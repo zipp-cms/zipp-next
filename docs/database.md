@@ -19,74 +19,108 @@ Creating a table for each element seems not that much of a problem.
 But i think when querying all elements or a few shared ones the performance might become a problem.
 
 
+### Set Schema
 
-
-
-### Schema example request
-
-
+Entry schema
 ```
-Example schema request
 {
-  name: "entries"
-  fields: [
-    {
-      name: "postDate",
-      type: "DateTime",
-      index: "hard"
+  name: "entry",
+  "fields": {
+    "id": {
+      "type": "id",
+      "primary": true
+    }
+    "typeHandle": {
+      "type": "text",
+      "index": true,
+      "not_null": true
     },
-    {
-      name: "title",
-      type: "text"
+    "type": {
+      "type": "i8",
     },
-    {
-      name: "slug",
-      type: "text",
-      index: "unique"
-  ]
-}
-
-
-entry type request
-{
-  name: "event",
-  parent: "entries",
-  fields: [
-    {
-      name: "posterImage",
-      type: "UniqueId",
+    "order": {
+      "type": "i64",
+      "index": true
+    },
+    "site": {
+      "type": "object",
+      "fields": {
+        "id": {
+          "type": "id",
+          "primary": true
+        },
+        "entryId": {
+          "type": "parentPrimary"
+        },
+        "siteId": {
+          "type": "id",
+          "related": "site.id",
+          "index": true
+        },
+        "state": {
+          "type": "i8",
+          "index": true
+        },
+        "updatedOn": {
+          "type": "datetime",
+          "index": true
+        },
+        "componentId": {
+          "type": "id",
+          "index": true
+        }
+      }
     }
-  ]
+  }
 }
-
-
-
-components (matrix)
-{
-  name: "components",
-  fields: [
-    {
-      name: "type",
-      type: "text",
-      index: "soft"
-    }
-  ]
-}
-
-
-image component
-{
-  name: "image",
-  parent: "components",
-  fields: [
-    {
-      name: "asset",
-      type: "UniqueId"
-    }
-  ]
-}
-
 ```
 
-### Query
-components and entries can be queried, as well as like components(type: "")
+Component Schema
+```
+{
+  // name required to start with component
+  name: "component_event",
+  fields: {
+    // field id required, as type id, and primary
+    "id": {
+      "type": "id",
+      "primary": true
+    },
+    "eventDate": {
+      "type": "datetime",
+      "index": true
+    }
+  }
+}
+```
+
+
+
+Query get latest entry bySiteId
+```
+{
+  "schema": "entry",
+  "fields": [
+    "id": true,
+    "typeHandle": true,
+    "type": true,
+    "site": {
+      "id": true,
+      "state": true,
+      "updatedOn": true,
+      "componentId": true
+    }
+  ]
+  "filter": {
+    "type": "eq",
+    "values": [
+      { "type": "eq", "key": "site.siteId", "value": "mySiteId" },
+      { "type": "eq", "key": "site.state", "value": 5 }
+    ]
+  },
+  "order": {
+    "site.updatedOn": "desc"
+  },
+  "limit": 1
+}
+```
