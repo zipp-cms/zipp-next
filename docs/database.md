@@ -21,6 +21,8 @@ But i think when querying all elements or a few shared ones the performance migh
 
 ### Set Schema
 
+// maybe instead of index we use filter?
+
 Entry schema
 ```
 {
@@ -112,7 +114,7 @@ Query get latest entry bySiteId
     }
   ]
   "filter": {
-    "type": "eq",
+    "type": "and",
     "values": [
       { "type": "eq", "key": "site.siteId", "value": "mySiteId" },
       { "type": "eq", "key": "site.state", "value": 5 }
@@ -124,3 +126,21 @@ Query get latest entry bySiteId
   "limit": 1
 }
 ```
+
+
+
+db api
+- set Schema
+- delete Schema
+- set Component
+- delete Component
+
+- create Schema Data
+- read (with: filter) Schema Data
+- update Schema Data
+- delete Schema Data
+
+- create Component Data
+- read (wuth: filter) Component Data
+- update Component Data
+- delete Component Data
