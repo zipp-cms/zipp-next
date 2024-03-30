@@ -68,7 +68,7 @@ Entry schema
           "index": true
         },
         "componentId": {
-          "type": "id",
+          "type": "componentId",
           "index": true
         }
       }
@@ -91,6 +91,11 @@ Component Schema
     "eventDate": {
       "type": "datetime",
       "index": true
+    },
+    "artists": {
+      "type": "component",
+      // should that be here?
+      "amount": 10
     }
   }
 }
@@ -99,6 +104,7 @@ Component Schema
 
 
 Query get latest entry bySiteId
+Query should probably be similar to graphQl
 ```
 {
   "schema": "entry",
