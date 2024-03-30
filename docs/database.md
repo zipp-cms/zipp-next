@@ -24,65 +24,69 @@ But i think when querying all elements or a few shared ones the performance migh
 // maybe instead of index we use filter?
 
 Entry schema
-```
+```json
 {
-  name: "entry",
+  "name": "entity",
   "fields": {
     "id": {
       "type": "id",
       "primary": true
-    }
+    },
     "typeHandle": {
       "type": "text",
       "index": true,
       "not_null": true
     },
+    // single, channel, what ever
     "type": {
       "type": "i8",
     },
     "order": {
       "type": "i64",
       "index": true
+    }
+  }
+}
+
+{
+  "name": "entity_site",
+  "fields": {
+    "id": {
+      "type": "id",
+      "primary": true
     },
-    "site": {
-      "type": "object",
-      "fields": {
-        "id": {
-          "type": "id",
-          "primary": true
-        },
-        "entryId": {
-          "type": "parentPrimary"
-        },
-        "siteId": {
-          "type": "id",
-          "related": "site.id",
-          "index": true
-        },
-        "state": {
-          "type": "i8",
-          "index": true
-        },
-        "updatedOn": {
-          "type": "datetime",
-          "index": true
-        },
-        "componentId": {
-          "type": "componentId",
-          "index": true
-        }
-      }
+    "entryId": {
+      "type": "id",
+      "related": "entry.id",
+      "index": true
+    },
+    "siteId": {
+      "type": "id",
+      "related": "site.id",
+      "index": true
+    },
+    "state": {
+      "type": "i8",
+      "index": true
+    },
+    "updatedOn": {
+      "type": "datetime",
+      "index": true
+    },
+    "componentId": {
+      "type": "componentId",
+      "index": true
     }
   }
 }
 ```
 
 Component Schema
-```
+```json
 {
   // name required to start with component
-  name: "component_event",
-  fields: {
+  "name": "component_event",
+  "fields": {
     // field id required, as type id, and primary
     "id": {
       "type": "id",
@@ -94,8 +98,18 @@ Component Schema
     },
     "artists": {
       "type": "component",
+      "component": "component_artists",
       // should that be here?
       "amount": 10
+    }
+  }
+},
+{
+  "name" : "component_record_label",
+  "fields" : {
+    "artists" : {
+      "type": "component",
+      "component": "component_artists",
     }
   }
 }
@@ -105,10 +119,11 @@ Component Schema
 
 Query get latest entry bySiteId
 Query should probably be similar to graphQl
-```
+```json
 {
   "schema": "entry",
-  "fields": [
+  "fields": {
+
     "id": true,
     "typeHandle": true,
     "type": true,
@@ -118,7 +133,7 @@ Query should probably be similar to graphQl
       "updatedOn": true,
       "componentId": true
     }
-  ]
+  }
   "filter": {
     "type": "and",
     "values": [
