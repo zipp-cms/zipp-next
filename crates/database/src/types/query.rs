@@ -8,14 +8,29 @@ pub struct Query {
 	pub limit: Option<usize>,
 }
 
+/// Structure
+/// ```json
+/// {
+/// 	"schema": {
+///
+/// 	}
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct FieldsSelector {
-	pub fields: BTreeMap<String, FieldSelector>,
+	pub fields: Vec<FieldSelector>,
 }
 
 #[derive(Debug, Clone)]
-pub struct FieldSelector {
-	pub children: Option<FieldsSelector>,
+pub enum FieldSelector {
+	Schema {
+		name: String,
+		filter: Filter,
+		fields: BTreeMap<String, FieldSelector>,
+	},
+	Field {
+		name: String,
+	},
 }
 
 #[derive(Debug, Clone)]
