@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use serde_json::Map;
+
 #[derive(Debug, Clone)]
 pub struct Schema {
 	pub name: String,
@@ -18,13 +22,12 @@ pub enum FieldKind {
 	Id,
 	ComponentId,
 	Boolean,
-	Int8,
-	Int16,
-	Int32,
-	Int64,
-	Float32,
-	Float64,
+	Int,
+	Float,
 	Text,
 	Json,
 	DateTime,
 }
+
+pub type Value = serde_json::Value;
+pub type Data = Map<String, Value>;

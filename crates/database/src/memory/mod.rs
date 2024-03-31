@@ -7,7 +7,7 @@ use components::ComponentRepository;
 use schema::SchemaRepository;
 
 use crate::{
-	types::{component::Component, schema::Schema},
+	types::{component::Component, query::Query, schema::Schema},
 	Database, Error,
 };
 
@@ -44,6 +44,15 @@ impl Database for MemoryDatabase {
 		let mut schemas = self.schemas.write().unwrap();
 
 		schemas.delete_schema(name)
+	}
+
+	async fn query_schema_data(
+		&self,
+		query: Query,
+	) -> Result<super::schema::Data, Error> {
+		let schemas = self.schemas.read().unwrap();
+
+		schemas.query_schema_data(query)
 	}
 
 	async fn set_component(&self, component: Component) -> Result<(), Error> {

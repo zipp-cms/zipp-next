@@ -1,6 +1,12 @@
 use std::collections::HashMap;
 
-use crate::{types::schema::Schema, Error};
+use crate::{
+	types::{
+		query::Query,
+		schema::{Data, Schema},
+	},
+	Error,
+};
 
 #[derive(Debug)]
 pub struct SchemaRepository {
@@ -31,4 +37,16 @@ impl SchemaRepository {
 
 		Ok(())
 	}
+
+	pub fn query_schema_data(&self, query: Query) -> Result<Data, Error> {
+		todo!()
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_data_selector() {}
 }
