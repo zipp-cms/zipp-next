@@ -1,0 +1,101 @@
+#[cfg(feature = "memory")]
+pub mod memory;
+
+pub mod types;
+
+use std::{collections::BTreeMap, fmt};
+
+pub use crate::error::Error;
+use crate::types::{guards::Valid, schema::Schema};
+
+use self::types::BasicValue;
+
+#[derive(Debug, Clone)]
+pub struct CreateSchemaData {
+	pub schema: String,
+	pub data: BTreeMap<String, BasicValue>,
+}
+
+#[async_trait::async_trait]
+pub trait Adaptor: fmt::Debug {
+	/// Creates a new schema
+	async fn create_schema(&self, schema: Valid<Schema>) -> Result<(), Error>;
+
+	/// Returns a schema by its name if the schema definition exists
+	async fn get_schema(&self, name: &str) -> Result<Option<Schema>, Error>;
+
+	// /// Delete a schema
+	// ///
+	// /// The schema data will be deleted as well
+	// ///
+	// /// Relations and other stuff is already validated so just delete the schema
+	// /// and it's data
+	// async fn delete_schema(&self, name: &str) -> Result<(), Error>;
+
+	/// Create a new schema data this might update multiple schemas
+	///
+	/// all referenced schemas and fields are already validated
+	async fn create_schema_data(
+		&self,
+		data: Vec<CreateSchemaData>,
+	) -> Result<(), Error>;
+
+	// /// Query schema data
+	// ///
+	// /// Multiple schemas can be queried at once
+	// async fn query_schema_data(
+	// 	&self,
+	// 	query: Query,
+	// ) -> Result<schema::Data, Error>;
+
+	// create schema_data
+	// update schema_data
+	// delete schema_data
+
+	// /// Set a component
+	// async fn set_component(&self, component: Component) -> Result<(), Error>;
+	// /// Get a component
+	// async fn get_component(
+	// 	&self,
+	// 	name: &str,
+	// ) -> Result<Option<Component>, Error>;
+	// /// Delete a component
+	// async fn delete_component(&self, name: &str) -> Result<(), Error>;
+}
+
+impl CreateSchemaData {
+	/// used in tests
+	#[allow(dead_code)]
+	pub fn builder(schema: impl Into<String>) -> CreateSchemaDataBuilder {
+		CreateSchemaDataBuilder::new(schema)
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct CreateSchemaDataBuilder {
+	inner: CreateSchemaData,
+}
+
+impl CreateSchemaDataBuilder {
+	fn new(schema: impl Into<String>) -> Self {
+		Self {
+			inner: CreateSchemaData {
+				schema: schema.into(),
+				data: BTreeMap::new(),
+			},
+		}
+	}
+
+	/// used in tests
+	#[allow(dead_code)]
+	pub fn data(mut self, name: impl Into<String>, value: BasicValue) -> Self {
+		self.inner.data.insert(name.into(), value);
+		self
+	}
+
+	/// used in tests
+	#[allow(dead_code)]
+	pub fn build(self) -> CreateSchemaData {
+		self.inner
+	}
+}
