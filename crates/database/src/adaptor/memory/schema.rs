@@ -6,13 +6,15 @@ use crate::{
 	adaptor::{ReadSchemaData, ReadSchemaDataFilter},
 	types::{
 		guards::Valid,
-		schema::{Schema, SchemaEntries, SchemaFieldValue},
+		id::Kind,
+		schema::{CreateSchema, Schema, SchemaEntries, SchemaFieldValue},
 	},
 	Error,
 };
 
 #[derive(Debug)]
 pub struct SchemaRepository {
+	kind_counter: u16,
 	schemas: HashMap<String, Schema>,
 	data: HashMap<String, Vec<BTreeMap<String, Value>>>,
 }
@@ -20,6 +22,7 @@ pub struct SchemaRepository {
 impl SchemaRepository {
 	pub fn new() -> Self {
 		Self {
+			kind_counter: 0,
 			schemas: HashMap::new(),
 			data: HashMap::new(),
 		}
@@ -27,15 +30,21 @@ impl SchemaRepository {
 
 	pub fn create_schema(
 		&mut self,
-		schema: Valid<Schema>,
-	) -> Result<(), Error> {
+		schema: Valid<CreateSchema>,
+	) -> Result<Schema, Error> {
 		let schema = schema.into_inner();
+		let schema = Schema {
+			name: schema.name,
+			kind: Kind::new(false, self.kind_counter),
+			fields: schema.fields,
+		};
+		self.kind_counter += 1;
 
 		let name = schema.name.clone();
-		self.schemas.insert(schema.name.clone(), schema);
+		self.schemas.insert(schema.name.clone(), schema.clone());
 		self.data.insert(name, Vec::new());
 
-		Ok(())
+		Ok(schema)
 	}
 
 	pub fn get_schema(&self, name: &str) -> Result<Option<Schema>, Error> {
@@ -63,7 +72,7 @@ impl SchemaRepository {
 		let mut nested = vec![];
 
 		for entry in entries.0 {
-			let mut fields = entry
+			let fields = entry
 				.0
 				.into_iter()
 				.filter_map(|(name, value)| match value {
@@ -149,35 +158,37 @@ mod tests {
 
 	use super::*;
 
-	// #[test]
-	// fn test_new_schema() {
-	// 	let mut repo = SchemaRepository::new();
+	#[test]
+	fn test_new_schema() {
+		let mut repo = SchemaRepository::new();
 
-	// 	let schema = Schema::builder("test")
-	// 		.field(Field::builder("id", FieldKind::Id).primary())
-	// 		.build();
+		let schema = Schema::builder("test")
+			.field(Field::builder("id", FieldKind::Id).primary())
+			.build();
 
-	// 	repo.create_schema(Valid::assume_valid(schema.clone()))
-	// 		.unwrap();
-	// }
+		repo.create_schema(Valid::assume_valid(schema.clone()))
+			.unwrap();
+	}
 
-	// #[test]
-	// fn test_create_data() {
-	// 	let mut repo = SchemaRepository::new();
+	#[test]
+	fn test_create_data() {
+		let mut repo = SchemaRepository::new();
 
-	// 	let schema = Schema::builder("test")
-	// 		.field(Field::builder("id", FieldKind::Id).primary())
-	// 		.field(Field::builder("name", FieldKind::Text))
-	// 		.build();
+		let schema = Schema::builder("test")
+			.field(Field::builder("id", FieldKind::Id).primary())
+			.field(Field::builder("name", FieldKind::Text))
+			.build();
 
-	// 	repo.create_schema(Valid::assume_valid(schema.clone()))
-	// 		.unwrap();
+		repo.create_schema(Valid::assume_valid(schema.clone()))
+			.unwrap();
 
-	// 	let data = vec![CreateSchemaData::builder("test")
-	// 		.data("id", BasicValue::String("123".into()))
-	// 		.data("name", BasicValue::String("1".into()))
-	// 		.build()];
-
-	// 	repo.create_schema_data(data).unwrap();
-	// }
+		repo.create_schema_entries(
+			"test".into(),
+			SchemaEntries::builder()
+				.entry("id", "123".to_string())
+				.entry("name", "1".to_string())
+				.build(),
+		)
+		.unwrap();
+	}
 }

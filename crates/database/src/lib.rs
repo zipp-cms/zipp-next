@@ -29,8 +29,9 @@ use error::Error;
 use serde_json::{Map, Value};
 use types::{
 	guards::Valid,
+	id::Id,
 	query::Query,
-	schema::{self, Schema, SchemaEntries, SchemaFieldValue},
+	schema::{self, CreateSchema, Schema, SchemaEntries, SchemaFieldValue},
 };
 
 use crate::adaptor::types::validate_schema_value;
@@ -55,7 +56,10 @@ impl Database {
 	///
 	/// ## Note
 	/// The schema name needs to be globally unique
-	pub async fn set_schema(&self, schema: Schema) -> Result<(), Error> {
+	pub async fn create_schema(
+		&self,
+		schema: CreateSchema,
+	) -> Result<Schema, Error> {
 		// todo validate and make sure the schema is correct
 		// we need atleast one primary, no duplicate keys
 		// related values need to match another field
@@ -63,7 +67,7 @@ impl Database {
 		if let Some(_existing_schema) =
 			self.adaptor.get_schema(&schema.name).await?
 		{
-			todo!("update schema")
+			todo!("schema already exists")
 		}
 
 		self.adaptor
@@ -94,7 +98,7 @@ impl Database {
 		&self,
 		schema: String,
 		mut entries: SchemaEntries,
-	) -> Result<(), Error> {
+	) -> Result<SchemaEntries, Error> {
 		// validate the data
 
 		// todo probably deny id
@@ -203,7 +207,13 @@ impl Database {
 			// make sure all fields are set
 			for (name, field) in schema_fields {
 				if field.primary {
-					todo!("set primary field");
+					entry.0.insert(
+						name,
+						SchemaFieldValue::Value(Value::String(
+							Id::new(schema.kind).to_string(),
+						)),
+					);
+					continue;
 				}
 
 				if field.related.is_some() {
