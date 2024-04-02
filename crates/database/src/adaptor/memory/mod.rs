@@ -1,7 +1,7 @@
 mod components;
 mod schema;
 
-use std::{collections::BTreeMap, sync::RwLock};
+use std::sync::RwLock;
 
 use components::ComponentRepository;
 use schema::SchemaRepository;
@@ -9,12 +9,12 @@ use schema::SchemaRepository;
 use crate::{
 	types::{
 		guards::Valid,
-		schema::{Schema, SchemaEntries},
+		schema::{CreateSchema, Schema, SchemaEntries},
 	},
 	Error,
 };
 
-use super::{Adaptor, ReadSchemaData};
+use super::Adaptor;
 
 #[derive(Debug)]
 pub struct MemoryDatabase {
@@ -34,7 +34,10 @@ impl MemoryDatabase {
 
 #[async_trait::async_trait]
 impl Adaptor for MemoryDatabase {
-	async fn create_schema(&self, schema: Valid<Schema>) -> Result<(), Error> {
+	async fn create_schema(
+		&self,
+		schema: Valid<CreateSchema>,
+	) -> Result<Schema, Error> {
 		let mut schemas = self.schemas.write().unwrap();
 
 		schemas.create_schema(schema)
@@ -56,10 +59,12 @@ impl Adaptor for MemoryDatabase {
 		&self,
 		schema: String,
 		data: SchemaEntries,
-	) -> Result<(), Error> {
+	) -> Result<SchemaEntries, Error> {
 		let mut schemas = self.schemas.write().unwrap();
 
-		schemas.create_schema_entries(schema, data)
+		schemas.create_schema_entries(schema, data.clone())?;
+
+		Ok(data)
 	}
 
 	// async fn read_schema_data(

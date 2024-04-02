@@ -10,7 +10,7 @@ use serde_json::Value;
 pub use crate::error::Error;
 use crate::types::{
 	guards::Valid,
-	schema::{Schema, SchemaEntries},
+	schema::{CreateSchema, Schema, SchemaEntries},
 };
 
 #[derive(Debug, Clone)]
@@ -34,7 +34,10 @@ pub enum ReadSchemaDataFilter {
 #[async_trait::async_trait]
 pub trait Adaptor: fmt::Debug {
 	/// Creates a new schema
-	async fn create_schema(&self, schema: Valid<Schema>) -> Result<(), Error>;
+	async fn create_schema(
+		&self,
+		schema: Valid<CreateSchema>,
+	) -> Result<Schema, Error>;
 
 	/// Returns a schema by its name if the schema definition exists
 	async fn get_schema(&self, name: &str) -> Result<Option<Schema>, Error>;
@@ -54,7 +57,7 @@ pub trait Adaptor: fmt::Debug {
 		&self,
 		schema: String,
 		entries: SchemaEntries,
-	) -> Result<(), Error>;
+	) -> Result<SchemaEntries, Error>;
 
 	// /// Read schema data
 	// ///
@@ -86,41 +89,3 @@ pub trait Adaptor: fmt::Debug {
 	// /// Delete a component
 	// async fn delete_component(&self, name: &str) -> Result<(), Error>;
 }
-
-// impl CreateSchemaData {
-// 	/// used in tests
-// 	#[allow(dead_code)]
-// 	pub fn builder(schema: impl Into<String>) -> CreateSchemaDataBuilder {
-// 		CreateSchemaDataBuilder::new(schema)
-// 	}
-// }
-
-// #[derive(Debug, Clone)]
-// pub struct CreateSchemaDataBuilder {
-// 	inner: CreateSchemaData,
-// }
-
-// impl CreateSchemaDataBuilder {
-// 	fn new(schema: impl Into<String>) -> Self {
-// 		Self {
-// 			inner: CreateSchemaData {
-// 				schema: schema.into(),
-// 				data: BTreeMap::new(),
-// 				nested: Vec::new(),
-// 			},
-// 		}
-// 	}
-
-// 	/// used in tests
-// 	#[allow(dead_code)]
-// 	pub fn data(mut self, name: impl Into<String>, value: BasicValue) -> Self {
-// 		self.inner.data.insert(name.into(), value);
-// 		self
-// 	}
-
-// 	/// used in tests
-// 	#[allow(dead_code)]
-// 	pub fn build(self) -> CreateSchemaData {
-// 		self.inner
-// 	}
-// }
