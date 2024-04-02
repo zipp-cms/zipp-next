@@ -1,4 +1,6 @@
-use serde_json::Map;
+use std::collections::BTreeMap;
+
+use serde_json::Value;
 
 /// A database schema
 ///
@@ -38,8 +40,17 @@ pub enum FieldKind {
 	DateTime,
 }
 
-pub type Value = serde_json::Value;
-pub type Data = Map<String, Value>;
+#[derive(Debug, Clone)]
+pub struct SchemaEntries(pub Vec<SchemaEntry>);
+
+#[derive(Debug, Clone)]
+pub struct SchemaEntry(pub BTreeMap<String, SchemaFieldValue>);
+
+#[derive(Debug, Clone)]
+pub enum SchemaFieldValue {
+	Value(Value),
+	Entries(SchemaEntries),
+}
 
 /// builder
 

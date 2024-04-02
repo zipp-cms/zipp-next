@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use serde_json::{Map, Value};
+use serde_json::Value;
 
 /*
 fields:
@@ -10,13 +10,52 @@ fields:
 		"field1",
 		"field2",
 	],
-	"other_schema": {
-		"nested": [
-			"field1",
-			"field2",
+	"other_schema": [
+		{
+			"name": "schema",
+			"fields": [
+				"field1",
+				"field2",
+			]
+		}
+	]
+}
+
+
+
+
+{
+	"name": "schema",
+	"fields": [
+		"field1",
+		"field2",
+		{
+			"name": "other_schema",
+			"fields": [
+				"field1",
+				"field2",
+			]
+		}
+	]
+	"filter": {
+		"type": "and",
+		"filters": [
+			{
+				"type": "eq",
+				"field": "field1",
+				"value": "value"
+			},
+			{
+				"type": "in",
+				"field": "field2",
+				"values": ["value"]
+			}
 		]
 	}
 }
+
+
+// when i do an in query how do i make sure the
 ```
 
 filter:
@@ -32,44 +71,47 @@ filter:
 
 #[derive(Debug, Clone)]
 pub struct Query {
-	pub fields: Map<String, Value>,
-}
-
-// #[derive(Debug, Clone)]
-// pub struct Query {
-// 	pub fields: FieldsSelector,
-// 	pub filter: Filter,
-// 	pub sorting: Sorting,
-// 	pub limit: Option<usize>,
-// }
-
-/// Structure
-/// ```json
-/// {
-/// 	"schema": {
-///
-/// 	}
-/// }
-/// ```
-#[derive(Debug, Clone)]
-pub struct FieldsSelector {
-	pub fields: Vec<FieldSelector>,
+	pub schema: String,
+	pub fields: Vec<FieldQuery>,
+	pub filter: Filter,
+	pub sorting: Sorting,
 }
 
 #[derive(Debug, Clone)]
-pub enum FieldSelector {
+pub enum FieldQuery {
 	Schema {
 		name: String,
-		filter: Filter,
-		fields: BTreeMap<String, FieldSelector>,
+		fields: BTreeMap<String, FieldQuery>,
 	},
-	Field {
-		name: String,
+	Field(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct FieldSelector {
+	pub schema: String,
+	pub field: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum Filter {
+	#[default]
+	None,
+	And(Vec<Filter>),
+	Or(Vec<Filter>),
+	Eq {
+		field: FieldSelector,
+		value: Value,
+	},
+	In {
+		field: FieldSelector,
+		values: Vec<Value>,
 	},
 }
 
 #[derive(Debug, Clone)]
-pub struct Filter {}
-
-#[derive(Debug, Clone)]
-pub struct Sorting {}
+pub enum Sorting {
+	None,
+	Asc(FieldSelector),
+	Desc(FieldSelector),
+	And(Vec<Sorting>),
+}

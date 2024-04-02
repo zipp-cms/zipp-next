@@ -5,16 +5,13 @@ pub mod types;
 
 use std::{collections::BTreeMap, fmt};
 
+use serde_json::Value;
+
 pub use crate::error::Error;
-use crate::types::{guards::Valid, schema::Schema};
-
-use self::types::BasicValue;
-
-#[derive(Debug, Clone)]
-pub struct CreateSchemaData {
-	pub schema: String,
-	pub data: BTreeMap<String, BasicValue>,
-}
+use crate::types::{
+	guards::Valid,
+	schema::{Schema, SchemaEntries},
+};
 
 #[derive(Debug, Clone)]
 pub struct ReadSchemaData {
@@ -29,7 +26,7 @@ pub struct ReadSchemaData {
 pub enum ReadSchemaDataFilter {
 	// todo: contains field from previous queue
 	// .
-	Equal { field: String, value: BasicValue },
+	Equal { field: String, value: Value },
 	And(Vec<ReadSchemaDataFilter>),
 	Or(Vec<ReadSchemaDataFilter>),
 }
@@ -53,18 +50,19 @@ pub trait Adaptor: fmt::Debug {
 	/// Create a new schema data this might update multiple schemas
 	///
 	/// all referenced schemas and fields are already validated
-	async fn create_schema_data(
+	async fn create_schema_entries(
 		&self,
-		data: Vec<CreateSchemaData>,
+		schema: String,
+		entries: SchemaEntries,
 	) -> Result<(), Error>;
 
-	/// Read schema data
-	///
-	/// All fields need to be valid and the filter needs to be executable
-	async fn read_schema_data(
-		&self,
-		queries: Vec<ReadSchemaData>,
-	) -> Result<Vec<Vec<BTreeMap<String, BasicValue>>>, Error>;
+	// /// Read schema data
+	// ///
+	// /// All fields need to be valid and the filter needs to be executable
+	// async fn read_schema_data(
+	// 	&self,
+	// 	queries: Vec<ReadSchemaData>,
+	// ) -> Result<Vec<Vec<BTreeMap<String, BasicValue>>>, Error>;
 
 	// /// Query schema data
 	// ///
@@ -89,39 +87,40 @@ pub trait Adaptor: fmt::Debug {
 	// async fn delete_component(&self, name: &str) -> Result<(), Error>;
 }
 
-impl CreateSchemaData {
-	/// used in tests
-	#[allow(dead_code)]
-	pub fn builder(schema: impl Into<String>) -> CreateSchemaDataBuilder {
-		CreateSchemaDataBuilder::new(schema)
-	}
-}
+// impl CreateSchemaData {
+// 	/// used in tests
+// 	#[allow(dead_code)]
+// 	pub fn builder(schema: impl Into<String>) -> CreateSchemaDataBuilder {
+// 		CreateSchemaDataBuilder::new(schema)
+// 	}
+// }
 
-#[derive(Debug, Clone)]
-pub struct CreateSchemaDataBuilder {
-	inner: CreateSchemaData,
-}
+// #[derive(Debug, Clone)]
+// pub struct CreateSchemaDataBuilder {
+// 	inner: CreateSchemaData,
+// }
 
-impl CreateSchemaDataBuilder {
-	fn new(schema: impl Into<String>) -> Self {
-		Self {
-			inner: CreateSchemaData {
-				schema: schema.into(),
-				data: BTreeMap::new(),
-			},
-		}
-	}
+// impl CreateSchemaDataBuilder {
+// 	fn new(schema: impl Into<String>) -> Self {
+// 		Self {
+// 			inner: CreateSchemaData {
+// 				schema: schema.into(),
+// 				data: BTreeMap::new(),
+// 				nested: Vec::new(),
+// 			},
+// 		}
+// 	}
 
-	/// used in tests
-	#[allow(dead_code)]
-	pub fn data(mut self, name: impl Into<String>, value: BasicValue) -> Self {
-		self.inner.data.insert(name.into(), value);
-		self
-	}
+// 	/// used in tests
+// 	#[allow(dead_code)]
+// 	pub fn data(mut self, name: impl Into<String>, value: BasicValue) -> Self {
+// 		self.inner.data.insert(name.into(), value);
+// 		self
+// 	}
 
-	/// used in tests
-	#[allow(dead_code)]
-	pub fn build(self) -> CreateSchemaData {
-		self.inner
-	}
-}
+// 	/// used in tests
+// 	#[allow(dead_code)]
+// 	pub fn build(self) -> CreateSchemaData {
+// 		self.inner
+// 	}
+// }
