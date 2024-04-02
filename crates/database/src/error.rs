@@ -15,6 +15,12 @@ pub enum Error {
 		field: Cow<'static, str>,
 	},
 
+	#[error("field {field} is a primary field in schema {schema} and is not allowed to be set")]
+	PrimaryFieldSet {
+		schema: Cow<'static, str>,
+		field: Cow<'static, str>,
+	},
+
 	#[error("incorrect data type: expected {expected} got {got}")]
 	IncorrectDataType {
 		expected: Cow<'static, str>,

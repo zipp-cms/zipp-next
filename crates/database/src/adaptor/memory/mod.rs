@@ -7,11 +7,14 @@ use components::ComponentRepository;
 use schema::SchemaRepository;
 
 use crate::{
-	types::{guards::Valid, schema::Schema},
+	types::{
+		guards::Valid,
+		schema::{Schema, SchemaEntries},
+	},
 	Error,
 };
 
-use super::{types::BasicValue, Adaptor, CreateSchemaData, ReadSchemaData};
+use super::{Adaptor, ReadSchemaData};
 
 #[derive(Debug)]
 pub struct MemoryDatabase {
@@ -49,23 +52,24 @@ impl Adaptor for MemoryDatabase {
 	// 	schemas.delete_schema(name)
 	// }
 
-	async fn create_schema_data(
+	async fn create_schema_entries(
 		&self,
-		data: Vec<CreateSchemaData>,
+		schema: String,
+		data: SchemaEntries,
 	) -> Result<(), Error> {
 		let mut schemas = self.schemas.write().unwrap();
 
-		schemas.create_schema_data(data)
+		schemas.create_schema_entries(schema, data)
 	}
 
-	async fn read_schema_data(
-		&self,
-		queries: Vec<ReadSchemaData>,
-	) -> Result<Vec<Vec<BTreeMap<String, BasicValue>>>, Error> {
-		let schemas = self.schemas.read().unwrap();
+	// async fn read_schema_data(
+	// 	&self,
+	// 	queries: Vec<ReadSchemaData>,
+	// ) -> Result<Vec<Vec<BTreeMap<String, BasicValue>>>, Error> {
+	// 	let schemas = self.schemas.read().unwrap();
 
-		schemas.read_schema_data(queries)
-	}
+	// 	schemas.read_schema_data(queries)
+	// }
 
 	// async fn query_schema_data(
 	// 	&self,
