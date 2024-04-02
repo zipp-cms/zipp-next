@@ -1,0 +1,40 @@
+[
+  {
+    "name": "Button",
+    "handle": "button",
+    "fields": {
+      "label": {
+        "kind": "text"
+      },
+      "link": {
+        "kind": "component",
+        "settings": {
+          "component": ["internal-link", "external-link"],
+          "min": 1,
+          "max": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "Internal Link",
+    "handle": "internal-link",
+    "fields": {
+      "page": {
+        "kind": "relation"
+      }
+    }
+  },
+  {
+    "name": "External Link",
+    "handle": "external-link",
+    "fields": {
+      "url": {
+        "kind": "text",
+        "settings": {
+          "rules": ["url"]
+        }
+      }
+    }
+  }
+]
