@@ -18,13 +18,14 @@ pub mod types;
 
 mod adaptor;
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, mem};
 
-use adaptor::Adaptor;
+use adaptor::{types::BasicValue, Adaptor, ReadSchemaData};
 use error::Error;
 use serde_json::{Map, Value};
 use types::{
 	guards::Valid,
+	query::Query,
 	schema::{self, Schema},
 };
 
@@ -97,6 +98,39 @@ impl Database {
 		self.adaptor.create_schema_data(queue).await
 	}
 
+	/// Query schema data
+	///
+	/// Multiple schemas can be queried at once
+	/// ```json
+	/// {
+	/// 	"schema": [
+	/// 		"field1",
+	/// 		"field2",
+	/// 	],
+	/// 	"other_schema": [
+	/// 		{
+	/// 			"nested": [
+	/// 				"field1",
+	/// 				"field2",
+	/// 			]
+	/// 		}
+	/// 	]
+	/// }
+	/// ```
+	pub async fn read_schema_data(
+		&self,
+		query: Query,
+	) -> Result<schema::Data, Error> {
+		let mut queue = Vec::with_capacity(query.fields.len());
+
+		self.validate_and_transform_schema_query(&query.fields, &mut queue)
+			.await?;
+
+		let data = self.adaptor.read_schema_data(queue).await?;
+
+		self.map_schema_query_data(query, data)
+	}
+
 	async fn validate_and_transform_schema_data(
 		&self,
 		data: schema::Data,
@@ -148,7 +182,7 @@ impl Database {
 						continue;
 					}
 
-					return Err(Error::SetUnknownFieldToSchema {
+					return Err(Error::UnknownFieldToSchema {
 						schema: name.clone().into(),
 						field: field.clone().into(),
 					});
@@ -174,5 +208,99 @@ impl Database {
 		}
 
 		Ok(())
+	}
+
+	/// the order of the queue needs to be top down
+	/// so the first schema is the first in the queue
+	/// and if a schema is nested it needs to be after the parent
+	async fn validate_and_transform_schema_query(
+		&self,
+		fields: &Map<String, Value>,
+		queue: &mut Vec<ReadSchemaData>,
+	) -> Result<(), Error> {
+		for (name, value) in fields {
+			let schema =
+				self.adaptor.get_schema(&name).await?.ok_or_else(|| {
+					Error::SchemaNotFound(name.clone().into())
+				})?;
+
+			// each schema should contain an array of strings or objects
+			let Value::Array(fields) = value else {
+				return Err(Error::SchemaExpectsAnArray {
+					schema: name.clone().into(),
+					found: value.to_string().into(),
+				});
+			};
+
+			let mut n_fields: Vec<String> = vec![];
+
+			// validate fields
+			for value in fields {
+				let field = match value {
+					Value::Object(_) => todo!("nested fields"),
+					Value::String(s) => s,
+					_ => {
+						return Err(Error::IncorrectDataType {
+							expected: "string or object".into(),
+							got: value.to_string().into(),
+						})
+					}
+				};
+
+				// check that the fields is not in the array
+				if n_fields.contains(&field) {
+					return Err(Error::DuplicateField {
+						schema: name.clone().into(),
+						field: field.clone().into(),
+					});
+				}
+
+				// check that the field is in the schema
+				if !schema.fields.iter().any(|f| &f.name == field) {
+					return Err(Error::UnknownFieldToSchema {
+						schema: name.clone().into(),
+						field: field.clone().into(),
+					});
+				}
+
+				n_fields.push(field.clone());
+			}
+
+			queue.push(ReadSchemaData {
+				schema: name.clone(),
+				fields: n_fields,
+				filter: None,
+			});
+		}
+
+		Ok(())
+	}
+
+	// the data must match the query order
+	fn map_schema_query_data(
+		&self,
+		query: Query,
+		mut data: Vec<Vec<BTreeMap<String, BasicValue>>>,
+	) -> Result<Map<String, Value>, Error> {
+		let mut result = Map::new();
+
+		let mut i = 0;
+
+		for (name, value) in &query.fields {
+			let fields = value.as_array();
+			let entries = mem::take(&mut data[i]);
+
+			let mut n_fields = Map::new();
+
+			for value in fields {
+				match value {
+					Value::Object(_) => todo!("obj"),
+					Value::String(s) => {
+						
+				}
+			}
+		}
+
+		Ok(result)
 	}
 }
