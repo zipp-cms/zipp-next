@@ -16,6 +16,24 @@ pub struct CreateSchemaData {
 	pub data: BTreeMap<String, BasicValue>,
 }
 
+#[derive(Debug, Clone)]
+pub struct ReadSchemaData {
+	pub schema: String,
+	pub fields: Vec<String>,
+	// todo related schema filters
+	pub filter: Option<ReadSchemaDataFilter>,
+}
+
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub enum ReadSchemaDataFilter {
+	// todo: contains field from previous queue
+	// .
+	Equal { field: String, value: BasicValue },
+	And(Vec<ReadSchemaDataFilter>),
+	Or(Vec<ReadSchemaDataFilter>),
+}
+
 #[async_trait::async_trait]
 pub trait Adaptor: fmt::Debug {
 	/// Creates a new schema
@@ -39,6 +57,14 @@ pub trait Adaptor: fmt::Debug {
 		&self,
 		data: Vec<CreateSchemaData>,
 	) -> Result<(), Error>;
+
+	/// Read schema data
+	///
+	/// All fields need to be valid and the filter needs to be executable
+	async fn read_schema_data(
+		&self,
+		queries: Vec<ReadSchemaData>,
+	) -> Result<Vec<Vec<BTreeMap<String, BasicValue>>>, Error>;
 
 	// /// Query schema data
 	// ///

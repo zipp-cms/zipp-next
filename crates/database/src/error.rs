@@ -9,6 +9,12 @@ pub enum Error {
 		field: Cow<'static, str>,
 	},
 
+	#[error("field {field} already exists in schema {schema}")]
+	DuplicateField {
+		schema: Cow<'static, str>,
+		field: Cow<'static, str>,
+	},
+
 	#[error("incorrect data type: expected {expected} got {got}")]
 	IncorrectDataType {
 		expected: Cow<'static, str>,
@@ -16,13 +22,19 @@ pub enum Error {
 	},
 
 	#[error("schema {schema} does not have a field {field}")]
-	SetUnknownFieldToSchema {
+	UnknownFieldToSchema {
 		schema: Cow<'static, str>,
 		field: Cow<'static, str>,
 	},
 
 	#[error("schema {schema} expects an object found {found}")]
 	SchemaExpectsAnObject {
+		schema: Cow<'static, str>,
+		found: Cow<'static, str>,
+	},
+
+	#[error("schema {schema} expects an array found {found}")]
+	SchemaExpectsAnArray {
 		schema: Cow<'static, str>,
 		found: Cow<'static, str>,
 	},

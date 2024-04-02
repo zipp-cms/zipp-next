@@ -1,7 +1,7 @@
 mod components;
 mod schema;
 
-use std::sync::RwLock;
+use std::{collections::BTreeMap, sync::RwLock};
 
 use components::ComponentRepository;
 use schema::SchemaRepository;
@@ -11,7 +11,7 @@ use crate::{
 	Error,
 };
 
-use super::{Adaptor, CreateSchemaData};
+use super::{types::BasicValue, Adaptor, CreateSchemaData, ReadSchemaData};
 
 #[derive(Debug)]
 pub struct MemoryDatabase {
@@ -56,6 +56,15 @@ impl Adaptor for MemoryDatabase {
 		let mut schemas = self.schemas.write().unwrap();
 
 		schemas.create_schema_data(data)
+	}
+
+	async fn read_schema_data(
+		&self,
+		queries: Vec<ReadSchemaData>,
+	) -> Result<Vec<Vec<BTreeMap<String, BasicValue>>>, Error> {
+		let schemas = self.schemas.read().unwrap();
+
+		schemas.read_schema_data(queries)
 	}
 
 	// async fn query_schema_data(

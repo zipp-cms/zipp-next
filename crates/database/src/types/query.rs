@@ -1,12 +1,47 @@
 use std::collections::BTreeMap;
 
+use serde_json::{Map, Value};
+
+/*
+fields:
+```json
+{
+	"schema": [
+		"field1",
+		"field2",
+	],
+	"other_schema": {
+		"nested": [
+			"field1",
+			"field2",
+		]
+	}
+}
+```
+
+filter:
+```json
+{
+	"schema": {
+		"field1": {
+			"eq": "value"
+		}
+	}
+}
+*/
+
 #[derive(Debug, Clone)]
 pub struct Query {
-	pub fields: FieldsSelector,
-	pub filter: Filter,
-	pub sorting: Sorting,
-	pub limit: Option<usize>,
+	pub fields: Map<String, Value>,
 }
+
+// #[derive(Debug, Clone)]
+// pub struct Query {
+// 	pub fields: FieldsSelector,
+// 	pub filter: Filter,
+// 	pub sorting: Sorting,
+// 	pub limit: Option<usize>,
+// }
 
 /// Structure
 /// ```json
