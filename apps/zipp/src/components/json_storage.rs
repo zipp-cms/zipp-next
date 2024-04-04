@@ -41,19 +41,3 @@ impl Persistent<Vec<ComponentDto>> for JsonStorage {
 		}
 	}
 }
-
-#[cfg(test)]
-mod tests {
-
-	use crate::components::component_store::ComponentStore;
-
-	use super::*;
-
-	#[tokio::test]
-	async fn test_save() {
-		let components =
-			ComponentStore::new_json_storage("testfiles/components.json").await;
-
-		println!("{:?}", components);
-	}
-}

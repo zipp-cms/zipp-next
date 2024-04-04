@@ -37,6 +37,7 @@ impl ComponentStore {
 		let components = persistent.load().await.unwrap();
 		let field_kinds = FieldKinds::default();
 
+		// todo: this should be done in the json storage
 		// turn ComponentDto into Component
 		let components: Vec<Component> = components
 			.into_iter()
@@ -55,11 +56,11 @@ impl ComponentStore {
 		// todo: maybe save to persistent storage
 	}
 
-	/// Add a field kind to the store
-	/// this is useful for plugins to register their field kinds
-	pub fn add_field_kind(&mut self, kind: FieldKind) {
-		self.field_kinds.push(kind);
-	}
+	// /// Add a field kind to the store
+	// /// this is useful for plugins to register their field kinds
+	// pub fn add_field_kind(&mut self, kind: FieldKind) {
+	// 	self.field_kinds.push(kind);
+	// }
 }
 
 impl fmt::Debug for ComponentStore {
@@ -67,5 +68,23 @@ impl fmt::Debug for ComponentStore {
 		f.debug_struct("ComponentStore")
 			.field("components", &self.components)
 			.finish()
+	}
+}
+
+#[cfg(test)]
+mod tests {
+
+	use crate::components::component_store::ComponentStore;
+
+	use super::*;
+
+	#[tokio::test]
+	async fn test_save() {
+		let components = ComponentStore::new_json_storage(
+			"testfiles/components/minimal.json",
+		)
+		.await;
+
+		println!("{:?}", components);
 	}
 }

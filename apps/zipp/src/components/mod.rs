@@ -1,26 +1,52 @@
 use std::collections::BTreeMap;
 
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-
-use self::field_kinds::FieldKinds;
+use self::field_kinds::{FieldKind, FieldKinds, FieldTrait};
 
 pub mod component_store;
+pub mod default_field_kinds;
 pub mod field_kinds;
 pub mod json_storage;
 
-#[derive(Debug, Serialize, Deserialize)]
+// trait Setting<T> {
+// 	fn validate(&self, value: &T) -> bool;
+// 	fn name(&self) -> &'static str;
+// }
+
+// struct MinSetting {
+// 	min: i32,
+// }
+
+// // setting implementation as a sanity check
+// impl MinSetting {
+// 	fn new(min: i32) -> Self {
+// 		Self { min }
+// 	}
+// }
+
+// impl Setting<i32> for MinSetting {
+// 	fn validate(&self, value: &i32) -> bool {
+// 		value >= &self.min
+// 	}
+// 	fn name(&self) -> &'static str {
+// 		"min"
+// 	}
+// }
+
+#[derive(Debug)]
 pub struct Field {
-	pub kind: String,
-	#[serde(default)]
-	pub settings: BTreeMap<String, Value>,
+	pub inner: Box<dyn FieldTrait>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl Field {
+	pub fn new(inner: Box<dyn FieldTrait>) -> Self {
+		Self { inner }
+	}
+}
+
+#[derive(Debug)]
 pub struct Component {
 	pub name: String,
 	pub handle: String,
-	#[serde(default)]
 	pub fields: BTreeMap<String, Field>,
 }
 
@@ -48,14 +74,14 @@ impl Component {
 	}
 }
 
-impl Field {
-	pub fn new(kind: String) -> Self {
-		Self {
-			kind,
-			settings: BTreeMap::new(),
-		}
-	}
-}
+// impl Field {
+// 	pub fn new(kind: String) -> Self {
+// 		Self {
+// 			kind,
+// 			settings: Vec::new(),
+// 		}
+// 	}
+// }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct FieldDto {

@@ -4,7 +4,10 @@
     "handle": "button",
     "fields": {
       "label": {
-        "kind": "text"
+        "kind": "text",
+        "settings": {
+          "max_length": 100
+        }
       },
       "link": {
         "kind": "component",
