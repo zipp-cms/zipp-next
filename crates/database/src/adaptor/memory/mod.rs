@@ -9,6 +9,7 @@ use schema::SchemaRepository;
 use crate::{
 	types::{
 		guards::Valid,
+		query::Query,
 		schema::{CreateSchema, Schema, SchemaEntries},
 	},
 	Error,
@@ -67,14 +68,14 @@ impl Adaptor for MemoryDatabase {
 		Ok(data)
 	}
 
-	// async fn read_schema_data(
-	// 	&self,
-	// 	queries: Vec<ReadSchemaData>,
-	// ) -> Result<Vec<Vec<BTreeMap<String, BasicValue>>>, Error> {
-	// 	let schemas = self.schemas.read().unwrap();
+	async fn read_schema_data(
+		&self,
+		query: Query,
+	) -> Result<SchemaEntries, Error> {
+		let schemas = self.schemas.read().unwrap();
 
-	// 	schemas.read_schema_data(queries)
-	// }
+		schemas.read_schema_data(query)
+	}
 
 	// async fn query_schema_data(
 	// 	&self,

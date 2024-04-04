@@ -167,16 +167,43 @@ impl SchemaEntriesBuilder {
 		}
 	}
 
-	pub fn entry(
+	pub fn entry(mut self, entry: SchemaEntryBuilder) -> Self {
+		self.inner.0.push(entry.build());
+		self
+	}
+
+	pub fn build(self) -> SchemaEntries {
+		self.inner
+	}
+}
+
+impl SchemaEntry {
+	pub fn builder() -> SchemaEntryBuilder {
+		SchemaEntryBuilder::new()
+	}
+}
+
+pub struct SchemaEntryBuilder {
+	inner: SchemaEntry,
+}
+
+impl SchemaEntryBuilder {
+	pub fn new() -> Self {
+		Self {
+			inner: SchemaEntry(BTreeMap::new()),
+		}
+	}
+
+	// this makes no sense
+	// an entry does not only contain a single field
+	pub fn field(
 		mut self,
 		name: impl Into<String>,
 		value: impl Into<Value>,
 	) -> Self {
-		self.inner.0.push(SchemaEntry(
-			[(name.into(), SchemaFieldValue::Value(value.into()))]
-				.into_iter()
-				.collect(),
-		));
+		self.inner
+			.0
+			.insert(name.into(), SchemaFieldValue::Value(value.into()));
 
 		self
 	}
@@ -186,16 +213,14 @@ impl SchemaEntriesBuilder {
 		name: impl Into<String>,
 		entries: SchemaEntriesBuilder,
 	) -> Self {
-		self.inner.0.push(SchemaEntry(
-			[(name.into(), SchemaFieldValue::Entries(entries.build()))]
-				.into_iter()
-				.collect(),
-		));
+		self.inner
+			.0
+			.insert(name.into(), SchemaFieldValue::Entries(entries.build()));
 
 		self
 	}
 
-	pub fn build(self) -> SchemaEntries {
+	pub fn build(self) -> SchemaEntry {
 		self.inner
 	}
 }

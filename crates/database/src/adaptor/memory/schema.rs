@@ -3,11 +3,13 @@ use std::collections::{BTreeMap, HashMap};
 use serde_json::Value;
 
 use crate::{
-	adaptor::{ReadSchemaData, ReadSchemaDataFilter},
 	types::{
 		guards::Valid,
 		id::Kind,
-		schema::{CreateSchema, Schema, SchemaEntries, SchemaFieldValue},
+		query::{FieldQuery, Query},
+		schema::{
+			CreateSchema, Schema, SchemaEntries, SchemaEntry, SchemaFieldValue,
+		},
 	},
 	Error,
 };
@@ -96,42 +98,45 @@ impl SchemaRepository {
 
 	pub fn read_schema_data(
 		&self,
-		queries: Vec<ReadSchemaData>,
-	) -> Result<Vec<Vec<BTreeMap<String, Value>>>, Error> {
-		let mut result = Vec::with_capacity(queries.len());
-
-		for query in queries {
-			let entries = self.data.get(&query.schema).unwrap();
-
-			let entries = entries
-				.iter()
-				// now check if we should include this entry
-				.filter(|e| {
-					if let Some(filter) = &query.filter {
-						return filter_matches_entry(e, filter);
-					}
-
-					true
-				})
-				// only return the fields requested
-				.map(|e| {
-					let mut fields = BTreeMap::new();
-
-					for field in &query.fields {
-						fields.insert(
-							field.clone(),
-							e.get(field).unwrap().clone(),
-						);
-					}
-
-					fields
-				})
-				.collect();
-
-			result.push(entries);
+		query: Query,
+	) -> Result<SchemaEntries, Error> {
+		if !query.filter.is_none() {
+			todo!()
 		}
 
-		Ok(result)
+		if !query.sorting.is_none() {
+			todo!()
+		}
+
+		let entries = self.data.get(&query.schema).unwrap();
+
+		let entries = entries
+			.iter()
+			// only return the fields requested
+			.map(|e| {
+				let mut fields = BTreeMap::new();
+
+				for field in &query.fields.0 {
+					match field {
+						FieldQuery::Schema { name, .. } => {
+							todo!("schema query {name}")
+						}
+						FieldQuery::Field(field) => {
+							fields.insert(
+								field.clone(),
+								SchemaFieldValue::Value(
+									e.get(field).unwrap().clone(),
+								),
+							);
+						}
+					}
+				}
+
+				SchemaEntry(fields)
+			})
+			.collect();
+
+		Ok(SchemaEntries(entries))
 	}
 
 	// pub fn query_schema_data(&self, query: Query) -> Result<Data, Error> {
@@ -139,18 +144,18 @@ impl SchemaRepository {
 	// }
 }
 
-fn filter_matches_entry(
-	entry: &BTreeMap<String, Value>,
-	filter: &ReadSchemaDataFilter,
-) -> bool {
-	use ReadSchemaDataFilter::*;
+// fn filter_matches_entry(
+// 	entry: &BTreeMap<String, Value>,
+// 	filter: &ReadSchemaDataFilter,
+// ) -> bool {
+// 	use ReadSchemaDataFilter::*;
 
-	match filter {
-		Equal { field, value } => entry.get(field).unwrap() == value,
-		And(filters) => filters.iter().all(|f| filter_matches_entry(entry, f)),
-		Or(filters) => filters.iter().any(|f| filter_matches_entry(entry, f)),
-	}
-}
+// 	match filter {
+// 		Equal { field, value } => entry.get(field).unwrap() == value,
+// 		And(filters) => filters.iter().all(|f| filter_matches_entry(entry, f)),
+// 		Or(filters) => filters.iter().any(|f| filter_matches_entry(entry, f)),
+// 	}
+// }
 
 #[cfg(test)]
 mod tests {
@@ -185,8 +190,11 @@ mod tests {
 		repo.create_schema_entries(
 			"test".into(),
 			SchemaEntries::builder()
-				.entry("id", "123".to_string())
-				.entry("name", "1".to_string())
+				.entry(
+					SchemaEntry::builder()
+						.field("id", "123")
+						.field("name", "1"),
+				)
 				.build(),
 		)
 		.unwrap();

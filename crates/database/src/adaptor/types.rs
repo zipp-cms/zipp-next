@@ -25,7 +25,7 @@ pub fn validate_schema_value(
 
 			Ok(())
 		}
-		(FieldKind::Boolean, Value::Bool(b)) => Ok(()),
+		(FieldKind::Boolean, Value::Bool(_)) => Ok(()),
 		(FieldKind::Int, Value::Number(n)) => {
 			let _n = n.as_i64().ok_or_else(|| Error::IncorrectDataType {
 				expected: "int".into(),
@@ -42,7 +42,7 @@ pub fn validate_schema_value(
 
 			Ok(())
 		}
-		(FieldKind::Text, Value::String(s)) => Ok(()),
+		(FieldKind::Text, Value::String(_)) => Ok(()),
 		_ => todo!(),
 	}
 }
