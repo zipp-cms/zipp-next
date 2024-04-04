@@ -3,13 +3,14 @@ pub mod memory;
 
 pub mod types;
 
-use std::{collections::BTreeMap, fmt};
+use std::fmt;
 
 use serde_json::Value;
 
 pub use crate::error::Error;
 use crate::types::{
 	guards::Valid,
+	query::Query,
 	schema::{CreateSchema, Schema, SchemaEntries},
 };
 
@@ -59,21 +60,13 @@ pub trait Adaptor: fmt::Debug {
 		entries: SchemaEntries,
 	) -> Result<SchemaEntries, Error>;
 
-	// /// Read schema data
-	// ///
-	// /// All fields need to be valid and the filter needs to be executable
-	// async fn read_schema_data(
-	// 	&self,
-	// 	queries: Vec<ReadSchemaData>,
-	// ) -> Result<Vec<Vec<BTreeMap<String, BasicValue>>>, Error>;
-
-	// /// Query schema data
-	// ///
-	// /// Multiple schemas can be queried at once
-	// async fn query_schema_data(
-	// 	&self,
-	// 	query: Query,
-	// ) -> Result<schema::Data, Error>;
+	/// Read schema data
+	///
+	/// All fields need to be valid and the filter needs to be executable
+	async fn read_schema_data(
+		&self,
+		query: Query,
+	) -> Result<SchemaEntries, Error>;
 
 	// create schema_data
 	// update schema_data

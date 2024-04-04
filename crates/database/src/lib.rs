@@ -22,19 +22,19 @@ pub mod types;
 
 mod adaptor;
 
-use std::{collections::BTreeMap, mem};
+use std::collections::{BTreeMap, BTreeSet};
 
-use adaptor::{Adaptor, ReadSchemaData};
+use adaptor::Adaptor;
 use error::Error;
-use serde_json::{Map, Value};
+use serde_json::Value;
 use types::{
 	guards::Valid,
 	id::Id,
 	query::Query,
-	schema::{self, CreateSchema, Schema, SchemaEntries, SchemaFieldValue},
+	schema::{CreateSchema, Schema, SchemaEntries, SchemaFieldValue},
 };
 
-use crate::adaptor::types::validate_schema_value;
+use crate::{adaptor::types::validate_schema_value, types::query::FieldQuery};
 
 #[derive(Debug)]
 pub struct Database {
@@ -79,15 +79,11 @@ impl Database {
 	///
 	/// schema data needs to be structured as
 	/// ```json
-	/// {
-	///		"schema": {
-	/// 		"field": "value"
-	/// 	},
-	/// 	"other_schema": [
-	/// 		{ "field": "value" },
-	/// 		{ "field": "value" }
-	/// 	]
-	/// }
+	/// [
+	///		{
+	/// 		"field": "value",
+	/// 	}
+	/// ]
 	/// ```
 	///
 	/// ## Note
@@ -101,7 +97,6 @@ impl Database {
 	) -> Result<SchemaEntries, Error> {
 		// validate the data
 
-		// todo probably deny id
 		// todo add related id when nesting
 
 		self.validate_schema_entries(&schema, &mut entries).await?;
@@ -109,39 +104,37 @@ impl Database {
 		self.adaptor.create_schema_entries(schema, entries).await
 	}
 
-	// /// Query schema data
-	// ///
-	// /// Multiple schemas can be queried at once
-	// /// ```json
-	// /// 	{
-	// /// 	"schema": [
-	// /// 		"field1",
-	// /// 		"field2",
-	// /// 	],
-	// /// 	"other_schema": [
-	// /// 		{
-	// /// 			"name": "schema",
-	// /// 			"fields": [
-	// /// 				"field1",
-	// /// 				"field2",
-	// /// 			]
-	// /// 		}
-	// /// 	]
-	// /// }
-	// /// ```
-	// pub async fn read_schema_data(
-	// 	&self,
-	// 	query: Query,
-	// ) -> Result<schema::Data, Error> {
-	// 	let mut queue = Vec::with_capacity(query.fields.len());
+	/// Query schema data
+	///
+	/// Multiple schemas can be queried at once
+	/// ```json
+	/// 	{
+	/// 	"schema": [
+	/// 		"field1",
+	/// 		"field2",
+	/// 	],
+	/// 	"other_schema": [
+	/// 		{
+	/// 			"name": "schema",
+	/// 			"fields": [
+	/// 				"field1",
+	/// 				"field2",
+	/// 			]
+	/// 		}
+	/// 	]
+	/// }
+	/// ```
+	pub async fn read_schema_data(
+		&self,
+		query: Query,
+	) -> Result<SchemaEntries, Error> {
+		// validate the fields
+		// validate filters
 
-	// 	// self.validate_and_transform_schema_query(&query.fields, &mut queue)
-	// 	// 	.await?;
+		self.validate_schema_query(&query).await?;
 
-	// 	let data = self.adaptor.read_schema_data(queue).await?;
-
-	// 	self.map_schema_query_data(query, data)
-	// }
+		self.adaptor.read_schema_data(query).await
+	}
 
 	async fn validate_schema_entries(
 		&self,
@@ -230,6 +223,87 @@ impl Database {
 					field: name.into(),
 				});
 			}
+		}
+
+		Ok(())
+	}
+
+	async fn validate_schema_query(&self, query: &Query) -> Result<(), Error> {
+		let name = &query.schema;
+
+		let schema = self
+			.adaptor
+			.get_schema(&name)
+			.await?
+			.ok_or_else(|| Error::SchemaNotFound(name.clone().into()))?;
+
+		if !query.filter.is_none() {
+			todo!("validate filter")
+		}
+
+		if !query.sorting.is_none() {
+			todo!("validate sorting")
+		}
+
+		self.validate_schema_query_fields(&schema, &query.fields.0)
+			.await
+	}
+
+	async fn validate_schema_query_fields(
+		&self,
+		schema: &Schema,
+		fields: &[FieldQuery],
+	) -> Result<(), Error> {
+		// make sure we don't have duplicated fields
+		// make sure the fields are in the schema
+
+		let mut used_fields: BTreeSet<&str> = BTreeSet::new();
+
+		// validate fields
+		for field in fields {
+			let field_name = match field {
+				FieldQuery::Schema { name, .. } => name,
+				FieldQuery::Field(f) => f,
+			};
+
+			// check that the fields is not in the array
+			if used_fields.contains(field_name.as_str()) {
+				return Err(Error::DuplicateField {
+					schema: schema.name.clone().into(),
+					field: field_name.clone().into(),
+				});
+			}
+
+			let field = match field {
+				FieldQuery::Schema { name, fields } => {
+					// todo validate that they are related
+
+					let schema =
+						self.adaptor.get_schema(&name).await?.ok_or_else(
+							|| Error::SchemaNotFound(name.clone().into()),
+						)?;
+
+					let fut =
+						self.validate_schema_query_fields(&schema, &fields.0);
+					let fut = Box::pin(fut);
+					fut.await?;
+
+					name
+				}
+				FieldQuery::Field(name) => {
+					// check that the field is in the schema
+					if !schema.fields.iter().any(|f| &f.name == name) {
+						return Err(Error::UnknownFieldToSchema {
+							schema: schema.name.clone().into(),
+							field: name.clone().into(),
+						});
+					}
+
+					name
+				}
+			};
+
+			used_fields.insert(field);
 		}
 
 		Ok(())
