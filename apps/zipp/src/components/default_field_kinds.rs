@@ -28,7 +28,7 @@ impl FieldKind for NumberFieldKind {
 	}
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Default)]
 #[serde(transparent)]
 struct MaxSetting(pub i32);
 
@@ -46,6 +46,7 @@ impl FieldTrait for MaxSetting {
 pub struct NumberField {
 	// min: i32,
 	// min: MinSetting,
+	#[serde(default)]
 	max: MaxSetting,
 }
 

@@ -1,5 +1,4 @@
 use std::{
-	any::TypeId,
 	collections::BTreeMap,
 	fmt::{self, Debug},
 };
@@ -53,20 +52,6 @@ where
 	}
 }
 
-// impl FieldKind {
-// 	pub fn new(name: String) -> Self {
-// 		Self {
-// 			name,
-// 			settings: Vec::new(),
-// 		}
-// 	}
-
-// 	pub fn with_setting(mut self, setting: TypeId) -> Self {
-// 		self.settings.push(setting);
-// 		self
-// 	}
-// }
-
 pub struct FieldKinds(BTreeMap<String, Box<dyn ErasedFieldKind>>);
 
 #[derive(thiserror::Error)]
@@ -101,27 +86,6 @@ impl FieldKinds {
 			.ok_or(ParseFieldError::KindNotFound { kind: dto.kind })?
 			.build(dto.settings)
 			.map(Field::new)
-
-		// check if settings are valid
-		// let settings = dto
-		// 	.settings
-		// 	.into_iter()
-		// 	.map(
-		// 		|(name, value)| -> Result<Box<dyn Setting>, ParseFieldError> {
-		// 			let setting = kind.settings.from_name(&name);
-
-		// 			if name == "min".to_string() {
-		// 				let min: i32 = serde_json::from_value(value).unwrap();
-		// 				return Ok(MinSetting::new(min));
-		// 			} else {
-		// 				error!("Invalid setting: {}", name);
-		// 				return Err(ParseFieldError::InvalidSettings {
-		// 					settings: vec![name],
-		// 				});
-		// 			}
-		// 		},
-		// 	)
-		// 	.unwrap();
 	}
 }
 
@@ -132,18 +96,7 @@ impl Default for FieldKinds {
 		this.push(NumberFieldKind);
 		this.push(TextFieldKind);
 
-		// let map = [
-		// 	// ("boolean", BooleanFieldKind as dyn FieldKind)
-		// 	// ("number", NumberFieldKind as dyn FieldKind),
-		// 	// ("text", TextFieldKind as dyn FieldKind)
-		// 	// ("relation", RelationFieldKind as dyn FieldKind) // todo: think about if entity should be the kind not relation
-		// 	// ("media", MediaFieldKind as dyn FieldKind)
-		// 	// ("component", ComponentFieldKind as dyn FieldKind)
-		// 	// ("richtext", RichtextFieldKind as dyn FieldKind)
-		// ]
-		// 	.into_iter()
-		// 	.map(|(k, v)| (k.to_string(), Box::new(v)) )
-		// 	.collect();
+		// boolean, number, text, relation, media, component, richtext
 
 		this
 	}

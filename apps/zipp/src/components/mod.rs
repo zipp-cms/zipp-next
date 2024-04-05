@@ -7,31 +7,6 @@ pub mod default_field_kinds;
 pub mod field_kinds;
 pub mod json_storage;
 
-// trait Setting<T> {
-// 	fn validate(&self, value: &T) -> bool;
-// 	fn name(&self) -> &'static str;
-// }
-
-// struct MinSetting {
-// 	min: i32,
-// }
-
-// // setting implementation as a sanity check
-// impl MinSetting {
-// 	fn new(min: i32) -> Self {
-// 		Self { min }
-// 	}
-// }
-
-// impl Setting<i32> for MinSetting {
-// 	fn validate(&self, value: &i32) -> bool {
-// 		value >= &self.min
-// 	}
-// 	fn name(&self) -> &'static str {
-// 		"min"
-// 	}
-// }
-
 #[derive(Debug)]
 pub struct Field {
 	pub inner: Box<dyn FieldTrait>,

@@ -14,9 +14,7 @@
     "fields": {
       "count": {
         "kind": "number",
-        "settings": {
-          "max": 100
-        }
+        "settings": {}
       }
     }
   }
