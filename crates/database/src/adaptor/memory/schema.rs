@@ -8,7 +8,7 @@ use crate::{
 		id::Kind,
 		query::{FieldQuery, Query},
 		schema::{
-			CreateSchema, Schema, SchemaEntries, SchemaEntry, SchemaFieldValue,
+			Schema, SchemaEntries, SchemaEntry, SchemaFieldValue, SetSchema,
 		},
 	},
 	Error,
@@ -32,7 +32,7 @@ impl SchemaRepository {
 
 	pub fn create_schema(
 		&mut self,
-		schema: Valid<CreateSchema>,
+		schema: Valid<SetSchema>,
 	) -> Result<Schema, Error> {
 		let schema = schema.into_inner();
 		let schema = Schema {

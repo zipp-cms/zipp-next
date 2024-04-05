@@ -59,6 +59,19 @@ impl QueryFields {
 	}
 }
 
+impl<A, B> From<(A, B)> for FieldSelector
+where
+	A: Into<String>,
+	B: Into<String>,
+{
+	fn from((schema, field): (A, B)) -> Self {
+		Self {
+			schema: schema.into(),
+			field: field.into(),
+		}
+	}
+}
+
 impl Filter {
 	pub fn is_none(&self) -> bool {
 		matches!(self, Filter::None)

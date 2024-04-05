@@ -17,7 +17,7 @@ async fn test_memory() {
 		.field(Field::builder("name", FieldKind::Text))
 		.build();
 
-	let schema = db.create_schema(schema).await.unwrap();
+	let schema = db.set_schema(schema).await.unwrap();
 
 	let entries = db
 		.create_schema_entries(

@@ -11,6 +11,7 @@ use base64::{
 };
 use rand::{rngs::OsRng, RngCore};
 use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::Value;
 
 /// A Database Kind
 ///
@@ -136,6 +137,12 @@ impl FromStr for Id {
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		Self::parse_b64(s)
+	}
+}
+
+impl From<Id> for Value {
+	fn from(id: Id) -> Self {
+		Value::String(id.to_string())
 	}
 }
 
