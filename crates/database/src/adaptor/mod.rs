@@ -11,7 +11,7 @@ pub use crate::error::Error;
 use crate::types::{
 	guards::Valid,
 	query::Query,
-	schema::{CreateSchema, Schema, SchemaEntries},
+	schema::{Schema, SchemaEntries, SetSchema},
 };
 
 #[derive(Debug, Clone)]
@@ -37,7 +37,7 @@ pub trait Adaptor: fmt::Debug {
 	/// Creates a new schema
 	async fn create_schema(
 		&self,
-		schema: Valid<CreateSchema>,
+		schema: Valid<SetSchema>,
 	) -> Result<Schema, Error>;
 
 	/// Returns a schema by its name if the schema definition exists

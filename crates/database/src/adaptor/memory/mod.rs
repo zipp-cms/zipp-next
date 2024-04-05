@@ -10,7 +10,7 @@ use crate::{
 	types::{
 		guards::Valid,
 		query::Query,
-		schema::{CreateSchema, Schema, SchemaEntries},
+		schema::{Schema, SchemaEntries, SetSchema},
 	},
 	Error,
 };
@@ -37,7 +37,7 @@ impl MemoryDatabase {
 impl Adaptor for MemoryDatabase {
 	async fn create_schema(
 		&self,
-		schema: Valid<CreateSchema>,
+		schema: Valid<SetSchema>,
 	) -> Result<Schema, Error> {
 		let mut schemas = self.schemas.write().unwrap();
 

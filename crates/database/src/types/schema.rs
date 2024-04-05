@@ -8,7 +8,7 @@ use serde_json::Value;
 ///
 /// The name needs to be unique across the entire database
 #[derive(Debug, Clone)]
-pub struct CreateSchema {
+pub struct SetSchema {
 	pub name: String,
 	pub fields: Vec<Field>,
 }
@@ -80,13 +80,13 @@ impl Field {
 
 #[derive(Debug, Clone)]
 pub struct SchemaBuilder {
-	inner: CreateSchema,
+	inner: SetSchema,
 }
 
 impl SchemaBuilder {
 	fn new(name: impl Into<String>) -> Self {
 		Self {
-			inner: CreateSchema {
+			inner: SetSchema {
 				name: name.into(),
 				fields: Vec::new(),
 			},
@@ -98,7 +98,7 @@ impl SchemaBuilder {
 		self
 	}
 
-	pub fn build(self) -> CreateSchema {
+	pub fn build(self) -> SetSchema {
 		self.inner
 	}
 }
@@ -169,6 +169,14 @@ impl SchemaEntriesBuilder {
 
 	pub fn entry(mut self, entry: SchemaEntryBuilder) -> Self {
 		self.inner.0.push(entry.build());
+		self
+	}
+
+	pub fn entries(
+		mut self,
+		entries: impl Iterator<Item = SchemaEntry>,
+	) -> Self {
+		self.inner.0.extend(entries);
 		self
 	}
 

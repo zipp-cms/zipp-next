@@ -22,7 +22,10 @@ pub mod types;
 
 mod adaptor;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+	collections::{BTreeMap, BTreeSet},
+	sync::Arc,
+};
 
 use adaptor::Adaptor;
 use error::Error;
@@ -31,21 +34,21 @@ use types::{
 	guards::Valid,
 	id::Id,
 	query::Query,
-	schema::{CreateSchema, Schema, SchemaEntries, SchemaFieldValue},
+	schema::{Schema, SchemaEntries, SchemaFieldValue, SetSchema},
 };
 
 use crate::{adaptor::types::validate_schema_value, types::query::FieldQuery};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Database {
-	adaptor: Box<dyn Adaptor>,
+	adaptor: Arc<dyn Adaptor>,
 }
 
 impl Database {
 	#[cfg(feature = "memory")]
 	pub fn new_memory() -> Self {
 		Self {
-			adaptor: Box::new(adaptor::memory::MemoryDatabase::new()),
+			adaptor: Arc::new(adaptor::memory::MemoryDatabase::new()),
 		}
 	}
 
@@ -56,10 +59,7 @@ impl Database {
 	///
 	/// ## Note
 	/// The schema name needs to be globally unique
-	pub async fn create_schema(
-		&self,
-		schema: CreateSchema,
-	) -> Result<Schema, Error> {
+	pub async fn set_schema(&self, schema: SetSchema) -> Result<Schema, Error> {
 		// todo validate and make sure the schema is correct
 		// we need atleast one primary, no duplicate keys
 		// related values need to match another field
@@ -67,7 +67,7 @@ impl Database {
 		if let Some(_existing_schema) =
 			self.adaptor.get_schema(&schema.name).await?
 		{
-			todo!("schema already exists")
+			todo!("schema update if needed")
 		}
 
 		self.adaptor
@@ -76,15 +76,6 @@ impl Database {
 	}
 
 	/// Create a new schema data this might update multiple schemas
-	///
-	/// schema data needs to be structured as
-	/// ```json
-	/// [
-	///		{
-	/// 		"field": "value",
-	/// 	}
-	/// ]
-	/// ```
 	///
 	/// ## Note
 	/// Related fields will be check to contain the correct data
@@ -96,9 +87,6 @@ impl Database {
 		mut entries: SchemaEntries,
 	) -> Result<SchemaEntries, Error> {
 		// validate the data
-
-		// todo add related id when nesting
-
 		self.validate_schema_entries(&schema, &mut entries).await?;
 
 		self.adaptor.create_schema_entries(schema, entries).await
@@ -108,7 +96,7 @@ impl Database {
 	///
 	/// Multiple schemas can be queried at once
 	/// ```json
-	/// 	{
+	/// {
 	/// 	"schema": [
 	/// 		"field1",
 	/// 		"field2",
