@@ -1,3 +1,5 @@
+mod users;
+
 use clap::Parser;
 use fire_http::get;
 use tracing::info;

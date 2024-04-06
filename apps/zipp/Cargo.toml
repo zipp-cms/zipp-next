@@ -18,6 +18,10 @@ tokio = { version = "1.37.0", features = [
 ] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-serde = "1.0.197"
+database = { version = "0.1.0", path = "../../crates/database", features = [
+	"memory",
+] }
+email_address = "0.2.4"
 serde_json = "1.0.115"
+serde = { version = "1.0.197", features = ["derive"] }
 thiserror = "1.0.58"
