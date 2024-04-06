@@ -24,7 +24,15 @@ impl PartialEq for Field {
 	}
 }
 
-#[derive(Debug)]
+impl Clone for Field {
+	fn clone(&self) -> Self {
+		Self {
+			inner: self.inner.clone_box(),
+		}
+	}
+}
+
+#[derive(Debug, Clone)]
 pub struct Component {
 	pub name: String,
 	pub handle: String,

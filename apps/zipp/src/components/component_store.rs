@@ -1,4 +1,8 @@
 use core::fmt;
+use std::{
+	collections::HashMap,
+	sync::{Arc, RwLock},
+};
 
 use tokio::io;
 
@@ -24,7 +28,7 @@ pub trait Persistent<T> {
 }
 
 pub struct ComponentStore {
-	components: Vec<Component>,
+	components: Arc<RwLock<HashMap<String, Component>>>,
 	field_kinds: FieldKinds,
 	pub persistent: Box<dyn Persistent<Vec<ComponentDto>>>,
 }
@@ -37,10 +41,13 @@ impl ComponentStore {
 
 		// todo: this should be done in the json storage
 		// turn ComponentDto into Component
-		let components: Vec<Component> = components
-			.into_iter()
-			.map(|c| Component::from_dto(c, &field_kinds))
-			.collect();
+		let components = Arc::new(RwLock::new(
+			components
+				.into_iter()
+				.map(|c| Component::from_dto(c, &field_kinds))
+				.map(|c| (c.handle.clone(), c))
+				.collect(),
+		));
 
 		Self {
 			components,
@@ -49,13 +56,28 @@ impl ComponentStore {
 		}
 	}
 
-	pub fn add(&mut self, component: Component) {
-		self.components.push(component);
+	pub fn get_all(&self) -> Vec<Component> {
+		let components = self.components.read().unwrap();
+		components.values().cloned().collect()
+	}
+
+	pub fn get_by_handle(&self, handle: &str) -> Option<Component> {
+		let components = self.components.read().unwrap();
+		components.get(handle).cloned()
+	}
+
+	pub fn remove_by_handle(&self, handle: &str) {
+		self.components.write().unwrap().remove(handle);
+	}
+
+	pub fn insert(&self, component: Component) {
+		let mut components = self.components.write().unwrap();
+		components.insert(component.handle.clone(), component);
 	}
 
 	pub async fn save(&self, file_name: Option<&str>) {
 		let components: Vec<ComponentDto> =
-			self.components.iter().map(|c| c.to_dto()).collect();
+			self.get_all().iter().map(|c| c.to_dto()).collect();
 		self.persistent.save(file_name, &components).await;
 	}
 
@@ -68,7 +90,7 @@ impl ComponentStore {
 
 impl PartialEq for ComponentStore {
 	fn eq(&self, other: &Self) -> bool {
-		self.components == other.components
+		todo!("ComponentStore::eq")
 	}
 }
 
@@ -85,17 +107,19 @@ mod tests {
 
 	// Component Store use cases:
 	// - [x] get a list of all components
-	// - [~] add a new component
-	// - [ ] update a component
-	// - [ ] delete a component
-	// - [ ] get a specific component by handle
+	// - [x] add a new component (insert)
+	// - [x] update a component (insert)
+	// - [x] delete a component
+	// - [x] get a specific component by handle
 	// implies:
 	// - [x] load from disk
 	// - [x] save to disk
-	// - [ ] thread safe
+	// - [x] thread safe
 	// - [ ] equal comparison for testing
 
-	use crate::components::component_store::ComponentStore;
+	use crate::components::{
+		component_store::ComponentStore, default_field_kinds::TextField, Field,
+	};
 
 	use super::*;
 
@@ -124,7 +148,7 @@ mod tests {
 		.await;
 
 		let component = Component::new("test".to_string(), "test".to_string());
-		components.add(component);
+		components.insert(component);
 
 		let stringified = format!("{:?}", components);
 
@@ -142,7 +166,7 @@ mod tests {
 		.await;
 
 		let component = Component::new("test".to_string(), "test".to_string());
-		components.add(component);
+		components.insert(component);
 
 		components
 			.save(Some("testfiles/components/minimal2.json"))
@@ -154,5 +178,66 @@ mod tests {
 		.await;
 
 		assert_eq!(components, components2);
+	}
+
+	#[tokio::test]
+	async fn test_get_all() {
+		let components = ComponentStore::new_json_storage(
+			"testfiles/components/minimal.json",
+		)
+		.await;
+
+		let all = components.get_all();
+
+		assert_eq!(2, all.len());
+	}
+
+	#[tokio::test]
+	async fn test_get_by_handle() {
+		let components = ComponentStore::new_json_storage(
+			"testfiles/components/minimal.json",
+		)
+		.await;
+
+		let component = components.get_by_handle("button");
+
+		assert!(component.is_some());
+	}
+
+	#[tokio::test]
+	async fn test_remove_by_handle() {
+		let mut components = ComponentStore::new_json_storage(
+			"testfiles/components/minimal.json",
+		)
+		.await;
+
+		components.remove_by_handle("button");
+
+		let all = components.get_all();
+
+		assert_eq!(1, all.len());
+	}
+
+	#[tokio::test]
+	async fn test_update() {
+		let components = ComponentStore::new_json_storage(
+			"testfiles/components/minimal.json",
+		)
+		.await;
+
+		let mut component = components.get_by_handle("button").unwrap().clone();
+		component.name = "new name".to_string();
+
+		component.fields.insert(
+			"new field".to_string(),
+			Field::new(Box::new(TextField::default())),
+		);
+
+		components.insert(component);
+
+		let updated = components.get_by_handle("button").unwrap();
+
+		assert_eq!("new name", updated.name);
+		assert!(updated.fields.get("new field").is_some());
 	}
 }

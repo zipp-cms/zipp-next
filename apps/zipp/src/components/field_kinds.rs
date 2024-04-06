@@ -22,6 +22,7 @@ pub enum ValidateError {
 pub trait FieldTrait: Debug {
 	fn name(&self) -> String;
 	fn settings(&self) -> Settings;
+	fn clone_box(&self) -> Box<dyn FieldTrait>;
 	fn validate(&self, value: &serde_json::Value) -> Result<(), ValidateError>;
 }
 

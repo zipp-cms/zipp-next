@@ -29,47 +29,7 @@ impl FieldKind for NumberFieldKind {
 	}
 }
 
-// #[derive(Debug, serde::Deserialize)]
-// #[serde(transparent)]
-// struct MaxSetting(pub u32);
-
-// impl FieldTrait for MaxSetting {
-// 	fn validate(&self, value: &Value) -> Result<(), ValidateError> {
-// 		value
-// 			.as_u64()
-// 			.filter(|v| self.0 as u64 > *v)
-// 			.map(|_| ())
-// 			.ok_or(ValidateError::ValidationFailed)
-// 	}
-// }
-
-// impl Default for MaxSetting {
-// 	fn default() -> Self {
-// 		Self(u32::MAX)
-// 	}
-// }
-
-// #[derive(Debug, serde::Deserialize)]
-// #[serde(transparent)]
-// struct MinSetting(pub u32);
-
-// impl FieldTrait for MinSetting {
-// 	fn validate(&self, value: &Value) -> Result<(), ValidateError> {
-// 		value
-// 			.as_u64()
-// 			.filter(|v| self.0 as u64 <= *v)
-// 			.map(|_| ())
-// 			.ok_or(ValidateError::ValidationFailed)
-// 	}
-// }
-
-// impl Default for MinSetting {
-// 	fn default() -> Self {
-// 		Self(u32::MIN)
-// 	}
-// }
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 #[serde(default = "NumberField::default")]
 pub struct NumberField {
 	max: u32,
@@ -126,6 +86,10 @@ impl FieldTrait for NumberField {
 		settings
 	}
 
+	fn clone_box(&self) -> Box<dyn FieldTrait> {
+		Box::new(self.clone())
+	}
+
 	fn validate(&self, value: &Value) -> Result<(), ValidateError> {
 		self.max_validate(value).and(self.min_validate(value))
 	}
@@ -150,7 +114,7 @@ impl FieldKind for TextFieldKind {
 	}
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 #[serde(default = "TextField::default")]
 pub struct TextField {
 	max_length: i32,
@@ -182,5 +146,9 @@ impl FieldTrait for TextField {
 			.filter(|v| self.max_length as usize > v.len())
 			.map(|_| ())
 			.ok_or(ValidateError::ValidationFailed)
+	}
+
+	fn clone_box(&self) -> Box<dyn FieldTrait> {
+		Box::new(self.clone())
 	}
 }
