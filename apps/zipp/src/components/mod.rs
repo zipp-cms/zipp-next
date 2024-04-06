@@ -18,6 +18,12 @@ impl Field {
 	}
 }
 
+impl PartialEq for Field {
+	fn eq(&self, other: &Self) -> bool {
+		todo!("Field::eq")
+	}
+}
+
 #[derive(Debug)]
 pub struct Component {
 	pub name: String,
@@ -47,16 +53,35 @@ impl Component {
 				.collect(),
 		}
 	}
+
+	pub fn to_dto(&self) -> ComponentDto {
+		ComponentDto {
+			name: self.name.clone(),
+			handle: self.handle.clone(),
+			fields: self
+				.fields
+				.iter()
+				.map(|(name, field)| {
+					(
+						name.clone(),
+						FieldDto {
+							kind: field.inner.name(),
+							settings: field.inner.settings(),
+						},
+					)
+				})
+				.collect(),
+		}
+	}
 }
 
-// impl Field {
-// 	pub fn new(kind: String) -> Self {
-// 		Self {
-// 			kind,
-// 			settings: Vec::new(),
-// 		}
-// 	}
-// }
+impl PartialEq for Component {
+	fn eq(&self, other: &Self) -> bool {
+		self.name == other.name
+			&& self.handle == other.handle
+			&& self.fields == other.fields
+	}
+}
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct FieldDto {

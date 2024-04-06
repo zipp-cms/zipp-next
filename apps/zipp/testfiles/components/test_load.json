@@ -5,9 +5,7 @@
     "fields": {
       "label": {
         "kind": "text",
-        "settings": {
-          "max_length": 250
-        }
+        "settings": {}
       }
     }
   },
@@ -18,8 +16,8 @@
       "count": {
         "kind": "number",
         "settings": {
-          "min": 0,
-          "max": 100
+          "min": 10,
+          "max": 10
         }
       }
     }

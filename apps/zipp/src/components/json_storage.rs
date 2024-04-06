@@ -35,9 +35,25 @@ impl Persistent<Vec<ComponentDto>> for JsonStorage {
 		})
 	}
 
-	async fn save(&self, components: &Vec<ComponentDto>) {
-		for component in components {
-			println!("Saving component: {:?}", component.name)
+	async fn save(
+		&self,
+		file_name: Option<&str>,
+		components: &Vec<ComponentDto>,
+	) {
+		// Convert the components to a JSON string
+		let json = match serde_json::to_string(components) {
+			Ok(json) => json,
+			Err(err) => {
+				error!("Failed to serialize components: {:?}", err);
+				return;
+			}
+		};
+
+		let file_name = file_name.unwrap_or(&self.file_name);
+
+		// Write the JSON string to a file
+		if let Err(err) = tokio::fs::write(file_name, json).await {
+			error!("Failed to write to file {}: {:?}", file_name, err);
 		}
 	}
 }

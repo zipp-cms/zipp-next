@@ -20,6 +20,8 @@ pub enum ValidateError {
 }
 
 pub trait FieldTrait: Debug {
+	fn name(&self) -> String;
+	fn settings(&self) -> Settings;
 	fn validate(&self, value: &serde_json::Value) -> Result<(), ValidateError>;
 }
 

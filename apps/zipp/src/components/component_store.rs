@@ -20,13 +20,13 @@ pub enum LoadError {
 #[async_trait::async_trait]
 pub trait Persistent<T> {
 	async fn load(&self) -> Result<T, LoadError>;
-	async fn save(&self, contents: &T);
+	async fn save(&self, file_name: Option<&str>, contents: &T);
 }
 
 pub struct ComponentStore {
 	components: Vec<Component>,
 	field_kinds: FieldKinds,
-	persistent: Box<dyn Persistent<Vec<ComponentDto>>>,
+	pub persistent: Box<dyn Persistent<Vec<ComponentDto>>>,
 }
 
 impl ComponentStore {
@@ -51,7 +51,12 @@ impl ComponentStore {
 
 	pub fn add(&mut self, component: Component) {
 		self.components.push(component);
-		// todo: maybe save to persistent storage
+	}
+
+	pub async fn save(&self, file_name: Option<&str>) {
+		let components: Vec<ComponentDto> =
+			self.components.iter().map(|c| c.to_dto()).collect();
+		self.persistent.save(file_name, &components).await;
 	}
 
 	// /// Add a field kind to the store
@@ -59,6 +64,12 @@ impl ComponentStore {
 	// pub fn add_field_kind(&mut self, kind: FieldKind) {
 	// 	self.field_kinds.push(kind);
 	// }
+}
+
+impl PartialEq for ComponentStore {
+	fn eq(&self, other: &Self) -> bool {
+		self.components == other.components
+	}
 }
 
 impl fmt::Debug for ComponentStore {
@@ -72,17 +83,76 @@ impl fmt::Debug for ComponentStore {
 #[cfg(test)]
 mod tests {
 
+	// Component Store use cases:
+	// - [x] get a list of all components
+	// - [~] add a new component
+	// - [ ] update a component
+	// - [ ] delete a component
+	// - [ ] get a specific component by handle
+	// implies:
+	// - [x] load from disk
+	// - [x] save to disk
+	// - [ ] thread safe
+	// - [ ] equal comparison for testing
+
 	use crate::components::component_store::ComponentStore;
 
 	use super::*;
 
 	#[tokio::test]
-	async fn test_save() {
+	async fn test_load_from_disk() {
 		let components = ComponentStore::new_json_storage(
+			"testfiles/components/test_load.json",
+		)
+		.await;
+
+		let stringified = format!("{:?}", components);
+
+		assert_eq!(
+			"ComponentStore { components: [Component { name: \"Button\", handle: \"button\", fields: {\"label\": Field { inner: TextField { max_length: 255 } }} }, Component { name: \"counter\", handle: \"counter\", fields: {\"count\": Field { inner: NumberField { max: 10, min: 10 } }} }] }".to_string()
+			,
+			stringified);
+
+		println!("{:?}", stringified);
+	}
+
+	#[tokio::test]
+	async fn test_add_component() {
+		let mut components = ComponentStore::new_json_storage(
 			"testfiles/components/minimal.json",
 		)
 		.await;
 
-		println!("{:?}", components);
+		let component = Component::new("test".to_string(), "test".to_string());
+		components.add(component);
+
+		let stringified = format!("{:?}", components);
+
+		assert!(stringified.contains(
+			"Component { name: \"test\", handle: \"test\", fields: {} }"
+		));
+	}
+	// todo: test a component that has fields
+
+	#[tokio::test]
+	async fn test_save_to_disk() {
+		let mut components = ComponentStore::new_json_storage(
+			"testfiles/components/minimal.json",
+		)
+		.await;
+
+		let component = Component::new("test".to_string(), "test".to_string());
+		components.add(component);
+
+		components
+			.save(Some("testfiles/components/minimal2.json"))
+			.await;
+
+		let mut components2 = ComponentStore::new_json_storage(
+			"testfiles/components/minimal2.json",
+		)
+		.await;
+
+		assert_eq!(components, components2);
 	}
 }
