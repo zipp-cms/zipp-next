@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Button",
+    "handle": "button",
+    "fields": {
+      "label": {
+        "kind": "text",
+        "settings": {
+          "max_length": 250
+        }
+      }
+    }
+  },
+  {
+    "name": "counter",
+    "handle": "counter",
+    "fields": {
+      "count": {
+        "kind": "number",
+        "settings": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    }
+  }
+]

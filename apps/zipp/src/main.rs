@@ -2,6 +2,8 @@ use clap::Parser;
 use fire_http::get;
 use tracing::info;
 
+pub mod components;
+
 #[derive(Debug, Parser)]
 struct Opts {
 	#[clap(subcommand)]
