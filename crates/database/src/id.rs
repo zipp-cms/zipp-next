@@ -25,12 +25,14 @@ use serde_json::Value;
 pub struct Kind([u8; 2]);
 
 impl Kind {
-	pub fn new(component: bool, kind: u16) -> Self {
+	pub const fn new(component: bool, kind: u16) -> Self {
 		let mut bytes = [0u8; 2];
 		let kind_bytes = kind.to_be_bytes();
 
 		// check that the first bit is not set of kind
-		assert_eq!(kind_bytes[0] & 0b1000_0000, 0, "Kind has first bit set!");
+		if kind_bytes[0] & 0b1000_0000 != 0 {
+			panic!("Kind has first bit set!");
+		}
 		if component {
 			bytes[0] |= 0b1000_0000;
 		}
@@ -58,7 +60,7 @@ impl Kind {
 /// +----+------+----+  
 /// | 40 |  40  | 16 |  
 /// +----+------+----+  
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Id([u8; 12]);
 
 impl Id {
