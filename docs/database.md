@@ -7,9 +7,7 @@ The database is then obligated to update it's own layout to accommodate the new 
 
 Read performance should be favored instead of write. Since in every case this cms is inteded reads will overweight writes.
 
-
 The db provide an endpoint to define a schema of an element.
-
 
 ### Postgres
 
@@ -18,12 +16,12 @@ If we would create a dynamic schema using postgres.
 Creating a table for each element seems not that much of a problem.
 But i think when querying all elements or a few shared ones the performance might become a problem.
 
-
 ### Set Schema
 
 // maybe instead of index we use filter?
 
 Entry schema
+
 ```json
 {
   "name": "entity",
@@ -82,6 +80,7 @@ Entry schema
 ```
 
 Component Schema
+
 ```json
 {
   // name required to start with component
@@ -115,10 +114,9 @@ Component Schema
 }
 ```
 
-
-
 Query get latest entry bySiteId
 Query should probably be similar to graphQl
+
 ```json
 {
   "schema": "entry",
@@ -148,20 +146,38 @@ Query should probably be similar to graphQl
 }
 ```
 
+components query
 
+```json
+// get component by Id with fields
+
+[
+	"myField",
+	"field2",
+	{
+		// this component is related to the parent via the
+		// related component query
+		"name": "myNestedField",
+		"fields": ["otherField", "thirdField"]
+	}
+]
+
+// how can the query be done??
+```
 
 db api
-- set Schema
-- delete Schema
-- set Component
-- delete Component
 
-- create Schema Data
-- read (with: filter) Schema Data
-- update Schema Data
-- delete Schema Data
+-   set Schema
+-   delete Schema
+-   set Component
+-   delete Component
 
-- create Component Data
-- read (wuth: filter) Component Data
-- update Component Data
-- delete Component Data
+-   create Schema Data
+-   read (with: filter) Schema Data
+-   update Schema Data
+-   delete Schema Data
+
+-   create Component Data
+-   read (wuth: filter) Component Data
+-   update Component Data
+-   delete Component Data

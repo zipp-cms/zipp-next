@@ -1,78 +1,101 @@
-mod components;
-mod schema;
-
-use std::sync::RwLock;
-
-use components::ComponentRepository;
-use schema::SchemaRepository;
-
-use crate::{
-	types::{component::Component, query::Query, schema::Schema},
-	Database, Error,
+use std::{
+	collections::BTreeMap,
+	hash::Hash,
+	marker::PhantomData,
+	sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
-#[derive(Debug)]
-pub struct MemoryDatabase {
-	schemas: RwLock<SchemaRepository>,
-	components: RwLock<ComponentRepository>,
+#[derive(Debug, Clone, Copy)]
+pub struct Connection<'a> {
+	inner: PhantomData<&'a ()>,
 }
 
-impl MemoryDatabase {
+impl<'a> Connection<'a> {
+	pub(super) fn new() -> Self {
+		Self { inner: PhantomData }
+	}
+}
+
+#[derive(Debug)]
+pub struct Table<K, V> {
+	inner: BTreeMap<K, V>,
+}
+
+impl<K, V> Table<K, V>
+where
+	K: Ord + Eq + Hash,
+{
 	pub fn new() -> Self {
 		Self {
-			schemas: RwLock::new(SchemaRepository::new()),
-			components: RwLock::new(ComponentRepository::new()),
+			inner: BTreeMap::new(),
 		}
+	}
+
+	pub fn get(&self, key: &K) -> Option<&V> {
+		self.inner.get(key)
+	}
+
+	pub fn find<F>(&self, f: F) -> Option<&V>
+	where
+		F: Fn(&V) -> bool,
+	{
+		self.inner.values().find(|v| f(v))
+	}
+
+	pub fn any<F>(&self, f: F) -> bool
+	where
+		F: Fn(&V) -> bool,
+	{
+		self.inner.values().any(f)
+	}
+
+	pub fn all<F>(&self, f: F) -> bool
+	where
+		F: Fn(&V) -> bool,
+	{
+		self.inner.values().all(f)
+	}
+
+	/// Returns an error if the value already exists
+	pub fn insert(&mut self, key: K, value: V) -> Result<(), AlreadyExists> {
+		if self.inner.contains_key(&key) {
+			return Err(AlreadyExists);
+		}
+
+		self.inner.insert(key, value);
+
+		Ok(())
 	}
 }
 
-#[async_trait::async_trait]
-impl Database for MemoryDatabase {
-	async fn set_schema(&self, schema: Schema) -> Result<(), Error> {
-		let mut schemas = self.schemas.write().unwrap();
+#[derive(Debug)]
+pub struct AlreadyExists;
 
-		schemas.set_schema(schema)
+#[derive(Debug)]
+pub struct ReadWrite<T> {
+	inner: Arc<RwLock<T>>,
+}
+
+impl<T> ReadWrite<T> {
+	pub fn new(inner: T) -> Self {
+		Self {
+			inner: Arc::new(RwLock::new(inner)),
+		}
 	}
 
-	async fn get_schema(&self, name: &str) -> Result<Option<Schema>, Error> {
-		let schemas = self.schemas.read().unwrap();
-
-		schemas.get_schema(name)
+	pub fn read(&self) -> RwLockReadGuard<'_, T> {
+		self.inner.read().unwrap()
 	}
 
-	async fn delete_schema(&self, name: &str) -> Result<(), Error> {
-		let mut schemas = self.schemas.write().unwrap();
-
-		schemas.delete_schema(name)
+	pub fn write(&self) -> RwLockWriteGuard<'_, T> {
+		self.inner.write().unwrap()
 	}
+}
 
-	async fn query_schema_data(
-		&self,
-		query: Query,
-	) -> Result<super::schema::Data, Error> {
-		let schemas = self.schemas.read().unwrap();
-
-		schemas.query_schema_data(query)
-	}
-
-	async fn set_component(&self, component: Component) -> Result<(), Error> {
-		let mut components = self.components.write().unwrap();
-
-		components.set_component(component)
-	}
-
-	async fn get_component(
-		&self,
-		name: &str,
-	) -> Result<Option<Component>, Error> {
-		let components = self.components.read().unwrap();
-
-		components.get_component(name)
-	}
-
-	async fn delete_component(&self, name: &str) -> Result<(), Error> {
-		let mut components = self.components.write().unwrap();
-
-		components.delete_component(name)
+impl<T> Clone for ReadWrite<T> {
+	fn clone(&self) -> Self {
+		Self {
+			inner: self.inner.clone(),
+		}
 	}
 }

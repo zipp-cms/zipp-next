@@ -1,4 +1,5 @@
 use std::{
+	borrow::Cow,
 	fmt,
 	str::FromStr,
 	time::{SystemTime, UNIX_EPOCH},
@@ -9,6 +10,8 @@ use base64::{
 	DecodeError,
 };
 use rand::{rngs::OsRng, RngCore};
+use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::Value;
 
 /// A Database Kind
 ///
@@ -22,13 +25,15 @@ use rand::{rngs::OsRng, RngCore};
 pub struct Kind([u8; 2]);
 
 impl Kind {
-	pub fn new(internal: bool, kind: u16) -> Self {
+	pub const fn new(component: bool, kind: u16) -> Self {
 		let mut bytes = [0u8; 2];
 		let kind_bytes = kind.to_be_bytes();
 
 		// check that the first bit is not set of kind
-		assert_eq!(kind_bytes[0] & 0b1000_0000, 0, "Kind has first bit set!");
-		if internal {
+		if kind_bytes[0] & 0b1000_0000 != 0 {
+			panic!("Kind has first bit set!");
+		}
+		if component {
 			bytes[0] |= 0b1000_0000;
 		}
 
@@ -55,7 +60,7 @@ impl Kind {
 /// +----+------+----+  
 /// | 40 |  40  | 16 |  
 /// +----+------+----+  
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Id([u8; 12]);
 
 impl Id {
@@ -134,6 +139,31 @@ impl FromStr for Id {
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		Self::parse_b64(s)
+	}
+}
+
+impl From<Id> for Value {
+	fn from(id: Id) -> Self {
+		Value::String(id.to_string())
+	}
+}
+
+impl Serialize for Id {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		serializer.serialize_str(&self.to_b64())
+	}
+}
+
+impl<'de> Deserialize<'de> for Id {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: Deserializer<'de>,
+	{
+		let s: Cow<'_, str> = Deserialize::deserialize(deserializer)?;
+		Id::parse_b64(s.as_ref()).map_err(D::Error::custom)
 	}
 }
 
