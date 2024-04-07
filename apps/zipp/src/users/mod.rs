@@ -1,18 +1,20 @@
+pub mod api;
+mod persistent;
+
 use database::{
 	id::{Id, Kind},
 	Connection, ConnectionKind, Database,
 };
 use email_address::EmailAddress;
+use serde::{Deserialize, Serialize};
 
 use crate::users::persistent::memory::Memory;
 
 use self::persistent::{InsertRawUser, RawUser, UsersPersistent};
 
-mod persistent;
-
 pub const KIND: Kind = Kind::new(false, 1);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
 	pub id: Id,
 	pub email: EmailAddress,

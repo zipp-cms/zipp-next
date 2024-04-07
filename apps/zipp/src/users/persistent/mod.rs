@@ -19,7 +19,7 @@ pub struct InsertRawUser {
 }
 
 #[async_trait::async_trait]
-pub trait UsersPersistent: fmt::Debug {
+pub trait UsersPersistent: fmt::Debug + Send + Sync {
 	async fn insert(
 		&self,
 		conn: Connection<'_>,

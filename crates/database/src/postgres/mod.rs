@@ -1,15 +1,15 @@
 pub mod error;
 
-use std::ops::{Deref, DerefMut};
-
 use deadpool::managed::PoolError;
 use deadpool_postgres::{
-	ClientWrapper, CreatePoolError, Manager, Object, Pool, Runtime,
+	ClientWrapper, CreatePoolError, Object, Pool, Runtime,
 };
+use serde::Deserialize;
 use tokio_postgres::{NoTls, Statement};
 
 use self::error::{CreateError, Error, GetError, TransactionError};
 
+#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
 	user: String,
 	password: String,
