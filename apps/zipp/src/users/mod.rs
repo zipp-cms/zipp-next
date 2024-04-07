@@ -3,7 +3,7 @@ mod persistent;
 
 use database::{
 	id::{Id, Kind},
-	Connection, ConnectionKind, Database,
+	Connection, Database, DatabaseKind,
 };
 use email_address::EmailAddress;
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,9 @@ use crate::users::persistent::memory::Memory;
 use self::persistent::{InsertRawUser, RawUser, UsersPersistent};
 
 pub const KIND: Kind = Kind::new(false, 1);
+
+// contains all migration files
+// const MIGRATIONS: &[Migration] = &[];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -55,10 +58,10 @@ pub struct Users {
 }
 
 impl Users {
-	pub async fn new(conn: Connection<'_>) -> Self {
+	pub async fn new(conn: &Database) -> Self {
 		let persistent = match conn.kind() {
-			ConnectionKind::Memory => Box::new(Memory::new()),
-			ConnectionKind::Postgres => todo!(),
+			DatabaseKind::Memory => Box::new(Memory::new()),
+			DatabaseKind::Postgres => todo!(),
 		};
 
 		Self { inner: persistent }
@@ -125,7 +128,7 @@ mod tests {
 		let db = db.get().await.unwrap();
 		let conn = db.connection();
 
-		let users = Users::new(conn).await;
+		let users = Users::new(&db).await;
 
 		let user = users
 			.create_user(

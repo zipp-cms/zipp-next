@@ -13,6 +13,7 @@
 //! > .connection
 //! > > Connection (MemoryConnection, PostgresConnection)
 
+use migrations::Migrations;
 use postgres::{
 	error::{CreateError, GetError},
 	Config, PostgresPool,
@@ -20,6 +21,7 @@ use postgres::{
 
 pub mod id;
 pub mod memory;
+pub mod migrations;
 pub mod postgres;
 
 mod types;
@@ -34,76 +36,73 @@ enum Inner {
 #[derive(Debug, Clone)]
 pub struct DatabasePool {
 	inner: Inner,
+	migrations: Migrations,
 }
 
 impl DatabasePool {
+	/// Create a new memory database pool
 	pub fn new_memory() -> Self {
 		Self {
 			inner: Inner::Memory,
+			migrations: Migrations::new(),
 		}
 	}
 
+	/// Create a new postgres database pool
 	pub async fn new_postgres(cfg: Config) -> Result<Self, CreateError> {
 		Ok(Self {
 			inner: Inner::Postgres(PostgresPool::new(cfg).await?),
+			migrations: Migrations::new(),
 		})
 	}
 
+	/// Get a database from the pool
 	pub async fn get(&self) -> Result<Database, GetError> {
 		match &self.inner {
 			Inner::Memory => Ok(Database {
 				inner: DatabaseInner::Memory,
+				migrations: self.migrations.clone(),
 			}),
 			Inner::Postgres(pg) => Ok(Database {
 				inner: DatabaseInner::Postgres(pg.get().await?),
+				migrations: self.migrations.clone(),
 			}),
 		}
 	}
 }
-
-// #[derive(Debug, Clone)]
-// pub enum Accessor {
-// 	Memory(MemoryAccessor),
-// 	Postgres(PostgresAccessor),
-// }
-
-// #[derive(Debug, Clone)]
-// pub struct MemoryAccessor {}
-
-// impl MemoryAccessor {
-// 	pub fn get(&self, conn: Connection) -> () {
-// 		match conn.inner {
-// 			ConnectionInner::Memory(_) => (),
-// 			ConnectionInner::Postgres(_) => unreachable!("memory expected"),
-// 		}
-// 	}
-// }
-
-// #[derive(Debug, Clone)]
-// pub struct PostgresAccessor {}
-
-// impl PostgresAccessor {
-// 	pub fn get<'a>(&self, conn: Connection<'a>) -> postgres::Connection<'a> {
-// 		match conn.inner {
-// 			ConnectionInner::Memory(_) => unreachable!("postgres expected"),
-// 			ConnectionInner::Postgres(pg) => pg,
-// 		}
-// 	}
-// }
 
 enum DatabaseInner {
 	Memory,
 	Postgres(postgres::Postgres),
 }
 
-// needs to provide transaction and commit, as well as normal queries
-// how should it be called, maybe something like GenericlCient?
-// or Access??
+/// A Database from the pool
+// needs to provide transaction and commit
 pub struct Database {
 	inner: DatabaseInner,
+	migrations: Migrations,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum DatabaseKind {
+	Memory,
+	Postgres,
 }
 
 impl Database {
+	/// Get the kind of the database
+	pub fn kind(&self) -> DatabaseKind {
+		match self.inner {
+			DatabaseInner::Memory => DatabaseKind::Memory,
+			DatabaseInner::Postgres(_) => DatabaseKind::Postgres,
+		}
+	}
+
+	/// Get the migrations
+	pub fn migrations(&self) -> Migrations {
+		self.migrations.clone()
+	}
+
 	pub fn connection(&self) -> Connection {
 		match &self.inner {
 			DatabaseInner::Memory => Connection {
@@ -116,6 +115,7 @@ impl Database {
 	}
 }
 
+/// A database connection
 #[derive(Debug, Clone, Copy)]
 pub struct Connection<'a> {
 	inner: ConnectionInner<'a>,
@@ -130,13 +130,6 @@ impl<'a> Connection<'a> {
 	// 		}
 	// 	}
 	// }
-
-	pub fn kind(&self) -> ConnectionKind {
-		match self.inner {
-			ConnectionInner::Memory(_) => ConnectionKind::Memory,
-			ConnectionInner::Postgres(_) => ConnectionKind::Postgres,
-		}
-	}
 
 	pub fn get<T: FromConnection<'a>>(&self) -> T {
 		T::from_connection(*self)
@@ -155,12 +148,6 @@ impl<'a> Connection<'a> {
 			ConnectionInner::Postgres(pg) => pg,
 		}
 	}
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum ConnectionKind {
-	Memory,
-	Postgres,
 }
 
 #[derive(Debug, Clone, Copy)]

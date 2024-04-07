@@ -1,4 +1,4 @@
-pub mod components;
+mod components;
 mod users;
 
 use std::fs;
@@ -75,7 +75,7 @@ async fn main() {
 	let conn = db.connection();
 
 	// create instances
-	let users = Users::new(conn).await;
+	let users = Users::new(&db).await;
 
 	// create http server
 	let mut fire = fire_http::build("127.0.0.1:3000").await.unwrap();
