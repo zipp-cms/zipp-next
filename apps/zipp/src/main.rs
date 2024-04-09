@@ -25,6 +25,8 @@ struct Opts {
 	tracing: Option<String>,
 }
 
+const DEFAULT_CONFIG_PATH: &str = "./zipp.toml";
+
 #[derive(Debug, Parser)]
 enum SubCommand {}
 
@@ -45,12 +47,14 @@ async fn main() {
 	let opts = Opts::parse();
 
 	// read config
-	let cfg: Config = if let Some(path) = opts.config {
-		let cfg = fs::read_to_string(path).unwrap();
-
-		toml::from_str(&cfg).unwrap()
-	} else {
-		Config::default()
+	let cfg_path = opts
+		.config
+		.clone()
+		.unwrap_or_else(|| DEFAULT_CONFIG_PATH.into());
+	let cfg: Config = match fs::read_to_string(&cfg_path) {
+		Ok(cfg) => toml::from_str(&cfg).unwrap(),
+		Err(_) if cfg!(debug_assertions) => Config::default(),
+		Err(_) => panic!("Config file is required"),
 	};
 
 	// init logging using env filter
@@ -75,7 +79,7 @@ async fn main() {
 	let conn = db.connection();
 
 	// create instances
-	let users = Users::new(&db).await;
+	let users = Users::new(&db).await.unwrap();
 
 	// create http server
 	let mut fire = fire_http::build("127.0.0.1:3000").await.unwrap();

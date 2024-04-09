@@ -3,6 +3,8 @@ mod persistent;
 
 use database::{
 	id::{Id, Kind},
+	migrations::MigrationError,
+	postgres::error::{Error as PgError, GetError},
 	Connection, Database, DatabaseKind,
 };
 use email_address::EmailAddress;
@@ -10,7 +12,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::users::persistent::memory::Memory;
 
-use self::persistent::{InsertRawUser, RawUser, UsersPersistent};
+use self::persistent::{
+	postgres::Postgres, InsertRawUser, RawUser, UsersPersistent,
+};
 
 pub const KIND: Kind = Kind::new(false, 1);
 
@@ -50,6 +54,9 @@ pub enum Error {
 
 	#[error("a connection error occured!")]
 	Connection(String),
+
+	#[error("a postgres error occured!")]
+	Postgres(#[from] PgError),
 }
 
 #[derive(Debug)]
@@ -58,13 +65,13 @@ pub struct Users {
 }
 
 impl Users {
-	pub async fn new(conn: &Database) -> Self {
-		let persistent = match conn.kind() {
+	pub async fn new(conn: &Database) -> Result<Self, MigrationError> {
+		let persistent: Box<dyn UsersPersistent> = match conn.kind() {
 			DatabaseKind::Memory => Box::new(Memory::new()),
-			DatabaseKind::Postgres => todo!(),
+			DatabaseKind::Postgres => Box::new(Postgres::new(conn).await?),
 		};
 
-		Self { inner: persistent }
+		Ok(Self { inner: persistent })
 	}
 
 	pub async fn create_user(
@@ -128,7 +135,7 @@ mod tests {
 		let db = db.get().await.unwrap();
 		let conn = db.connection();
 
-		let users = Users::new(&db).await;
+		let users = Users::new(&db).await.unwrap();
 
 		let user = users
 			.create_user(
