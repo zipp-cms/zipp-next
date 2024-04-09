@@ -20,6 +20,7 @@ use postgres::{
 };
 
 pub mod id;
+pub mod macros;
 pub mod memory;
 pub mod migrations;
 pub mod postgres;
@@ -50,10 +51,19 @@ impl DatabasePool {
 
 	/// Create a new postgres database pool
 	pub async fn new_postgres(cfg: Config) -> Result<Self, CreateError> {
-		Ok(Self {
+		let this = Self {
 			inner: Inner::Postgres(PostgresPool::new(cfg).await?),
 			migrations: Migrations::new(),
-		})
+		};
+
+		let db = this.get().await.map_err(CreateError::Get)?;
+
+		this.migrations
+			.init(&db)
+			.await
+			.map_err(|e| CreateError::Migration(e.to_string()))?;
+
+		Ok(this)
 	}
 
 	/// Get a database from the pool
@@ -68,6 +78,11 @@ impl DatabasePool {
 				migrations: self.migrations.clone(),
 			}),
 		}
+	}
+
+	/// Get the migrations
+	pub async fn get_migrations(&self) -> Migrations {
+		self.migrations.clone()
 	}
 }
 
@@ -146,6 +161,13 @@ impl<'a> Connection<'a> {
 		match self.inner {
 			ConnectionInner::Memory(_) => unreachable!("postgres expected"),
 			ConnectionInner::Postgres(pg) => pg,
+		}
+	}
+
+	pub fn try_into_postgres(self) -> Option<postgres::Connection<'a>> {
+		match self.inner {
+			ConnectionInner::Memory(_) => None,
+			ConnectionInner::Postgres(pg) => Some(pg),
 		}
 	}
 }

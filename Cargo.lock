@@ -351,6 +351,7 @@ dependencies = [
  "chrono",
  "deadpool",
  "deadpool-postgres",
+ "indexmap",
  "rand",
  "serde",
  "serde_json",

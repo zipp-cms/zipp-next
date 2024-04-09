@@ -5,7 +5,7 @@ use deadpool_postgres::{
 	ClientWrapper, CreatePoolError, Object, Pool, Runtime,
 };
 use serde::Deserialize;
-use tokio_postgres::{NoTls, Statement};
+use tokio_postgres::{types::ToSql, NoTls, Row, Statement, ToStatement};
 
 use self::error::{CreateError, Error, GetError, TransactionError};
 
@@ -128,6 +128,84 @@ impl Connection<'_> {
 			ConnectionInner::Transaction(tr) => {
 				tr.prepare_cached(query).await.map_err(Error::from_pg)
 			}
+		}
+	}
+
+	/// Executes a sequence of SQL statements using the simple query protocol.
+	///
+	/// Statements should be separated by semicolons. If an error occurs, execution of the sequence will stop at that
+	/// point. This is intended for use when, for example, initializing a database schema.
+	///
+	/// # Warning
+	///
+	/// Prepared statements should be use for any query which contains user-specified data, as they provided the
+	/// functionality to safely embed that data in the request. Do not form statements via string concatenation and pass
+	/// them to this method!
+	pub async fn batch_execute(&self, query: &str) -> Result<(), Error> {
+		match &self.inner {
+			ConnectionInner::Client(client) => {
+				client.batch_execute(query).await.map_err(Error::from_pg)
+			}
+			ConnectionInner::Transaction(tr) => {
+				tr.batch_execute(query).await.map_err(Error::from_pg)
+			}
+		}
+	}
+
+	/// Executes a statement, returning a vector of the resulting rows.
+	///
+	/// A statement may contain parameters, specified by `$n`, where `n` is the index of the parameter of the list
+	/// provided, 1-indexed.
+	///
+	/// The `statement` argument can either be a `Statement`, or a raw query string. If the same statement will be
+	/// repeatedly executed (perhaps with different query parameters), consider preparing the statement up front
+	/// with the `prepare` method.
+	pub async fn query<T>(
+		&self,
+		statement: &T,
+		params: &[&(dyn ToSql + Sync)],
+	) -> Result<Vec<Row>, Error>
+	where
+		T: ?Sized + ToStatement,
+	{
+		match &self.inner {
+			ConnectionInner::Client(client) => client
+				.query(statement, params)
+				.await
+				.map_err(Error::from_pg),
+			ConnectionInner::Transaction(tr) => {
+				tr.query(statement, params).await.map_err(Error::from_pg)
+			}
+		}
+	}
+
+	/// Executes a statement which returns a single row, returning it.
+	///
+	/// Returns an error if the query does not return exactly one row.
+	///
+	/// A statement may contain parameters, specified by `$n`, where `n` is the index of the parameter of the list
+	/// provided, 1-indexed.
+	///
+	/// The `statement` argument can either be a `Statement`, or a raw query string. If the same statement will be
+	/// repeatedly executed (perhaps with different query parameters), consider preparing the statement up front
+	/// with the `prepare` method.
+	pub async fn query_one<T>(
+		&self,
+		statement: &T,
+		params: &[&(dyn ToSql + Sync)],
+	) -> Result<Row, Error>
+	where
+		T: ?Sized + ToStatement,
+	{
+		match &self.inner {
+			ConnectionInner::Client(client) => client
+				.query_one(statement, params)
+				.await
+				.map_err(Error::from_pg),
+			ConnectionInner::Transaction(tr) => tr
+				.query_one(statement, params)
+				.await
+				.map_err(Error::from_pg),
 		}
 	}
 }
