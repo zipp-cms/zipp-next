@@ -4,4 +4,7 @@
 	export let block: BlockOf<TextField>;
 </script>
 
-<input type="text" class="w-full rounded-lg p-2 hover:bg-gray-100" placeholder={block.name} />
+<div>
+	{block.name}
+	<input type="text" class="rounded-lg border p-2 hover:bg-gray-100" />
+</div>

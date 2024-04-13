@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { get } from 'svelte/store';
 	import type { ComponentField, BlockOf, ComponentContext } from '../../editor.ts';
 	import Block from '../../block.svelte';
 	export let block: BlockOf<ComponentField>;
@@ -6,24 +7,32 @@
 	import Button from '../../../../registry/button/button.svelte';
 
 	const { blocks } = context;
+
+	const isRootChild = block.parent === get(context.rootBlock);
 </script>
 
-<!-- {block.settings?.min ?? ''} -->
+{#if isRootChild}
+	<hr class=" my-8 border-2 border-black/20" />
+{/if}
 
 <div>
-	{block.name}
-	<!-- style:background={`rgb(${Math.random() * 255} ${Math.random() * 255} ${Math.random() * 255} / .2)`} -->
+	{#if isRootChild}
+		<h2 class="mb-4 font-serif text-3xl">{block.name}</h2>
+	{:else}
+		{block.name}
+	{/if}
+
 	{#each block.content as subBlock}
 		<Block block={$blocks.get(subBlock)} {context} />
 	{/each}
 </div>
 
-<div class="flex gap-2">
-	{#if block.content.length < (block.settings?.max ?? Infinity)}
+{#if block.content.length < (block.settings?.max ?? Infinity)}
+	<div class="flex max-w-fit gap-2 rounded-3xl border p-2 shadow-lg">
 		{#each block.subComponentOptions as option}
 			<Button on:click={context.choose(block, option)}>
 				{option}
 			</Button>
 		{/each}
-	{/if}
-</div>
+	</div>
+{/if}

@@ -1,4 +1,5 @@
 import { get, writable, type Writable } from 'svelte/store';
+import { createBlocksUI, type BlocksUI } from './ui.ts';
 
 type Component = {
 	name: string;
@@ -79,7 +80,8 @@ export interface ComponentContext {
 	choose: (parent: Block, child: string) => void;
 	setProperty: (block: Block, key: string, value: unknown) => void;
 	blocks: Writable<Map<string, Block>>;
-	rootBlock: Writable<string[]>;
+	rootBlock: Writable<string>;
+	ui: BlocksUI;
 }
 
 let id = 0;
@@ -140,23 +142,14 @@ export function componentContext(components: Component[], rootHandle: string): C
 	}
 
 	function setProperty(block: Block, key: string, value: unknown) {
-		blocks.update((bs) => {
-			const updated = bs.map((b) => {
-				if (b === block) {
-					return {
-						...b,
-						properties: {
-							...b.properties,
-							[key]: value
-						}
-					};
-				}
-				blockMap.set(b.id, b);
-				return b;
-			});
-
-			return updated;
+		blockMap.set(block.id, {
+			...block,
+			properties: {
+				...block.properties,
+				[key]: value
+			}
 		});
+		rebuildBlocks();
 	}
 
 	function choose(parent: Block, child: string) {
@@ -185,10 +178,13 @@ export function componentContext(components: Component[], rootHandle: string): C
 		blocks.set(new Map(blockMap));
 	}
 
+	const ui = createBlocksUI();
+
 	return {
 		rootBlock,
 		blocks,
 		choose,
-		setProperty
+		setProperty,
+		ui
 	};
 }
