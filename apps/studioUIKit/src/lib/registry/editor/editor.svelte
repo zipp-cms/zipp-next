@@ -6,9 +6,9 @@
 	export let root = 'page';
 
 	const context = componentContext(components, root);
-	const { blocks, rootBlocks } = context;
+	const { blocks, rootBlock } = context;
 </script>
 
-{#each $rootBlocks.map((b) => $blocks.get(b)) as block}
-	<Block {block} {context}></Block>
-{/each}
+<main class="mx-8">
+	<Block block={$blocks.get($rootBlock)} {context}></Block>
+</main>

@@ -5,21 +5,20 @@
 	export let context: ComponentContext;
 
 	// with glob import:
-	const blockTypes = import.meta.glob('./blocks/*.svelte', { eager: true });
+	const blockTypes = import.meta.glob('./blocks/fields/*.svelte', { eager: true });
+	import ComponentBlock from './blocks/component.svelte';
 
-	function blockComponent(kind: string) {
-		return blockTypes[`./blocks/${kind}.svelte`]?.default;
+	function blockComponent(block: Block) {
+		if (block.type === 'field') {
+			return blockTypes[`./blocks/fields/${block.kind}.svelte`]?.default;
+		}
+
+		return ComponentBlock;
 	}
 </script>
 
-<div class="relative m-4 rounded border border-blue-400 p-4">
-	<pre
-		class="absolute right-0 top-0 rounded bg-yellow-100 text-yellow-800">name={block.name}/kind={block.kind}/belongsto={block.belongsTo}]</pre>
-	{#if block.kind === 'component'}
-		<h3 class="text-xl font-bold">{block.name}</h3>
-	{:else}
-		{block.name}
-	{/if}
+<div class="relative p-2">
+	<button class="absolute right-full size-6 rounded hover:bg-gray-200"> :: </button>
 
-	<svelte:component this={blockComponent(block.kind)} {block} {context} />
+	<svelte:component this={blockComponent(block)} {block} {context} />
 </div>
