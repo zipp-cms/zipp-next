@@ -9,12 +9,14 @@
 
 	const { blocks } = context;
 	let open = true;
+
+	const isRoot = block.parent === '';
 </script>
 
-<div>
-	<header class="flex items-center gap-2">
+<div class={!isRoot && 'mb-3 rounded-xl border shadow-sm'}>
+	<header class="flex items-center gap-2 rounded-xl bg-gray-50">
 		<Button variant="ghost" on:click={() => (open = !open)}>
-			<span class="font-semibold underline">
+			<span class="font-semibold">
 				{block.name}
 			</span>
 			{#if open}

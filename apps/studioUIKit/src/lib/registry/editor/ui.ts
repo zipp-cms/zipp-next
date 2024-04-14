@@ -1,23 +1,31 @@
 import { writable, type Writable } from 'svelte/store';
 import type { Block } from './editor.ts';
 
+type ContextMenuHandler = (block: Block, event: MouseEvent) => void;
+
 export interface BlocksUI {
 	selection: Selection;
 	openContextMenu: (block: Block, event: MouseEvent) => void;
+	onContextMenuOpen: (handler: ContextMenuHandler) => void;
 }
 
 export function createBlocksUI(): BlocksUI {
 	const selection = createSelection();
 
-	function openContextMenu(block: Block, event: MouseEvent) {
-		console.log('openContextMenu', block, event);
+	const contextMenuHandlers: ContextMenuHandler[] = [];
 
-		// do something
+	function openContextMenu(block: Block, event: MouseEvent) {
+		for (const handler of contextMenuHandlers) {
+			handler(block, event);
+		}
 	}
 
 	return {
 		selection,
-		openContextMenu
+		openContextMenu,
+		onContextMenuOpen(handler) {
+			contextMenuHandlers.push(handler);
+		}
 	};
 }
 

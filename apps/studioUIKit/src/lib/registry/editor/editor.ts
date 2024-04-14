@@ -68,7 +68,6 @@ export type BlockOf<T extends BaseField | Component> = T & {
 	id: string;
 	name: string;
 	type: 'component' | 'field';
-	subComponentOptions: string[]; // list of allowed sub-components
 	level: number; // level of nesting
 	properties: Record<string, unknown>;
 	content: string[];
@@ -114,12 +113,11 @@ export function componentContext(components: Component[], rootHandle: string): C
 
 		const componentId = generateBlockId();
 		const fieldBlocks = Object.entries(component.fields).map(([key, field]) => {
-			const subComponentOptions = field.kind === 'component' ? field.settings.component : [];
 			return {
 				...field,
 				type: 'field',
 				name: key,
-				subComponentOptions,
+
 				level,
 				id: generateBlockId(),
 				properties: {},
@@ -132,7 +130,6 @@ export function componentContext(components: Component[], rootHandle: string): C
 			...component,
 			type: 'component',
 			id: componentId,
-			subComponentOptions: [],
 			level,
 			properties: {},
 			parent: '',

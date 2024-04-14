@@ -5,6 +5,7 @@
 	export let block: BlockOf<ComponentField>;
 	export let context: ComponentContext;
 	import Button from '../../../../registry/button/button.svelte';
+	import Component from '../component.svelte';
 
 	const { blocks } = context;
 
@@ -12,27 +13,44 @@
 </script>
 
 {#if isRootChild}
-	<hr class=" my-8 border-2 border-black/20" />
+	<hr class=" border-1 border-foreground/30 my-8" />
 {/if}
 
 <div>
 	{#if isRootChild}
 		<h2 class="mb-4 font-serif text-3xl">{block.name}</h2>
 	{:else}
-		{block.name}
+		<span class="text-foreground/50 font-bold">
+			{block.name}
+		</span>
 	{/if}
 
-	{#each block.content as subBlock}
-		<Block block={$blocks.get(subBlock)} {context} />
-	{/each}
+	{#if block.settings?.max === 1 && block.content.length === 1}
+		<!-- collapse subComponent -->
+		{@const subComponent = $blocks.get(block.content[0])}
+		<span class="bg-foreground/10 inline-block rounded-xl px-3 py-0.5 text-opacity-30"
+			>{subComponent?.name}</span
+		>
+		{#each subComponent?.content as field}
+			<Block block={$blocks.get(field)} {context} />
+		{/each}
+	{:else}
+		{#each block.content as subBlock}
+			<Block block={$blocks.get(subBlock)} {context} />
+		{/each}
+	{/if}
 </div>
 
 {#if block.content.length < (block.settings?.max ?? Infinity)}
-	<div class="flex max-w-fit gap-2 rounded-3xl border p-2 shadow-lg">
-		{#each block.subComponentOptions as option}
-			<Button on:click={context.choose(block, option)}>
-				{option}
-			</Button>
-		{/each}
-	</div>
+	{#if block.settings?.min > 0}
+		<div class="flex max-w-fit gap-2 rounded-3xl bg-gray-100 p-2">
+			{#each block.settings.component as option}
+				<Button variant="outline" class="bg-white" on:click={context.choose(block, option)}>
+					{option}
+				</Button>
+			{/each}
+		</div>
+	{:else if block.content.length === 0}
+		<p class="select-none text-gray-400">type / to add a new component</p>
+	{/if}
 {/if}

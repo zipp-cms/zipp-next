@@ -69,7 +69,32 @@
 				content: {
 					kind: 'component',
 					settings: {
-						component: ['button', 'text']
+						component: ['button', 'text', 'cta']
+					}
+				}
+			}
+		},
+		{
+			name: 'Call to action',
+			handle: 'cta',
+			fields: {
+				headline: {
+					kind: 'text',
+					settings: {
+						max_length: 100
+					}
+				},
+				text: {
+					kind: 'text',
+					settings: {
+						max_length: 100
+					}
+				},
+				buttons: {
+					kind: 'component',
+					settings: {
+						component: ['button'],
+						max: 1
 					}
 				}
 			}

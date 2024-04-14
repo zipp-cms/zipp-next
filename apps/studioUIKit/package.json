@@ -51,6 +51,7 @@
 		"bits-ui": "^0.21.2",
 		"class-variance-authority": "^0.7.0",
 		"clsx": "^2.1.0",
+		"hotkeys-js": "^3.13.7",
 		"lucide-svelte": "^0.368.0",
 		"tailwind-merge": "^2.2.2"
 	}

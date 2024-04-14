@@ -8,6 +8,7 @@
 	const blockTypes = import.meta.glob('./blocks/fields/*.svelte', { eager: true });
 	import ComponentBlock from './blocks/component.svelte';
 	import { GripVertical } from 'lucide-svelte';
+	import { scale } from 'svelte/transition';
 
 	function blockComponent(block: Block) {
 		if (block.type === 'field') {
@@ -25,9 +26,12 @@
 </script>
 
 <div
-	class="relative ml-2 rounded data-[activeBlock]:bg-black/[0.02]"
+	transition:scale={{ duration: 200, start: 0.98 }}
+	class="outline-foreground/10 relative ml-2 rounded-xl outline-2 data-[activeBlock]:outline"
 	data-activeBlock={$activeBlock === block.id || undefined}
 	on:mouseenter={handleMouseEnter}
+	on:mouseleave={() => activeBlock.set(block.parent)}
+	role="group"
 >
 	{#if $activeBlock === block.id}
 		<button
