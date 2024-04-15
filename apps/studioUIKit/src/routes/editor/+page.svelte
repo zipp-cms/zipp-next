@@ -94,7 +94,7 @@
 					kind: 'component',
 					settings: {
 						component: ['button'],
-						max: 1
+						max: 2
 					}
 				}
 			}

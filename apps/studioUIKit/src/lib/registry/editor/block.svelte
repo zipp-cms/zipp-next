@@ -27,10 +27,9 @@
 
 <div
 	transition:scale={{ duration: 200, start: 0.98 }}
-	class="outline-foreground/10 relative ml-2 rounded-xl outline-2 data-[activeBlock]:outline"
+	class="relative ml-2 rounded-xl outline-2 outline-blue-500 data-[activeBlock]:outline"
 	data-activeBlock={$activeBlock === block.id || undefined}
-	on:mouseenter={handleMouseEnter}
-	on:mouseleave={() => activeBlock.set(block.parent)}
+	on:click|stopPropagation={handleMouseEnter}
 	role="group"
 >
 	{#if $activeBlock === block.id}

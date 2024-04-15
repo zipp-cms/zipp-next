@@ -6,6 +6,7 @@
 	export let context: ComponentContext;
 	import Button from '../../../../registry/button/button.svelte';
 	import Component from '../component.svelte';
+	import BlockMenu from '../../blockMenu/blockMenu.svelte';
 
 	const { blocks } = context;
 
@@ -50,7 +51,12 @@
 				</Button>
 			{/each}
 		</div>
-	{:else if block.content.length === 0}
-		<p class="select-none text-gray-400">type / to add a new component</p>
+	{:else}
+		<BlockMenu {block} {context}></BlockMenu>
 	{/if}
+{/if}
+
+<!-- fill rest of page -->
+{#if isRootChild}
+	<div class="h-full min-h-[100vh] flex-grow"></div>
 {/if}
