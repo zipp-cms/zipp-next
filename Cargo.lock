@@ -299,19 +299,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "console"
-version = "0.15.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e1f83fc076bd6dd27517eacdf25fef6c4dfe5f1d7448bafaaf3a26f13b5e4eb"
-dependencies = [
- "encode_unicode",
- "lazy_static",
- "libc",
- "unicode-width",
- "windows-sys 0.52.0",
-]
-
-[[package]]
 name = "core-foundation-sys"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -351,6 +338,7 @@ dependencies = [
  "chrono",
  "deadpool",
  "deadpool-postgres",
+ "fire-postgres",
  "indexmap",
  "rand",
  "serde",
@@ -363,11 +351,10 @@ dependencies = [
 
 [[package]]
 name = "deadpool"
-version = "0.11.0"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c380a837cb8cb747898b1be7fa5ba5b871eb1210f8881d6512946c132617f80"
+checksum = "ff0fc28638c21092aba483136debc6e177fff3dace8c835d715866923b03323e"
 dependencies = [
- "console",
  "deadpool-runtime",
  "num_cpus",
  "tokio",
@@ -413,12 +400,6 @@ checksum = "e2153bd83ebc09db15bcbdc3e2194d901804952e3dc96967e1cd3b0c5c32d112"
 dependencies = [
  "serde",
 ]
-
-[[package]]
-name = "encode_unicode"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 
 [[package]]
 name = "equivalent"
@@ -501,6 +482,57 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+]
+
+[[package]]
+name = "fire-postgres"
+version = "0.3.0-alpha.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f71ec3515429d5ae08e49cec1d94cf12b07231166c425bfd39823d40a2ff6796"
+dependencies = [
+ "base64 0.22.0",
+ "bytes",
+ "chrono",
+ "deadpool",
+ "deadpool-postgres",
+ "fallible-iterator",
+ "fire-postgres-derive",
+ "fire-postgres-types",
+ "futures-util",
+ "pin-project-lite",
+ "postgres-protocol",
+ "postgres-types",
+ "rand",
+ "serde",
+ "thiserror",
+ "tokio-postgres",
+ "tracing",
+]
+
+[[package]]
+name = "fire-postgres-derive"
+version = "0.3.0-alpha.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2508e8c1697dec7eb3f05665fc3a1af49307f81f9ce519a276f7bf3ae68b6766"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "fire-postgres-types"
+version = "0.1.0-alpha.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f7b96d4f8737a3c29a4ecacc01ec6f52de0eaf9effb041e7b8e75c54e11ff33"
+dependencies = [
+ "base64 0.22.0",
+ "bytes",
+ "chrono",
+ "postgres-protocol",
+ "postgres-types",
+ "rand",
 ]
 
 [[package]]
@@ -1943,6 +1975,7 @@ dependencies = [
  "email_address",
  "fire-http",
  "fire-http-api",
+ "fire-postgres",
  "serde",
  "serde_json",
  "thiserror",

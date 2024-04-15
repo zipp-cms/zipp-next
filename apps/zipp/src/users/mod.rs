@@ -3,8 +3,6 @@ mod persistent;
 
 use database::{
 	id::{Id, Kind},
-	migrations::MigrationError,
-	postgres::error::{Error as PgError, GetError},
 	Connection, Database, DatabaseKind,
 };
 use email_address::EmailAddress;
@@ -13,7 +11,8 @@ use serde::{Deserialize, Serialize};
 use crate::users::persistent::memory::Memory;
 
 use self::persistent::{
-	postgres::Postgres, InsertRawUser, RawUser, UsersPersistent,
+	postgres::{Postgres, PostgresBuilder},
+	InsertRawUser, RawUser, UsersPersistent, UsersPersistentBuilder,
 };
 
 pub const KIND: Kind = Kind::new(false, 1);
@@ -56,34 +55,45 @@ pub enum Error {
 	Connection(String),
 
 	#[error("a postgres error occured!")]
-	Postgres(#[from] PgError),
+	Postgres(#[from] database::Error),
 }
 
 #[derive(Debug)]
 pub struct Users {
-	inner: Box<dyn UsersPersistent>,
+	inner: Box<dyn UsersPersistentBuilder>,
 }
 
 impl Users {
-	pub async fn new(conn: &Database) -> Result<Self, MigrationError> {
-		let persistent: Box<dyn UsersPersistent> = match conn.kind() {
+	pub async fn new(conn: &mut Database) -> Result<Self, Error> {
+		let persistent: Box<dyn UsersPersistentBuilder> = match conn.kind() {
 			DatabaseKind::Memory => Box::new(Memory::new()),
-			DatabaseKind::Postgres => Box::new(Postgres::new(conn).await?),
+			DatabaseKind::Postgres => {
+				Box::new(PostgresBuilder::new(conn).await?)
+			}
 		};
 
 		Ok(Self { inner: persistent })
 	}
 
-	pub async fn create_user(
-		&self,
-		conn: Connection<'_>,
-		user: CreateUser,
-	) -> Result<User, Error> {
+	pub fn with_conn<'a>(&'a self, conn: Connection<'a>) -> UsersWithConn<'a> {
+		UsersWithConn {
+			inner: self.inner.with_conn(conn),
+		}
+	}
+}
+
+#[derive(Debug)]
+pub struct UsersWithConn<'a> {
+	inner: Box<dyn UsersPersistent + 'a>,
+}
+
+impl UsersWithConn<'_> {
+	pub async fn create_user(&self, user: CreateUser) -> Result<User, Error> {
 		let insert_user = InsertRawUser {
 			email: user.email.to_string(),
 		};
 
-		let user = self.inner.insert(conn, insert_user).await?;
+		let user = self.inner.insert(insert_user).await?;
 
 		Ok(user.into())
 	}
@@ -94,22 +104,14 @@ impl Users {
 	// 	users.into_iter().map(Into::into).collect()
 	// }
 
-	pub async fn by_email(
-		&self,
-		conn: Connection<'_>,
-		email: &str,
-	) -> Result<Option<User>, Error> {
-		let user = self.inner.by_email(conn, email).await?;
+	pub async fn by_email(&self, email: &str) -> Result<Option<User>, Error> {
+		let user = self.inner.by_email(email).await?;
 
 		Ok(user.map(Into::into))
 	}
 
-	pub async fn by_id(
-		&self,
-		conn: Connection<'_>,
-		id: &Id,
-	) -> Result<Option<User>, Error> {
-		let user = self.inner.by_id(conn, id).await?;
+	pub async fn by_id(&self, id: &Id) -> Result<Option<User>, Error> {
+		let user = self.inner.by_id(id).await?;
 
 		Ok(user.map(Into::into))
 	}
@@ -132,31 +134,25 @@ mod tests {
 	#[tokio::test]
 	async fn test_users() {
 		let db = DatabasePool::new_memory();
-		let db = db.get().await.unwrap();
-		let conn = db.connection();
+		let mut db = db.get().await.unwrap();
 
-		let users = Users::new(&db).await.unwrap();
+		let users = Users::new(&mut db).await.unwrap();
+		let users = users.with_conn(db.connection());
 
 		let user = users
-			.create_user(
-				conn,
-				CreateUser {
-					email: "rust@rust.com".parse().unwrap(),
-				},
-			)
+			.create_user(CreateUser {
+				email: "rust@rust.com".parse().unwrap(),
+			})
 			.await
 			.unwrap();
 
 		assert_eq!(user.email.as_ref(), "rust@rust.com");
 
-		let n_user = users
-			.by_email(conn, user.email.as_ref())
-			.await
-			.unwrap()
-			.unwrap();
+		let n_user =
+			users.by_email(user.email.as_ref()).await.unwrap().unwrap();
 		assert_eq!(n_user.id, user.id);
 
-		let n_user = users.by_id(conn, &user.id).await.unwrap().unwrap();
+		let n_user = users.by_id(&user.id).await.unwrap().unwrap();
 		assert_eq!(n_user.id, user.id);
 	}
 }

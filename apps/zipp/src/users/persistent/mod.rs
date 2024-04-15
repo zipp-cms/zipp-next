@@ -1,9 +1,9 @@
 pub mod memory;
 pub mod postgres;
 
-use std::{fmt, future::Future, pin::Pin};
+use std::fmt;
 
-use database::{id::Id, Connection, FromConnection};
+use database::{id::Id, Connection};
 use serde::Deserialize;
 
 use super::Error;
@@ -20,24 +20,20 @@ pub struct InsertRawUser {
 }
 
 #[async_trait::async_trait]
+pub trait UsersPersistentBuilder: fmt::Debug + Send + Sync {
+	fn with_conn<'a>(
+		&'a self,
+		conn: Connection<'a>,
+	) -> Box<dyn UsersPersistent + 'a>;
+
+	fn clone_box(&self) -> Box<dyn UsersPersistentBuilder>;
+}
+
+#[async_trait::async_trait]
 pub trait UsersPersistent: fmt::Debug + Send + Sync {
-	async fn insert(
-		&self,
-		conn: Connection<'_>,
-		user: InsertRawUser,
-	) -> Result<RawUser, Error>;
+	async fn insert(&self, user: InsertRawUser) -> Result<RawUser, Error>;
 
-	async fn by_email(
-		&self,
-		conn: Connection<'_>,
-		email: &str,
-	) -> Result<Option<RawUser>, Error>;
+	async fn by_email(&self, email: &str) -> Result<Option<RawUser>, Error>;
 
-	async fn by_id(
-		&self,
-		conn: Connection<'_>,
-		id: &Id,
-	) -> Result<Option<RawUser>, Error>;
-
-	fn clone_box(&self) -> Box<dyn UsersPersistent>;
+	async fn by_id(&self, id: &Id) -> Result<Option<RawUser>, Error>;
 }

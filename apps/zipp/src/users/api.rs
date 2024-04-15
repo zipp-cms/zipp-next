@@ -78,10 +78,10 @@ pub async fn login(
 	db: &DatabasePool,
 ) -> Result<Login, Error> {
 	let db = db.get().await.map_err(Error::string_internal)?;
-	let conn = db.connection();
+	let users = users.with_conn(db.connection());
 
 	let user = users
-		.by_email(conn, req.email.as_ref())
+		.by_email(req.email.as_ref())
 		.await
 		.map_err(Error::string_internal)?;
 

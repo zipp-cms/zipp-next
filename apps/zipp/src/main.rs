@@ -4,7 +4,7 @@ mod users;
 use std::fs;
 
 use clap::Parser;
-use database::{postgres::Config as DbConfig, DatabasePool};
+use database::{Config as DbConfig, DatabasePool};
 use fire_http::get;
 use serde::Deserialize;
 use tracing::info;
@@ -75,11 +75,14 @@ async fn main() {
 			.expect("database failed"),
 		(false, false, None) => panic!("Database configuration is required"),
 	};
-	let db = db_pool.get().await.unwrap();
-	let conn = db.connection();
+	let mut db = db_pool.get().await.unwrap();
 
 	// create instances
-	let users = Users::new(&db).await.unwrap();
+	let users = Users::new(&mut db).await.unwrap();
+
+	// since we don't need the database anymore, we can drop it
+	// this makes sure we don't keep a connection running
+	drop(db);
 
 	// create http server
 	let mut fire = fire_http::build("127.0.0.1:3000").await.unwrap();

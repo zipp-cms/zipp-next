@@ -13,31 +13,37 @@
 //! > .connection
 //! > > Connection (MemoryConnection, PostgresConnection)
 
-use migrations::Migrations;
-use postgres::{
-	error::{CreateError, GetError},
-	Config, PostgresPool,
-};
+use postgres::{connection::ConnectionOwned, migrations::Migrations};
+
+pub use postgres::connection::Error;
+pub use postgres::database::DatabaseError;
+use serde::Deserialize;
 
 pub mod id;
 pub mod macros;
 pub mod memory;
-pub mod migrations;
-pub mod postgres;
 
 mod types;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Config {
+	user: String,
+	password: String,
+	database: String,
+	host: Option<String>,
+	port: Option<u16>,
+}
 
 #[derive(Debug, Clone)]
 enum Inner {
 	Memory,
-	Postgres(PostgresPool),
+	Postgres(postgres::Database),
 }
 
 // Maybe call this DatabasePools?
 #[derive(Debug, Clone)]
 pub struct DatabasePool {
 	inner: Inner,
-	migrations: Migrations,
 }
 
 impl DatabasePool {
@@ -45,57 +51,53 @@ impl DatabasePool {
 	pub fn new_memory() -> Self {
 		Self {
 			inner: Inner::Memory,
-			migrations: Migrations::new(),
 		}
 	}
 
 	/// Create a new postgres database pool
-	pub async fn new_postgres(cfg: Config) -> Result<Self, CreateError> {
-		let this = Self {
-			inner: Inner::Postgres(PostgresPool::new(cfg).await?),
-			migrations: Migrations::new(),
+	pub async fn new_postgres(cfg: Config) -> Result<Self, DatabaseError> {
+		let config = deadpool_postgres::Config {
+			user: Some(cfg.user),
+			password: Some(cfg.password),
+			dbname: Some(cfg.database),
+			host: cfg.host,
+			port: cfg.port,
+			..Default::default()
 		};
 
-		let db = this.get().await.map_err(CreateError::Get)?;
-
-		this.migrations
-			.init(&db)
-			.await
-			.map_err(|e| CreateError::Migration(e.to_string()))?;
-
-		Ok(this)
+		Ok(Self {
+			inner: Inner::Postgres(postgres::Database::with_cfg(config).await?),
+		})
 	}
 
 	/// Get a database from the pool
-	pub async fn get(&self) -> Result<Database, GetError> {
+	pub async fn get(&self) -> Result<Database, DatabaseError> {
 		match &self.inner {
 			Inner::Memory => Ok(Database {
 				inner: DatabaseInner::Memory,
-				migrations: self.migrations.clone(),
 			}),
 			Inner::Postgres(pg) => Ok(Database {
-				inner: DatabaseInner::Postgres(pg.get().await?),
-				migrations: self.migrations.clone(),
+				inner: DatabaseInner::Postgres {
+					conn: pg.get().await?,
+					migrations: pg.migrations(),
+				},
 			}),
 		}
-	}
-
-	/// Get the migrations
-	pub async fn get_migrations(&self) -> Migrations {
-		self.migrations.clone()
 	}
 }
 
 enum DatabaseInner {
 	Memory,
-	Postgres(postgres::Postgres),
+	Postgres {
+		conn: ConnectionOwned,
+		migrations: Migrations,
+	},
 }
 
 /// A Database from the pool
 // needs to provide transaction and commit
 pub struct Database {
 	inner: DatabaseInner,
-	migrations: Migrations,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -109,13 +111,26 @@ impl Database {
 	pub fn kind(&self) -> DatabaseKind {
 		match self.inner {
 			DatabaseInner::Memory => DatabaseKind::Memory,
-			DatabaseInner::Postgres(_) => DatabaseKind::Postgres,
+			DatabaseInner::Postgres { .. } => DatabaseKind::Postgres,
 		}
 	}
 
 	/// Get the migrations
-	pub fn migrations(&self) -> Migrations {
-		self.migrations.clone()
+	pub fn migrations(&self) -> Option<Migrations> {
+		match &self.inner {
+			DatabaseInner::Memory => None,
+			DatabaseInner::Postgres { migrations, .. } => {
+				Some(migrations.clone())
+			}
+		}
+	}
+
+	/// This will panic if not called when the connection is a postgres
+	pub fn connection_owned(&mut self) -> &mut ConnectionOwned {
+		match &mut self.inner {
+			DatabaseInner::Memory => panic!("memory connection"),
+			DatabaseInner::Postgres { conn, .. } => conn,
+		}
 	}
 
 	pub fn connection(&self) -> Connection {
@@ -123,8 +138,8 @@ impl Database {
 			DatabaseInner::Memory => Connection {
 				inner: ConnectionInner::Memory(memory::Connection::new()),
 			},
-			DatabaseInner::Postgres(pg) => Connection {
-				inner: ConnectionInner::Postgres(pg.connection()),
+			DatabaseInner::Postgres { conn, .. } => Connection {
+				inner: ConnectionInner::Postgres(conn.connection()),
 			},
 		}
 	}
@@ -137,15 +152,6 @@ pub struct Connection<'a> {
 }
 
 impl<'a> Connection<'a> {
-	// pub fn get_accessor(&self) -> Accessor {
-	// 	match self.inner {
-	// 		ConnectionInner::Memory => Accessor::Memory(MemoryAccessor {}),
-	// 		ConnectionInner::Postgres(_) => {
-	// 			Accessor::Postgres(PostgresAccessor {})
-	// 		}
-	// 	}
-	// }
-
 	pub fn get<T: FromConnection<'a>>(&self) -> T {
 		T::from_connection(*self)
 	}
@@ -202,16 +208,16 @@ impl<'a> FromConnection<'a> for memory::Connection<'a> {
 
 impl private::Sealed for memory::Connection<'_> {}
 
-// impl FromConnection for postgres::Connection<'_> {
-// 	fn from_connection<'a>(conn: Connection<'a>) -> Self {
-// 		match conn.inner {
-// 			ConnectionInner::Memory(_) => unreachable!("postgres expected"),
-// 			ConnectionInner::Postgres(pg) => pg,
-// 		}
-// 	}
-// }
+impl<'a> FromConnection<'a> for postgres::Connection<'a> {
+	fn from_connection(conn: Connection<'a>) -> Self {
+		match conn.inner {
+			ConnectionInner::Memory(_) => unreachable!("postgres expected"),
+			ConnectionInner::Postgres(pg) => pg,
+		}
+	}
+}
 
-// impl private::Sealed for postgres::Connection<'_> {}
+impl private::Sealed for postgres::Connection<'_> {}
 
 mod private {
 	pub trait Sealed {}

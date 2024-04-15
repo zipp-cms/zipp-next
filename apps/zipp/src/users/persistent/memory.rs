@@ -1,14 +1,14 @@
-use std::marker::PhantomData;
-
 use database::{
 	id::Id,
-	memory::{self, ReadWrite, Table},
+	memory::{ReadWrite, Table},
 	Connection,
 };
 
 use crate::users::KIND;
 
-use super::{Error, InsertRawUser, RawUser, UsersPersistent};
+use super::{
+	Error, InsertRawUser, RawUser, UsersPersistent, UsersPersistentBuilder,
+};
 
 #[derive(Debug, Clone)]
 pub struct Memory {
@@ -23,14 +23,25 @@ impl Memory {
 	}
 }
 
+impl UsersPersistentBuilder for Memory {
+	fn with_conn(&self, conn: Connection<'_>) -> Box<dyn UsersPersistent> {
+		let _conn = conn.into_memory();
+
+		Box::new(Self {
+			inner: self.inner.clone(),
+		})
+	}
+
+	fn clone_box(&self) -> Box<dyn UsersPersistentBuilder> {
+		Box::new(Self {
+			inner: self.inner.clone(),
+		})
+	}
+}
+
 #[async_trait::async_trait]
 impl UsersPersistent for Memory {
-	async fn insert(
-		&self,
-		conn: Connection<'_>,
-		user: InsertRawUser,
-	) -> Result<RawUser, Error> {
-		let _conn = conn.into_memory();
+	async fn insert(&self, user: InsertRawUser) -> Result<RawUser, Error> {
 		let mut table = self.inner.write();
 
 		// check email does not exist
@@ -50,31 +61,15 @@ impl UsersPersistent for Memory {
 		Ok(raw_user)
 	}
 
-	async fn by_email(
-		&self,
-		conn: Connection<'_>,
-		email: &str,
-	) -> Result<Option<RawUser>, Error> {
-		let _conn = conn.into_memory();
+	async fn by_email(&self, email: &str) -> Result<Option<RawUser>, Error> {
 		let table = self.inner.read();
 
 		Ok(table.find(|u| u.email == email).cloned())
 	}
 
-	async fn by_id(
-		&self,
-		conn: Connection<'_>,
-		id: &Id,
-	) -> Result<Option<RawUser>, Error> {
-		let _conn = conn.into_memory();
+	async fn by_id(&self, id: &Id) -> Result<Option<RawUser>, Error> {
 		let table = self.inner.read();
 
 		Ok(table.get(id).cloned())
-	}
-
-	fn clone_box(&self) -> Box<dyn UsersPersistent> {
-		Box::new(Self {
-			inner: self.inner.clone(),
-		})
 	}
 }
