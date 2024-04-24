@@ -58,7 +58,9 @@ async fn main() {
 	};
 
 	// init logging using env filter
-	let env_tracing = opts.tracing.unwrap_or_else(|| "zipp=info,warn".into());
+	let env_tracing = opts
+		.tracing
+		.unwrap_or_else(|| "zipp=info,fire_http=info,warn".into());
 	tracing_subscriber::fmt()
 		.with_env_filter(env_tracing)
 		.init();
@@ -98,7 +100,6 @@ async fn main() {
 	// todo run plugins before building
 
 	// build server and prepare to run it
-	fire.hide_startup_message();
 	let fire = fire.build().await.unwrap();
 
 	// todo prepare cron jobs (async tasks)

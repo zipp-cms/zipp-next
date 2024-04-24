@@ -13,6 +13,7 @@
 //! > .connection
 //! > > Connection (MemoryConnection, PostgresConnection)
 
+use fire_http::Resource;
 use postgres::{connection::ConnectionOwned, migrations::Migrations};
 
 pub use postgres::connection::Error;
@@ -23,7 +24,7 @@ pub mod id;
 pub mod macros;
 pub mod memory;
 
-mod types;
+// mod types;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
@@ -41,7 +42,7 @@ enum Inner {
 }
 
 // Maybe call this DatabasePools?
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Resource)]
 pub struct DatabasePool {
 	inner: Inner,
 }
@@ -56,7 +57,7 @@ impl DatabasePool {
 
 	/// Create a new postgres database pool
 	pub async fn new_postgres(cfg: Config) -> Result<Self, DatabaseError> {
-		let config = deadpool_postgres::Config {
+		let config = postgres::database::Config {
 			user: Some(cfg.user),
 			password: Some(cfg.password),
 			dbname: Some(cfg.database),

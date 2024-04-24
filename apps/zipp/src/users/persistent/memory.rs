@@ -41,19 +41,21 @@ impl UsersPersistentBuilder for Memory {
 
 #[async_trait::async_trait]
 impl UsersPersistent for Memory {
-	async fn insert(&self, user: InsertRawUser) -> Result<RawUser, Error> {
+	async fn insert(&self, user: InsertRawUser<'_>) -> Result<RawUser, Error> {
 		let mut table = self.inner.write();
 
 		// check email does not exist
 		if table.any(|u| u.email == user.email) {
-			return Err(Error::AlreadyExists { email: user.email });
+			return Err(Error::AlreadyExists {
+				email: user.email.to_string(),
+			});
 		}
 
 		let id = Id::new(KIND);
 
 		let raw_user = RawUser {
 			id,
-			email: user.email,
+			email: user.email.to_string(),
 		};
 
 		table.insert(id, raw_user.clone()).unwrap();

@@ -9,6 +9,9 @@ use base64::{
 	engine::{general_purpose::URL_SAFE_NO_PAD, Engine},
 	DecodeError,
 };
+use bytes::BytesMut;
+use postgres::filter::ParamData;
+use postgres_types::{to_sql_checked, FromSql, IsNull, ToSql, Type};
 use rand::{rngs::OsRng, RngCore};
 use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
@@ -164,6 +167,48 @@ impl<'de> Deserialize<'de> for Id {
 	{
 		let s: Cow<'_, str> = Deserialize::deserialize(deserializer)?;
 		Id::parse_b64(s.as_ref()).map_err(D::Error::custom)
+	}
+}
+
+impl ToSql for Id {
+	fn to_sql(
+		&self,
+		ty: &Type,
+		out: &mut BytesMut,
+	) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>>
+	where
+		Self: Sized,
+	{
+		self.to_b64().to_sql(ty, out)
+	}
+
+	fn accepts(ty: &Type) -> bool
+	where
+		Self: Sized,
+	{
+		<&str as ToSql>::accepts(ty)
+	}
+
+	to_sql_checked!();
+}
+
+impl<'r> FromSql<'r> for Id {
+	fn from_sql(
+		ty: &Type,
+		raw: &'r [u8],
+	) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
+		let s = <&str as FromSql>::from_sql(ty, raw)?;
+		s.parse().map_err(Into::into)
+	}
+
+	fn accepts(ty: &Type) -> bool {
+		<&str as FromSql>::accepts(ty)
+	}
+}
+
+impl ParamData for Id {
+	fn is_null(&self) -> bool {
+		false
 	}
 }
 

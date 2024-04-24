@@ -6,13 +6,14 @@ use database::{
 	Connection, Database, DatabaseKind,
 };
 use email_address::EmailAddress;
+use fire_http::Resource;
 use serde::{Deserialize, Serialize};
 
 use crate::users::persistent::memory::Memory;
 
 use self::persistent::{
-	postgres::{Postgres, PostgresBuilder},
-	InsertRawUser, RawUser, UsersPersistent, UsersPersistentBuilder,
+	postgres::PostgresBuilder, InsertRawUser, RawUser, UsersPersistent,
+	UsersPersistentBuilder,
 };
 
 pub const KIND: Kind = Kind::new(false, 1);
@@ -58,7 +59,7 @@ pub enum Error {
 	Postgres(#[from] database::Error),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct Users {
 	inner: Box<dyn UsersPersistentBuilder>,
 }
@@ -90,7 +91,7 @@ pub struct UsersWithConn<'a> {
 impl UsersWithConn<'_> {
 	pub async fn create_user(&self, user: CreateUser) -> Result<User, Error> {
 		let insert_user = InsertRawUser {
-			email: user.email.to_string(),
+			email: user.email.as_ref(),
 		};
 
 		let user = self.inner.insert(insert_user).await?;

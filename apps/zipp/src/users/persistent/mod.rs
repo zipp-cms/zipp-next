@@ -15,8 +15,8 @@ pub struct RawUser {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct InsertRawUser {
-	pub email: String,
+pub struct InsertRawUser<'a> {
+	pub email: &'a str,
 }
 
 #[async_trait::async_trait]
@@ -31,7 +31,7 @@ pub trait UsersPersistentBuilder: fmt::Debug + Send + Sync {
 
 #[async_trait::async_trait]
 pub trait UsersPersistent: fmt::Debug + Send + Sync {
-	async fn insert(&self, user: InsertRawUser) -> Result<RawUser, Error>;
+	async fn insert(&self, user: InsertRawUser<'_>) -> Result<RawUser, Error>;
 
 	async fn by_email(&self, email: &str) -> Result<Option<RawUser>, Error>;
 
