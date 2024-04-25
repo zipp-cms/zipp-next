@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import type { BlockOf, ComponentContext } from '../editor.ts';
 	import Fuse from 'fuse.js';
+	import { Box } from 'lucide-svelte';
 
 	export let context: ComponentContext;
 	export let block: BlockOf<ComponentField>;
@@ -43,11 +44,6 @@
 	});
 
 	function handleKeydown(e) {
-		if (e.key === '/') {
-			open = true;
-			return;
-		}
-
 		if (e.key === 'ArrowDown') {
 			e.preventDefault();
 			componentIndex = (componentIndex + 1) % filteredComponents.length;
@@ -70,6 +66,8 @@
 	function handleKeyup() {
 		const results = index.search(textarea.value.replace('/', ''));
 
+		open = textarea.value[0] === '/';
+
 		if (results.length === 0) {
 			filteredComponents = block.settings.component;
 			return;
@@ -82,13 +80,14 @@
 {#if focused}
 	<div class="relative flex-grow">
 		{#if open}
-			<ul class="absolute z-10 -translate-y-full rounded bg-white p-1 shadow">
+			<ul class="absolute z-10 -translate-y-full rounded border bg-white p-1 shadow">
 				{#each filteredComponents as component, i}
 					<li
 						data-active={componentIndex === i}
 						class="rounded px-2 py-1 data-[active=true]:bg-gray-100"
 					>
-						<button on:click={() => choose(component)}>
+						<button class="flex items-center gap-1" on:click={() => choose(component)}>
+							<Box strokeWidth={1.4} class="text-gray-400" size={18} />
 							{component}
 						</button>
 					</li>
