@@ -25,12 +25,17 @@
 	}
 </script>
 
+<!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
 	transition:scale={{ duration: 200, start: 0.98 }}
-	class="relative ml-2 rounded-xl outline-2 outline-blue-500 data-[activeBlock]:outline"
+	class="relative ml-2 flex h-full min-h-full flex-col rounded-xl {block.level === 0 ||
+	(block.type == 'field' && block?.kind === 'component')
+		? 'grow'
+		: 'grow-0'} outline-2 outline-blue-500 data-[activeBlock]:outline"
 	data-activeBlock={$activeBlock === block.id || undefined}
 	on:click|stopPropagation={handleMouseEnter}
-	role="group"
+	role="button"
+	tabindex="0"
 >
 	{#if $activeBlock === block.id}
 		<button

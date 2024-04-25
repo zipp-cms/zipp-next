@@ -13,7 +13,7 @@
 	const isRoot = block.parent === '';
 </script>
 
-<div class={!isRoot && 'mb-3 rounded-xl border shadow-sm'}>
+<div class={(!isRoot && 'mb-3 rounded-xl border shadow-sm') + ' flex grow flex-col'}>
 	<header class="flex items-center gap-2 rounded-xl bg-gray-50">
 		<Button variant="ghost" on:click={() => (open = !open)}>
 			<span class="font-semibold">
@@ -27,7 +27,7 @@
 		</Button>
 	</header>
 	{#if open}
-		<div class="pl-2" transition:slide>
+		<div class="flex grow flex-col pl-2" transition:slide>
 			{#each block.content as subBlock}
 				<Block block={$blocks.get(subBlock)} {context} />
 			{/each}

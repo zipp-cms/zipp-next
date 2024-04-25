@@ -118,7 +118,7 @@ export function componentContext(components: Component[], rootHandle: string): C
 				type: 'field',
 				name: key,
 
-				level,
+				level: level + 1,
 				id: generateBlockId(),
 				properties: {},
 				content: [],

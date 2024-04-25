@@ -58,5 +58,5 @@
 
 <!-- fill rest of page -->
 {#if isRootChild}
-	<div class="h-full min-h-[100vh] flex-grow"></div>
+	<div class="h-full min-h-10 flex-grow grow"></div>
 {/if}
