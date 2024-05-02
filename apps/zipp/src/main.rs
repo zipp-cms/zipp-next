@@ -1,4 +1,5 @@
 mod components;
+mod components_instances;
 mod users;
 
 use std::fs;
