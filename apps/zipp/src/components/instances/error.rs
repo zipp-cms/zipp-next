@@ -1,5 +1,3 @@
-mod persistent;
-
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error("a user with the email {email} already exists!")]

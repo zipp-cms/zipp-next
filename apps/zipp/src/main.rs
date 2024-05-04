@@ -1,6 +1,19 @@
+//! Startup process
+//!
+//! Load Plugins
+//!
+//! Load Config
+//! Load schemas
+//! Run migrations
+//!
+//! ...
+//!
+//! Events should only be triggered by controllers
+
 mod components;
-mod components_instances;
+mod fields;
 mod users;
+mod utils;
 
 use std::fs;
 
@@ -10,6 +23,8 @@ use fire_http::get;
 use serde::Deserialize;
 use tracing::info;
 use users::Users;
+
+use crate::{components::Components, fields::Fields};
 
 #[derive(Debug, Parser)]
 struct Opts {
@@ -82,6 +97,8 @@ async fn main() {
 
 	// create instances
 	let users = Users::new(&mut db).await.unwrap();
+	let fields = Fields::default();
+	let components = Components::new(&mut db).await.unwrap();
 
 	// since we don't need the database anymore, we can drop it
 	// this makes sure we don't keep a connection running
@@ -93,6 +110,8 @@ async fn main() {
 	// add global data
 	fire.add_data(db_pool);
 	fire.add_data(users);
+	fire.add_data(fields);
+	fire.add_data(components);
 
 	// register routes
 	users::api::register(&mut fire);

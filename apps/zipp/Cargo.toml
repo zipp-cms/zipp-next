@@ -28,3 +28,4 @@ serde = { version = "1.0.197", features = ["derive"] }
 thiserror = "1.0.58"
 toml = "0.8.12"
 fire-postgres = { package = "fire-postgres", version = "0.3.0-beta.2" }
+indexmap = { version = "2.2.6", features = ["serde"] }

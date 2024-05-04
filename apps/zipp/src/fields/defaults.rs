@@ -1,22 +1,20 @@
+use std::any::Any;
+
 use serde_json::Value;
 
-use super::field_kinds::{
-	FieldKind, FieldTrait, ParseFieldError, Settings, ValidateError,
-};
+use super::{Field, FieldKind, ParseFieldError, Settings, ValidateError};
 
-type Error = std::io::Error;
-
+#[derive(Debug, Clone)]
 pub struct NumberFieldKind;
-const NUMBER_FIELD_NAME: &str = "number";
 
 impl FieldKind for NumberFieldKind {
 	type Field = NumberField;
 
 	fn name() -> String {
-		NUMBER_FIELD_NAME.to_string()
+		"number".to_string()
 	}
 
-	fn build(
+	fn parse(
 		&self,
 		settings: Settings,
 	) -> Result<NumberField, ParseFieldError> {
@@ -32,8 +30,8 @@ impl FieldKind for NumberFieldKind {
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(default = "NumberField::default")]
 pub struct NumberField {
-	max: u32,
-	min: u32,
+	pub(crate) max: u32,
+	pub(crate) min: u32,
 }
 
 impl NumberField {
@@ -63,9 +61,9 @@ impl Default for NumberField {
 	}
 }
 
-impl FieldTrait for NumberField {
-	fn name(&self) -> String {
-		NUMBER_FIELD_NAME.to_string()
+impl Field for NumberField {
+	fn kind(&self) -> String {
+		NumberFieldKind::name()
 	}
 
 	fn settings(&self) -> Settings {
@@ -86,7 +84,7 @@ impl FieldTrait for NumberField {
 		settings
 	}
 
-	fn clone_box(&self) -> Box<dyn FieldTrait> {
+	fn clone_box(&self) -> Box<dyn Field> {
 		Box::new(self.clone())
 	}
 
@@ -95,6 +93,7 @@ impl FieldTrait for NumberField {
 	}
 }
 
+#[derive(Debug, Clone)]
 pub struct TextFieldKind;
 const TEXT_FIELD_NAME: &str = "text";
 
@@ -105,7 +104,7 @@ impl FieldKind for TextFieldKind {
 		TEXT_FIELD_NAME.to_string()
 	}
 
-	fn build(&self, settings: Settings) -> Result<TextField, ParseFieldError> {
+	fn parse(&self, settings: Settings) -> Result<TextField, ParseFieldError> {
 		let settings = Value::Object(settings.into_iter().collect());
 
 		let field: TextField = serde_json::from_value(settings).expect("todo");
@@ -126,10 +125,11 @@ impl Default for TextField {
 	}
 }
 
-impl FieldTrait for TextField {
-	fn name(&self) -> String {
-		TEXT_FIELD_NAME.to_string()
+impl Field for TextField {
+	fn kind(&self) -> String {
+		TextFieldKind::name()
 	}
+
 	fn settings(&self) -> Settings {
 		let mut settings = Settings::new();
 		if self.max_length != TextField::default().max_length {
@@ -140,6 +140,7 @@ impl FieldTrait for TextField {
 		}
 		settings
 	}
+
 	fn validate(&self, value: &Value) -> Result<(), ValidateError> {
 		value
 			.as_str()
@@ -148,7 +149,7 @@ impl FieldTrait for TextField {
 			.ok_or(ValidateError::ValidationFailed)
 	}
 
-	fn clone_box(&self) -> Box<dyn FieldTrait> {
+	fn clone_box(&self) -> Box<dyn Field> {
 		Box::new(self.clone())
 	}
 }

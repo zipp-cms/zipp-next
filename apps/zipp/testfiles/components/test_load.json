@@ -17,7 +17,7 @@
         "kind": "number",
         "settings": {
           "min": 10,
-          "max": 10
+          "max": 20
         }
       }
     }
