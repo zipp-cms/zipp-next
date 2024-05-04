@@ -1,47 +1,17 @@
-use std::any::Any;
 use std::collections::BTreeMap;
 
-use crate::fields::Field;
+use crate::fields::{BoxedFieldSchema, FieldSchema};
 
 // pub mod component_store;
 // pub mod default_field_kinds;
 // pub mod field_kinds;
 // pub mod json_storage;
 
-#[derive(Debug)]
-pub struct FieldSchema {
-	pub inner: Box<dyn Field>,
-}
-
-impl FieldSchema {
-	pub fn new(inner: Box<dyn Field>) -> Self {
-		Self { inner }
-	}
-
-	pub fn downcast_ref<T: Field>(&self) -> Option<&T> {
-		self.inner.as_any().downcast_ref()
-	}
-}
-
-impl PartialEq for FieldSchema {
-	fn eq(&self, other: &Self) -> bool {
-		todo!("Field::eq")
-	}
-}
-
-impl Clone for FieldSchema {
-	fn clone(&self) -> Self {
-		Self {
-			inner: self.inner.clone_box(),
-		}
-	}
-}
-
 #[derive(Debug, Clone)]
 pub struct ComponentSchema {
 	pub name: String,
 	pub handle: String,
-	pub fields: BTreeMap<String, FieldSchema>,
+	pub fields: BTreeMap<String, BoxedFieldSchema>,
 }
 
 impl ComponentSchema {
@@ -68,10 +38,10 @@ impl ComponentSchema {
 	//
 }
 
-impl PartialEq for ComponentSchema {
-	fn eq(&self, other: &Self) -> bool {
-		self.name == other.name
-			&& self.handle == other.handle
-			&& self.fields == other.fields
-	}
-}
+// impl PartialEq for ComponentSchema {
+// 	fn eq(&self, other: &Self) -> bool {
+// 		self.name == other.name
+// 			&& self.handle == other.handle
+// 			&& self.fields == other.fields
+// 	}
+// }

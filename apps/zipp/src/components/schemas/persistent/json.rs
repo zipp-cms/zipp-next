@@ -3,11 +3,11 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-	components::schemas::schema::{ComponentSchema, FieldSchema},
+	components::schemas::schema::ComponentSchema,
 	fields::{Fields, ParseFieldError},
 };
 
-use super::{Persistent, PersistentError};
+use super::{Persistent, SchemaError};
 
 #[derive(Debug)]
 pub struct JsonStorage {
@@ -27,20 +27,20 @@ impl Persistent for JsonStorage {
 	async fn load(
 		&mut self,
 		fields: &Fields,
-	) -> Result<Vec<ComponentSchema>, PersistentError> {
+	) -> Result<Vec<ComponentSchema>, SchemaError> {
 		let file_string = tokio::fs::read_to_string(&self.file_name)
 			.await
-			.map_err(|err| PersistentError::io(err, &self.file_name))?;
+			.map_err(|err| SchemaError::io(err, &self.file_name))?;
 
 		// todo convert from dto
 
 		let dtos: Vec<SchemaComponentDto> = serde_json::from_str(&file_string)
-			.map_err(|err| PersistentError::json(err, &self.file_name))?;
+			.map_err(|err| SchemaError::json(err, &self.file_name))?;
 
 		dtos.into_iter()
 			.map(|dto| {
 				component_dto_to_schema(dto, fields)
-					.map_err(|e| PersistentError::parse(e, &self.file_name))
+					.map_err(|e| SchemaError::parse(e, &self.file_name))
 			})
 			.collect()
 	}
@@ -48,7 +48,7 @@ impl Persistent for JsonStorage {
 	async fn save(
 		&mut self,
 		components: &[ComponentSchema],
-	) -> Result<(), PersistentError> {
+	) -> Result<(), SchemaError> {
 		// todo convert to dto
 		let dtos = components
 			.iter()
@@ -58,12 +58,12 @@ impl Persistent for JsonStorage {
 
 		// Convert the components to a JSON string
 		let json = serde_json::to_string(&dtos)
-			.map_err(|err| PersistentError::json(err, &self.file_name))?;
+			.map_err(|err| SchemaError::json(err, &self.file_name))?;
 
 		// Write the JSON string to a file
 		tokio::fs::write(&self.file_name, json)
 			.await
-			.map_err(|err| PersistentError::io(err, &self.file_name))
+			.map_err(|err| SchemaError::io(err, &self.file_name))
 	}
 }
 
@@ -93,8 +93,8 @@ impl From<ComponentSchema> for SchemaComponentDto {
 					(
 						name.clone(),
 						FieldDto {
-							kind: field.inner.kind(),
-							settings: field.inner.settings(),
+							kind: field.kind(),
+							settings: field.settings(),
 						},
 					)
 				})
@@ -113,7 +113,7 @@ fn component_dto_to_schema(
 		let field =
 			fields_kinds.parse_field(&field_dto.kind, field_dto.settings)?;
 
-		fields.insert(name, FieldSchema::new(field));
+		fields.insert(name, field.into());
 	}
 
 	Ok(ComponentSchema {

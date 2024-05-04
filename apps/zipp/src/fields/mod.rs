@@ -6,80 +6,21 @@
 //! From a field kind you can create a field
 
 pub mod defaults;
+mod error;
+mod field;
+mod kind;
+mod schema;
 
-use std::any::Any;
+pub use error::{ParseFieldError, ValidateError};
+pub use field::{BoxedField, Field};
+pub use kind::{BoxedFieldKind, ErasedFieldKind, FieldKind, Settings};
+pub use schema::{
+	BoxedFieldSchema, ErasedFieldSchema, FieldSchema, PersistentKind,
+};
+
 use std::collections::BTreeMap;
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
-
-use crate::utils::AsAny;
-
-pub type Settings = BTreeMap<String, serde_json::Value>;
-
-#[derive(Debug, thiserror::Error)]
-pub enum ValidateError {
-	#[error("Field validation failed")]
-	ValidationFailed,
-}
-
-// todo this should probably be called FieldSchema?
-pub trait Field: AsAny + Debug + Send + Sync {
-	/// returns the kind of this field
-	fn kind(&self) -> String;
-
-	/// returns the current settings
-	fn settings(&self) -> Settings;
-
-	/// validates field data
-	fn validate(&self, value: &serde_json::Value) -> Result<(), ValidateError>;
-
-	/// makes a clone of the field
-	fn clone_box(&self) -> Box<dyn Field>;
-}
-
-#[derive(thiserror::Error)]
-pub enum ParseFieldError {
-	#[error("Field has unknown kind: {0}")]
-	KindNotFound(String),
-
-	#[error("Invalid settings: {settings:?}")]
-	InvalidSettings { settings: Vec<String> },
-}
-
-impl fmt::Debug for ParseFieldError {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "{}", self)
-	}
-}
-
-pub trait FieldKind: Debug + Send + Sync {
-	type Field: Field;
-
-	fn name() -> String;
-
-	fn parse(&self, settings: Settings)
-		-> Result<Self::Field, ParseFieldError>;
-}
-
-pub trait ErasedFieldKind: Debug + Send + Sync {
-	fn parse(
-		&self,
-		settings: Settings,
-	) -> Result<Box<dyn Field>, ParseFieldError>;
-}
-
-impl<T> ErasedFieldKind for T
-where
-	T: FieldKind + 'static,
-{
-	fn parse(
-		&self,
-		settings: Settings,
-	) -> Result<Box<dyn Field>, ParseFieldError> {
-		let field = self.parse(settings)?;
-		Ok(Box::new(field))
-	}
-}
 
 #[derive(Debug, Clone)]
 pub struct Fields {
@@ -113,7 +54,7 @@ impl Fields {
 		&self,
 		name: &str,
 		settings: Settings,
-	) -> Result<Box<dyn Field>, ParseFieldError> {
+	) -> Result<Box<dyn ErasedFieldSchema>, ParseFieldError> {
 		let inner = self.inner.read().unwrap();
 
 		inner.parse_field(name, settings)
@@ -148,7 +89,7 @@ impl Inner {
 		&self,
 		name: &str,
 		settings: Settings,
-	) -> Result<Box<dyn Field>, ParseFieldError> {
+	) -> Result<Box<dyn ErasedFieldSchema>, ParseFieldError> {
 		match self.kinds.get(name) {
 			Some(kind) => kind.parse(settings),
 			None => Err(ParseFieldError::KindNotFound(name.to_string())),

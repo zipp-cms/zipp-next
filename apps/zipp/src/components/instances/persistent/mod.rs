@@ -1,36 +1,43 @@
+pub mod memory;
+
 use std::fmt;
 
-use database::{id::Id, Connection};
-use serde::Deserialize;
+use database::Connection;
 
-use super::Error;
+use crate::{components::Error, fields::PersistentKind};
 
 #[derive(Debug, Clone)]
-pub struct ComponentSchema<'a> {
+pub struct SetFieldColumn<'a> {
 	pub name: &'a str,
-	pub fields: Vec<SchemaField<'a>>,
+	pub kind: FieldKind,
 }
 
 #[derive(Debug, Clone)]
-pub struct SchemaField<'a> {
-	pub name: &'a str,
-	pub kind: FieldKind<'a>,
-	pub related: Option<&'a str>,
-	pub primary: bool,
-	pub index: bool,
-}
-
-#[derive(Debug, Clone)]
-pub enum FieldKind<'a> {
+pub enum FieldKind {
 	Id,
-	ComponentId,
-	Component { name: &'a str },
+	// ComponentId,
+	// Component { name: &'a str },
 	Boolean,
 	Int,
 	Float,
 	Text,
 	Json,
 	DateTime,
+}
+
+impl FieldKind {
+	pub fn from_kind(kind: PersistentKind) -> Option<Self> {
+		Some(match kind {
+			PersistentKind::Id => FieldKind::Id,
+			PersistentKind::ComponentRelation => return None,
+			PersistentKind::Boolean => FieldKind::Boolean,
+			PersistentKind::Int => FieldKind::Int,
+			PersistentKind::Float => FieldKind::Float,
+			PersistentKind::Text => FieldKind::Text,
+			PersistentKind::Json => FieldKind::Json,
+			PersistentKind::DateTime => FieldKind::DateTime,
+		})
+	}
 }
 
 #[async_trait::async_trait]
@@ -47,6 +54,7 @@ pub trait ComponentsPersistentBuilder: fmt::Debug + Send + Sync {
 pub trait ComponentsPersistent: fmt::Debug + Send + Sync {
 	async fn update_schema(
 		&self,
-		user: ComponentSchema<'_>,
+		handle: &str,
+		columns: Vec<SetFieldColumn<'_>>,
 	) -> Result<(), Error>;
 }

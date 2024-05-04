@@ -6,17 +6,18 @@
 //! Fields are managed by the fields
 //!
 
+mod error;
 mod persistent;
 mod schema;
 
+pub use error::SchemaError;
+
 use persistent::Persistent;
-use schema::ComponentSchema;
+pub use schema::ComponentSchema;
 
 use indexmap::IndexMap;
 
 use crate::fields::Fields;
-
-use self::persistent::PersistentError;
 
 // component schemas
 #[derive(Debug)]
@@ -47,7 +48,7 @@ impl ComponentSchemas {
 	pub async fn load_file(
 		fields: Fields,
 		file_name: &str,
-	) -> Result<Self, PersistentError> {
+	) -> Result<Self, SchemaError> {
 		let mut me = Self::new(fields, persistent::new_file(file_name));
 
 		me.load().await?;
@@ -58,7 +59,7 @@ impl ComponentSchemas {
 	/// Load the schemas from the persistent storage
 	///
 	/// Replaces the current schemas
-	pub async fn load(&mut self) -> Result<(), PersistentError> {
+	pub async fn load(&mut self) -> Result<(), SchemaError> {
 		let schemas = self.persistent.load(&self.fields).await?;
 		self.inner =
 			schemas.into_iter().map(|s| (s.handle.clone(), s)).collect();
@@ -89,7 +90,7 @@ impl ComponentSchemas {
 		self.inner.insert(component.handle.clone(), component);
 	}
 
-	pub async fn save(&mut self) -> Result<(), PersistentError> {
+	pub async fn save(&mut self) -> Result<(), SchemaError> {
 		let schemas = self.get_all().cloned().collect::<Vec<_>>();
 		self.persistent.save(&schemas).await
 	}
@@ -110,8 +111,10 @@ mod tests {
 	// - [x] thread safe
 	// - [ ] equal comparison for testing
 
-	use super::schema::FieldSchema;
-	use crate::fields::defaults::{NumberField, TextField};
+	use crate::fields::{
+		defaults::{NumberFieldSchema, TextFieldSchema},
+		BoxedFieldSchema,
+	};
 
 	use super::*;
 
@@ -133,7 +136,7 @@ mod tests {
 		let (field_name, field) = comp.fields.iter().next().unwrap();
 		assert_eq!(field_name, "label");
 		eprintln!("{:?}", field);
-		let _field: &TextField = field.downcast_ref().unwrap();
+		let _field: &TextFieldSchema = field.downcast_ref().unwrap();
 
 		let comp = all.next().unwrap();
 		assert_eq!(comp.name, "counter");
@@ -141,7 +144,7 @@ mod tests {
 		assert_eq!(comp.fields.len(), 1);
 		let (field_name, field) = comp.fields.iter().next().unwrap();
 		assert_eq!(field_name, "count");
-		let field: &NumberField = field.downcast_ref().unwrap();
+		let field: &NumberFieldSchema = field.downcast_ref().unwrap();
 		assert_eq!(field.min, 10);
 		assert_eq!(field.max, 20);
 	}
@@ -219,7 +222,7 @@ mod tests {
 
 		component.fields.insert(
 			"new field".to_string(),
-			FieldSchema::new(Box::new(TextField::default())),
+			BoxedFieldSchema::new(TextFieldSchema::default()),
 		);
 
 		components.insert(component);

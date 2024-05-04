@@ -1,6 +1,6 @@
 use crate::{components::schemas::schema::ComponentSchema, fields::Fields};
 
-use super::{Persistent, PersistentError};
+use super::{Persistent, SchemaError};
 
 #[derive(Debug)]
 pub struct Memory {
@@ -18,14 +18,14 @@ impl Persistent for Memory {
 	async fn load(
 		&mut self,
 		_fields: &Fields,
-	) -> Result<Vec<ComponentSchema>, PersistentError> {
+	) -> Result<Vec<ComponentSchema>, SchemaError> {
 		Ok(self.inner.clone())
 	}
 
 	async fn save(
 		&mut self,
 		contents: &[ComponentSchema],
-	) -> Result<(), PersistentError> {
+	) -> Result<(), SchemaError> {
 		self.inner = contents.to_vec();
 		Ok(())
 	}

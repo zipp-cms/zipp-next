@@ -98,7 +98,7 @@ async fn main() {
 	// create instances
 	let users = Users::new(&mut db).await.unwrap();
 	let fields = Fields::default();
-	let components = Components::new(&mut db).await.unwrap();
+	let components = Components::new(&mut db, &fields).await.unwrap();
 
 	// since we don't need the database anymore, we can drop it
 	// this makes sure we don't keep a connection running
