@@ -1,10 +1,16 @@
-# the navigation: all pages, the header shows the top ones
+# globals are singles in zipp, globalSet finds them like in Craft
 query ($siteId: [QueryArgument]) {
-	pages: entries(section: "pages", siteId: $siteId, order: "structure") {
-		title
-		url
-		parent {
-			id
+	header: globalSet(handle: "header", siteId: $siteId) {
+		... on header_Entry {
+			navigation {
+				title
+				url
+			}
+		}
+	}
+	footer: globalSet(handle: "footer", siteId: $siteId) {
+		... on footer_Entry {
+			text
 		}
 	}
 }

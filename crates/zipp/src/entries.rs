@@ -633,6 +633,29 @@ pub fn refs(
 	Ok(out)
 }
 
+/// Whether the entries are published, per site.
+pub fn published_per_site(
+	conn: &Connection,
+	ids: &[i64],
+) -> Result<BTreeMap<i64, BTreeMap<String, bool>>> {
+	let marks = vec!["?"; ids.len()].join(", ");
+	let sql = format!(
+		"SELECT entry_id, site, published FROM entry_sites
+		WHERE entry_id IN ({marks})"
+	);
+	let mut stmt = conn.prepare(&sql)?;
+	let rows = stmt.query_map(params_from_iter(ids), |r| {
+		Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get(2)?))
+	})?;
+
+	let mut out: BTreeMap<i64, BTreeMap<String, bool>> = BTreeMap::new();
+	for r in rows {
+		let (id, site, published) = r?;
+		out.entry(id).or_default().insert(site, published);
+	}
+	Ok(out)
+}
+
 /// `Über uns!` becomes `über-uns`.
 pub fn slugify(s: &str) -> String {
 	let mut out = String::new();
@@ -651,6 +674,8 @@ struct ListResp {
 	entries: Vec<Entry>,
 	total: i64,
 	relations: BTreeMap<i64, EntryRef>,
+	/// whether each entry is published, per site
+	published: BTreeMap<i64, BTreeMap<String, bool>>,
 }
 
 async fn list_route(
@@ -665,11 +690,13 @@ async fn list_route(
 	let (entries, total) = list(&conn, &q)?;
 	let ids: Vec<i64> = entries.iter().map(|e| e.id).collect();
 	let relations = refs(&conn, &ids, &q.site, q.published_only)?;
+	let published = published_per_site(&conn, &ids)?;
 
 	Ok(Json(ListResp {
 		entries,
 		total,
 		relations,
+		published,
 	}))
 }
 
@@ -749,11 +776,23 @@ async fn delete_route(
 	delete(&state.db.conn(), &state.schema, id)
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SchemaResp {
+	#[serde(flatten)]
+	schema: Schema,
+	/// for the preview button of the studio
+	site_urls: crate::graphql::SiteUrls,
+}
+
 async fn schema_route(
 	State(state): State<AppState>,
 	_auth: Authed,
-) -> Json<Schema> {
-	Json((*state.schema).clone())
+) -> Json<SchemaResp> {
+	Json(SchemaResp {
+		schema: (*state.schema).clone(),
+		site_urls: (*state.site_urls).clone(),
+	})
 }
 
 pub fn routes() -> Router<AppState> {

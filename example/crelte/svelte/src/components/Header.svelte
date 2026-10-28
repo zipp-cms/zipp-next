@@ -1,8 +1,8 @@
 <script>
 	import { getGlobal, getRouter, getSite } from 'crelte';
 
-	// top pages of the structure, from global.graphql
-	const pages = getGlobal('pages');
+	// the navigation of the header single, from global.graphql
+	const header = getGlobal('header');
 	const site = getSite();
 	const sites = getRouter().sites;
 </script>
@@ -10,7 +10,7 @@
 <header>
 	<nav>
 		<a href={$site.url.href}>Home</a>
-		{#each $pages.filter(p => !p.parent) as page (page.url)}
+		{#each $header?.navigation ?? [] as page (page.url)}
 			<a href={page.url}>{page.title}</a>
 		{/each}
 	</nav>

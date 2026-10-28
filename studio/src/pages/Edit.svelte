@@ -3,6 +3,7 @@
 		ApiError,
 		deleteEntry,
 		getEntry,
+		entryUrl,
 		listEntries,
 		saveEntry,
 		type Entry,
@@ -11,7 +12,7 @@
 		type Values,
 	} from '../api';
 	import { untrack } from 'svelte';
-	import { go, site } from '../route.svelte';
+	import { go, shown, site } from '../route.svelte';
 	import Fields from '../fields/Fields.svelte';
 	import Icon from '../lib/Icon.svelte';
 
@@ -43,6 +44,11 @@
 	const secDef = $derived(schema.sections.find(s => s.handle === sec));
 	const comp = $derived(schema.components.find(c => c.handle === ty));
 	const single = $derived(secDef?.kind === 'single');
+	const url = $derived(entryUrl(schema, site.current, uri));
+
+	$effect(() => {
+		shown.section = sec;
+	});
 
 	$effect(() => {
 		if (id === null) {
@@ -130,6 +136,17 @@
 				{published ? 'Published' : 'Draft'}
 			</span>
 		</h1>
+		{#if url}
+			<a
+				class="view"
+				href={url}
+				target="_blank"
+				title="View on the website"
+			>
+				<Icon name="view" />
+				View
+			</a>
+		{/if}
 		{#if id !== null && !single}
 			<button class="dark" onclick={remove}>
 				<Icon name="delete" />
@@ -216,6 +233,19 @@
 {/if}
 
 <style lang="scss">
+	.view {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 12px;
+		font-size: 14px;
+		color: var(--text);
+		text-decoration: none;
+		border: 1px solid var(--dark);
+		border-radius: 2px;
+		background: white;
+	}
+
 	h1 {
 		display: flex;
 		align-items: center;

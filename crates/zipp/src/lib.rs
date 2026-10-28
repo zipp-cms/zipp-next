@@ -61,6 +61,8 @@ pub struct AppState {
 	pub gql: async_graphql::dynamic::Schema,
 	/// where uploads go
 	pub files: PathBuf,
+	/// the url of each site, for previews
+	pub site_urls: Arc<graphql::SiteUrls>,
 }
 
 #[derive(Debug, Parser)]
@@ -186,13 +188,18 @@ async fn serve(
 	}
 
 	let schema = Arc::new(schema);
-	let gql =
-		graphql::build(schema.clone(), db.clone(), public_url, site_urls)?;
+	let gql = graphql::build(
+		schema.clone(),
+		db.clone(),
+		public_url,
+		site_urls.clone(),
+	)?;
 	let state = AppState {
 		db,
 		schema,
 		gql,
 		files,
+		site_urls: Arc::new(site_urls),
 	};
 	let api = Router::new()
 		.nest("/auth", auth::routes())

@@ -25,7 +25,8 @@
 
 - [ ] `localized` on entries (the same entry in the other sites) for language switches
 - [ ] Preview: crelte's preview tokens and drafts
-- [ ] Globals (crelte's global sets), today a single section does it
+- [x] Globals as singles without a url, `globalSet(handle:)` in GraphQL, navigation groups
+      in the schema (`.nav("Settings", [...])`), preview button, status per site in lists
 
 - [ ] Drafts and revisions: a row per saved version, publish a version
 - [ ] Live preview: preview tokens, frontend renders unsaved content

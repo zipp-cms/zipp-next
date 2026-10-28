@@ -169,6 +169,49 @@
     {
       "op": "addComponent",
       "component": {
+        "handle": "header",
+        "name": "Header",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "navigation",
+            "label": "Main navigation",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "page",
+              "event"
+            ],
+            "max": null
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "footer",
+        "name": "Footer",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "text",
+            "label": "Text",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
         "handle": "heading",
         "name": "Heading",
         "entry": false,
@@ -341,6 +384,30 @@
         ],
         "uri": "events/{slug}"
       }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "header",
+        "name": "Header",
+        "kind": "single",
+        "types": [
+          "header"
+        ],
+        "uri": null
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "footer",
+        "name": "Footer",
+        "kind": "single",
+        "types": [
+          "footer"
+        ],
+        "uri": null
+      }
     }
   ],
   "schema": {
@@ -383,6 +450,24 @@
           "event"
         ],
         "uri": "events/{slug}"
+      },
+      {
+        "handle": "header",
+        "name": "Header",
+        "kind": "single",
+        "types": [
+          "header"
+        ],
+        "uri": null
+      },
+      {
+        "handle": "footer",
+        "name": "Footer",
+        "kind": "single",
+        "types": [
+          "footer"
+        ],
+        "uri": null
       }
     ],
     "components": [
@@ -544,6 +629,43 @@
         ]
       },
       {
+        "handle": "header",
+        "name": "Header",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "navigation",
+            "label": "Main navigation",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "page",
+              "event"
+            ],
+            "max": null
+          }
+        ]
+      },
+      {
+        "handle": "footer",
+        "name": "Footer",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "text",
+            "label": "Text",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          }
+        ]
+      },
+      {
         "handle": "heading",
         "name": "Heading",
         "entry": false,
@@ -677,6 +799,23 @@
         "width": 160,
         "height": 120,
         "crop": true
+      }
+    ],
+    "nav": [
+      {
+        "name": "Content",
+        "sections": [
+          "home",
+          "pages",
+          "events"
+        ]
+      },
+      {
+        "name": "Settings",
+        "sections": [
+          "header",
+          "footer"
+        ]
       }
     ]
   }

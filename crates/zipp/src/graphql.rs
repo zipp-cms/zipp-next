@@ -187,6 +187,34 @@ pub fn build(
 				})
 			},
 		)))
+		// Craft's globals are singles here: the entry of the section
+		.field(
+			GqlField::new("globalSet", TypeRef::named("Entry"), |ctx| {
+				FieldFuture::new(async move {
+					let mut params = params_from_args(&ctx)?;
+					for p in &mut params {
+						if p.0 == "handle" {
+							p.0 = "section".into();
+						}
+					}
+					params.push(("limit".into(), "1".into()));
+					let e = load(&ctx, &params)?.into_iter().next();
+					Ok(e.map(entry_value))
+				})
+			})
+			.argument(InputValue::new(
+				"handle",
+				TypeRef::named_list(TypeRef::STRING),
+			))
+			.argument(InputValue::new(
+				"site",
+				TypeRef::named_list(TypeRef::STRING),
+			))
+			.argument(InputValue::new(
+				"siteId",
+				TypeRef::named_list("QueryArgument"),
+			)),
+		)
 		.field(sites_field("sites"))
 		// what crelte asks for on start
 		.field(sites_field("crelteSites"));
@@ -625,7 +653,7 @@ fn params_from_args(
 			"parent" | "related" | "limit" | "offset" => {
 				params.push((name.into(), value.i64()?.to_string()))
 			}
-			"site" | "section" | "type" | "uri" | "slug" => {
+			"site" | "section" | "type" | "uri" | "slug" | "handle" => {
 				let Some(v) = first(&value)? else { continue };
 				let v = match v.as_str() {
 					// Craft's name of the home page
@@ -925,6 +953,14 @@ mod tests {
 			schema: (*s).clone(),
 		};
 		crate::apply::apply_migrations(&db.conn(), &[first]).unwrap();
+
+		let data = run(
+			&gql,
+			r#"{ header: globalSet(handle: "home", siteId: 2) { title } }"#,
+			true,
+		)
+		.await;
+		assert_eq!(data["header"]["title"], "Home");
 
 		let data = run(
 			&gql,

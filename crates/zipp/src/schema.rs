@@ -30,6 +30,17 @@ pub struct Schema {
 	/// Named image transforms, only these are public.
 	#[serde(default)]
 	pub transforms: Vec<Transform>,
+	/// Groups of sections in the top bar of the studio, empty puts all
+	/// sections in one group. Only looks, like labels.
+	#[serde(default)]
+	pub nav: Vec<NavGroup>,
+}
+
+/// A group of sections in the studio, like Content or Settings.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NavGroup {
+	pub name: String,
+	pub sections: Vec<String>,
 }
 
 /// An image size, generated on its first request and cached. Without a
@@ -152,6 +163,20 @@ impl Schema {
 		self
 	}
 
+	/// A group of sections in the top bar of the studio. Once there is one,
+	/// every section has to be in exactly one group.
+	pub fn nav<'a>(
+		mut self,
+		name: &str,
+		sections: impl IntoIterator<Item = &'a str>,
+	) -> Self {
+		self.nav.push(NavGroup {
+			name: name.into(),
+			sections: sections.into_iter().map(Into::into).collect(),
+		});
+		self
+	}
+
 	pub fn transform(mut self, transform: Transform) -> Self {
 		self.transforms.push(transform);
 		self
@@ -269,6 +294,29 @@ impl Schema {
 				}
 				self.check_field(comp, field)
 					.map_err(|e| format!("{at}: {e}"))?;
+			}
+		}
+
+		if !self.nav.is_empty() {
+			for section in &self.sections {
+				let n = self
+					.nav
+					.iter()
+					.filter(|g| g.sections.contains(&section.handle))
+					.count();
+				if n != 1 {
+					return Err(format!(
+						"section {} is in {n} nav groups, it needs one",
+						section.handle
+					));
+				}
+			}
+			for g in &self.nav {
+				let unknown =
+					g.sections.iter().find(|s| self.get_section(s).is_none());
+				if let Some(s) = unknown {
+					return Err(format!("nav {}: unknown section {s}", g.name));
+				}
 			}
 		}
 
@@ -725,6 +773,12 @@ pub(crate) mod tests {
 		assert_eq!(
 			s.check().unwrap_err(),
 			"section news: the uri needs {slug}"
+		);
+
+		let s = site().nav("Content", ["home", "pages"]);
+		assert_eq!(
+			s.check().unwrap_err(),
+			"section events is in 0 nav groups, it needs one"
 		);
 
 		let s =

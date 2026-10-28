@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { getSchema, logout, token, type Schema } from './api';
-	import { go, route, setSite, site } from './route.svelte';
+	import { getSchema, logout, navGroups, token, type Schema } from './api';
+	import { go, route, setSite, shown, site } from './route.svelte';
 	import Login from './pages/Login.svelte';
 	import List from './pages/List.svelte';
 	import Edit from './pages/Edit.svelte';
@@ -11,6 +11,11 @@
 	let error = $state('');
 
 	const loggedIn = $derived(route.current.page !== 'login' && !!token());
+	const groups = $derived(schema ? navGroups(schema) : []);
+	// the group of the section on screen
+	const group = $derived(
+		groups.find(g => g.sections.includes(shown.section)) ?? groups[0],
+	);
 	const current = $derived.by(() => {
 		const r = route.current;
 		if (r.page === 'list') return r.section ?? schema?.sections[0]?.handle;
@@ -51,7 +56,14 @@
 		<div class="logo">zipp</div>
 		<header>
 			<nav class="top">
-				<a href="#/list" class:active={!assets}>Entries</a>
+				{#each groups as g (g.name)}
+					<a
+						href="#/list/{g.sections[0]}"
+						class:active={!assets && g === group}
+					>
+						{g.name}
+					</a>
+				{/each}
 				<a href="#/assets" class:active={assets}>Assets</a>
 			</nav>
 			<div class="right">
@@ -76,10 +88,10 @@
 					Assets
 				</a>
 			{:else}
-				{#each schema.sections as s (s.handle)}
+				{#each schema.sections.filter( s => group?.sections.includes(s.handle) ) as s (s.handle)}
 					<a
 						href="#/list/{s.handle}"
-						class:active={current === s.handle}
+						class:active={shown.section === s.handle}
 					>
 						<Icon
 							name={s.kind === 'single' ? 'default' : 'all_pages'}

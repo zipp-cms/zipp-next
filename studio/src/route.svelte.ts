@@ -46,3 +46,6 @@ export function setSite(handle: string) {
 	site.current = handle;
 	localStorage.setItem('zipp-site', handle);
 }
+
+/** The section the page shows, so the navigation knows its group. */
+export const shown = $state({ section: '' });

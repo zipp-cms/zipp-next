@@ -16,6 +16,11 @@ fn schema() -> Schema {
 			Section::structure("pages", ["page"]).uri("{parent.uri}/{slug}"),
 		)
 		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
+		// globals: singles without a url
+		.section(Section::single("header", "header"))
+		.section(Section::single("footer", "footer"))
+		.nav("Content", ["home", "pages", "events"])
+		.nav("Settings", ["header", "footer"])
 		.transform(Transform::new("hero").width(1600).height(700).crop())
 		.transform(Transform::new("small").width(600))
 		.transform(Transform::new("medium").width(1200))
@@ -52,6 +57,17 @@ fn schema() -> Schema {
 				Field::text("description").multiline().translatable(),
 				Field::relation("page", ["page"]).max(1).label("More info"),
 			],
+		)
+		.entry(
+			"header",
+			"Header",
+			[Field::relation("navigation", ["page", "event"])
+				.label("Main navigation")],
+		)
+		.entry(
+			"footer",
+			"Footer",
+			[Field::text("text").multiline().translatable()],
 		)
 		.block(
 			"heading",

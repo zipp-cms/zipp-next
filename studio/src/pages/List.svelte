@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { listEntries, moveEntry, type Entry, type Schema } from '../api';
-	import { go, site } from '../route.svelte';
+	import { go, shown, site } from '../route.svelte';
 	import Icon from '../lib/Icon.svelte';
 
 	let { schema, section }: { schema: Schema; section: string } = $props();
@@ -9,6 +9,11 @@
 	const tree = $derived(sec.kind === 'structure');
 	let search = $state('');
 	let entries = $state<Entry[]>([]);
+	let published = $state<Record<number, Record<string, boolean>>>({});
+
+	$effect(() => {
+		shown.section = section;
+	});
 	let total = $state(0);
 	let error = $state('');
 
@@ -29,6 +34,7 @@
 				}
 				entries = r.entries;
 				total = r.total;
+				published = r.published;
 			})
 			.catch(e => (error = e.message));
 	}
@@ -101,12 +107,18 @@
 			>
 				{e.title}
 			</a>
-			<span
-				class="badge"
-				class:draft={!e.published}
-				title={e.published ? 'Published' : 'Draft'}
-			>
-				{site.current.toUpperCase()}
+			<span class="badges">
+				{#each schema.sites as st (st.handle)}
+					{@const on = published[e.id]?.[st.handle]}
+					<span
+						class="badge"
+						class:draft={!on}
+						class:current={st.handle === site.current}
+						title="{st.name}: {on ? 'published' : 'draft'}"
+					>
+						{st.handle.toUpperCase()}
+					</span>
+				{/each}
 			</span>
 			<span class="type hide-small">
 				Type: {schema.components.find(c => c.handle === e.type)?.name}
@@ -185,7 +197,7 @@
 
 	.row {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 4rem 12rem 9rem;
+		grid-template-columns: minmax(0, 1fr) 7rem 12rem 9rem;
 		align-items: center;
 		padding: 10px 26px;
 	}
@@ -200,8 +212,12 @@
 		}
 	}
 
+	.badges {
+		display: flex;
+		gap: 4px;
+	}
+
 	.badge {
-		justify-self: start;
 		padding: 2px 6px;
 		font-size: 13px;
 		color: white;
@@ -210,6 +226,11 @@
 
 		&.draft {
 			background: #c4c4c8;
+		}
+
+		&.current {
+			outline: 2px solid var(--dark);
+			outline-offset: 1px;
 		}
 	}
 
@@ -229,7 +250,7 @@
 
 	@media (max-width: 800px) {
 		.row {
-			grid-template-columns: minmax(0, 1fr) 3rem auto;
+			grid-template-columns: minmax(0, 1fr) auto auto;
 			padding: 10px 16px;
 		}
 
