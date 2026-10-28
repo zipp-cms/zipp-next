@@ -85,35 +85,42 @@
 <style lang="scss">
 	.relation {
 		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+		align-items: center;
 	}
 
 	.chip {
 		display: flex;
-		gap: 0.5rem;
+		gap: 0.35rem;
 		align-items: center;
-		padding: 0.3rem 0.4rem 0.3rem 0.7rem;
-		border: 1px solid var(--line);
+		padding: 0.05rem 0.1rem 0.05rem 0.5rem;
+		background: var(--line);
 		border-radius: 0.3rem;
-
-		button {
-			margin-left: auto;
-		}
 	}
 
 	.search {
 		position: relative;
+		flex: 1;
+		min-width: 8rem;
+
+		input {
+			border: none;
+			outline: none;
+			padding: 0.15rem 0;
+			background: none;
+		}
 	}
 
 	.results {
 		position: absolute;
-		z-index: 2;
+		z-index: 5;
 		left: 0;
-		right: 0;
+		min-width: 14rem;
+		padding: 0.3rem;
 		background: white;
 		border: 1px solid var(--line);
-		border-radius: 0.3rem;
+		border-radius: 0.4rem;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 
 		button {
@@ -122,6 +129,7 @@
 			width: 100%;
 			border: none;
 			text-align: left;
+			padding: 0.35rem 0.6rem;
 		}
 	}
 

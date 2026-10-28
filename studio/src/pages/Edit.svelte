@@ -10,6 +10,7 @@
 	} from '../api';
 	import { untrack } from 'svelte';
 	import { go } from '../route.svelte';
+	import AutoText from '../fields/AutoText.svelte';
 	import Fields from '../fields/Fields.svelte';
 
 	let {
@@ -110,25 +111,35 @@
 		</div>
 	</header>
 
-	<input class="title" placeholder="Title" bind:value={title} />
-	{#if errors.title}<p class="error">{errors.title}</p>{/if}
-	<div class="slug">
-		/
-		<input placeholder="slug from title" bind:value={slug} />
-	</div>
-	{#if errors.slug}<p class="error">{errors.slug}</p>{/if}
+	<article>
+		<AutoText
+			multiline={false}
+			placeholder="Untitled"
+			bind:value={title}
+			heading
+		/>
+		{#if errors.title}<p class="error">Title {errors.title}</p>{/if}
+		<div class="slug">
+			/
+			<input placeholder="slug from title" bind:value={slug} />
+		</div>
+		{#if errors.slug}<p class="error">Slug {errors.slug}</p>{/if}
+		{#if error}<p class="error">{error}</p>{/if}
 
-	{#if error}<p class="error">{error}</p>{/if}
-
-	<Fields {schema} component={comp} values={fields} {errors} {refs} />
+		<Fields {schema} component={comp} values={fields} {errors} {refs} />
+	</article>
 {/if}
 
 <style lang="scss">
 	header {
+		position: sticky;
+		top: 0;
+		z-index: 6;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 1.5rem;
+		padding: 0.75rem 0;
+		background: white;
 
 		a {
 			color: var(--muted);
@@ -154,23 +165,33 @@
 		}
 	}
 
-	.title {
-		font-size: 1.6rem;
-		font-weight: 600;
-		border: none;
-		padding: 0.2rem 0;
+	article {
+		max-width: 46rem;
+		padding: 1.5rem 0 6rem 3.25rem;
+
+		:global(> textarea.heading) {
+			font-size: 2.3rem;
+			font-weight: 700;
+		}
 	}
 
 	.slug {
 		display: flex;
 		align-items: center;
 		color: var(--muted);
-		margin-bottom: 1.5rem;
+		margin-bottom: 1.2rem;
 
 		input {
 			border: none;
+			outline: none;
 			padding: 0.2rem;
 			color: inherit;
+		}
+	}
+
+	@media (max-width: 700px) {
+		article {
+			padding-left: 0;
 		}
 	}
 </style>

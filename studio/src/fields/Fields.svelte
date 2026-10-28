@@ -1,8 +1,13 @@
 <script lang="ts">
 	import type { Component, Refs, Schema, Values } from '../api';
-	import BlocksField from './BlocksField.svelte';
+	import AutoText from './AutoText.svelte';
+	import Document from './Document.svelte';
 	import RelationField from './RelationField.svelte';
 
+	/**
+	 * Fields as properties: a label and the value next to it. A blocks
+	 * field becomes a document below them.
+	 */
 	let {
 		schema,
 		component,
@@ -23,51 +28,52 @@
 <div class="fields">
 	{#each component.fields as field (field.handle)}
 		{@const path = prefix + field.handle}
-		<div class="field">
-			{#if field.kind === 'boolean'}
-				<label class="check">
-					<input
-						type="checkbox"
-						bind:checked={values[field.handle]}
-					/>
-					{field.label}
-				</label>
-			{:else}
+		{#if field.kind === 'blocks'}
+			<div class="document">
+				{#if component.fields.length > 1}
+					<div class="section">{field.label}</div>
+				{/if}
+				<Document {schema} {field} {values} {errors} {refs} {path} />
+			</div>
+		{:else}
+			<div class="prop">
 				<label for={path}>
 					{field.label}{#if field.required}<span class="req">
 							*
 						</span>{/if}
 				</label>
-			{/if}
-
-			{#if field.kind === 'text' && field.multiline}
-				<textarea
-					id={path}
-					maxlength={field.max ?? undefined}
-					bind:value={values[field.handle]}
-				></textarea>
-			{:else if field.kind === 'text'}
-				<input
-					id={path}
-					maxlength={field.max ?? undefined}
-					bind:value={values[field.handle]}
-				/>
-			{:else if field.kind === 'number'}
-				<input
-					id={path}
-					type="number"
-					min={field.min ?? undefined}
-					max={field.max ?? undefined}
-					bind:value={values[field.handle]}
-				/>
-			{:else if field.kind === 'relation'}
-				<RelationField {schema} {field} {values} {refs} />
-			{:else if field.kind === 'blocks'}
-				<BlocksField {schema} {field} {values} {errors} {refs} {path} />
-			{/if}
-
-			{#if errors[path]}<p class="error">{errors[path]}</p>{/if}
-		</div>
+				<div class="value">
+					{#if field.kind === 'text'}
+						<AutoText
+							id={path}
+							placeholder="Empty"
+							multiline={field.multiline}
+							heading={field.heading}
+							maxlength={field.max}
+							bind:value={values[field.handle]}
+						/>
+					{:else if field.kind === 'number'}
+						<input
+							id={path}
+							type="number"
+							placeholder="Empty"
+							min={field.min ?? undefined}
+							max={field.max ?? undefined}
+							bind:value={values[field.handle]}
+						/>
+					{:else if field.kind === 'boolean'}
+						<input
+							id={path}
+							type="checkbox"
+							bind:checked={values[field.handle]}
+						/>
+					{:else if field.kind === 'relation'}
+						<RelationField {schema} {field} {values} {refs} />
+					{/if}
+				</div>
+			</div>
+		{/if}
+		{#if errors[path]}<p class="error">{errors[path]}</p>{/if}
 	{/each}
 </div>
 
@@ -75,27 +81,79 @@
 	.fields {
 		display: flex;
 		flex-direction: column;
-		gap: 1.1rem;
+		gap: 0.1rem;
 	}
 
-	label {
-		display: block;
-		font-weight: 500;
-		margin-bottom: 0.35rem;
-	}
-
-	.check {
+	.prop {
 		display: flex;
-		gap: 0.4rem;
-		align-items: center;
+		align-items: flex-start;
+		gap: 0.5rem;
+		border-radius: 0.3rem;
 
-		input {
-			width: auto;
+		label {
+			width: 9rem;
+			flex-shrink: 0;
+			padding: 0.3rem 0;
+			color: var(--muted);
+			font-size: 0.9rem;
 		}
+
+		.value {
+			flex: 1;
+			min-width: 0;
+			padding: 0.05rem 0.4rem;
+			border-radius: 0.3rem;
+
+			&:focus-within {
+				background: var(--side);
+			}
+		}
+
+		input[type='number'] {
+			border: none;
+			outline: none;
+			padding: 0.15rem 0;
+			background: none;
+		}
+
+		input[type='checkbox'] {
+			width: auto;
+			margin: 0.45rem 0;
+		}
+	}
+
+	.document {
+		margin-top: 1.2rem;
+	}
+
+	.section {
+		color: var(--muted);
+		font-size: 0.8rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		margin-bottom: 0.3rem;
 	}
 
 	.req {
 		color: var(--danger);
 		margin-left: 0.15rem;
+	}
+
+	@media (max-width: 700px) {
+		.prop {
+			flex-direction: column;
+			gap: 0;
+
+			label {
+				width: auto;
+				padding-bottom: 0;
+			}
+
+			.value {
+				width: 100%;
+				box-sizing: border-box;
+				padding: 0;
+			}
+		}
 	}
 </style>

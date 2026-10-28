@@ -1,82 +1,103 @@
 <script lang="ts">
 	import type { Component } from '../api';
 
+	/**
+	 * The list of block types to insert. After a `/` the line itself is
+	 * the search and handles the keys, otherwise the menu has its own
+	 * search input.
+	 */
 	let {
-		types,
+		items,
+		index = $bindable(0),
+		query = $bindable(''),
+		search = false,
 		onpick,
-	}: { types: Component[]; onpick: (type: string) => void } = $props();
-
-	let open = $state(false);
-	let search = $state('');
-	let input = $state<HTMLInputElement>();
-
-	const found = $derived(
-		types.filter(t => t.name.toLowerCase().includes(search.toLowerCase())),
-	);
-
-	// with a single type there is nothing to choose
-	function toggle() {
-		if (types.length === 1) return onpick(types[0].handle);
-		open = !open;
-		search = '';
-		if (open) setTimeout(() => input?.focus());
-	}
-
-	function pick(handle: string) {
-		open = false;
-		onpick(handle);
-	}
+	}: {
+		items: Component[];
+		index?: number;
+		query?: string;
+		search?: boolean;
+		onpick: (c: Component) => void;
+	} = $props();
 
 	function onkeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') open = false;
-		if (e.key === 'Enter' && found.length) pick(found[0].handle);
+		const n = items.length || 1;
+		if (e.key === 'ArrowDown') index = (index + 1) % n;
+		else if (e.key === 'ArrowUp') index = (index - 1 + n) % n;
+		else if (e.key === 'Enter' && items[index]) onpick(items[index]);
+		else return;
+		e.preventDefault();
+	}
+
+	function focus(el: HTMLInputElement) {
+		el.focus();
 	}
 </script>
 
-<div class="menu">
-	<button onclick={toggle}>
-		+ Add {types.length === 1 ? types[0].name : 'block'}
-	</button>
-	{#if open}
-		<div class="popup">
-			<input
-				bind:this={input}
-				placeholder="Search blocks"
-				bind:value={search}
-				{onkeydown}
-			/>
-			{#each found as t (t.handle)}
-				<button class="item" onclick={() => pick(t.handle)}>
-					{t.name}
-				</button>
-			{/each}
-		</div>
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<div
+	class="menu"
+	role="listbox"
+	tabindex="-1"
+	onclick={e => e.stopPropagation()}
+>
+	{#if search}
+		<input
+			use:focus
+			placeholder="Search blocks"
+			bind:value={query}
+			oninput={() => (index = 0)}
+			{onkeydown}
+		/>
 	{/if}
+	{#each items as c, i (c.handle)}
+		<button
+			class:active={i === index}
+			onmouseenter={() => (index = i)}
+			onmousedown={e => e.preventDefault()}
+			onclick={() => onpick(c)}
+		>
+			{c.name}
+		</button>
+	{:else}
+		<p>No blocks found</p>
+	{/each}
 </div>
 
-<style lang="scss">
+<style>
 	.menu {
-		position: relative;
-	}
-
-	.popup {
 		position: absolute;
-		z-index: 3;
+		z-index: 5;
 		top: 100%;
-		margin-top: 0.25rem;
-		width: 16rem;
-		padding: 0.4rem;
+		left: 0;
+		width: 15rem;
+		margin-top: 0.15rem;
+		padding: 0.3rem;
 		background: white;
 		border: 1px solid var(--line);
 		border-radius: 0.4rem;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
 	}
 
-	.item {
+	input {
+		margin-bottom: 0.25rem;
+	}
+
+	button {
 		border: none;
 		text-align: left;
+		padding: 0.35rem 0.6rem;
+		background: none;
+	}
+
+	.active {
+		background: var(--side);
+	}
+
+	p {
+		margin: 0.3rem 0.6rem;
+		color: var(--muted);
 	}
 </style>

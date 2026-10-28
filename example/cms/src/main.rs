@@ -29,7 +29,7 @@ fn schema() -> Schema {
 		.block(
 			"heading",
 			"Heading",
-			[Field::text("text").required().max(80)],
+			[Field::text("text").required().max(80).heading()],
 		)
 		.block(
 			"text",

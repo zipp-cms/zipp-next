@@ -15,6 +15,7 @@ export type Field = FieldKind & {
 	label: string;
 	required: boolean;
 	indexed: boolean;
+	heading: boolean;
 };
 
 export type Component = {

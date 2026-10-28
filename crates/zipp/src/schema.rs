@@ -42,6 +42,9 @@ pub struct Field {
 	/// filtered and sorted by them.
 	#[serde(default)]
 	pub indexed: bool,
+	/// The studio shows this text as a heading. Only looks, like the label.
+	#[serde(default)]
+	pub heading: bool,
 	#[serde(flatten)]
 	pub kind: FieldKind,
 }
@@ -210,6 +213,7 @@ impl Field {
 			label: humanize(handle),
 			required: false,
 			indexed: false,
+			heading: false,
 			kind,
 		}
 	}
@@ -285,6 +289,14 @@ impl Field {
 			FieldKind::Text { multiline, .. } => *multiline = true,
 			_ => panic!("{}: multiline is only for text", self.handle),
 		}
+		self
+	}
+
+	pub fn heading(mut self) -> Self {
+		if !matches!(self.kind, FieldKind::Text { .. }) {
+			panic!("{}: heading is only for text", self.handle);
+		}
+		self.heading = true;
 		self
 	}
 
