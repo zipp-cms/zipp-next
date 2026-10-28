@@ -148,7 +148,7 @@ fn schema() -> Schema {
 				)
 				.label("Für wen"),
 				Field::dropdown(
-					"language",
+					"spokenIn",
 					[
 						("de", "Deutsch"),
 						("ch", "Mundart"),
@@ -157,7 +157,8 @@ fn schema() -> Schema {
 						("en", "English"),
 					],
 				)
-				.indexed(),
+				.indexed()
+				.label("Sprache"),
 				Field::number("price").range(0.0, 1000.0).indexed(),
 				Field::boolean("soldOut").indexed(),
 				Field::images("image").max(1),

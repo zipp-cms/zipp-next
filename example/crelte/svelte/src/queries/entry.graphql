@@ -100,7 +100,7 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 			city
 			price
 			soldOut
-			language
+			spokenIn
 			genre {
 				value
 				label

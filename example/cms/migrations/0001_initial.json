@@ -718,8 +718,8 @@
             ]
           },
           {
-            "handle": "language",
-            "label": "Language",
+            "handle": "spokenIn",
+            "label": "Sprache",
             "required": false,
             "indexed": true,
             "translatable": false,
@@ -1872,8 +1872,8 @@
             ]
           },
           {
-            "handle": "language",
-            "label": "Language",
+            "handle": "spokenIn",
+            "label": "Sprache",
             "required": false,
             "indexed": true,
             "translatable": false,
