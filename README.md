@@ -74,7 +74,16 @@ fn main() {
   applies new migrations to all content and refuses to start when the
   code changed without one. Labels, names, `required` and the field order
   change freely.
-- **Types for the frontend.** `types` prints TypeScript types of all
+- **GraphQL for the frontend.** `/api/graphql` is generated from the
+  schema: every entry type is `<handle>_Entry`, every block
+  `<handle>_Block`, like Craft. Relations resolve to entries with their
+  fields, so one query loads a page with everything it shows:
+  `entry(uri: "about/team", site: "en") { title ... on page_Entry { body
+  { ... on button_Block { label link { title uri } } } } }`. `entries`
+  and `entryCount` take the same filters as the rest api (`where: [{
+  field: "city", value: "Bern" }]`). Without a session only published
+  entries show. A GET opens GraphiQL to try queries.
+- **Types for the rest api.** `types` prints TypeScript types of all
   entries and blocks.
 
 ## Run the example
@@ -92,8 +101,8 @@ read the migrations from disk, so a new one works without a rebuild.
 To work on the studio run `npm run dev` in `studio/` (it proxies `/api`
 to the cms), `npm run build` updates the embedded build in
 `crates/zipp/studio`, commit it with the change. The frontend runs
-with `npm run dev` in `example/frontend`, `npm run types` updates its
-types after a schema change.
+with `npm run dev` in `example/frontend`, it loads everything over
+GraphQL.
 
 After changing `example/cms/src/main.rs`:
 

@@ -1,28 +1,37 @@
 <script lang="ts">
-	import { entries, url } from './api';
-	import type { Event as EventEntry } from './content';
+	import { gql, url, type Link } from './api';
 
-	let { city }: { city?: string } = $props();
+	let { city }: { city: string | null } = $props();
 
-	// upcoming events, filtered and sorted by their indexed fields
-	let events = $state<EventEntry[]>([]);
+	// upcoming events, filtered and sorted by their indexed fields; like
+	// crelte's loadData of a block
+	const EVENTS = `
+		query ($site: String, $where: [Where!]) {
+			entries(type: "event", site: $site, where: $where, order: "date") {
+				title uri
+				... on event_Entry { date city }
+			}
+		}
+	`;
+
+	type Event = Link & { date: string; city: string };
+	let events = $state<Event[]>([]);
+
 	$effect(() => {
 		const today = new Date().toISOString().slice(0, 10);
-		const params: Record<string, string> = {
-			type: 'event',
-			'f.date.gte': today,
-			order: 'date',
-		};
-		if (city) params['f.city'] = city;
-		entries<EventEntry>(params).then(r => (events = r.entries));
+		const where = [{ field: 'date', op: 'gte', value: today }];
+		if (city) where.push({ field: 'city', op: 'eq', value: city });
+		gql<{ entries: Event[] }>(EVENTS, { where }).then(
+			r => (events = r.entries),
+		);
 	});
 </script>
 
 <ul>
-	{#each events as e (e.id)}
+	{#each events as e (e.uri)}
 		<li>
 			<a href={url(e)}>{e.title}</a>
-			{e.fields.date}, {e.fields.city}
+			{e.date}, {e.city}
 		</li>
 	{:else}
 		<li>No upcoming events</li>

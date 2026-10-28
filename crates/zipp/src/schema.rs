@@ -229,6 +229,16 @@ impl Schema {
 				if comp.fields[..j].iter().any(|f| f.handle == field.handle) {
 					return Err(format!("field {at} exists twice"));
 				}
+				let reserved = match comp.entry {
+					true => crate::graphql::ENTRY_FIELDS,
+					false => crate::graphql::BLOCK_FIELDS,
+				};
+				if reserved.contains(&field.handle.as_str()) {
+					return Err(format!(
+						"field {at}: {} is built in",
+						field.handle
+					));
+				}
 				self.check_field(comp, field)
 					.map_err(|e| format!("{at}: {e}"))?;
 			}

@@ -1,52 +1,76 @@
 <script lang="ts">
-	import { entries, sites, uri, url, type Refs } from './api';
-	import type { AnyEntry } from './content';
+	import { gql, sites, uri, url, type Entry } from './api';
 	import Blocks from './Blocks.svelte';
 
-	let entry = $state<AnyEntry | null>(null);
-	let refs = $state<Refs>({});
-	let missing = $state(false);
-	// the same entry in the other sites, for the language switch
-	let others = $state<Record<string, string>>({});
-
-	entries<AnyEntry>({ uri }).then(async r => {
-		entry = r.entries[0] ?? null;
-		refs = r.relations;
-		missing = !entry;
-		if (!entry) return;
-
-		for (const s of sites) {
-			const other = await entries({
-				ids: String(entry.id),
-				site: s.handle,
-			});
-			if (other.entries[0])
-				others[s.handle] = url(other.entries[0], s.handle);
+	// everything the page shows in one request, linked entries included
+	const PAGE = `
+		fragment Body on Block {
+			id
+			typeHandle
+			... on heading_Block { text }
+			... on text_Block { content }
+			... on button_Block { label link { title uri } }
+			... on events_Block { city }
 		}
+
+		query ($uri: String, $site: String) {
+			entry(uri: $uri, site: $site) {
+				id
+				typeHandle
+				title
+				... on home_Entry { intro body { ...Body } }
+				... on page_Entry { intro body { ...Body } }
+				... on event_Entry {
+					date city price description
+					page { title uri }
+				}
+			}
+		}
+	`;
+
+	// the same entry in every site, for the language switch
+	const SITES = `
+		query ($id: Int) {
+			${sites.map(s => `${s.handle}: entry(id: $id, site: "${s.handle}") { uri }`).join('\n')}
+		}
+	`;
+
+	let entry = $state<Entry | null>(null);
+	let missing = $state(false);
+	let others = $state<Record<string, { uri: string | null } | null>>({});
+
+	gql<{ entry: Entry | null }>(PAGE, { uri }).then(async r => {
+		entry = r.entry;
+		missing = !entry;
+		if (entry) others = await gql(SITES, { id: entry.id });
 	});
 </script>
 
 <nav>
 	{#each sites as s (s.handle)}
-		<a href={others[s.handle] ?? s.prefix + '/'}>{s.label}</a>
+		{@const other = others[s.handle]}
+		<a href={other ? url(other, s.handle) : s.prefix + '/'}>{s.label}</a>
 	{/each}
 </nav>
 
 <main>
 	{#if missing}
 		<h1>Not found</h1>
-	{:else if entry?.type === 'home' || entry?.type === 'page'}
+	{:else if entry?.typeHandle === 'event'}
 		<h1>{entry.title}</h1>
-		{#if entry.fields.intro}<p class="intro">{entry.fields.intro}</p>{/if}
-		<Blocks blocks={entry.fields.body ?? []} {refs} />
-	{:else if entry?.type === 'event'}
-		{@const f = entry.fields}
-		<h1>{entry.title}</h1>
-		<p>{f.date} in {f.city}{f.price ? ` · CHF ${f.price}` : ''}</p>
-		{#if f.description}<p>{f.description}</p>{/if}
-		{#each f.page ?? [] as id (id)}
-			{#if refs[id]}<a href={url(refs[id])}>{refs[id].title}</a>{/if}
+		<p>
+			{entry.date} in {entry.city}{entry.price
+				? ` · CHF ${entry.price}`
+				: ''}
+		</p>
+		{#if entry.description}<p>{entry.description}</p>{/if}
+		{#each entry.page ?? [] as p (p.uri)}
+			<a href={url(p)}>{p.title}</a>
 		{/each}
+	{:else if entry}
+		<h1>{entry.title}</h1>
+		{#if entry.intro}<p class="intro">{entry.intro}</p>{/if}
+		<Blocks blocks={entry.body ?? []} />
 	{/if}
 </main>
 

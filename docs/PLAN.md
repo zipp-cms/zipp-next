@@ -14,8 +14,8 @@
 - [x] Sections (single, channel, structure) with several entry types and uri formats
 - [x] Sites: a row per site, translatable and shared fields, migrations for sites and sections
 - [x] Studio: sections, site switcher, tree of a structure
-- [ ] GraphQL generated from the schema, `entry(uri, site)` in the shape crelte expects,
-      relations resolved with their fields in the same query
+- [x] GraphQL generated from the schema: `entry(uri, site)`, `entries`, `entryCount`,
+      `sites`; relations resolve with their fields in the same query
 - [ ] Assets: uploads, image field with focal point, named transforms in code,
       generated on first request and cached
 - [ ] A crelte project on zipp as the real test

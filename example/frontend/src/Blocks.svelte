@@ -1,26 +1,21 @@
 <script lang="ts">
-	import { url, type Refs } from './api';
-	import type { PageFields } from './content';
+	import { url, type Block } from './api';
 	import Events from './Events.svelte';
 
-	let {
-		blocks,
-		refs,
-	}: { blocks: NonNullable<PageFields['body']>; refs: Refs } = $props();
+	let { blocks }: { blocks: Block[] } = $props();
 </script>
 
 {#each blocks as block (block.id)}
-	{#if block.type === 'heading'}
-		<h2>{block.fields.text}</h2>
-	{:else if block.type === 'text'}
-		<p>{block.fields.content}</p>
-	{:else if block.type === 'button'}
-		{@const target = refs[block.fields.link?.[0] ?? -1]}
-		<a class="button" href={target ? url(target) : '#'}>
-			{block.fields.label}
+	{#if block.typeHandle === 'heading'}
+		<h2>{block.text}</h2>
+	{:else if block.typeHandle === 'text'}
+		<p>{block.content}</p>
+	{:else if block.typeHandle === 'button'}
+		<a class="button" href={block.link[0] ? url(block.link[0]) : '#'}>
+			{block.label}
 		</a>
-	{:else if block.type === 'events'}
-		<Events city={block.fields.city} />
+	{:else if block.typeHandle === 'events'}
+		<Events city={block.city} />
 	{/if}
 {/each}
 

@@ -8,6 +8,7 @@ pub mod content;
 pub mod db;
 pub mod entries;
 pub mod error;
+pub mod graphql;
 pub mod migrate;
 pub mod query;
 pub mod schema;
@@ -56,6 +57,7 @@ macro_rules! migrations {
 pub struct AppState {
 	pub db: Db,
 	pub schema: Arc<Schema>,
+	pub gql: async_graphql::dynamic::Schema,
 }
 
 #[derive(Debug, Parser)]
@@ -147,21 +149,21 @@ async fn serve(
 			.into());
 	}
 
-	let state = AppState {
-		db,
-		schema: Arc::new(schema),
-	};
+	let schema = Arc::new(schema);
+	let gql = graphql::build(schema.clone(), db.clone())?;
+	let state = AppState { db, schema, gql };
 	let api = Router::new()
 		.nest("/auth", auth::routes())
-		.merge(entries::routes());
+		.merge(entries::routes())
+		.merge(graphql::routes());
 	let app = Router::new().nest("/api", api).merge(studio::routes());
 
-	// frontends on other domains read the content
+	// frontends on other domains read the content, graphql is a POST
 	let app = app
 		.layer(
 			CorsLayer::new()
 				.allow_origin(cors::Any)
-				.allow_methods([Method::GET])
+				.allow_methods([Method::GET, Method::POST])
 				.allow_headers([header::CONTENT_TYPE]),
 		)
 		.layer(TraceLayer::new_for_http())
