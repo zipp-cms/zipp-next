@@ -57,7 +57,7 @@
       and query arguments, so the frontends' queries stay; later remove what isn't needed
       (e.g. `defaultLabel` of links)
 - [x] Importer from Craft (content, structure, assets with focal points), `import-craft`
-- [ ] SEO native in zipp like the Craft plugin meierlabs-seo: a seo field, defaults in code
+- [x] SEO native in zipp like the Craft plugin meierlabs-seo: a seo field, defaults in code
       per entry type and section, global settings as a single, `seoJson` on every entry and
       `seo(siteId)` in the plugin's shape so the npm `<Seo>` works unchanged, `/sitemap.xml`
       and `/robots.txt` for its `seoRoutes`
@@ -92,4 +92,8 @@
 - [x] SEO half code, half database: field mappings in code, title pattern,
   description, image, robots and sitemap per section and entry type
   editable in `seoSettings` over the code's defaults
-
+- [x] SEO as the plugin `zipp-seo`, the test of the plugin system (operator
+  2026-10-28); field handles for admins; tabs of entry types, shown in Setup
+- Tabs for blocks too, like Craft's nested entry types? (question)
+- Where translation keys live: in code (today) or in the frontend's JSON
+  (question, open since the textrem plans)
