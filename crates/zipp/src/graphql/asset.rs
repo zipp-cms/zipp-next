@@ -8,7 +8,7 @@ pub(super) fn asset_object() -> Object {
 			FieldFuture::new(async move {
 				let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
 				let v = match name {
-					"id" => GqlValue::from(a.id),
+					"id" => GqlValue::from(a.id.to_string()),
 					"filename" => GqlValue::from(a.filename.clone()),
 					"kind" => GqlValue::from(a.kind.clone()),
 					"mimeType" => GqlValue::from(a.mime.clone()),
@@ -37,7 +37,7 @@ pub(super) fn asset_object() -> Object {
 	let f = || TypeRef::named_nn(TypeRef::FLOAT);
 
 	Object::new("Asset")
-		.field(plain("id", TypeRef::named_nn(TypeRef::INT)))
+		.field(plain("id", TypeRef::named_nn(TypeRef::ID)))
 		.field(plain("filename", s()))
 		.field(plain("kind", s()))
 		.field(plain("mimeType", s()))

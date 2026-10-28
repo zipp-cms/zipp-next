@@ -94,7 +94,7 @@ async fn loads_a_page_with_its_relations() {
 	.await;
 	assert_eq!(
 		data["entries"],
-		json!([{ "title": "Jazz", "city": "Bern", "page": [{ "id": about.id }] }])
+		json!([{ "title": "Jazz", "city": "Bern", "page": [{ "id": about.id.to_string() }] }])
 	);
 	assert_eq!(data["entryCount"], 2);
 	assert_eq!(data["about"], Value::Null);
@@ -218,7 +218,7 @@ async fn answers_crelte_like_craft() {
 	let data = resp.data.into_json().unwrap();
 	assert_eq!(
 		data["entry"],
-		json!({ "id": 1, "siteId": 2, "url": "https://x.ch/en/",
+		json!({ "id": "1", "siteId": 2, "url": "https://x.ch/en/",
 			"sectionHandle": "home", "typeHandle": "page", "title": "Home" })
 	);
 }

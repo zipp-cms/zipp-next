@@ -3,7 +3,8 @@ use super::*;
 pub(super) fn entry_common() -> Vec<(&'static str, TypeRef)> {
 	let s = || TypeRef::named_nn(TypeRef::STRING);
 	vec![
-		("id", TypeRef::named_nn(TypeRef::INT)),
+		// Craft's ids are strings
+		("id", TypeRef::named_nn(TypeRef::ID)),
 		("sectionHandle", s()),
 		("typeHandle", s()),
 		("site", s()),
@@ -39,7 +40,7 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 		FieldFuture::new(async move {
 			let e = ctx.parent_value.try_downcast_ref::<Entry>()?;
 			let v = match name {
-				"id" => GqlValue::from(e.id),
+				"id" => GqlValue::from(e.id.to_string()),
 				"sectionHandle" => GqlValue::from(e.section.clone()),
 				"typeHandle" => GqlValue::from(e.ty.clone()),
 				"site" => GqlValue::from(e.site.clone()),
