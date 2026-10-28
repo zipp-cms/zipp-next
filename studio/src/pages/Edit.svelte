@@ -6,6 +6,7 @@
 		entryUrl,
 		getDraft,
 		getEntry,
+		getRevision,
 		getRevisions,
 		listEntries,
 		previewToken,
@@ -18,6 +19,7 @@
 		type Refs,
 		type Revision,
 		type Schema,
+		type SiteDoc,
 		type Values,
 	} from '../api';
 	import { untrack } from 'svelte';
@@ -52,6 +54,10 @@
 	let draft = $state<Draft | null>(null);
 	let draftState = $state<'' | 'saving' | 'saved'>('');
 	let revisions = $state<Revision[]>([]);
+	// the live content of the site, to mark what the draft changes
+	let live = $state<SiteDoc | null>(null);
+	// an old revision, shown read only
+	let viewing = $state<{ rev: Revision; doc: SiteDoc | null } | null>(null);
 	// someone else changed the draft, nothing is saved until resolved
 	let conflict = $state('');
 
@@ -76,6 +82,12 @@
 		parentId = entry.parentId;
 		refs = relations;
 		draft = d;
+		live = {
+			title: entry.title,
+			slug: entry.slug,
+			published: entry.published,
+			fields: entry.fields,
+		};
 		const content = d?.doc[site.current] ?? entry;
 		title = content.title;
 		slug = content.slug;
@@ -219,9 +231,57 @@
 		await saveDraft(snapshot());
 	}
 
+	/** The fields of the draft that differ from the live entry. */
+	const changed = $derived.by(() => {
+		const set = new Set<string>();
+		if (!draft || !live) return set;
+		if (title !== live.title) set.add('title');
+		if (slug !== live.slug) set.add('slug');
+		const keys = new Set([
+			...Object.keys(fields),
+			...Object.keys(live.fields),
+		]);
+		for (const k of keys) {
+			const now = JSON.stringify($state.snapshot(fields[k]) ?? null);
+			if (now !== JSON.stringify(live.fields[k] ?? null)) set.add(k);
+		}
+		return set;
+	});
+
+	async function view(rev: Revision) {
+		const doc = await getRevision(id!, rev.id);
+		viewing = { rev, doc: doc[site.current] ?? null };
+		tab = 'content';
+		window.scrollTo(0, 0);
+	}
+
+	/** Changed in this site by a revision, for the markers. */
+	function revChanged(rev: Revision) {
+		return new Set(
+			rev.changes
+				.filter(c => c.sites.includes(site.current))
+				.map(c => c.field),
+		);
+	}
+
+	/** `Title (de), Intro (de, en)` */
+	function changeText(rev: Revision) {
+		if (!rev.changes.length) return 'Created';
+		const label = (f: string) =>
+			comp?.fields.find(x => x.handle === f)?.label ??
+			f.charAt(0).toUpperCase() + f.slice(1);
+		const multi = schema.sites.length > 1;
+		return rev.changes
+			.map(
+				c => label(c.field) + (multi ? ` (${c.sites.join(', ')})` : ''),
+			)
+			.join(', ');
+	}
+
 	function restore(rev: Revision) {
 		return run(async () => {
 			await restoreRevision(id!, rev.id);
+			viewing = null;
 			await load();
 			tab = 'content';
 		});
@@ -343,27 +403,102 @@
 		{#if error}<p class="error">{error}</p>{/if}
 
 		{#if tab === 'content'}
-			<div class="head">
-				<label>
-					Title
-					<input placeholder="Title" bind:value={title} />
-					{#if errors.title}<span class="error">
-							{errors.title}
-						</span>{/if}
-				</label>
-				{#if !single}
+			{#if viewing}
+				{@const rc = revChanged(viewing.rev)}
+				<div class="viewing">
+					<span>
+						Revision of {time(viewing.rev.createdAt)}{viewing.rev
+							.user
+							? ` by ${viewing.rev.user}`
+							: ''}, read only
+					</span>
+					<button class="dark" onclick={() => restore(viewing!.rev)}>
+						Restore
+					</button>
+					<button class="light" onclick={() => (viewing = null)}>
+						Back to editing
+					</button>
+				</div>
+				{#if viewing.doc}
+					<!-- a disabled fieldset disables every input in it -->
+					<fieldset disabled>
+						<div class="head">
+							<label>
+								<span>
+									{#if rc.has('title')}<span
+											class="dot"
+										></span>{/if}Title
+								</span>
+								<input value={viewing.doc.title} />
+							</label>
+							{#if !single}
+								<label>
+									<span>
+										{#if rc.has('slug')}<span
+												class="dot"
+											></span>{/if}Slug
+									</span>
+									<input value={viewing.doc.slug} />
+								</label>
+							{/if}
+						</div>
+						<Fields
+							{schema}
+							component={comp}
+							values={viewing.doc.fields}
+							errors={{}}
+							{refs}
+							changed={rc}
+						/>
+					</fieldset>
+				{:else}
+					<p class="muted">
+						This revision has no content for this site.
+					</p>
+				{/if}
+			{:else}
+				<div class="head">
 					<label>
-						Slug
-						<input placeholder="from the title" bind:value={slug} />
-						{#if uri !== null}<span class="uri">/{uri}</span>{/if}
-						{#if errors.slug}<span class="error">
-								{errors.slug}
+						<span>
+							{#if changed.has('title')}<span
+									class="dot"
+								></span>{/if}Title
+						</span>
+						<input placeholder="Title" bind:value={title} />
+						{#if errors.title}<span class="error">
+								{errors.title}
 							</span>{/if}
 					</label>
-				{/if}
-			</div>
+					{#if !single}
+						<label>
+							<span>
+								{#if changed.has('slug')}<span
+										class="dot"
+									></span>{/if}Slug
+							</span>
+							<input
+								placeholder="from the title"
+								bind:value={slug}
+							/>
+							{#if uri !== null}<span class="uri">
+									/{uri}
+								</span>{/if}
+							{#if errors.slug}<span class="error">
+									{errors.slug}
+								</span>{/if}
+						</label>
+					{/if}
+				</div>
 
-			<Fields {schema} component={comp} values={fields} {errors} {refs} />
+				<Fields
+					{schema}
+					component={comp}
+					values={fields}
+					{errors}
+					{refs}
+					{changed}
+				/>
+			{/if}
 		{:else}
 			<div class="options">
 				<span>Published</span>
@@ -388,15 +523,21 @@
 					<ul class="revisions">
 						{#each revisions as rev, i (rev.id)}
 							<li>
-								<span>
-									{time(rev.createdAt)}
-									{#if rev.user}<span class="muted">
-											{rev.user}
-										</span>{/if}
-									{#if i === 0}<span class="muted">
-											live
-										</span>{/if}
-								</span>
+								<button
+									class="link rev"
+									onclick={() => view(rev)}
+								>
+									<span>
+										{time(rev.createdAt)}
+										{#if rev.user}<span class="muted">
+												{rev.user}
+											</span>{/if}
+										{#if i === 0}<span class="muted">
+												live
+											</span>{/if}
+									</span>
+									<span class="what">{changeText(rev)}</span>
+								</button>
 								{#if i > 0}
 									<button
 										class="link"
@@ -452,6 +593,49 @@
 
 	.last-change {
 		margin: -10px 0 12px;
+		font-size: 13px;
+		color: var(--muted);
+	}
+
+	.viewing {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 24px;
+		padding: 12px 16px;
+		background: var(--input);
+
+		span {
+			margin-right: auto;
+		}
+	}
+
+	fieldset {
+		margin: 0;
+		padding: 0;
+		border: none;
+	}
+
+	.dot {
+		display: inline-block;
+		width: 8px;
+		height: 8px;
+		margin-right: 6px;
+		border-radius: 50%;
+		background: #d98e04;
+	}
+
+	.rev {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 2px;
+		padding: 0;
+		color: var(--text);
+		text-align: left;
+	}
+
+	.what {
 		font-size: 13px;
 		color: var(--muted);
 	}

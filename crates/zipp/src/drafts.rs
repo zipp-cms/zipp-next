@@ -62,6 +62,54 @@ pub struct Revision {
 	pub id: i64,
 	pub user: Option<String>,
 	pub created_at: i64,
+	/// what changed since the revision before, empty for the first
+	pub changes: Vec<Change>,
+}
+
+/// A field (or title, slug, published) that changed, and in which sites.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Change {
+	pub field: String,
+	pub sites: Vec<String>,
+}
+
+/// What differs between two versions of an entry, in the order of the
+/// fields of the newer one.
+pub fn diff_docs(old: &Doc, new: &Doc) -> Vec<Change> {
+	let mut changes: Vec<Change> = vec![];
+	let mut add = |field: &str, site: &str| match changes
+		.iter_mut()
+		.find(|c| c.field == field)
+	{
+		Some(c) => c.sites.push(site.into()),
+		None => changes.push(Change {
+			field: field.into(),
+			sites: vec![site.into()],
+		}),
+	};
+
+	for (site, n) in new {
+		let Some(o) = old.get(site) else { continue };
+		if o.title != n.title {
+			add("title", site);
+		}
+		if o.slug != n.slug {
+			add("slug", site);
+		}
+		if o.published != n.published {
+			add("published", site);
+		}
+		let empty = serde_json::Map::new();
+		let of = o.fields.as_object().unwrap_or(&empty);
+		let nf = n.fields.as_object().unwrap_or(&empty);
+		let keys = nf.keys().chain(of.keys().filter(|k| !nf.contains_key(*k)));
+		for key in keys {
+			if of.get(key) != nf.get(key) {
+				add(key, site);
+			}
+		}
+	}
+	changes
 }
 
 /// The live content of an entry.
@@ -256,22 +304,47 @@ pub fn record_revision(
 	Ok(())
 }
 
+/// The revisions of an entry, newest first, each with what it changed.
 pub fn revisions(conn: &Connection, id: i64) -> Result<Vec<Revision>> {
 	let mut stmt = conn.prepare(
-		"SELECT r.id, u.email, r.created_at FROM revisions r
+		"SELECT r.id, u.email, r.created_at, r.doc FROM revisions r
 		LEFT JOIN users u ON u.id = r.user_id
-		WHERE r.entry_id = ?1 ORDER BY r.id DESC",
+		WHERE r.entry_id = ?1 ORDER BY r.id",
 	)?;
-	let revs = stmt
+	let rows = stmt
 		.query_map([id], |r| {
-			Ok(Revision {
-				id: r.get(0)?,
-				user: r.get(1)?,
-				created_at: r.get(2)?,
-			})
+			Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get::<_, String>(3)?))
 		})?
-		.collect::<rusqlite::Result<_>>()?;
+		.collect::<rusqlite::Result<Vec<(i64, Option<String>, i64, String)>>>(
+		)?;
+
+	let mut revs = vec![];
+	let mut prev: Option<Doc> = None;
+	for (id, user, created_at, doc) in rows {
+		let doc: Doc = serde_json::from_str(&doc).unwrap_or_default();
+		let changes = match &prev {
+			Some(p) => diff_docs(p, &doc),
+			None => vec![],
+		};
+		revs.push(Revision {
+			id,
+			user,
+			created_at,
+			changes,
+		});
+		prev = Some(doc);
+	}
+	revs.reverse();
 	Ok(revs)
+}
+
+pub fn get_revision(conn: &Connection, id: i64, revision: i64) -> Result<Doc> {
+	let doc: String = conn.query_row(
+		"SELECT doc FROM revisions WHERE id = ?1 AND entry_id = ?2",
+		params![revision, id],
+		|r| r.get(0),
+	)?;
+	Ok(serde_json::from_str(&doc).unwrap_or_default())
 }
 
 /// Puts an old revision into the draft. Sites that the revision doesn't
@@ -402,6 +475,14 @@ async fn revisions_route(
 	Ok(Json(revisions(&state.db.conn(), id)?))
 }
 
+async fn revision_route(
+	State(state): State<AppState>,
+	_auth: Authed,
+	Path((id, rev)): Path<(i64, i64)>,
+) -> Result<Json<Doc>> {
+	Ok(Json(get_revision(&state.db.conn(), id, rev)?))
+}
+
 async fn restore_route(
 	State(state): State<AppState>,
 	auth: Authed,
@@ -433,6 +514,7 @@ pub fn routes() -> Router<AppState> {
 		)
 		.route("/entries/{id}/publish", post(publish_route))
 		.route("/entries/{id}/revisions", get(revisions_route))
+		.route("/entries/{id}/revisions/{rev}", get(revision_route))
 		.route("/entries/{id}/revisions/{rev}/restore", post(restore_route))
 		.route("/entries/{id}/preview", post(preview_route))
 }
@@ -591,6 +673,32 @@ mod tests {
 		assert_eq!(errs[0].message, "en: is required");
 		// nothing was written
 		assert_eq!(get_entry(&conn, e.id, "de").unwrap().title, "E");
+	}
+
+	#[test]
+	fn revisions_know_what_changed() {
+		let db = Db::memory().unwrap();
+		let conn = db.conn();
+		let s = site();
+		let e = save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "P", json!({ "intro": "a" })),
+		)
+		.unwrap();
+		record_revision(&conn, e.id, None).unwrap();
+		let de = site_doc("P2", json!({ "intro": "b" }));
+		put_draft(&conn, &s, e.id, "de", de, base(&conn, e.id), None).unwrap();
+		publish(&conn, &s, e.id, None).unwrap();
+
+		let revs = revisions(&conn, e.id).unwrap();
+		assert!(revs[1].changes.is_empty());
+		let fields: Vec<_> =
+			revs[0].changes.iter().map(|c| c.field.as_str()).collect();
+		// the draft has no slug, it follows the new title
+		assert_eq!(fields, ["title", "slug", "intro"]);
+		assert_eq!(revs[0].changes[0].sites, ["de"]);
 	}
 
 	#[test]

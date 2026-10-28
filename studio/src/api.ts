@@ -272,7 +272,23 @@ export type Draft = {
 	updatedAt: number;
 };
 
-export type Revision = { id: number; user: string | null; createdAt: number };
+/** A field (or title, slug, published) that changed, in which sites. */
+export type Change = { field: string; sites: string[] };
+
+export type Revision = {
+	id: number;
+	user: string | null;
+	createdAt: number;
+	/** since the revision before, empty for the first */
+	changes: Change[];
+};
+
+export function getRevision(
+	id: number,
+	rev: number,
+): Promise<Record<string, SiteDoc>> {
+	return request('GET', `/entries/${id}/revisions/${rev}`);
+}
 
 export async function getDraft(id: number): Promise<Draft | null> {
 	return (await request('GET', `/entries/${id}/draft`)).draft;

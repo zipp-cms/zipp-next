@@ -12,6 +12,7 @@
 		errors,
 		refs,
 		prefix = '',
+		changed = new Set(),
 	}: {
 		schema: Schema;
 		component: Component;
@@ -19,6 +20,8 @@
 		errors: Record<string, string>;
 		refs: Refs;
 		prefix?: string;
+		/** fields to mark as changed */
+		changed?: Set<string>;
 	} = $props();
 
 	/** Entry fields that are the same in all sites, so editors know. */
@@ -34,7 +37,12 @@
 	{#each component.fields as field (field.handle)}
 		{@const path = prefix + field.handle}
 		<label for={path}>
-			{field.label}{#if field.required}<span class="req">*</span>{/if}
+			{#if changed.has(field.handle)}<span
+					class="changed"
+					title="Changed"
+				></span>{/if}{field.label}{#if field.required}<span class="req">
+					*
+				</span>{/if}
 			{#if shared(field)}<span class="shared">all sites</span>{/if}
 		</label>
 		<div class="value">
@@ -100,6 +108,16 @@
 		margin-top: 2px;
 		font-size: 12px;
 		color: var(--muted);
+	}
+
+	// like Craft: a dot in front of changed fields
+	.changed {
+		display: inline-block;
+		width: 8px;
+		height: 8px;
+		margin-right: 6px;
+		border-radius: 50%;
+		background: #d98e04;
 	}
 
 	.req {
