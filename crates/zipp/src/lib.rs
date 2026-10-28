@@ -7,6 +7,7 @@ pub mod assets;
 pub mod auth;
 mod cli;
 pub mod content;
+pub mod craft;
 pub mod db;
 pub mod drafts;
 pub mod entries;
@@ -220,6 +221,20 @@ impl Cms {
 				print!("{}", typescript::generate(&schema));
 				Ok(())
 			}
+			Cmd::ImportCraft {
+				export,
+				files,
+				volume,
+				site,
+			} => import_craft(
+				&schema,
+				&opts.db,
+				&migrations,
+				&export,
+				files,
+				&volume,
+				&site,
+			),
 			Cmd::User { email, role } => {
 				add_user(&schema, &opts.db, &email, role.as_deref())
 			}

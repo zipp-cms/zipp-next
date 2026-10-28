@@ -56,7 +56,7 @@
       names (`CkeditorMarkup`, `LinkData`, `<type>_Entry` for blocks, `<handle>_GlobalSet`)
       and query arguments, so the frontends' queries stay; later remove what isn't needed
       (e.g. `defaultLabel` of links)
-- [ ] Importer from Craft (content, structure, assets with focal points)
+- [x] Importer from Craft (content, structure, assets with focal points), `import-craft`
 - [ ] SEO native in zipp like the Craft plugin meierlabs-seo: a seo field, defaults in code
       per entry type and section, global settings as a single, `seoJson` on every entry and
       `seo(siteId)` in the plugin's shape so the npm `<Seo>` works unchanged, `/sitemap.xml`

@@ -15,6 +15,8 @@ SQLite database, default `zipp.db`):
 - `user <email> [--role r]`: adds a user or sets a new password and role,
   reads the password from stdin; without a role an admin
 - `types`: prints TypeScript types of the content
+- `import-craft <export.json> [--volume handle=dir] [--site craft=zipp]`:
+  imports a Craft site into a database without content, see below
 
 ## serve
 
@@ -64,3 +66,23 @@ against the schema (unknown fields, wrong arguments), for CI:
   `0001_initial`: after changing the schema delete it and run
   `makemigration --name initial` again. Real migrations start with the
   first live site.
+
+## Import from Craft
+
+`crates/zipp/craft/export.php` writes the content of a Craft 5 site as
+JSON (`ddev craft exec "if (true) { $(sed 1d export.php) }"` in the
+Craft project, it writes `storage/zipp-export.json`), `import-craft`
+puts it into a new database: `cargo run -- import-craft export.json
+--volume default=../craft/web/assets/default`. Everything matches by
+handle, so the zipp schema uses Craft's handles: sections, global sets
+(singles in zipp) and category groups go to the section of the same
+handle, entry types and nested entry types to the entry type or block,
+fields to the field. Values follow the zipp field: a matrix becomes
+blocks or a navigation (each nested entry's link and the nested entries
+under it), a content block a group, categories a relation, CKEditor's
+html rich text (nested entries become embedded blocks, or buttons if
+they are only a link). Assets come with their title, alt text and focal
+point; entries keep Craft's post date, structures their order. What
+the schema doesn't have is left out and listed; slugs are made zipp's
+(`teddy--co.` becomes `teddy-co`), so redirect such urls in the
+frontend. SEO fields aren't imported yet.

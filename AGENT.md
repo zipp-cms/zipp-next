@@ -28,10 +28,11 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
 ## Layout
 
 - `crates/zipp/src`: one folder per area (`schema`, `content`, `entries`,
-  `drafts`, `graphql`, `migrate`, `assets`, `ai`), each with a `mod.rs`
-  for its types and core functions, files for the parts, `routes.rs` for
-  the HTTP handlers and `tests.rs` when the tests are long. Types that
-  several files of a folder use stay in its `mod.rs`. `lib.rs` is the
+  `drafts`, `graphql`, `migrate`, `assets`, `ai`, `craft` for the
+  import), each with a `mod.rs` for its types and core functions, files
+  for the parts, `routes.rs` for the HTTP handlers and `tests.rs` when
+  the tests are long. Types that several files of a folder use stay in
+  its `mod.rs`. `lib.rs` is the
   public api, `cli.rs` the commands, `server.rs` the router.
 - `studio/src`: `api/` (one file per area, `index.ts` re-exports),
   `pages/` (`edit/` for the editor), `fields/` (one component per field

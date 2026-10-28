@@ -67,6 +67,21 @@ pub(super) enum Cmd {
 		#[arg(long)]
 		queries: Vec<PathBuf>,
 	},
+	/// Import a Craft site into a database without content: the JSON of
+	/// zipp's `craft/export.php` and the files of its volumes.
+	ImportCraft {
+		export: PathBuf,
+		/// Where uploaded files go, like `serve --files`
+		#[arg(long, default_value = "files")]
+		files: PathBuf,
+		/// The folder of a volume: `--volume default=craft/web/assets`
+		#[arg(long)]
+		volume: Vec<String>,
+		/// A site of Craft for a site of zipp: `--site default=de`,
+		/// without it they match by handle
+		#[arg(long)]
+		site: Vec<String>,
+	},
 	/// Add a studio user or set a new password and role, reads the
 	/// password from stdin. Without a role the user is an admin.
 	User {
@@ -148,6 +163,61 @@ pub(super) fn add_user(
 	auth::add_user(&db.conn(), email, password, role)
 		.map_err(|e| e.to_string())?;
 	println!("Saved {email} as {}", role.unwrap_or("admin"));
+	Ok(())
+}
+
+/// See [`Cmd::ImportCraft`].
+pub(super) fn import_craft(
+	schema: &Schema,
+	db_path: &Path,
+	migrations: &Migrations,
+	export: &Path,
+	files: PathBuf,
+	volumes: &[String],
+	sites: &[String],
+) -> Result<(), String> {
+	let pair = |s: &String, what: &str| {
+		s.split_once('=')
+			.map(|(a, b)| (a.to_string(), b.to_string()))
+			.ok_or_else(|| format!("--{what} {s:?} needs <craft>=<…>"))
+	};
+	let opts = craft::Options {
+		sites: sites
+			.iter()
+			.map(|s| pair(s, "site"))
+			.collect::<Result<_, _>>()?,
+		volumes: volumes
+			.iter()
+			.map(|v| pair(v, "volume").map(|(h, d)| (h, PathBuf::from(d))))
+			.collect::<Result<_, _>>()?,
+	};
+	let json = fs::read_to_string(export)
+		.map_err(|e| format!("{}: {e}", export.display()))?;
+	let export: craft::Export =
+		serde_json::from_str(&json).map_err(|e| format!("the export: {e}"))?;
+
+	let files = assets::files_dir(files).map_err(|e| e.to_string())?;
+	let db = Db::open(db_path).map_err(|e| e.to_string())?;
+	let migrations = migrations.load()?;
+	apply::apply_migrations(&db.conn(), &migrations)
+		.map_err(|e| e.to_string())?;
+	if !migrate::unmigrated(&migrations, schema)?.is_empty() {
+		return Err("The schema changed since the last migration, run \
+			`makemigration` first"
+			.into());
+	}
+
+	let report = craft::import(&db.conn(), schema, &files, &export, &opts)
+		.map_err(|e| e.to_string())?;
+	for s in &report.skipped {
+		println!("skipped {s}");
+	}
+	println!(
+		"Imported {} entries and {} assets, {} skipped",
+		report.entries,
+		report.assets,
+		report.skipped.len()
+	);
 	Ok(())
 }
 

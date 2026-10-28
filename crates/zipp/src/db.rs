@@ -190,6 +190,33 @@ pub fn iso(ms: i64) -> String {
 	)
 }
 
+/// `2026-10-28T08:00:00+02:00` (or `…Z`, or without seconds' offset
+/// `…T08:00:00`, read as UTC) as milliseconds, the inverse of [`iso`].
+pub fn parse_iso(s: &str) -> Option<i64> {
+	let num = |r: std::ops::Range<usize>| s.get(r)?.parse::<i64>().ok();
+	let (y, m, d) = (num(0..4)?, num(5..7)?, num(8..10)?);
+	let (h, min, sec) = (num(11..13)?, num(14..16)?, num(17..19)?);
+	let offset = match s.get(19..) {
+		None | Some("") | Some("Z") => 0,
+		Some(o) => {
+			let sign = if o.starts_with('-') { -1 } else { 1 };
+			let h = o.get(1..3)?.parse::<i64>().ok()?;
+			let m = o.get(4..6)?.parse::<i64>().ok()?;
+			sign * (h * 3600 + m * 60)
+		}
+	};
+	// days from civil, Howard Hinnant's algorithm
+	let y = if m <= 2 { y - 1 } else { y };
+	let era = y.div_euclid(400);
+	let yoe = y - era * 400;
+	let mp = (m + 9) % 12;
+	let doy = (153 * mp + 2) / 5 + d - 1;
+	let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+	let days = era * 146_097 + doe - 719_468;
+	let secs = days * 86_400 + h * 3600 + min * 60 + sec - offset;
+	Some(secs * 1000)
+}
+
 pub fn now() -> i64 {
 	SystemTime::now()
 		.duration_since(UNIX_EPOCH)
