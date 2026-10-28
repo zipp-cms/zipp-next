@@ -52,7 +52,15 @@
 - [x] Translations defined in code
 - [x] Cms builder: routes and on_change hooks of the site
 - [x] Group field (zandi's ContentBlock); `localized` is above
-- [ ] Port textrem or zandi to zipp
+- [ ] Port textrem, then zandi (operator 2026-10-28): first 1:1, GraphQL with Craft's
+      names (`CkeditorMarkup`, `LinkData`, `<type>_Entry` for blocks, `<handle>_GlobalSet`)
+      and query arguments, so the frontends' queries stay; later remove what isn't needed
+      (e.g. `defaultLabel` of links)
+- [ ] Importer from Craft (content, structure, assets with focal points)
+- [ ] SEO native in zipp like the Craft plugin meierlabs-seo: a seo field, defaults in code
+      per entry type and section, global settings as a single, `seoJson` on every entry and
+      `seo(siteId)` in the plugin's shape so the npm `<Seo>` works unchanged, `/sitemap.xml`
+      and `/robots.txt` for its `seoRoutes`
 
 ## Ideas of the operator (2026-10-28)
 
