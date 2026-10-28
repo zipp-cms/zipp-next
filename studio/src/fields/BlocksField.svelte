@@ -11,6 +11,7 @@
 		errors,
 		refs,
 		path,
+		changed = new Set(),
 	}: {
 		schema: Schema;
 		field: Field;
@@ -18,6 +19,7 @@
 		errors: Record<string, string>;
 		refs: Refs;
 		path: string;
+		changed?: Set<string>;
 	} = $props();
 
 	const types = $derived(
@@ -71,7 +73,10 @@
 					class="link name"
 					onclick={() => (collapsed[k] = !collapsed[k])}
 				>
-					{comp?.name ?? block.type}
+					{#if changed.has(`${path}.${i}`)}<span
+							class="dot"
+							title="New"
+						></span>{/if}{comp?.name ?? block.type}
 					{#if collapsed[k]}<span class="muted">
 							{summary(block)}
 						</span>{/if}
@@ -107,6 +112,7 @@
 					{errors}
 					{refs}
 					prefix="{path}.{i}."
+					{changed}
 				/>
 			{/if}
 		</div>
@@ -146,6 +152,15 @@
 			text-align: left;
 			min-width: 0;
 		}
+	}
+
+	.dot {
+		display: inline-block;
+		width: 8px;
+		height: 8px;
+		margin-right: -4px;
+		border-radius: 50%;
+		background: #d98e04;
 	}
 
 	.muted {

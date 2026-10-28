@@ -26,6 +26,7 @@
 	import { go, shown, site } from '../route.svelte';
 	import Fields from '../fields/Fields.svelte';
 	import Icon from '../lib/Icon.svelte';
+	import { changedPaths } from '../lib/diff';
 
 	let {
 		schema,
@@ -57,7 +58,11 @@
 	// the live content of the site, to mark what the draft changes
 	let live = $state<SiteDoc | null>(null);
 	// an old revision, shown read only
-	let viewing = $state<{ rev: Revision; doc: SiteDoc | null } | null>(null);
+	let viewing = $state<{
+		rev: Revision;
+		doc: SiteDoc | null;
+		changed: Set<string>;
+	} | null>(null);
 	// someone else changed the draft, nothing is saved until resolved
 	let conflict = $state('');
 
@@ -231,37 +236,34 @@
 		await saveDraft(snapshot());
 	}
 
-	/** The fields of the draft that differ from the live entry. */
+	/** What the draft changes against the live entry, also inside blocks. */
 	const changed = $derived.by(() => {
-		const set = new Set<string>();
-		if (!draft || !live) return set;
+		if (!draft || !live) return new Set<string>();
+		const set = changedPaths(live.fields, $state.snapshot(fields));
 		if (title !== live.title) set.add('title');
 		if (slug !== live.slug) set.add('slug');
-		const keys = new Set([
-			...Object.keys(fields),
-			...Object.keys(live.fields),
-		]);
-		for (const k of keys) {
-			const now = JSON.stringify($state.snapshot(fields[k]) ?? null);
-			if (now !== JSON.stringify(live.fields[k] ?? null)) set.add(k);
-		}
 		return set;
 	});
 
+	/** Shows a revision with what it changed against the one before. */
 	async function view(rev: Revision) {
-		const doc = await getRevision(id!, rev.id);
-		viewing = { rev, doc: doc[site.current] ?? null };
+		const i = revisions.indexOf(rev);
+		const before = revisions[i + 1];
+		const [doc, prev] = await Promise.all([
+			getRevision(id!, rev.id),
+			before ? getRevision(id!, before.id) : null,
+		]);
+		const now = doc[site.current] ?? null;
+		const old = prev?.[site.current] ?? null;
+		const set = new Set<string>();
+		if (now && old) {
+			changedPaths(old.fields, now.fields, '', set);
+			if (now.title !== old.title) set.add('title');
+			if (now.slug !== old.slug) set.add('slug');
+		}
+		viewing = { rev, doc: now, changed: set };
 		tab = 'content';
 		window.scrollTo(0, 0);
-	}
-
-	/** Changed in this site by a revision, for the markers. */
-	function revChanged(rev: Revision) {
-		return new Set(
-			rev.changes
-				.filter(c => c.sites.includes(site.current))
-				.map(c => c.field),
-		);
 	}
 
 	/** `Title (de), Intro (de, en)` */
@@ -404,13 +406,15 @@
 
 		{#if tab === 'content'}
 			{#if viewing}
-				{@const rc = revChanged(viewing.rev)}
+				{@const rc = viewing.changed}
 				<div class="viewing">
 					<span>
 						Revision of {time(viewing.rev.createdAt)}{viewing.rev
 							.user
 							? ` by ${viewing.rev.user}`
 							: ''}, read only
+						<br />
+						<small>Changed: {changeText(viewing.rev)}</small>
 					</span>
 					<button class="dark" onclick={() => restore(viewing!.rev)}>
 						Restore

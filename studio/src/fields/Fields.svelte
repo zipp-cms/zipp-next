@@ -38,7 +38,7 @@
 	{#each component.fields as field (field.handle)}
 		{@const path = prefix + field.handle}
 		<label for={path}>
-			{#if changed.has(field.handle)}<span
+			{#if changed.has(path)}<span
 					class="changed"
 					title="Changed"
 				></span>{/if}{field.label}{#if field.required}<span class="req">
@@ -82,7 +82,15 @@
 			{:else if field.kind === 'assets'}
 				<AssetField {field} {values} />
 			{:else if field.kind === 'blocks'}
-				<BlocksField {schema} {field} {values} {errors} {refs} {path} />
+				<BlocksField
+					{schema}
+					{field}
+					{values}
+					{errors}
+					{refs}
+					{path}
+					{changed}
+				/>
 			{/if}
 
 			{#if errors[path]}<p class="error">{errors[path]}</p>{/if}
