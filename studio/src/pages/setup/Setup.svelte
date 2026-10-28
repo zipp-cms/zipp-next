@@ -1,15 +1,20 @@
 <script lang="ts">
-	import { listEntries, type Component, type Schema } from '../api';
-	import { accessOf, can, isAdmin, roleName } from '../lib/access';
-	import { describeField } from '../lib/fieldKind';
-	import { shown } from '../route.svelte';
+	import { listEntries, type Component, type Schema } from '../../api';
+	import { accessOf, can, isAdmin, roleName } from '../../lib/access';
+	import { describeField } from '../../lib/fieldKind';
+	import SetupSection from './SetupSection.svelte';
+	import { shown } from '../../route.svelte';
 
 	/**
 	 * The content model, read only like Craft's settings when admin
 	 * changes are off: it is code, this shows what the code says, with the
 	 * handles and GraphQL types a frontend uses.
 	 */
-	let { schema, tab }: { schema: Schema; tab: string } = $props();
+	let {
+		schema,
+		tab,
+		handle,
+	}: { schema: Schema; tab: string; handle: string | null } = $props();
 
 	$effect(() => {
 		shown.section = '';
@@ -42,11 +47,14 @@
 		}
 	});
 
-	/** Where a component is used: sections and fields. */
-	function usedIn(c: Component): string[] {
+	/** Where a component is used: sections and fields, as links here. */
+	function usedIn(c: Component): { text: string; href: string }[] {
 		const out = sections
 			.filter(s => s.types.includes(c.handle))
-			.map(s => `section ${s.name}`);
+			.map(s => ({
+				text: `section ${s.name}`,
+				href: `/admin/setup/sections/${s.handle}`,
+			}));
 		for (const other of schema.components) {
 			for (const f of other.fields) {
 				const uses =
@@ -54,7 +62,11 @@
 					(f.kind === 'richText' && f.blocks.includes(c.handle)) ||
 					(f.kind === 'group' && f.component === c.handle) ||
 					(f.kind === 'relation' && f.types.includes(c.handle));
-				if (uses) out.push(`${other.handle}.${f.handle}`);
+				if (uses)
+					out.push({
+						text: `${other.handle}.${f.handle}`,
+						href: `/admin/setup/${other.entry ? 'types' : 'blocks'}#${other.handle}`,
+					});
 			}
 		}
 		return out;
@@ -67,18 +79,26 @@
 
 <div class="page-top">
 	<h1>
-		{tab === 'types'
-			? 'Entry types'
-			: tab === 'blocks'
-				? 'Blocks'
-				: tab === 'sites'
-					? 'Sites, transforms and roles'
-					: 'Sections'}
+		{#if tab === 'sections' && handle}
+			<a class="up" href="/admin/setup/sections">Sections</a>
+			›
+			{schema.sections.find(s => s.handle === handle)?.name ?? handle}
+		{:else}
+			{tab === 'types'
+				? 'Entry types'
+				: tab === 'blocks'
+					? 'Blocks'
+					: tab === 'sites'
+						? 'Sites, transforms and roles'
+						: 'Sections'}
+		{/if}
 	</h1>
 	<span class="muted">Read only, the content model is code</span>
 </div>
 
-{#if tab === 'sections'}
+{#if tab === 'sections' && handle}
+	<SetupSection {schema} {handle} />
+{:else if tab === 'sections'}
 	<div class="card">
 		<table>
 			<thead>
@@ -96,14 +116,16 @@
 				{#each sections as s (s.handle)}
 					<tr>
 						<td>
-							<a href="/admin/entries/{s.handle}">{s.name}</a>
+							<a href="/admin/setup/sections/{s.handle}">
+								{s.name}
+							</a>
 						</td>
 						<td><code>{s.handle}</code></td>
 						<td>{s.kind}</td>
 						<td>
 							{#each s.types as t, i (t)}
 								{i ? ', ' : ''}
-								<a href="/admin/model/types#{t}">{t}</a>
+								<a href="/admin/setup/types#{t}">{t}</a>
 							{/each}
 						</td>
 						<td>
@@ -133,7 +155,15 @@
 					{c.handle}_{c.entry ? 'Entry' : 'Block'}
 				</code>
 			</h2>
-			<p class="muted">Used in: {usedIn(c).join(', ') || 'nothing'}</p>
+			<p class="muted">
+				Used in:
+				{#each usedIn(c) as u, i (u.text)}
+					{i ? ', ' : ''}
+					<a href={u.href}>{u.text}</a>
+				{:else}
+					nothing
+				{/each}
+			</p>
 			{#if c.fields.length}
 				<table>
 					<thead>
@@ -252,6 +282,10 @@
 {/if}
 
 <style>
+	.up {
+		color: inherit;
+	}
+
 	.card {
 		margin-bottom: 20px;
 		overflow-x: auto;

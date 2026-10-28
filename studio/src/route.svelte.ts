@@ -1,7 +1,7 @@
 /**
  * The pages of the studio are paths under `/admin`, like Craft:
  * `/admin/login`, `/admin/assets`, `/admin/ai`, `/admin/users`,
- * `/admin/model/<sections|types|blocks|sites>`,
+ * `/admin/setup/<sections|types|blocks|sites>`, `/admin/setup/sections/<handle>`,
  * `/admin/docs/<doc>`, `/admin/entries/<section>`,
  * `/admin/entries/<section>/new`, `/admin/entries/<section>/<id>`.
  */
@@ -10,7 +10,7 @@ export type Route =
 	| { page: 'assets' }
 	| { page: 'ai' }
 	| { page: 'users' }
-	| { page: 'model'; tab: string }
+	| { page: 'setup'; tab: string; handle: string | null }
 	| { page: 'doc'; handle: string }
 	| { page: 'list'; section: string | null }
 	| { page: 'new'; section: string }
@@ -30,8 +30,8 @@ function parse(path: string): Route {
 		case 'ai':
 		case 'users':
 			return { page };
-		case 'model':
-			return { page: 'model', tab: a ?? 'sections' };
+		case 'setup':
+			return { page: 'setup', tab: a ?? 'sections', handle: b ?? null };
 		case 'docs':
 			return { page: 'doc', handle: a };
 		case 'entries':
@@ -88,7 +88,8 @@ document.addEventListener('click', e => {
 	go(a.pathname.slice(BASE.length));
 	// an anchor on the new page, once it is there
 	const id = decodeURIComponent(a.hash.slice(1));
-	if (id) setTimeout(() => document.getElementById(id)?.scrollIntoView(), 50);
+	if (id)
+		setTimeout(() => document.getElementById(id)?.scrollIntoView(), 200);
 });
 
 /** The site the studio edits, the same in all pages. */

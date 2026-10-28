@@ -223,6 +223,16 @@ pub fn refs(
 }
 
 /// Whether the entries are published, per site.
+/// Which of the entries have a draft.
+pub fn with_drafts(conn: &Connection, ids: &[i64]) -> Result<Vec<i64>> {
+	let marks = vec!["?"; ids.len()].join(", ");
+	let sql =
+		format!("SELECT entry_id FROM drafts WHERE entry_id IN ({marks})");
+	let mut stmt = conn.prepare(&sql)?;
+	let rows = stmt.query_map(params_from_iter(ids), |r| r.get(0))?;
+	Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
 pub fn published_per_site(
 	conn: &Connection,
 	ids: &[i64],

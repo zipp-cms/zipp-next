@@ -15,7 +15,7 @@
 	import Ai from './pages/Ai.svelte';
 	import Doc from './pages/Doc.svelte';
 	import Users from './pages/Users.svelte';
-	import Model from './pages/Model.svelte';
+	import Setup from './pages/setup/Setup.svelte';
 	import Icon from './lib/Icon.svelte';
 
 	let schema = $state<Schema | null>(null);
@@ -93,7 +93,7 @@
 	{@const assets = route.current.page === 'assets'}
 	{@const ai = route.current.page === 'ai'}
 	{@const users = route.current.page === 'users'}
-	{@const model = route.current.page === 'model'}
+	{@const setup = route.current.page === 'setup'}
 	<div class="layout" class:wide={ai}>
 		<div class="logo">zipp</div>
 		<header>
@@ -104,7 +104,7 @@
 						class:active={!assets &&
 							!ai &&
 							!users &&
-							!model &&
+							!setup &&
 							g === group}
 					>
 						{g.name}
@@ -117,7 +117,7 @@
 					<a href="/admin/ai" class:active={ai}>AI</a>
 				{/if}
 				<!-- read only for everyone, a role sees its part -->
-				<a href="/admin/model/sections" class:active={model}>Model</a>
+				<a href="/admin/setup/sections" class:active={setup}>Setup</a>
 				{#if isAdmin(schema)}
 					<a href="/admin/users" class:active={users}>Users</a>
 				{/if}
@@ -136,7 +136,7 @@
 				{/if}
 				<a
 					class="me"
-					href="/admin/model/sites#roles"
+					href="/admin/setup/sites#roles"
 					title="What you may do"
 				>
 					{schema.me.email} · {roleName(schema)}
@@ -150,11 +150,11 @@
 					<Icon name="dashboard" />
 					Assets
 				</a>
-			{:else if model}
+			{:else if setup}
 				{#each [['sections', 'Sections', 'all_pages'], ['types', 'Entry types', 'single'], ['blocks', 'Blocks', 'dashboard'], ['sites', 'Sites and more', 'doc']] as [tab, name, icon] (tab)}
 					<a
-						href="/admin/model/{tab}"
-						class:active={route.current.page === 'model' &&
+						href="/admin/setup/{tab}"
+						class:active={route.current.page === 'setup' &&
 							route.current.tab === tab}
 					>
 						<Icon name={icon} />
@@ -184,8 +184,12 @@
 					<Assets {schema} />
 				{:else if users}
 					<Users {schema} />
-				{:else if route.current.page === 'model'}
-					<Model {schema} tab={route.current.tab} />
+				{:else if route.current.page === 'setup'}
+					<Setup
+						{schema}
+						tab={route.current.tab}
+						handle={route.current.handle}
+					/>
 				{:else if ai}
 					<Ai {schema} />
 				{:else if doc}

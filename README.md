@@ -183,9 +183,10 @@ Cms::new(schema(), zipp::migrations!())
   a small bridge (`example/crelte/svelte/src/components/PreviewBridge.svelte`),
   crelte's live preview mode keeps the scroll position on reloads.
 - **The content model in the studio.** Everyone sees it read only under
-  Model (a role only its sections, with what it may do there, and its own
+  Setup (a role only its sections, with what it may do there, and its own
   role; the header shows who is logged in with which role), like Craft's settings with admin changes off: sections (kind,
-  entry types, uri, number of entries), entry types and blocks with
+  entry types, uri, and each section's entries with whether they are live
+  per site and have unpublished changes), entry types and blocks with
   their fields (handle, kind and settings, per site or shared, where
   they are used, the GraphQL type), sites, transforms and roles.
 - **SEO, like the Craft plugin meierlabs-seo.** `.seo(Seo::new()

@@ -7,6 +7,8 @@ pub(super) struct ListResp {
 	relations: BTreeMap<i64, EntryRef>,
 	/// whether each entry is published, per site
 	published: BTreeMap<i64, BTreeMap<String, bool>>,
+	/// the entries with unpublished changes
+	drafts: Vec<i64>,
 }
 
 pub(super) async fn list_route(
@@ -26,12 +28,14 @@ pub(super) async fn list_route(
 	let ids: Vec<i64> = entries.iter().map(|e| e.id).collect();
 	let relations = refs(&conn, &ids, &q.site, q.published_only)?;
 	let published = published_per_site(&conn, &ids)?;
+	let drafts = with_drafts(&conn, &ids)?;
 
 	Ok(Json(ListResp {
 		entries,
 		total,
 		relations,
 		published,
+		drafts,
 	}))
 }
 

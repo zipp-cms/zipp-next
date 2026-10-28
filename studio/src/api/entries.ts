@@ -30,6 +30,8 @@ export function listEntries(params: Record<string, string>): Promise<{
 	total: number;
 	relations: Refs;
 	published: Record<number, Record<string, boolean>>;
+	/** the entries with unpublished changes */
+	drafts: number[];
 }> {
 	return request('GET', '/entries?' + new URLSearchParams(params));
 }
