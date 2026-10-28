@@ -17,12 +17,15 @@ pub(super) fn entries_args(field: GqlField) -> GqlField {
 		.argument(InputValue::new("type", l()))
 		.argument(InputValue::new("uri", l()))
 		.argument(InputValue::new("slug", l()))
-		.argument(InputValue::new("id", i()))
+		// Craft's: an id, a list of them, or `["not", 1, 2]`
+		.argument(InputValue::new("id", TypeRef::named_list("QueryArgument")))
 		.argument(InputValue::new("ids", TypeRef::named_nn_list(TypeRef::INT)))
 		.argument(InputValue::new("parent", i()))
 		.argument(InputValue::new("related", i()))
 		.argument(InputValue::new("search", s()))
 		.argument(InputValue::new("order", s()))
+		// Craft's `postDate DESC`
+		.argument(InputValue::new("orderBy", s()))
 		.argument(InputValue::new("limit", i()))
 		.argument(InputValue::new("offset", i()))
 		.argument(InputValue::new("where", TypeRef::named_nn_list("Where")))
@@ -94,7 +97,17 @@ pub(super) fn params_from_args(
 			continue;
 		}
 		match name {
-			"id" => params.push(("ids".into(), value.i64()?.to_string())),
+			"id" => {
+				let items = all(&value)?;
+				match items.split_first() {
+					Some((not, rest)) if not == "not" => {
+						params.push(("notIds".into(), rest.join(",")))
+					}
+					_ => params.push(("ids".into(), items.join(","))),
+				}
+			}
+			// several types
+			"type" => params.push(("type".into(), all(&value)?.join(","))),
 			"ids" => {
 				let ids: Vec<String> = value
 					.list()?
@@ -118,7 +131,7 @@ pub(super) fn params_from_args(
 			"parent" | "related" | "limit" | "offset" => {
 				params.push((name.into(), value.i64()?.to_string()))
 			}
-			"site" | "section" | "type" | "uri" | "slug" | "handle" => {
+			"site" | "section" | "uri" | "slug" | "handle" => {
 				let Some(v) = first(&value)? else { continue };
 				let v = match v.as_str() {
 					// Craft's name of the home page
@@ -160,6 +173,24 @@ pub(super) fn first(
 		Some(GqlValue::Number(n)) => Some(n.to_string()),
 		_ => None,
 	})
+}
+
+/// Every value of a list argument, or the single one, as strings.
+pub(super) fn all(
+	value: &async_graphql::dynamic::ValueAccessor,
+) -> async_graphql::Result<Vec<String>> {
+	let items = match value.as_value() {
+		GqlValue::List(l) => l.clone(),
+		v => vec![v.clone()],
+	};
+	Ok(items
+		.into_iter()
+		.filter_map(|v| match v {
+			GqlValue::String(s) => Some(s),
+			GqlValue::Number(n) => Some(n.to_string()),
+			_ => None,
+		})
+		.collect())
 }
 
 /// The position of a site, from 1, like Craft's site ids.

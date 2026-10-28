@@ -16,6 +16,11 @@ pub(super) fn asset_object() -> Object {
 					"alt" => GqlValue::from(a.alt.clone()),
 					"focalX" => GqlValue::from(a.focal_x),
 					"focalY" => GqlValue::from(a.focal_y),
+					// Craft's
+					"focalPoint" => {
+						GqlValue::List(vec![a.focal_x.into(), a.focal_y.into()])
+					}
+					"title" => GqlValue::from(title_of(&a.filename)),
 					_ => unreachable!(),
 				};
 				Ok(Some(FieldValue::value(v)))
@@ -24,6 +29,7 @@ pub(super) fn asset_object() -> Object {
 	};
 	let transform_arg =
 		|| InputValue::new("transform", TypeRef::named(TypeRef::STRING));
+	let width_arg = || InputValue::new("width", TypeRef::named(TypeRef::INT));
 	let s = || TypeRef::named_nn(TypeRef::STRING);
 	let f = || TypeRef::named_nn(TypeRef::FLOAT);
 
@@ -36,6 +42,11 @@ pub(super) fn asset_object() -> Object {
 		.field(plain("alt", s()))
 		.field(plain("focalX", f()))
 		.field(plain("focalY", f()))
+		.field(plain(
+			"focalPoint",
+			TypeRef::named_nn_list_nn(TypeRef::FLOAT),
+		))
+		.field(plain("title", s()))
 		.field(
 			GqlField::new("url", s(), |ctx| {
 				FieldFuture::new(async move {
@@ -49,19 +60,22 @@ pub(super) fn asset_object() -> Object {
 					Ok(Some(FieldValue::value(url)))
 				})
 			})
-			.argument(transform_arg()),
+			.argument(transform_arg())
+			.argument(width_arg()),
 		)
 		.field(
 			GqlField::new("width", TypeRef::named(TypeRef::INT), |ctx| {
 				asset_size(ctx, |(w, _)| w)
 			})
-			.argument(transform_arg()),
+			.argument(transform_arg())
+			.argument(width_arg()),
 		)
 		.field(
 			GqlField::new("height", TypeRef::named(TypeRef::INT), |ctx| {
 				asset_size(ctx, |(_, h)| h)
 			})
-			.argument(transform_arg()),
+			.argument(transform_arg())
+			.argument(width_arg()),
 		)
 		.field(
 			GqlField::new("srcset", TypeRef::named(TypeRef::STRING), |ctx| {
@@ -100,14 +114,27 @@ pub(super) fn transform_of(
 	ctx: &ResolverContext,
 	a: &Asset,
 ) -> async_graphql::Result<Option<crate::schema::Transform>> {
-	let Some(name) = ctx.args.get("transform").filter(|v| !v.is_null()) else {
-		return Ok(None);
-	};
-	let name = name.string()?;
 	let schema = ctx.data::<Arc<Schema>>()?;
-	let t = schema
-		.get_transform(name)
-		.ok_or_else(|| GqlError::new(format!("unknown transform {name}")))?;
+	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
+	let t = match (arg("transform"), arg("width")) {
+		(Some(name), _) => {
+			let name = name.string()?;
+			schema.get_transform(name).cloned().ok_or_else(|| {
+				GqlError::new(format!("unknown transform {name}"))
+			})?
+		}
+		// Craft's `url(width: 800)`, of the widths the schema allows
+		(None, Some(w)) => {
+			let w = w.i64()? as u32;
+			schema.width_transform(w).ok_or_else(|| {
+				GqlError::new(format!(
+					"width {w} is not allowed, the schema has {:?}",
+					schema.image_widths
+				))
+			})?
+		}
+		(None, None) => return Ok(None),
+	};
 	// only images have transforms, a file stays itself
 	Ok((a.kind == "image").then(|| t.clone()))
 }
@@ -137,4 +164,15 @@ pub(super) fn asset_size(
 		};
 		Ok(size.map(|s| FieldValue::value(pick(s))))
 	})
+}
+
+/// Like Craft's title of an asset: `piano-night.jpg` is `Piano night`.
+pub(super) fn title_of(filename: &str) -> String {
+	let stem = filename.rsplit_once('.').map_or(filename, |(s, _)| s);
+	let words = stem.replace(['-', '_'], " ");
+	let mut chars = words.trim().chars();
+	match chars.next() {
+		Some(c) => c.to_uppercase().chain(chars).collect(),
+		None => String::new(),
+	}
 }

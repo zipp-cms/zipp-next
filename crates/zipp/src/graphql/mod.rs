@@ -89,6 +89,11 @@ pub const ENTRY_FIELDS: &[&str] = &[
 	"createdAt",
 	"updatedAt",
 	"seoJson",
+	"postDate",
+	"dateCreated",
+	"dateUpdated",
+	"language",
+	"localized",
 ];
 
 /// Fields every block has.

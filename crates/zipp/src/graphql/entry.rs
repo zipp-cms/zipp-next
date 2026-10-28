@@ -19,6 +19,13 @@ pub(super) fn entry_common() -> Vec<(&'static str, TypeRef)> {
 		// milliseconds since 1970, too big for Int
 		("createdAt", TypeRef::named_nn(TypeRef::FLOAT)),
 		("updatedAt", TypeRef::named_nn(TypeRef::FLOAT)),
+		// Craft's, as `2026-10-28T08:00:00+00:00`
+		("postDate", s()),
+		("dateCreated", s()),
+		("dateUpdated", s()),
+		("language", s()),
+		// the entry in the other sites, for a language switch
+		("localized", TypeRef::named_nn_list_nn("Entry")),
 	]
 }
 
@@ -47,6 +54,29 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 				"published" => GqlValue::from(e.published),
 				"createdAt" => GqlValue::from(e.created_at as f64),
 				"updatedAt" => GqlValue::from(e.updated_at as f64),
+				"postDate" | "dateCreated" => {
+					GqlValue::from(crate::db::iso(e.created_at))
+				}
+				"dateUpdated" => GqlValue::from(crate::db::iso(e.updated_at)),
+				"language" => {
+					let schema = ctx.data::<Arc<Schema>>()?;
+					let site =
+						schema.get_site(&e.site).map(|s| s.language.clone());
+					GqlValue::from(site.unwrap_or_default())
+				}
+				"localized" => {
+					let schema = ctx.data::<Arc<Schema>>()?;
+					let mut out = vec![];
+					for s in schema.sites.iter().filter(|s| s.handle != e.site)
+					{
+						let params =
+							site_params(&s.handle, [("ids", e.id.to_string())]);
+						out.extend(
+							load(&ctx, &params)?.into_iter().map(entry_value),
+						);
+					}
+					return Ok(Some(FieldValue::list(out)));
+				}
 				"parent" => {
 					let Some(p) = e.parent_id else {
 						return Ok(None);

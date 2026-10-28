@@ -173,6 +173,13 @@ Cms::new(schema(), zipp::migrations!())
   alt }`. Only named transforms exist, so nobody can make the server
   render arbitrary sizes. `--public-url` makes the urls absolute for
   frontends on other domains.
+- **Craft's arguments and fields.** Queries take `id` (one, several or
+  `["not", 1, 2]`), `type` (one or several) and `orderBy` (`postDate
+  DESC`, `title`, an indexed field); without an order a channel is newest
+  first and a structure in its order, like Craft. Entries have
+  `postDate`, `dateCreated`, `dateUpdated`, `language` and `localized`
+  (the entry in the other sites), images `focalPoint`, `title` and
+  `url(width: 800)` for the widths of `.image_widths([400, 800, 1600])`.
 - **crelte.** zipp answers crelte like Craft: `crelteSites`, site ids
   (the position of a site, from 1), `entry(uri: $uri, siteId: $siteId)`
   with Craft's argument types, `__home__`, `url` on entries and

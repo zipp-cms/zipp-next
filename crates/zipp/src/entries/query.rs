@@ -16,6 +16,7 @@
 use rusqlite::types::Value;
 
 use crate::field_type::{GraphqlType, Scalar};
+use crate::schema::SectionKind;
 use crate::schema::{FieldKind, Schema};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -23,6 +24,10 @@ pub struct Query {
 	pub site: String,
 	pub section: Option<String>,
 	pub ty: Option<String>,
+	/// several types, `type=a,b`; filters and order need a single one
+	pub types: Vec<String>,
+	/// entries left out, Craft's `id: ["not", 1]`
+	pub not_ids: Vec<i64>,
 	pub slug: Option<String>,
 	pub uri: Option<String>,
 	pub ids: Option<Vec<i64>>,
@@ -76,6 +81,8 @@ impl Query {
 			site: schema.primary_site().handle.clone(),
 			section: None,
 			ty: None,
+			types: vec![],
+			not_ids: vec![],
 			slug: None,
 			uri: None,
 			ids: None,
@@ -97,12 +104,20 @@ impl Query {
 		};
 
 		// type first, filters need it
-		if let Some((_, ty)) = params.iter().find(|(k, _)| k == "type") {
-			if schema.entry_type(ty).is_none() {
-				return Err(format!("unknown entry type {ty}"));
+		if let Some((_, types)) = params.iter().find(|(k, _)| k == "type") {
+			let types: Vec<String> = types.split(',').map(Into::into).collect();
+			if let Some(t) =
+				types.iter().find(|t| schema.entry_type(t).is_none())
+			{
+				return Err(format!("unknown entry type {t}"));
 			}
-			q.ty = Some(ty.clone());
+			match types.as_slice() {
+				[one] => q.ty = Some(one.clone()),
+				_ => q.types = types,
+			}
 		}
+		// like Craft: a channel newest first, a structure in its order
+		let mut ordered = false;
 
 		for (key, value) in params {
 			match key.as_str() {
@@ -126,19 +141,45 @@ impl Query {
 				"related" => q.related = Some(int(key, value)?),
 				"limit" => q.limit = int(key, value)?.clamp(1, 1000),
 				"offset" => q.offset = int(key, value)?.max(0),
-				"ids" => {
+				"ids" | "notIds" => {
 					let ids = value
 						.split(',')
 						.filter(|s| !s.is_empty())
 						.map(|s| int(key, s))
 						.collect::<Result<_, _>>()?;
-					q.ids = Some(ids);
+					match key.as_str() {
+						"ids" => q.ids = Some(ids),
+						_ => q.not_ids = ids,
+					}
+				}
+				// Craft's `postDate DESC`, `title`
+				"orderBy" => {
+					let mut words = value.split_whitespace();
+					let name = words.next().unwrap_or("postDate");
+					let desc = words
+						.next()
+						.is_some_and(|d| d.eq_ignore_ascii_case("desc"));
+					q.desc = desc;
+					q.order = match name {
+						"title" => Order::Column("title"),
+						"postDate" | "dateCreated" => {
+							Order::Column("created_at")
+						}
+						"dateUpdated" => Order::Column("updated_at"),
+						"lft" | "structure" => Order::Structure,
+						_ => {
+							let num = q.indexed_kind(schema, name)?;
+							Order::Field(name.into(), num)
+						}
+					};
+					ordered = true;
 				}
 				"order" => {
 					let (desc, name) = match value.strip_prefix('-') {
 						Some(n) => (true, n),
 						None => (false, value.as_str()),
 					};
+					ordered = true;
 					q.desc = desc;
 					q.order = match name {
 						"title" => Order::Column("title"),
@@ -158,6 +199,24 @@ impl Query {
 					}
 					None => return Err(format!("unknown parameter {key}")),
 				},
+			}
+		}
+
+		if !ordered {
+			let kind = q
+				.section
+				.as_ref()
+				.and_then(|s| schema.get_section(s))
+				.map(|s| s.kind);
+			match kind {
+				Some(SectionKind::Structure) => {
+					q.order = Order::Structure;
+					q.desc = false;
+				}
+				Some(SectionKind::Channel) => {
+					q.order = Order::Column("created_at")
+				}
+				_ => {}
 			}
 		}
 
@@ -250,6 +309,18 @@ impl Query {
 		}
 		if self.ty.is_some() {
 			cond("e.type = ?".into(), vec![text(&self.ty)]);
+		}
+		if !self.types.is_empty() {
+			let marks = vec!["?"; self.types.len()].join(", ");
+			let values =
+				self.types.iter().map(|t| Value::Text(t.clone())).collect();
+			cond(format!("e.type IN ({marks})"), values);
+		}
+		if !self.not_ids.is_empty() {
+			let marks = vec!["?"; self.not_ids.len()].join(", ");
+			let values =
+				self.not_ids.iter().map(|i| Value::Integer(*i)).collect();
+			cond(format!("e.id NOT IN ({marks})"), values);
 		}
 		if self.slug.is_some() {
 			cond("s.slug = ?".into(), vec![text(&self.slug)]);

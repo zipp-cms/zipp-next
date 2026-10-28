@@ -833,3 +833,84 @@ async fn checkboxes_tables_and_navigations() {
 		})
 	);
 }
+
+#[tokio::test]
+async fn craft_arguments_and_fields() {
+	let db = Db::memory().unwrap();
+	let s = Arc::new(site().image_widths([400, 800]));
+	let urls = SiteUrls::from([
+		("de".to_string(), "https://x.ch".to_string()),
+		("en".to_string(), "https://x.ch/en".to_string()),
+	]);
+	let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
+	let dir =
+		std::env::temp_dir().join(format!("zipp-craft-{}", std::process::id()));
+	let (a, b, c) = {
+		let conn = db.conn();
+		let mut png = vec![];
+		image::RgbImage::new(1600, 900)
+			.write_to(
+				&mut std::io::Cursor::new(&mut png),
+				image::ImageFormat::Png,
+			)
+			.unwrap();
+		let img =
+			crate::assets::store(&conn, &dir, "piano-night.png", &png).unwrap();
+		let a = save(
+			&conn,
+			&s,
+			None,
+			input("events", "event", "A", json!({ "image": [img.id] })),
+		)
+		.unwrap();
+		let b = save(&conn, &s, None, input("events", "event", "B", json!({})))
+			.unwrap();
+		let c = save(&conn, &s, None, input("pages", "page", "C", json!({})))
+			.unwrap();
+		(a.id, b.id, c.id)
+	};
+
+	// a channel is newest first, `not` leaves out, several types at once
+	let q = format!(
+		r#"{{
+			news: entries(section: "events") {{ title }}
+			titled: entries(section: "events", orderBy: "title ASC") {{ title }}
+			without: entries(section: "events", id: ["not", {a}]) {{ title }}
+			both: entries(id: [{a}, {c}], type: ["event", "page"], orderBy: "title") {{ title }}
+			one: entry(id: [{b}]) {{ title language postDate
+				localized {{ language url }} }}
+			img: entry(id: [{a}]) {{ ... on event_Entry {{ image {{
+				w800: url(width: 800) width(width: 800) focalPoint title }} }} }}
+		}}"#
+	);
+	let data = run(&gql, &q, true).await;
+	assert_eq!(data["news"], json!([{ "title": "B" }, { "title": "A" }]));
+	assert_eq!(data["titled"], json!([{ "title": "A" }, { "title": "B" }]));
+	assert_eq!(data["without"], json!([{ "title": "B" }]));
+	assert_eq!(data["both"], json!([{ "title": "A" }, { "title": "C" }]));
+	assert_eq!(data["one"]["language"], "de-CH");
+	assert!(
+		data["one"]["postDate"]
+			.as_str()
+			.unwrap()
+			.ends_with("+00:00")
+	);
+	assert_eq!(
+		data["one"]["localized"],
+		json!([{ "language": "en", "url": "https://x.ch/en/events/b" }])
+	);
+	let img = &data["img"]["image"][0];
+	assert!(img["w800"].as_str().unwrap().contains("/w800/"), "{img}");
+	assert_eq!(img["width"], 800);
+	assert_eq!(img["focalPoint"], json!([0.5, 0.5]));
+	assert_eq!(img["title"], "Piano night");
+
+	// a width the schema doesn't allow
+	let req = async_graphql::Request::new(format!(
+		r#"{{ entry(id: [{a}]) {{ ... on event_Entry {{ image {{ url(width: 500) }} }} }} }}"#
+	))
+	.data(Viewer { published_only: true, preview: None, token: None, indexing: true });
+	let resp = gql.execute(req).await;
+	assert!(resp.errors[0].message.contains("width 500 is not allowed"));
+	std::fs::remove_dir_all(dir).ok();
+}

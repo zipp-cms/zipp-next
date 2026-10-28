@@ -76,6 +76,10 @@ pub struct Schema {
 	/// Sites not on the website yet, see [`Schema::offline`].
 	#[serde(skip)]
 	pub offline: Vec<String>,
+	/// Widths images can have without a named transform, see
+	/// [`Schema::image_widths`].
+	#[serde(skip)]
+	pub image_widths: Vec<u32>,
 }
 
 /// A markdown file of the project shown in the studio, like a readme.
@@ -252,6 +256,33 @@ impl Schema {
 
 	pub fn get_transform(&self, handle: &str) -> Option<&Transform> {
 		self.transforms.iter().find(|t| t.handle == handle)
+	}
+
+	/// Widths images can be resized to without a named transform, like
+	/// Craft's `url(width: 800)`: only these, so nobody can make the
+	/// server render any size.
+	pub fn image_widths(
+		mut self,
+		widths: impl IntoIterator<Item = u32>,
+	) -> Self {
+		self.image_widths.extend(widths);
+		self
+	}
+
+	/// The transform of a name: a named one or `w800` of an allowed width.
+	pub fn transform_named(&self, name: &str) -> Option<Transform> {
+		if let Some(t) = self.get_transform(name) {
+			return Some(t.clone());
+		}
+		let width: u32 = name.strip_prefix('w')?.parse().ok()?;
+		self.width_transform(width)
+	}
+
+	/// The transform of an allowed width.
+	pub fn width_transform(&self, width: u32) -> Option<Transform> {
+		self.image_widths
+			.contains(&width)
+			.then(|| Transform::new(&format!("w{width}")).width(width))
 	}
 
 	pub fn entry(
