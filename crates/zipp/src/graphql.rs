@@ -88,7 +88,7 @@ struct Viewer {
 }
 
 /// Markdown to html, raw html in it is dropped (editors write text).
-fn markdown_html(md: &str) -> String {
+pub(crate) fn markdown_html(md: &str) -> String {
 	use pulldown_cmark::{Event, Options, Parser, html};
 	let parser = Parser::new_ext(
 		md,

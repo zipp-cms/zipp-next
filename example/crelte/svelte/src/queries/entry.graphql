@@ -105,7 +105,9 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 			city
 			price
 			soldOut
-			description
+			description {
+				html
+			}
 			image {
 				...Hero
 			}

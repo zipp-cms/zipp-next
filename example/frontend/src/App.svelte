@@ -40,7 +40,7 @@
 				... on home_Entry { hero { ...Hero } intro body { ...Body } }
 				... on page_Entry { hero { ...Hero } intro body { ...Body } }
 				... on event_Entry {
-					date city price description
+					date city price description { html }
 					image { ...Hero }
 					page { title uri }
 				}
@@ -86,7 +86,7 @@
 				? ` · CHF ${entry.price}`
 				: ''}
 		</p>
-		{#if entry.description}<p>{entry.description}</p>{/if}
+		{#if entry.description}{@html entry.description.html}{/if}
 		{#each entry.page ?? [] as p (p.uri)}
 			<a href={url(p)}>{p.title}</a>
 		{/each}

@@ -6,13 +6,13 @@ zipp is a headless CMS where the **content model is code**. This studio, the Gra
 - **A plain Svelte frontend:** <https://zipp.noah.meierlabs.dev>
 - **GraphQL playground:** <https://zipp-studio.noah.meierlabs.dev/api/graphql>
 
-This page is itself a feature: a **markdown field**, shown rendered. Click *Write* above to edit it.
+This page is itself a feature: a markdown file of the repository ([`example/readme.md`](https://github.com/zipp-cms/zipp-next/blob/code-first/example/readme.md)), shown in the navigation with `.doc("readme", "Readme", include_str!("../../readme.md"))`. Editors read it, the code changes it.
 
 ## Where to try what
 
 | Feature | Where in the studio | What to look for |
 |---|---|---|
-| Sections: single, channel, structure | Readme, Header, Footer · Events · Pages | a single opens its entry, a channel is a list, a structure a tree |
+| Sections: single, channel, structure | Settings → Header, Footer · Events · Pages | a single opens its entry, a channel is a list, a structure a tree |
 | The home page in the tree | Pages → Willkommen | the entry type `home` gets the uri `/` (`uri_of`) |
 | Drag and drop | Pages | drag the handle before a title: before, after or into a page |
 | Sites and languages | the language switch top right | titles, slugs and text per site; fields marked *all sites* are shared |
@@ -26,6 +26,7 @@ This page is itself a feature: a **markdown field**, shown rendered. Click *Writ
 | Rich text | the Text block | headings, lists, links, a **row of buttons** and an **image** inside the text |
 | Links | a Button block | entry, URL, email, phone or file; external ones open in a new tab |
 | Group | a page → SEO | fields of another component under one name |
+| Markdown | Events → Description | written as markdown, the website gets it as html |
 | Boolean, number, indexed fields | Events | *sold out*, price; the website filters and sorts by them |
 | Relations | Events → More info, Header → navigation | the website gets the linked entries with their fields |
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |

@@ -26,10 +26,10 @@ fn schema() -> Schema {
 		)
 		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
 		// globals: singles without a url
-		// the readme of the demo, only in the studio: no url
-		.section(Section::single("readme", "readme").name("Readme"))
 		.section(Section::single("header", "header"))
 		.section(Section::single("footer", "footer"))
+		// the readme of the demo, a page of the studio from this repo
+		.doc("readme", "Readme", include_str!("../../readme.md"))
 		.nav("Content", ["readme", "pages", "events"])
 		.nav("Settings", ["header", "footer", "translations"])
 		// texts of the frontend, editors translate them
@@ -49,11 +49,6 @@ fn schema() -> Schema {
 		.transform(Transform::new("small").width(600))
 		.transform(Transform::new("medium").width(1200))
 		.transform(Transform::new("thumb").width(160).height(120).crop())
-		.entry(
-			"readme",
-			"Readme",
-			[Field::markdown("content").translatable()],
-		)
 		.entry(
 			"home",
 			"Home",
@@ -86,7 +81,7 @@ fn schema() -> Schema {
 				Field::number("price").range(0.0, 1000.0).indexed(),
 				Field::boolean("soldOut").indexed(),
 				Field::images("image").max(1),
-				Field::text("description").multiline().translatable(),
+				Field::markdown("description").translatable(),
 				Field::relation("page", ["page"]).max(1).label("More info"),
 			],
 		)

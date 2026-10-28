@@ -69,6 +69,8 @@ export type Schema = {
 	siteUrls: Record<string, string>;
 	/** the models of the AI chat, empty if it is off */
 	aiModels: { id: string; name: string }[];
+	/** markdown files of the code, read only, as html */
+	docs: { handle: string; name: string; html: string }[];
 };
 
 export type Block = { id?: string; type: string; fields: Values };

@@ -34,7 +34,7 @@
 	{#if writing}
 		<textarea {id} rows="14" bind:value={values[field.handle]}></textarea>
 	{:else}
-		<div class="preview">{@html html}</div>
+		<div class="markdown-body">{@html html}</div>
 	{/if}
 </div>
 
@@ -60,37 +60,5 @@
 	textarea {
 		font-family: monospace;
 		font-size: 14px;
-	}
-
-	.preview {
-		padding: 4px 2px;
-		line-height: 1.55;
-
-		:global(> * + *) {
-			margin-top: 0.8em;
-		}
-
-		:global(h1),
-		:global(h2),
-		:global(h3) {
-			margin: 1.2em 0 0.4em;
-		}
-
-		:global(code) {
-			padding: 1px 4px;
-			background: var(--input);
-			font-size: 0.9em;
-		}
-
-		:global(table) {
-			border-collapse: collapse;
-		}
-
-		:global(td),
-		:global(th) {
-			padding: 4px 10px;
-			border: 1px solid var(--line);
-			text-align: left;
-		}
 	}
 </style>

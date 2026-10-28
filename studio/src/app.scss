@@ -130,3 +130,40 @@ button {
 	font-size: 0.9rem;
 	margin: 0.25rem 0 0;
 }
+
+// rendered markdown: the markdown field and the docs
+.markdown-body {
+	padding: 4px 2px;
+	line-height: 1.55;
+
+	> * + * {
+		margin-top: 0.8em;
+	}
+
+	> :first-child {
+		margin-top: 0;
+	}
+
+	h1,
+	h2,
+	h3 {
+		margin: 1.2em 0 0.4em;
+	}
+
+	code {
+		padding: 1px 4px;
+		background: var(--input);
+		font-size: 0.9em;
+	}
+
+	table {
+		border-collapse: collapse;
+	}
+
+	td,
+	th {
+		padding: 4px 10px;
+		border: 1px solid var(--line);
+		text-align: left;
+	}
+}

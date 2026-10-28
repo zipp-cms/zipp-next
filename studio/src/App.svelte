@@ -7,6 +7,7 @@
 	import Assets from './pages/Assets.svelte';
 	import Translations from './pages/Translations.svelte';
 	import Ai from './pages/Ai.svelte';
+	import Doc from './pages/Doc.svelte';
 	import Icon from './lib/Icon.svelte';
 
 	let schema = $state<Schema | null>(null);
@@ -18,12 +19,17 @@
 	const group = $derived(
 		groups.find(g => g.sections.includes(shown.section)) ?? groups[0],
 	);
-	// the sections of the group, in the order of the nav
-	const groupSections = $derived(
-		(group?.sections ?? [])
-			.map(h => schema?.sections.find(s => s.handle === h))
-			.filter(s => !!s),
+	// the sections, docs and pages of the group, in the order of the nav
+	const groupItems = $derived(
+		(group?.sections ?? []).map(h => {
+			const s = schema?.sections.find(s => s.handle === h);
+			if (s) return { handle: h, name: s.name, icon: s.kind };
+			const d = schema?.docs.find(d => d.handle === h);
+			if (d) return { handle: h, name: d.name, icon: 'doc' };
+			return { handle: h, name: 'Translations', icon: 'translate' };
+		}),
 	);
+	const doc = $derived(schema?.docs.find(d => d.handle === current));
 	const current = $derived.by(() => {
 		const r = route.current;
 		if (r.page === 'list') return r.section ?? groups[0]?.sections[0];
@@ -33,6 +39,8 @@
 
 	$effect(() => {
 		if (!loggedIn) {
+			// an old session failed, the next login starts over
+			error = '';
 			if (route.current.page !== 'login') go('#/login');
 			return;
 		}
@@ -100,26 +108,15 @@
 					Assets
 				</a>
 			{:else}
-				{#each groupSections as s (s.handle)}
+				{#each groupItems as item (item.handle)}
 					<a
-						href="#/list/{s.handle}"
-						class:active={shown.section === s.handle}
+						href="#/list/{item.handle}"
+						class:active={shown.section === item.handle}
 					>
-						<Icon
-							name={s.kind === 'single' ? 'default' : 'all_pages'}
-						/>
-						{s.name}
+						<Icon name={item.icon} />
+						{item.name}
 					</a>
 				{/each}
-				{#if group?.sections.includes('translations')}
-					<a
-						href="#/translations"
-						class:active={shown.section === 'translations'}
-					>
-						<Icon name="default" />
-						Translations
-					</a>
-				{/if}
 			{/if}
 		</nav>
 		<main>
@@ -128,8 +125,10 @@
 					<Assets />
 				{:else if ai}
 					<Ai {schema} />
-				{:else if route.current.page === 'translations'}
+				{:else if route.current.page === 'translations' || current === 'translations'}
 					<Translations {schema} />
+				{:else if doc}
+					<Doc {doc} />
 				{:else if route.current.page === 'list' && current}
 					{#key current}
 						<List {schema} section={current} />

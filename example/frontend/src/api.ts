@@ -75,7 +75,7 @@ export type Entry = {
 	date?: string;
 	city?: string;
 	price?: number | null;
-	description?: string | null;
+	description?: { html: string } | null;
 	image?: Image[];
 	page?: Link[];
 };

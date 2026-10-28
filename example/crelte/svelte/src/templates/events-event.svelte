@@ -16,7 +16,7 @@
 		? ` · ${$t('events.soldOut')}`
 		: ''}
 </p>
-{#if entry.description}<p>{entry.description}</p>{/if}
+{#if entry.description}{@html entry.description.html}{/if}
 {#each entry.page as p (p.url)}
 	<a href={p.url}>{p.title}</a>
 {/each}

@@ -860,6 +860,14 @@ async fn delete_route(
 	Ok(())
 }
 
+/// A doc of the code, as html.
+#[derive(Debug, Serialize)]
+struct DocResp {
+	handle: String,
+	name: String,
+	html: String,
+}
+
 #[derive(Debug, Serialize)]
 struct AiModel {
 	id: String,
@@ -875,6 +883,7 @@ struct SchemaResp {
 	site_urls: crate::graphql::SiteUrls,
 	/// the models of the AI chat, none if it is off
 	ai_models: Vec<AiModel>,
+	docs: Vec<DocResp>,
 }
 
 async fn schema_route(
@@ -894,6 +903,16 @@ async fn schema_route(
 				.collect(),
 			None => vec![],
 		},
+		docs: state
+			.schema
+			.docs
+			.iter()
+			.map(|d| DocResp {
+				handle: d.handle.clone(),
+				name: d.name.clone(),
+				html: crate::graphql::markdown_html(&d.markdown),
+			})
+			.collect(),
 	})
 }
 

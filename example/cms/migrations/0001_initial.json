@@ -3,24 +3,6 @@
     {
       "op": "addComponent",
       "component": {
-        "handle": "readme",
-        "name": "Readme",
-        "entry": true,
-        "fields": [
-          {
-            "handle": "content",
-            "label": "Content",
-            "required": false,
-            "indexed": false,
-            "translatable": true,
-            "kind": "markdown"
-          }
-        ]
-      }
-    },
-    {
-      "op": "addComponent",
-      "component": {
         "handle": "home",
         "name": "Home",
         "entry": true,
@@ -191,9 +173,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "text",
-            "max": null,
-            "multiline": true
+            "kind": "markdown"
           },
           {
             "handle": "page",
@@ -454,18 +434,6 @@
     {
       "op": "addSection",
       "section": {
-        "handle": "readme",
-        "name": "Readme",
-        "kind": "single",
-        "types": [
-          "readme"
-        ],
-        "uri": null
-      }
-    },
-    {
-      "op": "addSection",
-      "section": {
         "handle": "header",
         "name": "Header",
         "kind": "single",
@@ -525,15 +493,6 @@
         "uri": "events/{slug}"
       },
       {
-        "handle": "readme",
-        "name": "Readme",
-        "kind": "single",
-        "types": [
-          "readme"
-        ],
-        "uri": null
-      },
-      {
         "handle": "header",
         "name": "Header",
         "kind": "single",
@@ -553,21 +512,6 @@
       }
     ],
     "components": [
-      {
-        "handle": "readme",
-        "name": "Readme",
-        "entry": true,
-        "fields": [
-          {
-            "handle": "content",
-            "label": "Content",
-            "required": false,
-            "indexed": false,
-            "translatable": true,
-            "kind": "markdown"
-          }
-        ]
-      },
       {
         "handle": "home",
         "name": "Home",
@@ -733,9 +677,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "text",
-            "max": null,
-            "multiline": true
+            "kind": "markdown"
           },
           {
             "handle": "page",

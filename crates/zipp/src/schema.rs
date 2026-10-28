@@ -39,6 +39,18 @@ pub struct Schema {
 	/// Texts of the frontend (`menu.open`), editors only translate them.
 	#[serde(default)]
 	pub translations: Vec<TranslationGroup>,
+	/// Pages of markdown from the code, the studio shows them read only.
+	/// Not part of the content model, so not in migrations.
+	#[serde(skip)]
+	pub docs: Vec<Doc>,
+}
+
+/// A markdown file of the project shown in the studio, like a readme.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Doc {
+	pub handle: String,
+	pub name: String,
+	pub markdown: String,
 }
 
 /// A namespace of texts, crelte loads `common` always.
@@ -233,6 +245,18 @@ impl Schema {
 		self
 	}
 
+	/// A page of markdown in the studio, read only, e.g.
+	/// `.doc("readme", "Readme", include_str!("../readme.md"))`. Put its
+	/// handle into a nav group like a section.
+	pub fn doc(mut self, handle: &str, name: &str, markdown: &str) -> Self {
+		self.docs.push(Doc {
+			handle: handle.into(),
+			name: name.into(),
+			markdown: markdown.into(),
+		});
+		self
+	}
+
 	/// Texts of the frontend in a namespace, the key and its text in the
 	/// primary site; editors translate them in the studio. To show them
 	/// in the studio, put `translations` into a nav group.
@@ -386,15 +410,26 @@ impl Schema {
 				}
 			}
 			for g in &self.nav {
-				// translations is a page of the studio, not a section
+				// translations and docs are pages of the studio, not sections
 				let unknown = g.sections.iter().find(|s| {
 					self.get_section(s).is_none()
 						&& !(*s == "translations"
 							&& !self.translations.is_empty())
+						&& !self.docs.iter().any(|d| d.handle == **s)
 				});
 				if let Some(s) = unknown {
 					return Err(format!("nav {}: unknown section {s}", g.name));
 				}
+			}
+		}
+
+		for (i, d) in self.docs.iter().enumerate() {
+			check_handle(&d.handle)?;
+			if self.get_section(&d.handle).is_some()
+				|| d.handle == "translations"
+				|| self.docs[..i].iter().any(|x| x.handle == d.handle)
+			{
+				return Err(format!("doc {} exists twice", d.handle));
 			}
 		}
 
@@ -1045,6 +1080,14 @@ pub(crate) mod tests {
 		let s =
 			site().section(Section::channel("x", ["page"]).uri("{id}/{slug}"));
 		assert!(s.check().unwrap_err().contains("knows only"));
+
+		// a doc goes into the nav like a section, but not with its name
+		let s = site()
+			.doc("readme", "Readme", "# Hi")
+			.nav("Content", ["readme", "home", "pages", "events"]);
+		s.check().unwrap();
+		let s = site().doc("pages", "Pages", "");
+		assert_eq!(s.check().unwrap_err(), "doc pages exists twice");
 	}
 
 	#[test]

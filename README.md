@@ -108,6 +108,9 @@ Cms::new(schema(), zipp::migrations!())
   of another component together under one name (an object, not a list
   like blocks). `Field::markdown("text")` is shown rendered in the studio
   and comes as `markdown` and `html` from GraphQL.
+- **Docs.** `.doc("readme", "Readme", include_str!("../readme.md"))`
+  shows a markdown file of the repository as a read-only page of the
+  studio; put its handle into a nav group like a section.
 - **Rich text.** `Field::rich_text("text").headings([3]).lists().links()
   .buttons().embed(["image"])` says what an editor may contain: bold and
   italic always, the rest only if the field allows it, blocks of the
