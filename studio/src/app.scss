@@ -167,3 +167,41 @@ button {
 		text-align: left;
 	}
 }
+
+// a button or link next to the dark ones
+.light {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 12px;
+	font-size: 14px;
+	color: var(--text);
+	text-decoration: none;
+	border: 1px solid var(--dark);
+	border-radius: 2px;
+	background: white;
+}
+
+// the state of an entry
+.badge {
+	padding: 2px 6px;
+	font-size: 13px;
+	font-weight: normal;
+	color: white;
+	background: var(--dark);
+	border-radius: 2px;
+
+	&.draft {
+		background: #c4c4c8;
+	}
+}
+
+// a field the draft changes
+.dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	margin-right: 6px;
+	border-radius: 50%;
+	background: #d98e04;
+}

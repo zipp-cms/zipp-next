@@ -7,7 +7,7 @@
 		type Values,
 	} from '../api';
 	import Icon from '../lib/Icon.svelte';
-	import EntrySearch from './EntrySearch.svelte';
+	import EntrySearch from '../lib/EntrySearch.svelte';
 
 	let {
 		schema,

@@ -10,9 +10,9 @@
 		type Schema,
 		type Values,
 	} from '../api';
-	import AssetPicker from './AssetPicker.svelte';
-	import EntrySearch from './EntrySearch.svelte';
-	import Thumb from './Thumb.svelte';
+	import AssetPicker from '../lib/AssetPicker.svelte';
+	import EntrySearch from '../lib/EntrySearch.svelte';
+	import Thumb from '../lib/Thumb.svelte';
 	import Icon from '../lib/Icon.svelte';
 
 	let {

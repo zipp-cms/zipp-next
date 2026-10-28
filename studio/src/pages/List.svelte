@@ -255,18 +255,6 @@
 		color: var(--muted);
 	}
 
-	.badge {
-		padding: 2px 6px;
-		font-size: 13px;
-		color: white;
-		background: var(--dark);
-		border-radius: 2px;
-
-		&.draft {
-			background: #c4c4c8;
-		}
-	}
-
 	.name {
 		display: flex;
 		align-items: center;

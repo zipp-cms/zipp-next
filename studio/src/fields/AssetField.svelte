@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { listAssets, type Asset, type Field, type Values } from '../api';
-	import AssetPicker from './AssetPicker.svelte';
-	import Thumb from './Thumb.svelte';
+	import AssetPicker from '../lib/AssetPicker.svelte';
+	import Thumb from '../lib/Thumb.svelte';
 	import Icon from '../lib/Icon.svelte';
 
 	let { field, values }: { field: Field; values: Values } = $props();

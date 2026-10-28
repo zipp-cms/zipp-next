@@ -7,7 +7,7 @@
 		uploadAssets,
 		type Asset,
 	} from '../api';
-	import AssetGrid from '../fields/AssetGrid.svelte';
+	import AssetGrid from '../lib/AssetGrid.svelte';
 	import Icon from '../lib/Icon.svelte';
 
 	let assets = $state<Asset[]>([]);

@@ -20,3 +20,16 @@ Instructions for anyone (human or coding agent) changing this repository.
   tests`). Database tests use `Db::memory()`.
 - Commits: a short imperative subject in plain words, then a body that
   says what changed and why.
+
+## Layout
+
+- `crates/zipp/src`: one folder per area (`schema`, `content`, `entries`,
+  `drafts`, `graphql`, `migrate`, `assets`, `ai`), each with a `mod.rs`
+  for its types and core functions, files for the parts, `routes.rs` for
+  the HTTP handlers and `tests.rs` when the tests are long. Types that
+  several files of a folder use stay in its `mod.rs`. `lib.rs` is the
+  public api, `cli.rs` the commands, `server.rs` the router.
+- `studio/src`: `api/` (one file per area, `index.ts` re-exports),
+  `pages/` (`edit/` for the editor), `fields/` (one component per field
+  kind), `lib/` (shared components and helpers). Shared styles are in
+  `app.scss`.

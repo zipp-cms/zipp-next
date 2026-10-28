@@ -21,12 +21,16 @@
 		type Schema,
 		type SiteDoc,
 		type Values,
-	} from '../api';
+	} from '../../api';
 	import { untrack } from 'svelte';
-	import { entryPath, go, shown, site } from '../route.svelte';
-	import Fields from '../fields/Fields.svelte';
-	import Icon from '../lib/Icon.svelte';
-	import { changedPaths } from '../lib/diff';
+	import { entryPath, go, shown, site } from '../../route.svelte';
+	import Fields from '../../fields/Fields.svelte';
+	import { changedPaths, clean } from '../../lib/diff';
+	import ConflictBanner from './ConflictBanner.svelte';
+	import EditHeader from './EditHeader.svelte';
+	import EntryHead from './EntryHead.svelte';
+	import OptionsTab from './OptionsTab.svelte';
+	import RevisionView from './RevisionView.svelte';
 
 	let {
 		schema,
@@ -119,12 +123,14 @@
 		load().catch(e => (error = e.message));
 	});
 
+	// as publishing keeps it: an empty group that a field fills in on
+	// load is no change
 	function snapshot() {
 		return JSON.stringify([
 			title,
 			slug,
 			published,
-			$state.snapshot(fields),
+			clean($state.snapshot(fields)),
 		]);
 	}
 
@@ -286,20 +292,6 @@
 		window.scrollTo(0, 0);
 	}
 
-	/** `Title (de), Intro (de, en)` */
-	function changeText(rev: Revision) {
-		if (!rev.changes.length) return 'Created';
-		const label = (f: string) =>
-			comp?.fields.find(x => x.handle === f)?.label ??
-			f.charAt(0).toUpperCase() + f.slice(1);
-		const multi = schema.sites.length > 1;
-		return rev.changes
-			.map(
-				c => label(c.field) + (multi ? ` (${c.sites.join(', ')})` : ''),
-			)
-			.join(', ');
-	}
-
 	function restore(rev: Revision) {
 		return run(async () => {
 			await restoreRevision(id!, rev.id);
@@ -327,10 +319,6 @@
 			save();
 		}
 	}
-
-	function time(ms: number) {
-		return new Date(ms).toLocaleString();
-	}
 </script>
 
 <svelte:window {onkeydown} />
@@ -338,73 +326,27 @@
 {#if error && !loaded}
 	<p class="error">{error}</p>
 {:else if loaded && secDef && comp}
-	<div class="page-top">
-		<h1>
-			{title || 'New entry'}
-			<span class="badge" class:draft={!published}>
-				{published ? 'Published' : 'Not published'}
-			</span>
-			{#if draft}
-				<span
-					class="badge changes"
-					title="Saved as draft, not live yet"
-				>
-					{draftState === 'saving'
-						? 'Saving…'
-						: 'Unpublished changes'}
-				</span>
-			{/if}
-		</h1>
-		{#if url}
-			{#if draft}
-				<button class="light" onclick={preview}>
-					<Icon name="view" />
-					Preview
-				</button>
-			{:else}
-				<a class="light" href={url} target="_blank">
-					<Icon name="view" />
-					View
-				</a>
-			{/if}
-		{/if}
-		{#if draft}
-			<button class="light" onclick={discard} disabled={busy}>
-				Discard
-			</button>
-		{/if}
-		{#if id !== null && !single}
-			<button class="dark" onclick={remove}>
-				<Icon name="delete" />
-				Delete
-			</button>
-		{/if}
-		<button
-			class="dark"
-			onclick={save}
-			disabled={busy || (id !== null && !draft)}
-		>
-			<Icon name="save" />
-			{id === null ? 'Create' : 'Publish'}
-		</button>
-	</div>
+	<EditHeader
+		{title}
+		{published}
+		hasDraft={!!draft}
+		saving={draftState === 'saving'}
+		{url}
+		{busy}
+		isNew={id === null}
+		canDelete={id !== null && !single}
+		onpreview={preview}
+		ondiscard={discard}
+		onremove={remove}
+		onsave={save}
+	/>
 
-	{#if conflict}
-		<div class="conflict">
-			<span>
-				<b>{conflict}</b>
-				while you were editing. Your last changes are not saved yet.
-			</span>
-			<button class="dark" onclick={loadTheirs}>
-				Load their changes
-			</button>
-			<button class="light" onclick={keepMine}>Keep mine</button>
-		</div>
-	{:else if draft?.user}
-		<p class="last-change">
-			Draft last changed by {draft.user}, {time(draft.updatedAt)}
-		</p>
-	{/if}
+	<ConflictBanner
+		{conflict}
+		{draft}
+		onloadtheirs={loadTheirs}
+		onkeepmine={keepMine}
+	/>
 
 	<div class="card">
 		<div class="tabs">
@@ -426,94 +368,26 @@
 
 		{#if tab === 'content'}
 			{#if viewing}
-				{@const rc = viewing.changed}
-				<div class="viewing">
-					<span>
-						Revision of {time(viewing.rev.createdAt)}{viewing.rev
-							.user
-							? ` by ${viewing.rev.user}`
-							: ''}, read only
-						<br />
-						<small>Changed: {changeText(viewing.rev)}</small>
-					</span>
-					<button class="dark" onclick={() => restore(viewing!.rev)}>
-						Restore
-					</button>
-					<button class="light" onclick={() => (viewing = null)}>
-						Back to editing
-					</button>
-				</div>
-				{#if viewing.doc}
-					<!-- a disabled fieldset disables every input in it -->
-					<fieldset disabled>
-						<div class="head">
-							<label>
-								<span>
-									{#if rc.has('title')}<span
-											class="dot"
-										></span>{/if}Title
-								</span>
-								<input value={viewing.doc.title} />
-							</label>
-							{#if !single}
-								<label>
-									<span>
-										{#if rc.has('slug')}<span
-												class="dot"
-											></span>{/if}Slug
-									</span>
-									<input value={viewing.doc.slug} />
-								</label>
-							{/if}
-						</div>
-						<Fields
-							{schema}
-							component={comp}
-							values={viewing.doc.fields}
-							errors={{}}
-							{refs}
-							changed={rc}
-						/>
-					</fieldset>
-				{:else}
-					<p class="muted">
-						This revision has no content for this site.
-					</p>
-				{/if}
+				<RevisionView
+					{schema}
+					{comp}
+					{refs}
+					{single}
+					rev={viewing.rev}
+					doc={viewing.doc}
+					changed={viewing.changed}
+					onrestore={() => restore(viewing!.rev)}
+					onback={() => (viewing = null)}
+				/>
 			{:else}
-				<div class="head">
-					<label>
-						<span>
-							{#if changed.has('title')}<span
-									class="dot"
-								></span>{/if}Title
-						</span>
-						<input placeholder="Title" bind:value={title} />
-						{#if errors.title}<span class="error">
-								{errors.title}
-							</span>{/if}
-					</label>
-					{#if !single}
-						<label>
-							<span>
-								{#if changed.has('slug')}<span
-										class="dot"
-									></span>{/if}Slug
-							</span>
-							<input
-								placeholder="from the title"
-								bind:value={slug}
-							/>
-							{#if uri !== null}<span class="uri">
-									/{uri}
-								</span>{/if}
-							{#if errors.slug}<span class="error">
-									{errors.slug}
-								</span>{/if}
-						</label>
-					{/if}
-				</div>
-
+				<EntryHead
+					bind:title
+					bind:slug
+					{single}
+					{changed}
+					{uri}
+					{errors}
+				/>
 				<Fields
 					{schema}
 					component={comp}
@@ -524,207 +398,25 @@
 				/>
 			{/if}
 		{:else}
-			<div class="options">
-				<span>Published</span>
-				<input type="checkbox" bind:checked={published} />
-				<span>Section</span>
-				<span>{secDef.name}</span>
-				<span>Type</span>
-				{#if id === null && secDef.types.length > 1}
-					<select bind:value={ty}>
-						{#each secDef.types as t (t)}
-							<option value={t}>
-								{schema.components.find(c => c.handle === t)
-									?.name}
-							</option>
-						{/each}
-					</select>
-				{:else}
-					<span>{comp.name}</span>
-				{/if}
-				{#if id !== null && schema.sites.length > 1}
-					<span>Content</span>
-					<select
-						value=""
-						onchange={e => {
-							const other = e.currentTarget.value;
-							e.currentTarget.value = '';
-							copyFrom(other);
-						}}
-					>
-						<option value="" disabled>
-							Copy from another site…
-						</option>
-						{#each schema.sites.filter(s => s.handle !== site.current) as s (s.handle)}
-							<option value={s.handle}>{s.name}</option>
-						{/each}
-					</select>
-				{/if}
-				{#if revisions.length}
-					<span>Revisions</span>
-					<ul class="revisions">
-						{#each revisions as rev, i (rev.id)}
-							<li>
-								<button
-									class="link rev"
-									onclick={() => view(rev)}
-								>
-									<span>
-										{time(rev.createdAt)}
-										{#if rev.user}<span class="muted">
-												{rev.user}
-											</span>{/if}
-										{#if i === 0}<span class="muted">
-												live
-											</span>{/if}
-									</span>
-									<span class="what">{changeText(rev)}</span>
-								</button>
-								{#if i > 0}
-									<button
-										class="link"
-										onclick={() => restore(rev)}
-									>
-										Restore
-									</button>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-				{/if}
-				{#if id === null && parents.length}
-					<span>Parent</span>
-					<select bind:value={parentId}>
-						<option value={null}>None, on the top</option>
-						{#each parents as p (p.id)}
-							<option value={p.id}>{p.title}</option>
-						{/each}
-					</select>
-				{/if}
-			</div>
+			<OptionsTab
+				{schema}
+				{secDef}
+				{comp}
+				isNew={id === null}
+				bind:published
+				bind:ty
+				bind:parentId
+				{parents}
+				{revisions}
+				oncopy={copyFrom}
+				onview={view}
+				onrestore={restore}
+			/>
 		{/if}
 	</div>
 {/if}
 
 <style lang="scss">
-	.light {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		padding: 10px 12px;
-		font-size: 14px;
-		color: var(--text);
-		text-decoration: none;
-		border: 1px solid var(--dark);
-		border-radius: 2px;
-		background: white;
-	}
-
-	.conflict {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		margin-bottom: 16px;
-		padding: 12px 16px;
-		background: #ffcd70;
-
-		span {
-			margin-right: auto;
-		}
-	}
-
-	.last-change {
-		margin: -10px 0 12px;
-		font-size: 13px;
-		color: var(--muted);
-	}
-
-	.viewing {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		margin-bottom: 24px;
-		padding: 12px 16px;
-		background: var(--input);
-
-		span {
-			margin-right: auto;
-		}
-	}
-
-	fieldset {
-		margin: 0;
-		padding: 0;
-		border: none;
-	}
-
-	.dot {
-		display: inline-block;
-		width: 8px;
-		height: 8px;
-		margin-right: 6px;
-		border-radius: 50%;
-		background: #d98e04;
-	}
-
-	.rev {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 2px;
-		padding: 0;
-		color: var(--text);
-		text-align: left;
-	}
-
-	.what {
-		font-size: 13px;
-		color: var(--muted);
-	}
-
-	.changes {
-		background: #d98e04 !important;
-	}
-
-	.revisions {
-		margin: 0;
-		padding: 0;
-		list-style: none;
-
-		li {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			padding: 6px 0;
-			border-bottom: 1px solid var(--line);
-		}
-	}
-
-	.muted {
-		margin-left: 8px;
-		color: var(--muted);
-		font-size: 14px;
-	}
-
-	h1 {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-	}
-
-	.badge {
-		padding: 2px 6px;
-		font-size: 13px;
-		font-weight: normal;
-		color: white;
-		background: var(--dark);
-		border-radius: 2px;
-
-		&.draft {
-			background: #c4c4c8;
-		}
-	}
-
 	.tabs {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
@@ -745,43 +437,6 @@
 			&.active {
 				border-bottom-color: var(--dark);
 			}
-		}
-	}
-
-	.head {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 24px;
-		margin-bottom: 30px;
-
-		label {
-			display: flex;
-			flex-direction: column;
-			gap: 10px;
-		}
-	}
-
-	.uri {
-		margin-top: -4px;
-		color: var(--muted);
-		font-size: 14px;
-	}
-
-	.options {
-		display: grid;
-		grid-template-columns: 200px 1fr;
-		gap: 16px 30px;
-		align-items: center;
-
-		select {
-			max-width: 24rem;
-		}
-	}
-
-	@media (max-width: 800px) {
-		.head,
-		.options {
-			grid-template-columns: 1fr;
 		}
 	}
 </style>

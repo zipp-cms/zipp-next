@@ -17,7 +17,7 @@ function isObject(v: unknown): v is Values {
  * A value as publishing keeps it: empty texts, lists and groups are
  * dropped, so `{}` in a draft is the same as nothing live.
  */
-function clean(v: unknown): unknown {
+export function clean(v: unknown): unknown {
 	if (v === undefined || v === null || v === '') return null;
 	if (Array.isArray(v)) return v.length ? v : null;
 	if (isObject(v)) {

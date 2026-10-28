@@ -3,7 +3,7 @@
 	import { go, route, setSite, shown, site, toLogin } from './route.svelte';
 	import Login from './pages/Login.svelte';
 	import List from './pages/List.svelte';
-	import Edit from './pages/Edit.svelte';
+	import Edit from './pages/edit/Edit.svelte';
 	import Assets from './pages/Assets.svelte';
 	import Translations from './pages/Translations.svelte';
 	import Ai from './pages/Ai.svelte';
