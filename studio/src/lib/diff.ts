@@ -14,6 +14,24 @@ function isObject(v: unknown): v is Values {
 }
 
 /**
+ * A value as publishing keeps it: empty texts, lists and groups are
+ * dropped, so `{}` in a draft is the same as nothing live.
+ */
+function clean(v: unknown): unknown {
+	if (v === undefined || v === null || v === '') return null;
+	if (Array.isArray(v)) return v.length ? v : null;
+	if (isObject(v)) {
+		const out: Values = {};
+		for (const [k, x] of Object.entries(v)) {
+			const c = clean(x);
+			if (c !== null) out[k] = c;
+		}
+		return Object.keys(out).length ? out : null;
+	}
+	return v;
+}
+
+/**
  * The paths of the fields that differ, like the error paths: `intro`,
  * `body`, `body.2` for a new block, `body.2.content` inside a block.
  */
@@ -30,7 +48,7 @@ export function changedPaths(
 	for (const key of keys) {
 		const a = old?.[key];
 		const b = now?.[key];
-		if (JSON.stringify(a ?? null) === JSON.stringify(b ?? null)) continue;
+		if (JSON.stringify(clean(a)) === JSON.stringify(clean(b))) continue;
 		out.add(prefix + key);
 
 		// a group: its fields

@@ -108,6 +108,10 @@ Cms::new(schema(), zipp::migrations!())
   of another component together under one name (an object, not a list
   like blocks). `Field::markdown("text")` is shown rendered in the studio
   and comes as `markdown` and `html` from GraphQL.
+- **Dropdowns.** `Field::dropdown("width", [("small", "Small"), ...])`
+  stores the value of one option, GraphQL gives that value like Craft.
+  The studio shows up to three options as buttons, more as a select.
+  Dropdowns can be indexed.
 - **Field types of other crates.** A crate implements `FieldType`:
   it checks its options and values, says how GraphQL shows them and
   brings the editor of the studio as an ES module with

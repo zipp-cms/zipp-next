@@ -81,6 +81,11 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 				"number[]".into()
 			}
 			FieldKind::Markdown => "string".into(),
+			FieldKind::Dropdown { options } => options
+				.iter()
+				.map(|o| format!("{:?}", o.value))
+				.collect::<Vec<_>>()
+				.join(" | "),
 			FieldKind::Group { component } => {
 				format!("{}Fields", pascal(component))
 			}

@@ -175,7 +175,7 @@ impl Query {
 			.find(|f| f.handle == field && f.indexed)
 			.ok_or_else(|| format!("{ty}.{field} is not indexed"))?;
 		Ok(match &f.kind {
-			FieldKind::Text { .. } => false,
+			FieldKind::Text { .. } | FieldKind::Dropdown { .. } => false,
 			// a custom type is compared like the scalar GraphQL shows
 			FieldKind::Custom { ty, .. } => {
 				schema.field_types.get(ty).is_none_or(|t| {

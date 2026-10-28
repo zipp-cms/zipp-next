@@ -166,6 +166,36 @@
             ]
           },
           {
+            "handle": "language",
+            "label": "Language",
+            "required": false,
+            "indexed": true,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "de",
+                "label": "Deutsch"
+              },
+              {
+                "value": "ch",
+                "label": "Mundart"
+              },
+              {
+                "value": "fr",
+                "label": "Français"
+              },
+              {
+                "value": "it",
+                "label": "Italiano"
+              },
+              {
+                "value": "en",
+                "label": "English"
+              }
+            ]
+          },
+          {
             "handle": "price",
             "label": "Price",
             "required": false,
@@ -362,6 +392,28 @@
             "kind": "text",
             "max": 200,
             "multiline": false
+          },
+          {
+            "handle": "width",
+            "label": "Width",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "small",
+                "label": "Small"
+              },
+              {
+                "value": "wide",
+                "label": "Wide"
+              },
+              {
+                "value": "full",
+                "label": "Full width"
+              }
+            ]
           }
         ]
       }
@@ -696,6 +748,36 @@
             ]
           },
           {
+            "handle": "language",
+            "label": "Language",
+            "required": false,
+            "indexed": true,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "de",
+                "label": "Deutsch"
+              },
+              {
+                "value": "ch",
+                "label": "Mundart"
+              },
+              {
+                "value": "fr",
+                "label": "Français"
+              },
+              {
+                "value": "it",
+                "label": "Italiano"
+              },
+              {
+                "value": "en",
+                "label": "English"
+              }
+            ]
+          },
+          {
             "handle": "price",
             "label": "Price",
             "required": false,
@@ -874,6 +956,28 @@
             "kind": "text",
             "max": 200,
             "multiline": false
+          },
+          {
+            "handle": "width",
+            "label": "Width",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "small",
+                "label": "Small"
+              },
+              {
+                "value": "wide",
+                "label": "Wide"
+              },
+              {
+                "value": "full",
+                "label": "Full width"
+              }
+            ]
           }
         ]
       },

@@ -107,6 +107,11 @@ fn validate_value(
 		}
 		(FieldKind::Boolean, Value::Bool(_)) => {}
 		(FieldKind::Markdown, Value::String(_)) => {}
+		(FieldKind::Dropdown { options }, Value::String(s)) => {
+			if !options.iter().any(|o| &o.value == s) {
+				error(errors, path, "not one of the options");
+			}
+		}
 		(FieldKind::Group { component }, Value::Object(_)) => {
 			let comp = schema.get(component).unwrap();
 			let prefix = format!("{path}.");
@@ -513,6 +518,7 @@ mod tests {
 	use serde_json::json;
 
 	use super::*;
+	use crate::schema::Section;
 	use crate::schema::tests::site;
 
 	fn page_fields() -> Value {
@@ -612,6 +618,35 @@ mod tests {
 		let en = json!({ "intro": "Hello" });
 		let out = share(s.get("page").unwrap(), &de, &en);
 		assert_eq!(out, json!({ "intro": "Hello" }));
+	}
+
+	#[test]
+	fn dropdowns_take_one_of_their_options() {
+		let s = site()
+			.section(Section::channel("talks", ["talk"]).uri("{slug}"))
+			.entry(
+				"talk",
+				"Talk",
+				[Field::dropdown("size", [("s", "Small"), ("l", "Large")])
+					.indexed()],
+			);
+		s.check().unwrap();
+		let comp = s.get("talk").unwrap();
+		let ok = validate(&s, comp, &json!({ "size": "l" })).unwrap();
+		assert_eq!(ok, json!({ "size": "l" }));
+		let err = validate(&s, comp, &json!({ "size": "m" })).unwrap_err();
+		assert_eq!(err[0].message, "not one of the options");
+		let vals = index_values(comp, &ok);
+		assert_eq!(vals[0].text.as_deref(), Some("l"));
+
+		let twice = site()
+			.section(Section::channel("talks", ["talk"]).uri("{slug}"))
+			.entry(
+				"talk",
+				"Talk",
+				[Field::dropdown("size", [("s", "Small"), ("s", "Large")])],
+			);
+		assert!(twice.check().unwrap_err().contains("exists twice"));
 	}
 
 	#[test]

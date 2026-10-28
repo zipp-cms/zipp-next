@@ -617,6 +617,8 @@ fn content_field(schema: &Schema, field: &crate::schema::Field) -> GqlField {
 		FieldKind::Link { .. } => TypeRef::named("Link"),
 		FieldKind::RichText { .. } => TypeRef::named("RichText"),
 		FieldKind::Markdown => TypeRef::named("Markdown"),
+		// the value, like Craft's dropdown
+		FieldKind::Dropdown { .. } => TypeRef::named(TypeRef::STRING),
 		FieldKind::Group { component } => {
 			TypeRef::named(format!("{component}_Fields"))
 		}

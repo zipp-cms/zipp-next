@@ -18,6 +18,7 @@ export type FieldKind =
 	| { kind: 'link'; to: LinkKind[]; labels: boolean; newTab: boolean }
 	| { kind: 'group'; component: string }
 	| { kind: 'markdown' }
+	| { kind: 'dropdown'; options: { value: string; label: string }[] }
 	| {
 			kind: 'richText';
 			headings: number[];

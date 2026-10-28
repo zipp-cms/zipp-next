@@ -90,6 +90,18 @@ fn schema() -> Schema {
 					],
 				)
 				.required(),
+				// more options: a select in the studio
+				Field::dropdown(
+					"language",
+					[
+						("de", "Deutsch"),
+						("ch", "Mundart"),
+						("fr", "Français"),
+						("it", "Italiano"),
+						("en", "English"),
+					],
+				)
+				.indexed(),
 				Field::number("price").range(0.0, 1000.0).indexed(),
 				Field::boolean("soldOut").indexed(),
 				Field::images("image").max(1),
@@ -141,6 +153,11 @@ fn schema() -> Schema {
 			[
 				Field::images("image").required().max(1),
 				Field::text("caption").max(200),
+				// three options: buttons in the studio
+				Field::dropdown(
+					"width",
+					[("small", "Small"), ("wide", "Wide"), ("full", "Full width")],
+				),
 			],
 		)
 		.block(

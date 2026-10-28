@@ -113,6 +113,13 @@ pub struct Section {
 	pub type_uris: BTreeMap<String, String>,
 }
 
+/// An option of a dropdown: the value that is stored and its label.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Choice {
+	pub value: String,
+	pub label: String,
+}
+
 /// What a link field can point to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -210,6 +217,11 @@ pub enum FieldKind {
 	},
 	/// Text in Markdown, GraphQL renders it to html too.
 	Markdown,
+	/// One of some options, the value is the option's value. The studio
+	/// shows up to three as buttons, more as a select.
+	Dropdown {
+		options: Vec<Choice>,
+	},
 	/// A list of blocks of the given types.
 	Blocks {
 		types: Vec<String>,
@@ -572,6 +584,19 @@ impl Schema {
 		{
 			return Err("a link needs something to point to".into());
 		}
+		if let FieldKind::Dropdown { options } = &field.kind {
+			if options.is_empty() {
+				return Err("a dropdown needs options".into());
+			}
+			for (i, o) in options.iter().enumerate() {
+				if o.value.is_empty() {
+					return Err("an option needs a value".into());
+				}
+				if options[..i].iter().any(|x| x.value == o.value) {
+					return Err(format!("option {} exists twice", o.value));
+				}
+			}
+		}
 		if let FieldKind::Custom { ty, options } = &field.kind {
 			let Some(t) = self.field_types.get(ty) else {
 				return Err(format!("unknown field type {ty}, register it"));
@@ -610,10 +635,12 @@ impl Schema {
 				FieldKind::Text { .. }
 					| FieldKind::Number { .. }
 					| FieldKind::Boolean
+					| FieldKind::Dropdown { .. }
 			) && !self.custom_scalar(&field.kind)
 			{
 				return Err(
-					"only text, number and boolean can be indexed".into()
+					"only text, number, boolean and dropdowns can be indexed"
+						.into(),
 				);
 			}
 		}
@@ -803,6 +830,21 @@ impl Field {
 
 	pub fn markdown(handle: &str) -> Self {
 		Self::new(handle, FieldKind::Markdown)
+	}
+
+	/// One of the options, given as value and label.
+	pub fn dropdown<'a>(
+		handle: &str,
+		options: impl IntoIterator<Item = (&'a str, &'a str)>,
+	) -> Self {
+		let options = options
+			.into_iter()
+			.map(|(value, label)| Choice {
+				value: value.into(),
+				label: label.into(),
+			})
+			.collect();
+		Self::new(handle, FieldKind::Dropdown { options })
 	}
 
 	/// A field of a type of another crate, it has to be registered with

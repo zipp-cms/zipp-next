@@ -36,6 +36,7 @@ fragment Body on Block {
 				}
 				... on image_Block {
 					caption
+					width
 					image {
 						...Image
 					}
@@ -45,6 +46,7 @@ fragment Body on Block {
 	}
 	... on image_Block {
 		caption
+		width
 		image {
 			...Image
 		}
@@ -105,6 +107,7 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 			city
 			price
 			soldOut
+			language
 			genre {
 				value
 				label
