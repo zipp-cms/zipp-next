@@ -58,6 +58,15 @@ A plugin is a crate that adds a whole feature, turned on with one line:
 is the first plugin: SEO like the Craft plugin meierlabs-seo, see
 [SEO](seo.md).
 
+`crates/zipp-agent` is the second: in development (`serve --dev`) the
+studio's AI chat hands everything to a coding agent (Claude Code) for
+admins, content as drafts through the api with the user's session, the
+content model and the frontend in the code; it commits its changes. The
+environment says where: `ZIPP_AGENT_COMMAND` (`claude`), `ZIPP_AGENT_DIR`
+(the project, `..`), `ZIPP_AGENT_RESTART` (rebuilds and restarts the
+cms; its unit needs `KillMode=process`, the agent outlives the restart),
+`ZIPP_AGENT_API`. Meant for a sandbox VM: the agent runs without asking.
+
 ## Types for the rest api
 
 `types` prints TypeScript types of all

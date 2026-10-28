@@ -11,6 +11,7 @@
 		type Schema,
 	} from '../api';
 	import { untrack } from 'svelte';
+	import { hasAgent } from '../lib/access';
 	import { entryPath, shown, site } from '../route.svelte';
 
 	/**
@@ -35,7 +36,7 @@
 	// the first model; the choice is hidden for now (operator 2026-10-28)
 	const model = untrack(() => schema.aiModels[0]?.id ?? '');
 	// development: the coding agent does everything, content and code
-	const agent = untrack(() => schema.agent);
+	const agent = untrack(() => hasAgent(schema));
 	let input = $state('');
 	let busy = $state(false);
 	let error = $state('');

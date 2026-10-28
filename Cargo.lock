@@ -3383,6 +3383,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "zipp-agent"
+version = "0.1.0"
+dependencies = [
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "zipp",
+]
+
+[[package]]
 name = "zipp-button-group"
 version = "0.1.0"
 dependencies = [

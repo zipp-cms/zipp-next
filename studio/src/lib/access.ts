@@ -54,3 +54,15 @@ export function visibleNav(schema: Schema): NavGroup[] {
 		}))
 		.filter(g => g.sections.length);
 }
+
+/**
+ * The chat hands everything to the coding agent of the plugin `agent`:
+ * development and admins only, the server checks it too.
+ */
+export function hasAgent(schema: Schema): boolean {
+	return (
+		schema.dev &&
+		isAdmin(schema) &&
+		schema.plugins.some(p => p.name === 'agent')
+	);
+}

@@ -1,7 +1,19 @@
-//! In development the AI chat of the studio can hand everything to a
-//! coding agent (Claude Code): content as drafts through the api, the
-//! content model in the cms crate, the frontend. `serve --dev --agent
-//! claude --agent-dir ..` turns it on, only admins use it.
+//! A zipp plugin for development: the AI chat of the studio hands
+//! everything to a coding agent (Claude Code), content as drafts through
+//! the api, the content model in the cms crate, the frontend.
+//!
+//! ```ignore
+//! Schema::new()
+//!     // ...
+//!     .plugin(zipp_agent::Agent::new())
+//! ```
+//!
+//! It only works with `serve --dev` and for admins, in production it does
+//! nothing. Where it runs is the environment's: `ZIPP_AGENT_COMMAND`
+//! (default `claude`), `ZIPP_AGENT_DIR` (the project, default `..`),
+//! `ZIPP_AGENT_RESTART` (a shell command that rebuilds and restarts the
+//! cms), `ZIPP_AGENT_API` (this cms' api, default
+//! `http://127.0.0.1:8090/api`).
 //!
 //! Each message starts the agent in the project folder; its output goes to
 //! a file, not a pipe, so it outlives a restart of the cms after a change
@@ -15,23 +27,50 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
-use axum::extract::{Path as UrlPath, Query, State};
-use axum::response::IntoResponse;
-use axum::response::sse::{Event, KeepAlive, Sse};
-use axum::routing::{delete, get, post};
-use axum::{Json, Router};
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
+use zipp::auth::Authed;
+use zipp::axum::extract::{Path as UrlPath, Query, State};
+use zipp::axum::response::IntoResponse;
+use zipp::axum::response::sse::{Event, KeepAlive, Sse};
+use zipp::axum::routing::{delete, get, post};
+use zipp::axum::{Json, Router};
+use zipp::db::{now, random_token};
+use zipp::error::{Error, Result};
+use zipp::{AppState, Plugin, PluginStudio};
 
-use crate::AppState;
-use crate::auth::Authed;
-use crate::db::{now, random_token};
-use crate::error::{Error, Result};
+/// The plugin, see the crate's docs.
+#[derive(Debug, Clone, Default)]
+pub struct Agent;
 
-/// The coding agent, see `serve --agent`.
+impl Agent {
+	pub fn new() -> Self {
+		Self
+	}
+}
+
+impl Plugin for Agent {
+	fn name(&self) -> &'static str {
+		"agent"
+	}
+
+	fn api_routes(&self) -> Router<AppState> {
+		routes()
+	}
+
+	/// The studio's chat uses the agent, it has no module of its own.
+	fn studio(&self) -> Option<PluginStudio> {
+		Some(PluginStudio {
+			js: "",
+			data: json!({ "chat": true }),
+		})
+	}
+}
+
+/// Where the agent runs, from the environment.
 #[derive(Debug, Clone)]
-pub struct AgentConfig {
+struct AgentConfig {
 	/// the command, like `claude`
 	pub command: String,
 	/// the project, the agent works there
@@ -44,14 +83,26 @@ pub struct AgentConfig {
 	pub api: String,
 }
 
+/// The agent of a request: development and an admin only.
 fn agent(state: &AppState, auth: &Authed) -> Result<AgentConfig> {
-	let Some(agent) = state.agent.clone() else {
+	if !state.dev {
 		return Err(Error::NotFound);
-	};
-	if !state.dev || !auth.admin() {
+	}
+	if !auth.admin() {
 		return Err(Error::Forbidden);
 	}
-	Ok(agent)
+	let env = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
+	let dir = PathBuf::from(env("ZIPP_AGENT_DIR").unwrap_or("..".into()));
+	check_dir(&dir).map_err(Error::Internal)?;
+	Ok(AgentConfig {
+		command: env("ZIPP_AGENT_COMMAND").unwrap_or("claude".into()),
+		dir: fs::canonicalize(&dir)
+			.map_err(|e| Error::Internal(e.to_string()))?,
+		runs: state.files.join("../agent-runs"),
+		restart: env("ZIPP_AGENT_RESTART"),
+		api: env("ZIPP_AGENT_API")
+			.unwrap_or("http://127.0.0.1:8090/api".into()),
+	})
 }
 
 /// A run's id is a token: only hex, it names files.
@@ -257,7 +308,7 @@ async fn forget(State(state): State<AppState>, auth: Authed) -> Result<()> {
 	Ok(())
 }
 
-pub fn routes() -> Router<AppState> {
+fn routes() -> Router<AppState> {
 	Router::new()
 		.route("/agent", post(start))
 		.route("/agent/session", delete(forget))
@@ -265,7 +316,7 @@ pub fn routes() -> Router<AppState> {
 }
 
 /// Whether the folder looks like a project for the agent.
-pub fn check_dir(dir: &Path) -> std::result::Result<(), String> {
+fn check_dir(dir: &Path) -> std::result::Result<(), String> {
 	if dir.join("cms").is_dir() || dir.join("AGENT.md").is_file() {
 		Ok(())
 	} else {

@@ -144,8 +144,8 @@ struct SchemaResp {
 	offline: Vec<String>,
 	/// the plugins with a studio module and its data
 	plugins: Vec<PluginResp>,
-	/// the chat hands everything to the coding agent: development, admins
-	agent: bool,
+	/// development mode, see `serve --dev`
+	dev: bool,
 	me: Me,
 }
 
@@ -169,7 +169,7 @@ async fn schema_route(
 	Ok(Json(SchemaResp {
 		roles: state.schema.roles.clone(),
 		offline: state.schema.offline.clone(),
-		agent: state.dev && state.agent.is_some() && auth.role.is_none(),
+		dev: state.dev,
 		plugins: state
 			.schema
 			.plugins

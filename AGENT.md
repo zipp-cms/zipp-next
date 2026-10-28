@@ -60,6 +60,8 @@ What the owner decided, so it doesn't get asked again:
   zipp belongs into the `Plugin`/`FieldType` api, not into zipp's core.
 - Admins see field handles; entry types can have tabs, Setup shows each
   type's editor as editors see it.
+- The coding agent in the chat is the plugin `crates/zipp-agent`
+  (operator 2026-10-28): development only, admins only, in a sandbox VM.
 - The studio looks like the old Zipp (dark top bar, white side nav, grey
   page, white cards), its pages are paths under `/admin`.
 - AI models run through soe-llms on OpenRouter, never a provider's api

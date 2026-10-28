@@ -2,19 +2,13 @@
 	import { getSchema, logout, token, type Schema } from './api';
 	import {
 		canAi,
+		hasAgent,
 		canAssets,
 		isAdmin,
 		roleName,
 		visibleNav,
 	} from './lib/access';
-	import {
-		go,
-		route,
-		setSite,
-		shown,
-		site,
-		toLogin,
-	} from './route.svelte';
+	import { go, route, setSite, shown, site, toLogin } from './route.svelte';
 	import Login from './pages/Login.svelte';
 	import List from './pages/List.svelte';
 	import Edit from './pages/edit/Edit.svelte';
@@ -120,7 +114,7 @@
 				{#if canAssets(schema, 'view')}
 					<a href="/admin/assets" class:active={assets}>Assets</a>
 				{/if}
-				{#if (schema.aiModels.length || schema.agent) && canAi(schema)}
+				{#if (schema.aiModels.length || hasAgent(schema)) && canAi(schema)}
 					<a href="/admin/ai" class:active={ai}>AI</a>
 				{/if}
 				<!-- read only for everyone, a role sees its part -->
