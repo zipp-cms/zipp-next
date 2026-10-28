@@ -131,6 +131,7 @@ struct SiteParam {
 /// The texts of a site with defaults, like the frontend gets them.
 async fn site_texts(
 	State(state): State<AppState>,
+	_auth: Authed,
 	Query(p): Query<SiteParam>,
 ) -> Result<Json<Texts>> {
 	let site = p

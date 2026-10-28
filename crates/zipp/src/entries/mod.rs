@@ -6,14 +6,13 @@
 use std::collections::{BTreeMap, HashMap};
 
 use axum::extract::{Path, Query as QueryParams, State};
-use axum::http::HeaderMap;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::auth::{Authed, session};
+use crate::auth::Authed;
 use crate::content::{
 	FieldError, Target, index_values, relations, share, validate,
 };

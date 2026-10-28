@@ -86,6 +86,10 @@ pub struct AppState {
 	pub site_urls: Arc<graphql::SiteUrls>,
 	/// origins that may frame the studio
 	pub frame_ancestors: Arc<Vec<String>>,
+	/// what frontends send to GraphQL, see `serve --graphql-token`
+	pub graphql_token: Option<Arc<String>>,
+	/// development mode, see `serve --dev`
+	pub dev: bool,
 	/// the AI chat, if there is an api key
 	pub ai: Option<ai::AiConfig>,
 	hooks: Arc<Vec<Hook>>,

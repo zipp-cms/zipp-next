@@ -47,7 +47,7 @@ use crate::auth::session;
 use crate::db::Db;
 use crate::drafts::{Preview, get_draft, preview};
 use crate::entries::{Entry, list};
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::field_type::{GraphqlType, Scalar as FieldScalar};
 use crate::query::Query;
 use crate::richtext::{self, Chunk};
@@ -261,11 +261,18 @@ async fn graphql(
 ) -> Result<GraphQLResponse> {
 	let (published_only, preview) = {
 		let conn = state.db.conn();
+		let editor = session(&conn, &headers)?.is_some();
+		// private like Craft's: frontends send the token, the studio its
+		// session; development without a token is open
+		let open = state.dev && state.graphql_token.is_none();
+		if !editor && !open && !has_token(&state, &headers) {
+			return Err(Error::MissingEndpointToken);
+		}
 		let preview = match &p.token {
 			Some(t) => preview(&conn, t)?,
 			None => None,
 		};
-		(session(&conn, &headers)?.is_none(), preview)
+		(!editor, preview)
 	};
 	let token = preview.as_ref().and(p.token);
 	let req = req.into_inner().data(Viewer {
@@ -276,8 +283,33 @@ async fn graphql(
 	Ok(state.gql.execute(req).await.into())
 }
 
-async fn graphiql() -> Html<String> {
-	Html(GraphiQLSource::build().endpoint("/api/graphql").finish())
+/// Whether the request has the endpoint token.
+fn has_token(state: &AppState, headers: &HeaderMap) -> bool {
+	let Some(token) = &state.graphql_token else {
+		return false;
+	};
+	let sent = headers
+		.get(axum::http::header::AUTHORIZATION)
+		.and_then(|v| v.to_str().ok())
+		.and_then(|v| v.strip_prefix("Bearer "))
+		.unwrap_or_default();
+	// as long whatever matches
+	sent.len() == token.len()
+		&& sent
+			.bytes()
+			.zip(token.bytes())
+			.fold(0, |acc, (a, b)| acc | (a ^ b))
+			== 0
+}
+
+/// The playground, only in development: it loads its scripts from a cdn.
+async fn graphiql(State(state): State<AppState>) -> Result<Html<String>> {
+	if !state.dev {
+		return Err(Error::NotFound);
+	}
+	Ok(Html(
+		GraphiQLSource::build().endpoint("/api/graphql").finish(),
+	))
 }
 
 pub fn routes() -> Router<AppState> {

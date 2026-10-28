@@ -11,12 +11,11 @@ pub(super) struct ListResp {
 
 pub(super) async fn list_route(
 	State(state): State<AppState>,
-	headers: HeaderMap,
+	_auth: Authed,
 	QueryParams(params): QueryParams<Vec<(String, String)>>,
 ) -> Result<Json<ListResp>> {
 	let conn = state.db.conn();
-	let mut q = Query::parse(&state.schema, &params).map_err(Error::Request)?;
-	q.published_only = session(&conn, &headers)?.is_none();
+	let q = Query::parse(&state.schema, &params).map_err(Error::Request)?;
 
 	let (entries, total) = list(&conn, &q)?;
 	let ids: Vec<i64> = entries.iter().map(|e| e.id).collect();
@@ -44,21 +43,17 @@ pub(super) struct EntryResp {
 
 pub(super) async fn get_route(
 	State(state): State<AppState>,
-	headers: HeaderMap,
+	_auth: Authed,
 	Path(id): Path<i64>,
 	QueryParams(p): QueryParams<SiteParam>,
 ) -> Result<Json<EntryResp>> {
 	let conn = state.db.conn();
-	let published_only = session(&conn, &headers)?.is_none();
 	let site = p
 		.site
 		.unwrap_or_else(|| state.schema.primary_site().handle.clone());
 
 	let entry = get_entry(&conn, id, &site)?;
-	if published_only && !entry.published {
-		return Err(Error::NotFound);
-	}
-	let relations = refs(&conn, &[id], &site, published_only)?;
+	let relations = refs(&conn, &[id], &site, false)?;
 
 	Ok(Json(EntryResp { entry, relations }))
 }

@@ -16,6 +16,9 @@ pub enum Error {
 	MissingSessionToken,
 	#[error("Invalid session token in request")]
 	InvalidSessionToken,
+	/// GraphQL without the endpoint token or a session
+	#[error("GraphQL needs the endpoint token: Authorization: Bearer <token>")]
+	MissingEndpointToken,
 	#[error("Resource not found")]
 	NotFound,
 	#[error("Some fields are invalid")]
@@ -32,9 +35,9 @@ pub enum Error {
 impl Error {
 	pub fn status_code(&self) -> StatusCode {
 		match self {
-			Self::LoginIncorrect | Self::MissingSessionToken => {
-				StatusCode::UNAUTHORIZED
-			}
+			Self::LoginIncorrect
+			| Self::MissingSessionToken
+			| Self::MissingEndpointToken => StatusCode::UNAUTHORIZED,
 			Self::InvalidSessionToken => StatusCode::FORBIDDEN,
 			Self::NotFound => StatusCode::NOT_FOUND,
 			Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,

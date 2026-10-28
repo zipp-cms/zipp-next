@@ -103,7 +103,14 @@ Cms::new(schema(), zipp::migrations!())
   { ... on button_Block { label link { title uri } } } } }`. `entries`
   and `entryCount` take the same filters as the rest api (`where: [{
   field: "city", value: "Bern" }]`). Without a session only published
-  entries show. A GET opens GraphiQL to try queries.
+  entries show.
+- **Private GraphQL, dev and prod.** Like Craft's schema tokens, GraphQL
+  only answers frontends that send `Authorization: Bearer <token>`, the
+  token of `serve` (`ZIPP_GRAPHQL_TOKEN`; crelte reads it as
+  `ENDPOINT_TOKEN` from `../craft/.env`), and the studio with its
+  session. `serve --dev` (`ZIPP_DEV=1`) turns on GraphiQL with a GET on
+  `/api/graphql` and opens GraphQL when there is no token. The rest api
+  is the studio's, it needs a session.
 - **Groups and markdown.** `Field::group("seo", "seo")` keeps the fields
   of another component together under one name (an object, not a list
   like blocks). `Field::markdown("text")` is shown rendered in the studio

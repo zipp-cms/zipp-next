@@ -4,7 +4,7 @@ zipp is a headless CMS where the **content model is code**. This studio, the Gra
 
 - **Website (crelte):** <https://zipp-crelte.noah.meierlabs.dev> — and `/en` for English
 - **A plain Svelte frontend:** <https://zipp.noah.meierlabs.dev>
-- **GraphQL playground:** <https://zipp-studio.noah.meierlabs.dev/api/graphql>
+- **GraphQL** is private like Craft's: frontends send a token, the playground (GraphiQL) is only on in development (`serve --dev`)
 
 This page is itself a feature: a markdown file of the repository ([`example/readme.md`](https://github.com/zipp-cms/zipp-next/blob/code-first/example/readme.md)), shown in the navigation with `.doc("readme", "Readme", include_str!("../../readme.md"))`. Editors read it, the code changes it.
 

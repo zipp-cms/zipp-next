@@ -30,6 +30,14 @@ pub(super) struct ServeArgs {
 	/// `--frame-ancestor https://dash.example.com`, repeat for more
 	#[arg(long)]
 	pub(super) frame_ancestor: Vec<String>,
+	/// The token frontends send to GraphQL as `Authorization: Bearer`,
+	/// like Craft's schema tokens; without it GraphQL is closed
+	#[arg(long, env = "ZIPP_GRAPHQL_TOKEN", hide_env_values = true)]
+	pub(super) graphql_token: Option<String>,
+	/// Development: GraphiQL on /api/graphql, and GraphQL is open when
+	/// there is no token
+	#[arg(long, env = "ZIPP_DEV")]
+	pub(super) dev: bool,
 }
 
 #[derive(Debug, Subcommand)]

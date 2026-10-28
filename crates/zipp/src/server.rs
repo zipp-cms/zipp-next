@@ -14,7 +14,14 @@ pub(super) async fn serve(
 		site_url: site_urls,
 		openrouter_key_file: key_file,
 		frame_ancestor,
+		graphql_token,
+		dev,
 	} = args;
+	if graphql_token.is_none() && !dev {
+		tracing::warn!(
+			"GraphQL is closed: set ZIPP_GRAPHQL_TOKEN for the frontends"
+		);
+	}
 	let site_urls = site_urls
 		.iter()
 		.map(|s| match s.split_once('=') {
@@ -65,6 +72,8 @@ pub(super) async fn serve(
 		files,
 		site_urls: Arc::new(site_urls),
 		frame_ancestors: Arc::new(frame_ancestor),
+		graphql_token: graphql_token.map(Arc::new),
+		dev,
 		ai,
 		hooks: Arc::new(hooks),
 	};
