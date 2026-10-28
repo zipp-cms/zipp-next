@@ -24,6 +24,9 @@ pub enum Error {
 	Internal(String),
 	#[error("Request error: {0}")]
 	Request(String),
+	/// someone else changed it meanwhile
+	#[error("{0}")]
+	Conflict(String),
 }
 
 impl Error {
@@ -36,6 +39,7 @@ impl Error {
 			Self::NotFound => StatusCode::NOT_FOUND,
 			Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
 			Self::Invalid(_) | Self::Request(_) => StatusCode::BAD_REQUEST,
+			Self::Conflict(_) => StatusCode::CONFLICT,
 		}
 	}
 }

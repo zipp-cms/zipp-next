@@ -49,6 +49,8 @@ pub type Doc = BTreeMap<String, SiteDoc>;
 #[serde(rename_all = "camelCase")]
 pub struct Draft {
 	pub doc: Doc,
+	#[serde(skip)]
+	pub user_id: Option<i64>,
 	/// email of who changed it last
 	pub user: Option<String>,
 	pub updated_at: i64,
@@ -88,16 +90,17 @@ pub fn live_doc(conn: &Connection, id: i64) -> Result<Doc> {
 }
 
 pub fn get_draft(conn: &Connection, id: i64) -> Result<Option<Draft>> {
-	let row: Option<(String, Option<String>, i64)> = conn
+	let row: Option<(String, Option<i64>, Option<String>, i64)> = conn
 		.query_row(
-			"SELECT d.doc, u.email, d.updated_at FROM drafts d
+			"SELECT d.doc, d.user_id, u.email, d.updated_at FROM drafts d
 			LEFT JOIN users u ON u.id = d.user_id WHERE d.entry_id = ?1",
 			[id],
-			|r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+			|r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
 		)
 		.optional()?;
-	Ok(row.map(|(doc, user, updated_at)| Draft {
+	Ok(row.map(|(doc, user_id, user, updated_at)| Draft {
 		doc: serde_json::from_str(&doc).unwrap_or_default(),
+		user_id,
 		user,
 		updated_at,
 	}))
@@ -122,12 +125,18 @@ fn store_draft(
 /// Changes one site of the draft, it starts as a copy of the live entry.
 /// Shared fields go to the other sites of the draft too. Nothing is
 /// validated here, a draft may be half done.
+///
+/// `base` is the version of the draft the editor started from (its
+/// `updated_at`, `None` without a draft). If someone else changed the
+/// draft since, or published or discarded it, nothing is saved: the
+/// editor sees their changes first instead of overwriting them.
 pub fn put_draft(
 	conn: &Connection,
 	schema: &Schema,
 	id: i64,
 	site: &str,
 	content: SiteDoc,
+	base: Option<i64>,
 	user_id: Option<i64>,
 ) -> Result<Draft> {
 	if schema.get_site(site).is_none() {
@@ -136,7 +145,21 @@ pub fn put_draft(
 	let entry = get_entry(conn, id, site)?;
 	let comp = schema.entry_type(&entry.ty).unwrap();
 
-	let mut doc = match get_draft(conn, id)? {
+	let current = get_draft(conn, id)?;
+	match (&current, base) {
+		(Some(d), _) if Some(d.updated_at) != base && d.user_id != user_id => {
+			let who = d.user.clone().unwrap_or_else(|| "someone".into());
+			return Err(Error::Conflict(format!("{who} changed this entry")));
+		}
+		(None, Some(_)) => {
+			return Err(Error::Conflict(
+				"the draft was published or discarded".into(),
+			));
+		}
+		_ => {}
+	}
+
+	let mut doc = match current {
 		Some(d) => d.doc,
 		None => live_doc(conn, id)?,
 	};
@@ -330,6 +353,8 @@ async fn get_route(
 #[derive(Debug, Deserialize)]
 struct PutReq {
 	site: String,
+	/// the version of the draft the editor knows
+	base: Option<i64>,
 	#[serde(flatten)]
 	content: SiteDoc,
 }
@@ -347,6 +372,7 @@ async fn put_route(
 		id,
 		&req.site,
 		req.content,
+		req.base,
 		Some(auth.user_id),
 	)?;
 	Ok(Json(d))
@@ -430,6 +456,81 @@ mod tests {
 		}
 	}
 
+	/// the version of the draft the editor knows
+	fn base(conn: &Connection, id: i64) -> Option<i64> {
+		get_draft(conn, id).unwrap().map(|d| d.updated_at)
+	}
+
+	#[test]
+	fn conflicts_with_others() {
+		let db = Db::memory().unwrap();
+		let conn = db.conn();
+		let s = site();
+		crate::auth::add_user(&conn, "a@x.ch", "password").unwrap();
+		crate::auth::add_user(&conn, "b@x.ch", "password").unwrap();
+		let e = save(&conn, &s, None, input("pages", "page", "P", json!({})))
+			.unwrap();
+
+		// a starts a draft, b still has the live entry open
+		let a = put_draft(
+			&conn,
+			&s,
+			e.id,
+			"de",
+			site_doc("A", json!({})),
+			None,
+			Some(1),
+		)
+		.unwrap();
+		let b = put_draft(
+			&conn,
+			&s,
+			e.id,
+			"de",
+			site_doc("B", json!({})),
+			None,
+			Some(2),
+		);
+		assert!(
+			matches!(b, Err(Error::Conflict(m)) if m == "a@x.ch changed this entry")
+		);
+
+		// a keeps typing, b after reloading too
+		let a2 = put_draft(
+			&conn,
+			&s,
+			e.id,
+			"de",
+			site_doc("A2", json!({})),
+			Some(a.updated_at),
+			Some(1),
+		)
+		.unwrap();
+		put_draft(
+			&conn,
+			&s,
+			e.id,
+			"de",
+			site_doc("B", json!({})),
+			Some(a2.updated_at),
+			Some(2),
+		)
+		.unwrap();
+
+		// after publishing, an old version is a conflict too
+		publish(&conn, &s, e.id, None).unwrap();
+		let late = put_draft(
+			&conn,
+			&s,
+			e.id,
+			"de",
+			site_doc("A3", json!({})),
+			Some(a2.updated_at),
+			Some(1),
+		);
+		assert!(matches!(late, Err(Error::Conflict(_))));
+	}
+
 	#[test]
 	fn drafts_stay_until_published() {
 		let db = Db::memory().unwrap();
@@ -442,7 +543,8 @@ mod tests {
 
 		// en changes its title and the shared price
 		let en = site_doc("Concert", json!({ "city": "Bern", "price": 12 }));
-		let d = put_draft(&conn, &s, e.id, "en", en, None).unwrap();
+		let d = put_draft(&conn, &s, e.id, "en", en, base(&conn, e.id), None)
+			.unwrap();
 		assert_eq!(d.doc["de"].fields["price"], 12);
 		assert_eq!(get_entry(&conn, e.id, "en").unwrap().title, "Konzert");
 
@@ -463,10 +565,26 @@ mod tests {
 		let e = save(&conn, &s, None, input("events", "event", "E", json!({})))
 			.unwrap();
 
-		put_draft(&conn, &s, e.id, "de", site_doc("Neu", json!({})), None)
-			.unwrap();
-		put_draft(&conn, &s, e.id, "en", site_doc("", json!({})), None)
-			.unwrap();
+		put_draft(
+			&conn,
+			&s,
+			e.id,
+			"de",
+			site_doc("Neu", json!({})),
+			base(&conn, e.id),
+			None,
+		)
+		.unwrap();
+		put_draft(
+			&conn,
+			&s,
+			e.id,
+			"en",
+			site_doc("", json!({})),
+			base(&conn, e.id),
+			None,
+		)
+		.unwrap();
 		let Err(Error::Invalid(errs)) = publish(&conn, &s, e.id, None) else {
 			panic!("should fail");
 		};
@@ -483,8 +601,16 @@ mod tests {
 		let e = save(&conn, &s, None, input("pages", "page", "One", json!({})))
 			.unwrap();
 		record_revision(&conn, e.id, None).unwrap();
-		put_draft(&conn, &s, e.id, "de", site_doc("Two", json!({})), None)
-			.unwrap();
+		put_draft(
+			&conn,
+			&s,
+			e.id,
+			"de",
+			site_doc("Two", json!({})),
+			base(&conn, e.id),
+			None,
+		)
+		.unwrap();
 		publish(&conn, &s, e.id, None).unwrap();
 
 		let first = revisions(&conn, e.id).unwrap().pop().unwrap();
@@ -506,8 +632,16 @@ mod tests {
 			"Live"
 		);
 
-		put_draft(&conn, &s, e.id, "de", site_doc("Draft", json!({})), None)
-			.unwrap();
+		put_draft(
+			&conn,
+			&s,
+			e.id,
+			"de",
+			site_doc("Draft", json!({})),
+			base(&conn, e.id),
+			None,
+		)
+		.unwrap();
 		assert_eq!(
 			preview(&conn, &token).unwrap().unwrap().1["de"].title,
 			"Draft"

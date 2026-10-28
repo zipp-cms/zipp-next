@@ -1051,7 +1051,8 @@ mod tests {
 				published: false,
 				fields: json!({ "intro": "new" }),
 			};
-			crate::drafts::put_draft(&conn, &s, e.id, "de", sd, None).unwrap();
+			crate::drafts::put_draft(&conn, &s, e.id, "de", sd, None, None)
+				.unwrap();
 			let token = crate::drafts::create_token(&conn, e.id).unwrap();
 			crate::drafts::preview(&conn, &token).unwrap()
 		};

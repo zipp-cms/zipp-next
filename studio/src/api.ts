@@ -268,12 +268,17 @@ export async function getDraft(id: number): Promise<Draft | null> {
 	return (await request('GET', `/entries/${id}/draft`)).draft;
 }
 
+/**
+ * `base` is the version of the draft the editor knows, a 409 means someone
+ * else changed it meanwhile.
+ */
 export function putDraft(
 	id: number,
 	site: string,
 	content: SiteDoc,
+	base: number | null,
 ): Promise<Draft> {
-	return request('PUT', `/entries/${id}/draft`, { site, ...content });
+	return request('PUT', `/entries/${id}/draft`, { site, base, ...content });
 }
 
 export function discardDraft(id: number): Promise<void> {

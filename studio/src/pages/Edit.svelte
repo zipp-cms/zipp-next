@@ -52,6 +52,8 @@
 	let draft = $state<Draft | null>(null);
 	let draftState = $state<'' | 'saving' | 'saved'>('');
 	let revisions = $state<Revision[]>([]);
+	// someone else changed the draft, nothing is saved until resolved
+	let conflict = $state('');
 
 	const secDef = $derived(schema.sections.find(s => s.handle === sec));
 	const comp = $derived(schema.components.find(c => c.handle === ty));
@@ -114,7 +116,7 @@
 	let timer: ReturnType<typeof setTimeout>;
 	$effect(() => {
 		const snap = snapshot();
-		if (!loaded || id === null || snap === lastSaved) return;
+		if (!loaded || id === null || snap === lastSaved || conflict) return;
 		clearTimeout(timer);
 		draftState = 'saving';
 		timer = setTimeout(() => saveDraft(snap), 700);
@@ -129,11 +131,21 @@
 			fields: $state.snapshot(fields),
 		};
 		try {
-			draft = await putDraft(id, site.current, content);
+			draft = await putDraft(
+				id,
+				site.current,
+				content,
+				draft?.updatedAt ?? null,
+			);
 			lastSaved = snap;
 			draftState = 'saved';
 		} catch (e: any) {
-			error = e.message;
+			if (e instanceof ApiError && e.status === 409) {
+				conflict = e.message;
+				draftState = '';
+			} else {
+				error = e.message;
+			}
 		}
 	}
 
@@ -188,6 +200,23 @@
 			draftState = '';
 			await load();
 		});
+	}
+
+	/** Throws away the own changes and shows the ones of the other. */
+	async function loadTheirs() {
+		clearTimeout(timer);
+		draftState = '';
+		await run(load);
+		// only now, else the own state would be saved again
+		conflict = '';
+	}
+
+	/** Saves the own changes over the ones of the other. */
+	async function keepMine() {
+		conflict = '';
+		if (id === null) return;
+		draft = await getDraft(id);
+		await saveDraft(snapshot());
 	}
 
 	function restore(rev: Revision) {
@@ -277,6 +306,23 @@
 			{id === null ? 'Create' : 'Publish'}
 		</button>
 	</div>
+
+	{#if conflict}
+		<div class="conflict">
+			<span>
+				<b>{conflict}</b>
+				while you were editing. Your last changes are not saved yet.
+			</span>
+			<button class="dark" onclick={loadTheirs}>
+				Load their changes
+			</button>
+			<button class="light" onclick={keepMine}>Keep mine</button>
+		</div>
+	{:else if draft?.user}
+		<p class="last-change">
+			Draft last changed by {draft.user}, {time(draft.updatedAt)}
+		</p>
+	{/if}
 
 	<div class="card">
 		<div class="tabs">
@@ -389,6 +435,25 @@
 		border: 1px solid var(--dark);
 		border-radius: 2px;
 		background: white;
+	}
+
+	.conflict {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 16px;
+		padding: 12px 16px;
+		background: #ffcd70;
+
+		span {
+			margin-right: auto;
+		}
+	}
+
+	.last-change {
+		margin: -10px 0 12px;
+		font-size: 13px;
+		color: var(--muted);
 	}
 
 	.changes {

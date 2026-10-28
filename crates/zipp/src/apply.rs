@@ -351,7 +351,8 @@ mod tests {
 			published: true,
 			fields: json!({ "city": "Bern" }),
 		};
-		crate::drafts::put_draft(&conn, &s, e.id, "de", sd, None).unwrap();
+		crate::drafts::put_draft(&conn, &s, e.id, "de", sd, None, None)
+			.unwrap();
 
 		// rename city to town
 		let mut s2 = s.clone();
