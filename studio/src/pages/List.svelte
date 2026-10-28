@@ -51,24 +51,57 @@
 		return entries.filter(s => s.parentId === e.parentId);
 	}
 
-	async function move(e: Entry, how: 'up' | 'down' | 'in' | 'out') {
-		const sibs = siblings(e);
-		const i = sibs.indexOf(e);
+	// drag and drop in a structure: before or after a row, or into it
+	let dragged = $state<Entry | null>(null);
+	let drop = $state<{
+		id: number;
+		where: 'before' | 'after' | 'into';
+	} | null>(null);
+
+	/** An entry can't go below itself. */
+	function below(e: Entry, ancestor: Entry): boolean {
+		if (e.parentId === null) return false;
+		if (e.parentId === ancestor.id) return true;
+		const parent = entries.find(p => p.id === e.parentId);
+		return parent ? below(parent, ancestor) : false;
+	}
+
+	function ondragover(ev: DragEvent, e: Entry) {
+		if (!dragged || e === dragged || below(e, dragged)) return;
+		ev.preventDefault();
+		const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+		const y = (ev.clientY - r.top) / r.height;
+		const where = y < 0.3 ? 'before' : y > 0.7 ? 'after' : 'into';
+		drop = { id: e.id, where };
+	}
+
+	async function ondrop(ev: DragEvent) {
+		ev.preventDefault();
+		const d = dragged;
+		const target = entries.find(e => e.id === drop?.id);
+		const where = drop?.where;
+		dragged = null;
+		drop = null;
+		if (!d || !target) return;
+
 		try {
-			if (how === 'up') await moveEntry(e.id, e.parentId, i - 1);
-			if (how === 'down') await moveEntry(e.id, e.parentId, i + 1);
-			// into the sibling above, as its last child
-			if (how === 'in') await moveEntry(e.id, sibs[i - 1].id, 1e6);
-			// after its parent
-			if (how === 'out') {
-				const parent = entries.find(p => p.id === e.parentId)!;
-				const at = siblings(parent).indexOf(parent);
-				await moveEntry(e.id, parent.parentId, at + 1);
+			if (where === 'into') {
+				await moveEntry(d.id, target.id, 1e6);
+			} else {
+				// the position among the new siblings, without the dragged one
+				const sibs = siblings(target).filter(s => s !== d);
+				const at = sibs.indexOf(target) + (where === 'after' ? 1 : 0);
+				await moveEntry(d.id, target.parentId, at);
 			}
 			load();
 		} catch (err: any) {
 			error = err.message;
 		}
+	}
+
+	/** Published in how many sites, for the status next to the current one. */
+	function publishedCount(e: Entry) {
+		return Object.values(published[e.id] ?? {}).filter(Boolean).length;
 	}
 
 	function date(ms: number) {
@@ -97,70 +130,67 @@
 	{/if}
 
 	{#each entries as e (e.id)}
-		{@const sibs = siblings(e)}
-		{@const i = sibs.indexOf(e)}
-		<div class="row">
-			<a
-				class="title"
-				href="#/entry/{e.id}"
-				style:padding-left="{depth(e) * 1.5}rem"
-			>
-				{e.title}
-			</a>
-			<span class="badges">
-				{#each schema.sites as st (st.handle)}
-					{@const on = published[e.id]?.[st.handle]}
+		{@const on = published[e.id]?.[site.current]}
+		<div
+			class="row"
+			class:dragging={dragged === e}
+			class:drop-before={drop?.id === e.id && drop.where === 'before'}
+			class:drop-after={drop?.id === e.id && drop.where === 'after'}
+			class:drop-into={drop?.id === e.id && drop.where === 'into'}
+			ondragover={ev => tree && ondragover(ev, e)}
+			ondragleave={() => drop?.id === e.id && (drop = null)}
+			{ondrop}
+			role="listitem"
+		>
+			<span class="name" style:padding-left="{depth(e) * 1.5}rem">
+				{#if tree}
 					<span
-						class="badge"
-						class:draft={!on}
-						class:current={st.handle === site.current}
-						title="{st.name}: {on ? 'published' : 'draft'}"
+						class="handle"
+						draggable="true"
+						title="Drag to move"
+						role="button"
+						tabindex="-1"
+						ondragstart={ev => {
+							dragged = e;
+							ev.dataTransfer?.setData(
+								'text/plain',
+								String(e.id),
+							);
+						}}
+						ondragend={() => {
+							dragged = null;
+							drop = null;
+						}}
 					>
-						{st.handle.toUpperCase()}
+						<Icon name="move" />
 					</span>
-				{/each}
+				{/if}
+				<a class="title" href="#/entry/{e.id}">{e.title}</a>
+			</span>
+			<span class="status">
+				<span
+					class="badge"
+					class:draft={!on}
+					title="{site.current.toUpperCase()}: {on
+						? 'published'
+						: 'not published'}"
+				>
+					{site.current.toUpperCase()}
+				</span>
+				{#if schema.sites.length > 1}
+					<span
+						class="count"
+						title="Published in {publishedCount(e)} of {schema.sites
+							.length} sites"
+					>
+						{publishedCount(e)}/{schema.sites.length}
+					</span>
+				{/if}
 			</span>
 			<span class="type hide-small">
 				Type: {schema.components.find(c => c.handle === e.type)?.name}
 			</span>
-			{#if tree}
-				<span class="moves">
-					<button
-						class="icon"
-						title="Up"
-						disabled={i === 0}
-						onclick={() => move(e, 'up')}
-					>
-						↑
-					</button>
-					<button
-						class="icon"
-						title="Down"
-						disabled={i === sibs.length - 1}
-						onclick={() => move(e, 'down')}
-					>
-						↓
-					</button>
-					<button
-						class="icon"
-						title="Into the entry above"
-						disabled={i === 0}
-						onclick={() => move(e, 'in')}
-					>
-						→
-					</button>
-					<button
-						class="icon"
-						title="Out of its parent"
-						disabled={e.parentId === null}
-						onclick={() => move(e, 'out')}
-					>
-						←
-					</button>
-				</span>
-			{:else}
-				<span class="type hide-small">{date(e.updatedAt)}</span>
-			{/if}
+			<span class="type hide-small">{date(e.updatedAt)}</span>
 		</div>
 	{:else}
 		<p class="empty">No entries yet</p>
@@ -197,7 +227,7 @@
 
 	.row {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 7rem 12rem 9rem;
+		grid-template-columns: minmax(0, 1fr) 7rem 12rem 7rem;
 		align-items: center;
 		padding: 10px 26px;
 	}
@@ -212,9 +242,15 @@
 		}
 	}
 
-	.badges {
+	.status {
 		display: flex;
-		gap: 4px;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.count {
+		font-size: 13px;
+		color: var(--muted);
 	}
 
 	.badge {
@@ -227,20 +263,39 @@
 		&.draft {
 			background: #c4c4c8;
 		}
+	}
 
-		&.current {
-			outline: 2px solid var(--dark);
-			outline-offset: 1px;
-		}
+	.name {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-width: 0;
+	}
+
+	.handle {
+		display: flex;
+		cursor: grab;
+		color: var(--muted);
+	}
+
+	.dragging {
+		opacity: 0.4;
+	}
+
+	.drop-before {
+		box-shadow: inset 0 2px 0 var(--dark);
+	}
+
+	.drop-after {
+		box-shadow: inset 0 -2px 0 var(--dark);
+	}
+
+	.drop-into {
+		background: var(--hover);
 	}
 
 	.type {
 		font-size: 14px;
-	}
-
-	.moves {
-		justify-self: end;
-		white-space: nowrap;
 	}
 
 	.empty {

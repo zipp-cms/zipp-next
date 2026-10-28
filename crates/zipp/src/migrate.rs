@@ -238,7 +238,8 @@ pub fn diff(
 			Some(o)
 				if o.kind != section.kind
 					|| o.types != section.types
-					|| o.uri != section.uri =>
+					|| o.uri != section.uri
+					|| o.type_uris != section.type_uris =>
 			{
 				Op::ChangeSection {
 					section: section.clone(),

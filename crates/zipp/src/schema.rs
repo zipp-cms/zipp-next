@@ -17,6 +17,8 @@
 //! assert!(schema.check().is_ok());
 //! ```
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -76,6 +78,10 @@ pub struct Section {
 	/// uri itself for a single (`""` is the home page). Without it the
 	/// entries have no url.
 	pub uri: Option<String>,
+	/// Another uri for one entry type, `""` makes the entry of type `home`
+	/// of a pages structure the home page.
+	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+	pub type_uris: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -358,6 +364,16 @@ impl Schema {
 			}
 		}
 
+		for (ty, uri) in &section.type_uris {
+			if !section.types.contains(ty) {
+				return Err(format!("uri of {ty}: not a type of the section"));
+			}
+			let parts = uri.replace("{slug}", "").replace("{parent.uri}", "");
+			if parts.contains(['{', '}']) {
+				return Err("the uri knows only {slug} and {parent.uri}".into());
+			}
+		}
+
 		let uri = section.uri.as_deref().unwrap_or_default();
 		let parts = uri.replace("{slug}", "").replace("{parent.uri}", "");
 		match section.kind {
@@ -631,6 +647,7 @@ impl Section {
 			kind,
 			types: types.into_iter().map(Into::into).collect(),
 			uri: None,
+			type_uris: BTreeMap::new(),
 		}
 	}
 
@@ -663,13 +680,20 @@ impl Section {
 		self
 	}
 
+	/// A uri for the entries of one type, like `""` for the home page.
+	pub fn uri_of(mut self, ty: &str, uri: &str) -> Self {
+		self.type_uris.insert(ty.into(), uri.into());
+		self
+	}
+
 	/// The uri of an entry, `None` if the section has no urls.
 	pub fn render_uri(
 		&self,
+		ty: &str,
 		slug: &str,
 		parent: Option<&str>,
 	) -> Option<String> {
-		let format = self.uri.as_ref()?;
+		let format = self.type_uris.get(ty).or(self.uri.as_ref())?;
 		let uri = match parent {
 			Some(p) => format.replace("{parent.uri}", p),
 			None => format
@@ -790,13 +814,18 @@ pub(crate) mod tests {
 	fn renders_uris() {
 		let s = site();
 		let pages = s.get_section("pages").unwrap();
-		assert_eq!(pages.render_uri("team", None).unwrap(), "team");
+		assert_eq!(pages.render_uri("page", "team", None).unwrap(), "team");
 		assert_eq!(
-			pages.render_uri("team", Some("about")).unwrap(),
+			pages.render_uri("page", "team", Some("about")).unwrap(),
 			"about/team"
 		);
 		let home = s.get_section("home").unwrap();
-		assert_eq!(home.render_uri("home", None).unwrap(), "");
+		assert_eq!(home.render_uri("page", "home", None).unwrap(), "");
+		let pages = Section::structure("pages", ["home", "page"])
+			.uri("{parent.uri}/{slug}")
+			.uri_of("home", "");
+		assert_eq!(pages.render_uri("home", "start", None).unwrap(), "");
+		assert_eq!(pages.render_uri("page", "start", None).unwrap(), "start");
 	}
 
 	#[test]

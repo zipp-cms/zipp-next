@@ -352,25 +352,17 @@
     {
       "op": "addSection",
       "section": {
-        "handle": "home",
-        "name": "Home",
-        "kind": "single",
-        "types": [
-          "home"
-        ],
-        "uri": ""
-      }
-    },
-    {
-      "op": "addSection",
-      "section": {
         "handle": "pages",
         "name": "Pages",
         "kind": "structure",
         "types": [
+          "home",
           "page"
         ],
-        "uri": "{parent.uri}/{slug}"
+        "uri": "{parent.uri}/{slug}",
+        "type_uris": {
+          "home": ""
+        }
       }
     },
     {
@@ -425,22 +417,17 @@
     ],
     "sections": [
       {
-        "handle": "home",
-        "name": "Home",
-        "kind": "single",
-        "types": [
-          "home"
-        ],
-        "uri": ""
-      },
-      {
         "handle": "pages",
         "name": "Pages",
         "kind": "structure",
         "types": [
+          "home",
           "page"
         ],
-        "uri": "{parent.uri}/{slug}"
+        "uri": "{parent.uri}/{slug}",
+        "type_uris": {
+          "home": ""
+        }
       },
       {
         "handle": "events",
@@ -805,7 +792,6 @@
       {
         "name": "Content",
         "sections": [
-          "home",
           "pages",
           "events"
         ]

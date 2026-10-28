@@ -226,7 +226,8 @@ pub fn check(
 		if id.is_some() && s.handle != site {
 			continue;
 		}
-		let uri = uri_for(conn, section, &slug, parent_id, &s.handle)?;
+		let uri =
+			uri_for(conn, section, &input.ty, &slug, parent_id, &s.handle)?;
 		if let Some(uri) = &uri {
 			let taken: Option<i64> = conn
 				.query_row(
@@ -400,6 +401,7 @@ fn check_parent(
 fn uri_for(
 	conn: &Connection,
 	section: &Section,
+	ty: &str,
 	slug: &str,
 	parent_id: Option<i64>,
 	site: &str,
@@ -415,7 +417,7 @@ fn uri_for(
 			.flatten(),
 		None => None,
 	};
-	Ok(section.render_uri(slug, parent_uri.as_deref()))
+	Ok(section.render_uri(ty, slug, parent_uri.as_deref()))
 }
 
 /// Recomputes the uris of all entries of a section in all sites, parents
@@ -433,7 +435,7 @@ pub fn refresh_uris(
 			SELECT e.id, t.depth + 1 FROM entries e JOIN tree t
 			ON e.parent_id = t.id
 		)
-		SELECT t.id, e.parent_id, s.slug, s.uri FROM tree t
+		SELECT t.id, e.parent_id, s.slug, s.uri, e.type FROM tree t
 		JOIN entries e ON e.id = t.id
 		JOIN entry_sites s ON s.entry_id = t.id AND s.site = ?2
 		ORDER BY t.depth",
@@ -442,17 +444,17 @@ pub fn refresh_uris(
 	for site in &schema.sites {
 		let rows = stmt
 			.query_map(params![section.handle, site.handle], |r| {
-				Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+				Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
 			})?
 			.collect::<rusqlite::Result<
-				Vec<(i64, Option<i64>, String, Option<String>)>,
+				Vec<(i64, Option<i64>, String, Option<String>, String)>,
 			>>()?;
 
 		let mut uris: HashMap<i64, Option<String>> = HashMap::new();
-		for (id, parent, slug, old) in rows {
+		for (id, parent, slug, old, ty) in rows {
 			let parent_uri =
 				parent.and_then(|p| uris.get(&p).cloned().flatten());
-			let uri = section.render_uri(&slug, parent_uri.as_deref());
+			let uri = section.render_uri(&ty, &slug, parent_uri.as_deref());
 			if uri != old {
 				conn.execute(
 					"UPDATE entry_sites SET uri = ?1

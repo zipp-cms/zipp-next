@@ -11,15 +11,17 @@ fn schema() -> Schema {
 	Schema::new()
 		.site("de", "Deutsch", "de-CH")
 		.site("en", "English", "en")
-		.section(Section::single("home", "home").uri(""))
+		// the home page is the page of type home in the structure
 		.section(
-			Section::structure("pages", ["page"]).uri("{parent.uri}/{slug}"),
+			Section::structure("pages", ["home", "page"])
+				.uri("{parent.uri}/{slug}")
+				.uri_of("home", ""),
 		)
 		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
 		// globals: singles without a url
 		.section(Section::single("header", "header"))
 		.section(Section::single("footer", "footer"))
-		.nav("Content", ["home", "pages", "events"])
+		.nav("Content", ["pages", "events"])
 		.nav("Settings", ["header", "footer"])
 		.transform(Transform::new("hero").width(1600).height(700).crop())
 		.transform(Transform::new("small").width(600))
