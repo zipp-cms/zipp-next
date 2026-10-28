@@ -157,6 +157,28 @@ pub fn validate(
 
 /// A paragraph or heading with only allowed inline content, `None` if it
 /// is empty.
+/// A no-break space between two words stays, it keeps them on one line
+/// (`der\u{a0}Kataraktchirurgie`); next to a space or at an end the editor
+/// only made space with it, that becomes a space.
+fn loose_nbsp(text: &str) -> String {
+	let chars: Vec<char> = text.chars().collect();
+	let word = |c: Option<&char>| c.is_some_and(|c| !c.is_whitespace());
+	chars
+		.iter()
+		.enumerate()
+		.map(|(i, c)| match c {
+			'\u{a0}'
+				if word(chars.get(i.wrapping_sub(1)))
+					&& word(chars.get(i + 1)) =>
+			{
+				'\u{a0}'
+			}
+			'\u{a0}' => ' ',
+			c => *c,
+		})
+		.collect()
+}
+
 fn clean_inline(
 	node: &Value,
 	allowed: &Allowed,
@@ -170,8 +192,7 @@ fn clean_inline(
 					continue;
 				};
 				let mut t = inline.clone();
-				// an nbsp is only there to make space
-				t["text"] = text.replace('\u{a0}', " ").into();
+				t["text"] = loose_nbsp(text).into();
 				if let Some(marks) = inline["marks"].as_array() {
 					for m in marks {
 						check_mark(m, allowed, err);
@@ -481,6 +502,22 @@ mod tests {
 		let out = validate(&s, &allowed(&[]), &doc, "text", &mut errors);
 		assert!(errors.is_empty(), "{errors:?}");
 		assert_eq!(out, json!({ "type": "doc", "content": [p("Hi")] }));
+	}
+
+	#[test]
+	fn keeps_no_break_spaces_between_words() {
+		let s = site();
+		let doc = json!({ "type": "doc", "content": [
+			p("in der\u{a0}Katarakt"),
+			p("two \u{a0}spaces\u{a0}"),
+		] });
+		let mut errors = vec![];
+		let out = validate(&s, &allowed(&[]), &doc, "text", &mut errors);
+		let doc = json!({ "type": "doc", "content": [
+			p("in der\u{a0}Katarakt"),
+			p("two  spaces "),
+		] });
+		assert_eq!(out, doc);
 	}
 
 	#[test]
