@@ -184,6 +184,14 @@ pub enum FieldKind {
 		buttons: bool,
 		blocks: Vec<String>,
 	},
+	/// The fields of another component (a block or an entry type), kept
+	/// together under one name, like zandi's `pageIntro`. The value is an
+	/// object, not a list like blocks.
+	Group {
+		component: String,
+	},
+	/// Text in Markdown, GraphQL renders it to html too.
+	Markdown,
 	/// A list of blocks of the given types.
 	Blocks {
 		types: Vec<String>,
@@ -508,6 +516,14 @@ impl Schema {
 		{
 			return Err("a link needs something to point to".into());
 		}
+		if let FieldKind::Group { component } = &field.kind {
+			if component == &comp.handle {
+				return Err("a group can't hold its own component".into());
+			}
+			if self.get(component).is_none() {
+				return Err(format!("unknown component {component}"));
+			}
+		}
 		for t in types {
 			match self.get(t) {
 				Some(c) if c.entry == entry => {}
@@ -698,6 +714,20 @@ impl Field {
 				*blocks = types.into_iter().map(Into::into).collect();
 			}
 		})
+	}
+
+	/// The fields of `component` under one name.
+	pub fn group(handle: &str, component: &str) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Group {
+				component: component.into(),
+			},
+		)
+	}
+
+	pub fn markdown(handle: &str) -> Self {
+		Self::new(handle, FieldKind::Markdown)
 	}
 
 	/// Any files.
@@ -930,6 +960,7 @@ pub(crate) mod tests {
 				[
 					Field::text("intro").multiline().translatable(),
 					Field::blocks("body", ["text", "button"]).translatable(),
+					Field::group("seo", "seo"),
 					Field::rich_text("story")
 						.headings([2, 3])
 						.links()
@@ -946,6 +977,7 @@ pub(crate) mod tests {
 					Field::number("price").indexed(),
 					Field::relation("page", ["page"]).max(1),
 					Field::images("image").max(1),
+					Field::markdown("notes"),
 					Field::link(
 						"ticket",
 						[LinkKind::Url, LinkKind::Entry, LinkKind::Email],
@@ -955,6 +987,11 @@ pub(crate) mod tests {
 			.transform(Transform::new("small").width(100))
 			.transform(Transform::new("square").width(50).height(50).crop())
 			.block("text", "Text", [Field::text("content").required()])
+			.block(
+				"seo",
+				"SEO",
+				[Field::text("title").max(60), Field::text("description")],
+			)
 			.block(
 				"button",
 				"Button",

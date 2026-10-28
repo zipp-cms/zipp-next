@@ -9,6 +9,10 @@ function isBlocks(v: unknown): v is Block[] {
 	);
 }
 
+function isObject(v: unknown): v is Values {
+	return !!v && typeof v === 'object' && !Array.isArray(v) && !('type' in v);
+}
+
 /**
  * The paths of the fields that differ, like the error paths: `intro`,
  * `body`, `body.2` for a new block, `body.2.content` inside a block.
@@ -29,6 +33,11 @@ export function changedPaths(
 		if (JSON.stringify(a ?? null) === JSON.stringify(b ?? null)) continue;
 		out.add(prefix + key);
 
+		// a group: its fields
+		if (isObject(a) && isObject(b)) {
+			changedPaths(a, b, `${prefix}${key}.`, out);
+			continue;
+		}
 		if (!isBlocks(b)) continue;
 		const before = isBlocks(a) ? a : [];
 		b.forEach((block, i) => {

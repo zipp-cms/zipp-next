@@ -106,6 +106,19 @@ fn validate_value(
 			}
 		}
 		(FieldKind::Boolean, Value::Bool(_)) => {}
+		(FieldKind::Markdown, Value::String(_)) => {}
+		(FieldKind::Group { component }, Value::Object(_)) => {
+			let comp = schema.get(component).unwrap();
+			let prefix = format!("{path}.");
+			let out = validate_fields(schema, comp, value, &prefix, errors);
+			if out.as_object().is_some_and(|o| o.is_empty()) {
+				if field.required {
+					error(errors, path, "is required");
+				}
+				return None;
+			}
+			return Some(out);
+		}
 		(kind @ FieldKind::RichText { .. }, Value::Object(_)) => {
 			let allowed = richtext::Allowed::of(kind).unwrap();
 			let doc = richtext::validate(schema, &allowed, value, path, errors);
@@ -291,6 +304,12 @@ pub fn walk_mut(
 				(FieldKind::RichText { .. }, Some(doc)) => {
 					richtext::blocks_mut(doc)
 				}
+				(FieldKind::Group { component }, Some(group)) => {
+					if let Some(c) = schema.get(component) {
+						walk_mut(schema, c, group, f);
+					}
+					continue;
+				}
 				_ => continue,
 			};
 		for block in blocks {
@@ -385,6 +404,15 @@ fn collect_relations(
 						out,
 					);
 				}
+			}
+			continue;
+		}
+
+		if let FieldKind::Group { component } = &field.kind {
+			if let (Some(c), Some(group)) =
+				(schema.get(component), fields.get(&field.handle))
+			{
+				collect_relations(schema, c, group, &format!("{path}."), out);
 			}
 			continue;
 		}

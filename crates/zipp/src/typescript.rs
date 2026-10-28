@@ -77,6 +77,10 @@ fn fields(comp: &Component) -> String {
 			FieldKind::Relation { .. } | FieldKind::Assets { .. } => {
 				"number[]".into()
 			}
+			FieldKind::Markdown => "string".into(),
+			FieldKind::Group { component } => {
+				format!("{}Fields", pascal(component))
+			}
 			FieldKind::RichText { .. } => {
 				"{ type: 'doc'; content: unknown[] }".into()
 			}

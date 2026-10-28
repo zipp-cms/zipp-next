@@ -3,6 +3,24 @@
     {
       "op": "addComponent",
       "component": {
+        "handle": "readme",
+        "name": "Readme",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "markdown"
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
         "handle": "home",
         "name": "Home",
         "entry": true,
@@ -43,6 +61,15 @@
             ],
             "min": null,
             "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "group",
+            "component": "seo"
           }
         ]
       }
@@ -90,6 +117,15 @@
             ],
             "min": null,
             "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "group",
+            "component": "seo"
           }
         ]
       }
@@ -130,6 +166,14 @@
             "kind": "number",
             "min": 0.0,
             "max": 1000.0
+          },
+          {
+            "handle": "soldOut",
+            "label": "Sold out",
+            "required": false,
+            "indexed": true,
+            "translatable": false,
+            "kind": "boolean"
           },
           {
             "handle": "image",
@@ -204,6 +248,36 @@
             "translatable": true,
             "kind": "text",
             "max": null,
+            "multiline": true
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "seo",
+        "name": "SEO",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "title",
+            "label": "Title for search engines",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 60,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 160,
             "multiline": true
           }
         ]
@@ -380,6 +454,18 @@
     {
       "op": "addSection",
       "section": {
+        "handle": "readme",
+        "name": "Readme",
+        "kind": "single",
+        "types": [
+          "readme"
+        ],
+        "uri": null
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
         "handle": "header",
         "name": "Header",
         "kind": "single",
@@ -439,6 +525,15 @@
         "uri": "events/{slug}"
       },
       {
+        "handle": "readme",
+        "name": "Readme",
+        "kind": "single",
+        "types": [
+          "readme"
+        ],
+        "uri": null
+      },
+      {
         "handle": "header",
         "name": "Header",
         "kind": "single",
@@ -458,6 +553,21 @@
       }
     ],
     "components": [
+      {
+        "handle": "readme",
+        "name": "Readme",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "markdown"
+          }
+        ]
+      },
       {
         "handle": "home",
         "name": "Home",
@@ -499,6 +609,15 @@
             ],
             "min": null,
             "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "group",
+            "component": "seo"
           }
         ]
       },
@@ -543,6 +662,15 @@
             ],
             "min": null,
             "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "group",
+            "component": "seo"
           }
         ]
       },
@@ -580,6 +708,14 @@
             "kind": "number",
             "min": 0.0,
             "max": 1000.0
+          },
+          {
+            "handle": "soldOut",
+            "label": "Sold out",
+            "required": false,
+            "indexed": true,
+            "translatable": false,
+            "kind": "boolean"
           },
           {
             "handle": "image",
@@ -648,6 +784,33 @@
             "translatable": true,
             "kind": "text",
             "max": null,
+            "multiline": true
+          }
+        ]
+      },
+      {
+        "handle": "seo",
+        "name": "SEO",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "title",
+            "label": "Title for search engines",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 60,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 160,
             "multiline": true
           }
         ]
@@ -792,6 +955,7 @@
       {
         "name": "Content",
         "sections": [
+          "readme",
           "pages",
           "events"
         ]
@@ -820,6 +984,10 @@
           [
             "events.none",
             "Keine Veranstaltungen"
+          ],
+          [
+            "events.soldOut",
+            "Ausverkauft"
           ]
         ]
       }

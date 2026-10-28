@@ -28,7 +28,11 @@
 </script>
 
 <svelte:head>
-	<title>{entry?.title ?? 'Not Found'}</title>
+	<!-- the seo group of pages, the title as fallback -->
+	<title>{entry?.seo?.title || entry?.title || 'Not Found'}</title>
+	{#if entry?.seo?.description}
+		<meta name="description" content={entry.seo.description} />
+	{/if}
 </svelte:head>
 
 <Header />

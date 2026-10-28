@@ -71,6 +71,10 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 		typeHandle
 		title
 		... on home_Entry {
+			seo {
+				title
+				description
+			}
 			intro
 			hero {
 				...Hero
@@ -80,6 +84,10 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 			}
 		}
 		... on page_Entry {
+			seo {
+				title
+				description
+			}
 			intro
 			hero {
 				...Hero
@@ -96,6 +104,7 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 			date
 			city
 			price
+			soldOut
 			description
 			image {
 				...Hero

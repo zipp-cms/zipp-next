@@ -17,9 +17,15 @@
 	const group = $derived(
 		groups.find(g => g.sections.includes(shown.section)) ?? groups[0],
 	);
+	// the sections of the group, in the order of the nav
+	const groupSections = $derived(
+		(group?.sections ?? [])
+			.map(h => schema?.sections.find(s => s.handle === h))
+			.filter(s => !!s),
+	);
 	const current = $derived.by(() => {
 		const r = route.current;
-		if (r.page === 'list') return r.section ?? schema?.sections[0]?.handle;
+		if (r.page === 'list') return r.section ?? groups[0]?.sections[0];
 		if (r.page === 'new') return r.section;
 		return null;
 	});
@@ -89,7 +95,7 @@
 					Assets
 				</a>
 			{:else}
-				{#each schema.sections.filter( s => group?.sections.includes(s.handle) ) as s (s.handle)}
+				{#each groupSections as s (s.handle)}
 					<a
 						href="#/list/{s.handle}"
 						class:active={shown.section === s.handle}

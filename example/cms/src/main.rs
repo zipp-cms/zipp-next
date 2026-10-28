@@ -26,9 +26,11 @@ fn schema() -> Schema {
 		)
 		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
 		// globals: singles without a url
+		// the readme of the demo, only in the studio: no url
+		.section(Section::single("readme", "readme").name("Readme"))
 		.section(Section::single("header", "header"))
 		.section(Section::single("footer", "footer"))
-		.nav("Content", ["pages", "events"])
+		.nav("Content", ["readme", "pages", "events"])
 		.nav("Settings", ["header", "footer", "translations"])
 		// texts of the frontend, editors translate them
 		.translations(
@@ -40,6 +42,7 @@ fn schema() -> Schema {
 					"Ein crelte-Frontend, die Inhalte kommen von zipp.",
 				),
 				("events.none", "Keine Veranstaltungen"),
+				("events.soldOut", "Ausverkauft"),
 			],
 		)
 		.transform(Transform::new("hero").width(1600).height(700).crop())
@@ -47,12 +50,18 @@ fn schema() -> Schema {
 		.transform(Transform::new("medium").width(1200))
 		.transform(Transform::new("thumb").width(160).height(120).crop())
 		.entry(
+			"readme",
+			"Readme",
+			[Field::markdown("content").translatable()],
+		)
+		.entry(
 			"home",
 			"Home",
 			[
 				Field::images("hero").max(1),
 				Field::text("intro").multiline().max(300).translatable(),
 				body(),
+				Field::group("seo", "seo").label("SEO").translatable(),
 			],
 		)
 		.entry(
@@ -62,6 +71,7 @@ fn schema() -> Schema {
 				Field::images("hero").max(1),
 				Field::text("intro").multiline().max(300).translatable(),
 				body(),
+				Field::group("seo", "seo").label("SEO").translatable(),
 			],
 		)
 		.entry(
@@ -74,6 +84,7 @@ fn schema() -> Schema {
 					.label("Date (YYYY-MM-DD)"),
 				Field::text("city").required().indexed(),
 				Field::number("price").range(0.0, 1000.0).indexed(),
+				Field::boolean("soldOut").indexed(),
 				Field::images("image").max(1),
 				Field::text("description").multiline().translatable(),
 				Field::relation("page", ["page"]).max(1).label("More info"),
@@ -89,6 +100,17 @@ fn schema() -> Schema {
 			"footer",
 			"Footer",
 			[Field::text("text").multiline().translatable()],
+		)
+		// the fields of the seo group of pages
+		.block(
+			"seo",
+			"SEO",
+			[
+				Field::text("title")
+					.max(60)
+					.label("Title for search engines"),
+				Field::text("description").multiline().max(160),
+			],
 		)
 		.block(
 			"heading",

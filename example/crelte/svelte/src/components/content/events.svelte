@@ -27,6 +27,7 @@
 			{#each e.image as img (img.url)}<img src={img.url} alt={img.alt} />{/each}
 			<a href={e.url}>{e.title}</a>
 			<span>{e.date}, {e.city}</span>
+			{#if e.soldOut}<strong>{$t('events.soldOut')}</strong>{/if}
 		</li>
 	{:else}
 		<li>{$t('events.none')}</li>

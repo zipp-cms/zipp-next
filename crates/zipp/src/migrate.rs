@@ -587,7 +587,7 @@ mod tests {
 	#[test]
 	fn initial_migration_adds_everything() {
 		let ops = diff(&Schema::new(), &site(), &[]).unwrap();
-		assert_eq!(ops.len(), 9);
+		assert_eq!(ops.len(), 10);
 		assert!(
 			diff(&apply_all(&Schema::new(), &ops), &site(), &[])
 				.unwrap()

@@ -4,6 +4,8 @@
 	import RelationField from './RelationField.svelte';
 	import AssetField from './AssetField.svelte';
 	import LinkField from './LinkField.svelte';
+	import GroupField from './GroupField.svelte';
+	import MarkdownField from './MarkdownField.svelte';
 	import RichTextField from './RichTextField.svelte';
 
 	let {
@@ -75,6 +77,18 @@
 				/>
 			{:else if field.kind === 'relation'}
 				<RelationField {schema} {field} {values} {refs} />
+			{:else if field.kind === 'group'}
+				<GroupField
+					{schema}
+					{field}
+					{values}
+					{errors}
+					{refs}
+					{path}
+					{changed}
+				/>
+			{:else if field.kind === 'markdown'}
+				<MarkdownField {field} {values} id={path} />
 			{:else if field.kind === 'richText'}
 				<RichTextField {schema} {field} {values} {refs} />
 			{:else if field.kind === 'link'}
@@ -110,8 +124,11 @@
 		grid-template-columns: 130px minmax(0, 1fr);
 	}
 
+	// at the top of tall fields like blocks or rich text, the first line
+	// of a field is 37px high
 	label {
-		align-self: center;
+		align-self: start;
+		padding-top: 9px;
 	}
 
 	.shared {

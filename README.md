@@ -54,7 +54,9 @@ Cms::new(schema(), zipp::migrations!())
 - `crates/zipp`: the cms, a library the site crate calls
 - `studio`: the editing ui (Svelte), its build is embedded in the zipp
   crate and served on `/`
-- `example/cms`: the cms crate of an example site, with its migrations
+- `example/cms`: the cms crate of an example site, with its migrations;
+  `example/readme.md` is its first page in the studio and says where to
+  try which feature
 - `example/frontend`: a small Svelte frontend for it
 - `example/crelte`: the same site as a crelte project, with crelte's
   default template and no Craft
@@ -102,6 +104,10 @@ Cms::new(schema(), zipp::migrations!())
   and `entryCount` take the same filters as the rest api (`where: [{
   field: "city", value: "Bern" }]`). Without a session only published
   entries show. A GET opens GraphiQL to try queries.
+- **Groups and markdown.** `Field::group("seo", "seo")` keeps the fields
+  of another component together under one name (an object, not a list
+  like blocks). `Field::markdown("text")` is shown rendered in the studio
+  and comes as `markdown` and `html` from GraphQL.
 - **Rich text.** `Field::rich_text("text").headings([3]).lists().links()
   .buttons().embed(["image"])` says what an editor may contain: bold and
   italic always, the rest only if the field allows it, blocks of the

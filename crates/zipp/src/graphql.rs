@@ -87,6 +87,19 @@ struct Viewer {
 	preview: Option<(i64, Doc)>,
 }
 
+/// Markdown to html, raw html in it is dropped (editors write text).
+fn markdown_html(md: &str) -> String {
+	use pulldown_cmark::{Event, Options, Parser, html};
+	let parser = Parser::new_ext(
+		md,
+		Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
+	)
+	.filter(|e| !matches!(e, Event::Html(_) | Event::InlineHtml(_)));
+	let mut out = String::new();
+	html::push_html(&mut out, parser);
+	out
+}
+
 /// A rich text field as parent of html and chunks.
 struct RichText {
 	doc: Value,
@@ -264,9 +277,41 @@ pub fn build(
 		)))
 		.register(chunk_union(&schema))
 		.register(
+			Object::new("Markdown")
+				.field(GqlField::new(
+					"markdown",
+					TypeRef::named_nn(TypeRef::STRING),
+					|ctx| value_field(ctx, "markdown"),
+				))
+				.field(GqlField::new(
+					"html",
+					TypeRef::named_nn(TypeRef::STRING),
+					|ctx| value_field(ctx, "html"),
+				)),
+		)
+		.register(
 			Scalar::new("QueryArgument")
 				.description("An id or a handle, like Craft's QueryArgument"),
 		);
+
+	// the components used by group fields, their fields without id or type
+	let grouped: std::collections::BTreeSet<&String> = schema
+		.components
+		.iter()
+		.flat_map(|c| &c.fields)
+		.filter_map(|f| match &f.kind {
+			FieldKind::Group { component } => Some(component),
+			_ => None,
+		})
+		.collect();
+	for handle in grouped {
+		let comp = schema.get(handle).unwrap();
+		let mut obj = Object::new(format!("{handle}_Fields"));
+		for field in &comp.fields {
+			obj = obj.field(content_field(field));
+		}
+		builder = builder.register(obj);
+	}
 
 	for comp in &schema.components {
 		let mut obj = if comp.entry {
@@ -531,6 +576,10 @@ fn content_field(field: &crate::schema::Field) -> GqlField {
 		FieldKind::Assets { .. } => TypeRef::named_nn_list_nn("Asset"),
 		FieldKind::Link { .. } => TypeRef::named("Link"),
 		FieldKind::RichText { .. } => TypeRef::named("RichText"),
+		FieldKind::Markdown => TypeRef::named("Markdown"),
+		FieldKind::Group { component } => {
+			TypeRef::named(format!("{component}_Fields"))
+		}
 		FieldKind::Blocks { .. } => TypeRef::named_nn_list_nn("Block"),
 	};
 	let handle = field.handle.clone();
@@ -597,6 +646,22 @@ fn content_field(field: &crate::schema::Field) -> GqlField {
 						.with_type(format!("{ty}_Block"))
 					});
 					Ok(Some(FieldValue::list(blocks)))
+				}
+				FieldKind::Group { component } if value.is_object() => {
+					// read like a block, it has no id or type of its own
+					Ok(Some(FieldValue::owned_any(Block {
+						id: String::new(),
+						ty: component,
+						site,
+						fields: value,
+					})))
+				}
+				FieldKind::Markdown if value.is_string() => {
+					let md = value.as_str().unwrap_or_default().to_string();
+					let html = markdown_html(&md);
+					Ok(Some(FieldValue::value(GqlValue::from_json(
+						serde_json::json!({ "markdown": md, "html": html }),
+					)?)))
 				}
 				FieldKind::RichText { .. } if !value.is_null() => {
 					let rt = RichText { doc: value, site };
@@ -1537,6 +1602,50 @@ mod tests {
 		)
 		.unwrap();
 		assert_eq!(common, json!({ "menu.open": "Open menu" }));
+	}
+
+	#[tokio::test]
+	async fn groups_and_markdown() {
+		let db = Db::memory().unwrap();
+		let s = Arc::new(site());
+		let gql = build(s.clone(), db.clone(), String::new(), SiteUrls::new())
+			.unwrap();
+		{
+			let conn = db.conn();
+			let fields =
+				json!({ "seo": { "title": "Hi", "description": "D" } });
+			save(&conn, &s, None, input("pages", "page", "P", fields)).unwrap();
+			let fields = json!({ "notes": "**bold** <script>x</script>" });
+			save(&conn, &s, None, input("events", "event", "E", fields))
+				.unwrap();
+
+			// errors inside a group have its path
+			let bad = json!({ "seo": { "title": "x".repeat(61) } });
+			let Err(crate::error::Error::Invalid(errs)) =
+				save(&conn, &s, None, input("pages", "page", "Q", bad))
+			else {
+				panic!("should fail");
+			};
+			assert_eq!(errs[0].path, "seo.title");
+		}
+
+		let data = run(
+			&gql,
+			r#"{
+				p: entry(uri: "p") { ... on page_Entry { seo { title description } } }
+				e: entry(uri: "events/e") { ... on event_Entry { notes { markdown html } } }
+			}"#,
+			true,
+		)
+		.await;
+		assert_eq!(
+			data["p"]["seo"],
+			json!({ "title": "Hi", "description": "D" })
+		);
+		assert_eq!(
+			data["e"]["notes"]["html"],
+			"<p><strong>bold</strong> x</p>\n"
+		);
 	}
 
 	#[tokio::test]

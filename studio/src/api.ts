@@ -14,6 +14,8 @@ export type FieldKind =
 	| { kind: 'relation'; types: string[]; max: number | null }
 	| { kind: 'assets'; images: boolean; max: number | null }
 	| { kind: 'link'; to: LinkKind[]; labels: boolean; newTab: boolean }
+	| { kind: 'group'; component: string }
+	| { kind: 'markdown' }
 	| {
 			kind: 'richText';
 			headings: number[];
