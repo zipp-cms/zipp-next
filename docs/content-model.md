@@ -13,6 +13,11 @@ a tree. A section allows one or more entry types and has a uri format
 site with its own title, slug, uri, published flag and translatable
 fields; the other fields are shared by all sites.
 
+`uri_of("home", "")` gives one entry type another uri, `uri_in("fr",
+"offres/{slug}")` one site, `uri_if("hasPage")` gives only entries with
+that boolean field on a page, like Craft's `{% if hasPage %}` in a uri
+format.
+
 ## Entry types and blocks
 
 Both are components made of fields: text,

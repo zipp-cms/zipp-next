@@ -82,6 +82,10 @@ export type Section = {
 	uri: string | null;
 	/** the uri of an entry type that differs from `uri` */
 	type_uris?: Record<string, string>;
+	/** the uri in a site that differs from `uri` */
+	site_uris?: Record<string, string>;
+	/** a boolean field, only entries with it on have a page */
+	uri_if?: string;
 };
 
 /** A named image size, only these exist. */

@@ -108,20 +108,43 @@ fn finds_mistakes() {
 
 #[test]
 fn renders_uris() {
+	let none = serde_json::Value::Null;
+	let uri = |s: &Section, ty, slug, parent| {
+		s.render_uri(ty, slug, parent, "de", &none)
+	};
 	let s = site();
 	let pages = s.get_section("pages").unwrap();
-	assert_eq!(pages.render_uri("page", "team", None).unwrap(), "team");
+	assert_eq!(uri(pages, "page", "team", None).unwrap(), "team");
 	assert_eq!(
-		pages.render_uri("page", "team", Some("about")).unwrap(),
+		uri(pages, "page", "team", Some("about")).unwrap(),
 		"about/team"
 	);
 	let home = s.get_section("home").unwrap();
-	assert_eq!(home.render_uri("page", "home", None).unwrap(), "");
+	assert_eq!(uri(home, "page", "home", None).unwrap(), "");
 	let pages = Section::structure("pages", ["home", "page"])
 		.uri("{parent.uri}/{slug}")
 		.uri_of("home", "");
-	assert_eq!(pages.render_uri("home", "start", None).unwrap(), "");
-	assert_eq!(pages.render_uri("page", "start", None).unwrap(), "start");
+	assert_eq!(uri(&pages, "home", "start", None).unwrap(), "");
+	assert_eq!(uri(&pages, "page", "start", None).unwrap(), "start");
+
+	// another uri in English, a page only with hasPage on
+	let offers = Section::channel("offers", ["offer"])
+		.uri("angebote/{slug}")
+		.uri_in("en", "offers/{slug}")
+		.uri_if("hasPage");
+	let on = serde_json::json!({ "hasPage": true });
+	let render = |site| offers.render_uri("offer", "star", None, site, &on);
+	assert_eq!(render("de").unwrap(), "angebote/star");
+	assert_eq!(render("en").unwrap(), "offers/star");
+	assert_eq!(offers.render_uri("offer", "star", None, "de", &none), None);
+	let checked = site().section(offers.clone()).entry(
+		"offer",
+		"Offer",
+		[Field::boolean("hasPage")],
+	);
+	checked.check().unwrap();
+	let wrong = site().section(offers).entry("offer", "Offer", []);
+	assert!(wrong.check().unwrap_err().contains("no boolean hasPage"));
 }
 
 #[test]

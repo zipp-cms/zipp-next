@@ -40,6 +40,8 @@ impl Section {
 			types: types.into_iter().map(Into::into).collect(),
 			uri: None,
 			type_uris: BTreeMap::new(),
+			site_uris: BTreeMap::new(),
+			uri_if: None,
 		}
 	}
 
@@ -78,14 +80,38 @@ impl Section {
 		self
 	}
 
-	/// The uri of an entry, `None` if the section has no urls.
+	/// A uri in one site instead of the section's, like `offres/{slug}`.
+	pub fn uri_in(mut self, site: &str, uri: &str) -> Self {
+		self.site_uris.insert(site.into(), uri.into());
+		self
+	}
+
+	/// Only entries with this boolean field on get a page and a uri.
+	pub fn uri_if(mut self, field: &str) -> Self {
+		self.uri_if = Some(field.into());
+		self
+	}
+
+	/// The uri of an entry in a site, `None` if it has no page. `fields`
+	/// are its values in the site, for [`Section::uri_if`].
 	pub fn render_uri(
 		&self,
 		ty: &str,
 		slug: &str,
 		parent: Option<&str>,
+		site: &str,
+		fields: &serde_json::Value,
 	) -> Option<String> {
-		let format = self.type_uris.get(ty).or(self.uri.as_ref())?;
+		if let Some(f) = &self.uri_if
+			&& fields[f] != true
+		{
+			return None;
+		}
+		let format = self
+			.type_uris
+			.get(ty)
+			.or(self.site_uris.get(site))
+			.or(self.uri.as_ref())?;
 		let uri = match parent {
 			Some(p) => format.replace("{parent.uri}", p),
 			None => format

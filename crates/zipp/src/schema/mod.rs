@@ -132,6 +132,13 @@ pub struct Section {
 	/// of a pages structure the home page.
 	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
 	pub type_uris: BTreeMap<String, String>,
+	/// Another uri in one site, like `offres/{slug}` in French.
+	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+	pub site_uris: BTreeMap<String, String>,
+	/// A boolean field: only entries with it on have a page, like Craft's
+	/// `{% if hasPage %}` in a uri format.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub uri_if: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

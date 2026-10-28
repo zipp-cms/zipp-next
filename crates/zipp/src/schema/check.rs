@@ -176,6 +176,29 @@ impl Schema {
 			}
 		}
 
+		for (site, uri) in &section.site_uris {
+			if self.get_site(site).is_none() {
+				return Err(format!("uri in {site}: not a site"));
+			}
+			if section.uri.is_none() {
+				return Err(format!("uri in {site}: the section has no uri"));
+			}
+			let parts = uri.replace("{slug}", "").replace("{parent.uri}", "");
+			if parts.contains(['{', '}']) {
+				return Err("the uri knows only {slug} and {parent.uri}".into());
+			}
+		}
+		if let Some(f) = &section.uri_if {
+			for t in &section.types {
+				let field = self
+					.entry_type(t)
+					.and_then(|c| c.fields.iter().find(|x| &x.handle == f));
+				if !field.is_some_and(|x| x.kind == FieldKind::Boolean) {
+					return Err(format!("uri if {f}: {t} has no boolean {f}"));
+				}
+			}
+		}
+
 		let uri = section.uri.as_deref().unwrap_or_default();
 		let parts = uri.replace("{slug}", "").replace("{parent.uri}", "");
 		match section.kind {

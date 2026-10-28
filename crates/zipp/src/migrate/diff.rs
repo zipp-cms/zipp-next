@@ -136,7 +136,9 @@ pub fn diff(
 				if o.kind != section.kind
 					|| o.types != section.types
 					|| o.uri != section.uri
-					|| o.type_uris != section.type_uris =>
+					|| o.type_uris != section.type_uris
+					|| o.site_uris != section.site_uris
+					|| o.uri_if != section.uri_if =>
 			{
 				Op::ChangeSection {
 					section: section.clone(),

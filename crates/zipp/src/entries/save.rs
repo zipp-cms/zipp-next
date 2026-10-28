@@ -80,8 +80,15 @@ pub fn check(
 		if id.is_some() && s.handle != site {
 			continue;
 		}
-		let uri =
-			uri_for(conn, section, &input.ty, &slug, parent_id, &s.handle)?;
+		let uri = uri_for(
+			conn,
+			section,
+			&input.ty,
+			&slug,
+			parent_id,
+			&s.handle,
+			&input.fields,
+		)?;
 		if let Some(uri) = &uri {
 			let taken: Option<i64> = conn
 				.query_row(
@@ -175,8 +182,11 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 				"UPDATE entries SET updated_at = ?1 WHERE id = ?2",
 				params![now, id],
 			)?;
-			// children follow the uri of their parent
-			if section.kind == SectionKind::Structure {
+			// children follow the uri of their parent, the uri of other
+			// sites a field that is the same in all of them
+			if section.kind == SectionKind::Structure
+				|| section.uri_if.is_some()
+			{
 				refresh_uris(conn, schema, section)?;
 			}
 			id

@@ -74,9 +74,11 @@
 	}
 
 	/** The uri of an entry type, its own or the section's. */
-	function uriOf(type: string): string | null {
+	function uriOf(type: string, site?: string): string | null {
 		const own = section?.type_uris?.[type];
-		return own !== undefined ? own : (section?.uri ?? null);
+		if (own !== undefined) return own;
+		const inSite = site ? section?.site_uris?.[site] : undefined;
+		return inSite ?? section?.uri ?? null;
 	}
 
 	const KINDS = {
@@ -100,6 +102,10 @@
 					<dd><code>{section.handle}</code></dd>
 					<dt>Kind</dt>
 					<dd>{KINDS[section.kind]}</dd>
+					{#if section.uri_if}
+						<dt>Pages</dt>
+						<dd>only entries with <code>{section.uri_if}</code> on</dd>
+					{/if}
 					<dt>Navigation</dt>
 					<dd>{group ?? '–'}</dd>
 					<dt>GraphQL</dt>
@@ -166,7 +172,7 @@
 								<td>{s.language}</td>
 								<td>
 									{#each types as t (t.handle)}
-										{@const uri = uriOf(t.handle)}
+										{@const uri = uriOf(t.handle, s.handle)}
 										<div>
 											{#if types.length > 1}
 												<span class="muted">{t.name}:</span>

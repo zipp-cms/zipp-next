@@ -83,6 +83,9 @@ $value = function (\craft\base\ElementInterface $el, \craft\base\FieldInterface 
 		$v instanceof \craft\fields\data\JsonData => $v->getValue(),
 		$v instanceof \DateTime => $v->format(\DateTime::ATOM),
 		is_scalar($v) || is_array($v) => $v,
+		// SEOmatic: zipp's SEO plugin has its own settings, the import
+		// leaves the field out
+		get_class($field) === 'nystudio107\\seomatic\\fields\\SeoSettings' => null,
 		default => throw new \Exception("{$field->handle}: can't export " . get_class($field)),
 	};
 };
