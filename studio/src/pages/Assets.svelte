@@ -21,6 +21,7 @@
 	let error = $state('');
 	let uploading = $state(false);
 	let current = $state<Asset | null>(null);
+	let title = $state('');
 	let alt = $state('');
 	let focal = $state({ x: 0.5, y: 0.5 });
 
@@ -47,6 +48,7 @@
 
 	function open(a: Asset) {
 		current = a;
+		title = a.title;
 		alt = a.alt;
 		focal = { x: a.focalX, y: a.focalY };
 	}
@@ -63,6 +65,7 @@
 	async function save() {
 		if (!current) return;
 		const a = await updateAsset(current.id, {
+			title,
 			alt,
 			focalX: focal.x,
 			focalY: focal.y,
@@ -155,6 +158,14 @@
 					{#if current.width}· {current.width} × {current.height}{/if}
 				</span>
 			</p>
+			<label>
+				Title
+				<input
+					bind:value={title}
+					placeholder="From the filename"
+					disabled={!canEdit}
+				/>
+			</label>
 			<label>
 				Alt text
 				<input

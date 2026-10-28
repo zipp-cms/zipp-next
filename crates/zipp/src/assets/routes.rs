@@ -137,6 +137,8 @@ pub(super) async fn list(
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct UpdateReq {
+	/// unchanged when missing
+	title: Option<String>,
 	alt: String,
 	focal_x: f64,
 	focal_y: f64,
@@ -153,8 +155,9 @@ pub(super) async fn update(
 	let old = get_asset(&conn, id)?;
 	let (fx, fy) = (req.focal_x.clamp(0.0, 1.0), req.focal_y.clamp(0.0, 1.0));
 	conn.execute(
-		"UPDATE assets SET alt = ?1, focal_x = ?2, focal_y = ?3 WHERE id = ?4",
-		params![req.alt, fx, fy, id],
+		"UPDATE assets SET title = IFNULL(?1, title), alt = ?2, focal_x = ?3,
+		focal_y = ?4 WHERE id = ?5",
+		params![req.title.as_deref().map(str::trim), req.alt, fx, fy, id],
 	)?;
 	if (old.focal_x, old.focal_y) != (fx, fy) {
 		let _ = fs::remove_dir_all(state.files.join(id.to_string()).join("t"));

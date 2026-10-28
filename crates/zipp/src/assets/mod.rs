@@ -53,6 +53,8 @@ pub struct Asset {
 	pub size: i64,
 	pub width: Option<u32>,
 	pub height: Option<u32>,
+	/// like Craft's asset title, empty for one from the filename
+	pub title: String,
 	pub alt: String,
 	pub focal_x: f64,
 	pub focal_y: f64,
@@ -75,7 +77,7 @@ impl Asset {
 }
 
 const COLUMNS: &str = "id, filename, kind, mime, size, width, height, alt, \
-	focal_x, focal_y, created_at";
+	focal_x, focal_y, created_at, title";
 
 fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 	Ok(Asset {
@@ -90,6 +92,7 @@ fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 		focal_x: r.get(8)?,
 		focal_y: r.get(9)?,
 		created_at: r.get(10)?,
+		title: r.get(11)?,
 	})
 }
 

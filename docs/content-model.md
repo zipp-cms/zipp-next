@@ -80,7 +80,8 @@ set in the studio. GraphQL asks like Craft: `image { url(transform:
 "hero") width(transform: "hero") srcset(transforms: ["small", "hero"])
 alt }`. Only named transforms exist, so nobody can make the server
 render arbitrary sizes. `--public-url` makes the urls absolute for
-frontends on other domains.
+frontends on other domains. Like in Craft an asset has a title (GraphQL
+`title`, from the filename while it is empty) and an alt text.
 
 ## Translations
 

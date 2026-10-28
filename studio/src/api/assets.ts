@@ -8,6 +8,8 @@ export type Asset = {
 	size: number;
 	width: number | null;
 	height: number | null;
+	/** empty: the frontend gets one from the filename */
+	title: string;
 	alt: string;
 	focalX: number;
 	focalY: number;
@@ -32,7 +34,7 @@ export function uploadAssets(files: FileList | File[]): Promise<Asset[]> {
 
 export function updateAsset(
 	id: number,
-	data: { alt: string; focalX: number; focalY: number },
+	data: { title: string; alt: string; focalX: number; focalY: number },
 ): Promise<Asset> {
 	return request('PUT', '/assets/' + id, data);
 }

@@ -20,7 +20,10 @@ pub(super) fn asset_object() -> Object {
 					"focalPoint" => {
 						GqlValue::List(vec![a.focal_x.into(), a.focal_y.into()])
 					}
-					"title" => GqlValue::from(title_of(&a.filename)),
+					"title" => GqlValue::from(match a.title.as_str() {
+						"" => title_of(&a.filename),
+						t => t.to_string(),
+					}),
 					_ => unreachable!(),
 				};
 				Ok(Some(FieldValue::value(v)))
