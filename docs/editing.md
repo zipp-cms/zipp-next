@@ -11,6 +11,12 @@ writes them in one transaction and keeps a revision; an old revision
 can be restored into the draft. A preview token shows the draft on the
 website: crelte passes `?token=` on to GraphQL.
 
+The editor has the content on the left and a sidebar like Craft's on the
+right: published in the current site with the status in every site (a
+badge switches to that site), slug, type and parent, copying the content
+from another site, and the revisions. A global (a single without a page)
+has no title and only the copying and revisions there.
+
 ## The content model in the studio
 
 Everyone sees it read only under

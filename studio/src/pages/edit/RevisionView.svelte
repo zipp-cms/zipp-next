@@ -46,7 +46,13 @@
 {#if doc}
 	<!-- a disabled fieldset disables every input in it -->
 	<fieldset disabled>
-		<EntryHead title={doc.title} slug={doc.slug} {single} {changed} />
+		<EntryHead title={doc.title} {changed} />
+		{#if !single}
+			<p class="slug">
+				{#if changed.has('slug')}<span class="dot"></span>{/if}Slug:
+				<code>{doc.slug}</code>
+			</p>
+		{/if}
 		<Fields
 			{schema}
 			component={comp}
@@ -82,5 +88,11 @@
 
 	.muted {
 		color: var(--muted);
+	}
+
+	.slug {
+		margin: -14px 0 30px;
+		color: var(--muted);
+		font-size: 14px;
 	}
 </style>

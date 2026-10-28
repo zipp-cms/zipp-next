@@ -30,7 +30,7 @@
 	import ConflictBanner from './ConflictBanner.svelte';
 	import EditHeader from './EditHeader.svelte';
 	import EntryHead from './EntryHead.svelte';
-	import OptionsTab from './OptionsTab.svelte';
+	import EntrySidebar from './EntrySidebar.svelte';
 	import RevisionView from './RevisionView.svelte';
 
 	let {
@@ -53,7 +53,8 @@
 	let busy = $state(false);
 	let error = $state('');
 	let errors = $state<Record<string, string>>({});
-	let tab = $state<'content' | 'options'>('content');
+	// whether the entry is live in each site, as saved
+	let perSite = $state<Record<string, boolean>>({});
 	// possible parents of a new entry in a structure
 	let parents = $state<Entry[]>([]);
 	// unpublished changes, saved while typing
@@ -114,7 +115,12 @@
 		fields = content.fields;
 		lastSaved = snapshot();
 		loaded = true;
-		revisions = await getRevisions(id);
+		const [revs, list] = await Promise.all([
+			getRevisions(id),
+			listEntries({ section: sec, ids: String(id), site: site.current }),
+		]);
+		revisions = revs;
+		perSite = list.published[id] ?? {};
 	}
 
 	$effect(() => {
@@ -279,6 +285,7 @@
 		const set = changedPaths(live.fields, $state.snapshot(fields));
 		if (title !== live.title) set.add('title');
 		if (slug !== live.slug) set.add('slug');
+		if (published !== live.published) set.add('published');
 		return set;
 	});
 
@@ -299,7 +306,6 @@
 			if (now.slug !== old.slug) set.add('slug');
 		}
 		viewing = { rev, doc: now, changed: set };
-		tab = 'content';
 		window.scrollTo(0, 0);
 	}
 
@@ -308,7 +314,6 @@
 			await restoreRevision(id!, rev.id);
 			viewing = null;
 			await load();
-			tab = 'content';
 		});
 	}
 
@@ -361,25 +366,10 @@
 		onkeepmine={keepMine}
 	/>
 
-	<div class="card">
-		<div class="tabs">
-			<button
-				class:active={tab === 'content'}
-				onclick={() => (tab = 'content')}
-			>
-				Content
-			</button>
-			<button
-				class:active={tab === 'options'}
-				onclick={() => (tab = 'options')}
-			>
-				Options
-			</button>
-		</div>
+	<div class="layout">
+		<div class="card">
+			{#if error}<p class="error">{error}</p>{/if}
 
-		{#if error}<p class="error">{error}</p>{/if}
-
-		{#if tab === 'content'}
 			{#if viewing}
 				<RevisionView
 					{schema}
@@ -396,14 +386,7 @@
 				<!-- read only for a role that may only look -->
 				<fieldset disabled={!canEdit}>
 					{#if !global}
-						<EntryHead
-							bind:title
-							bind:slug
-							{single}
-							{changed}
-							{uri}
-							{errors}
-						/>
+						<EntryHead bind:title {changed} {errors} />
 					{/if}
 					<Fields
 						{schema}
@@ -415,24 +398,30 @@
 					/>
 				</fieldset>
 			{/if}
-		{:else}
-			<OptionsTab
-				{schema}
-				{secDef}
-				{comp}
-				isNew={id === null}
-				{canEdit}
-				{canPublish}
-				bind:published
-				bind:ty
-				bind:parentId
-				{parents}
-				{revisions}
-				oncopy={copyFrom}
-				onview={view}
-				onrestore={restore}
-			/>
-		{/if}
+		</div>
+
+		<EntrySidebar
+			{schema}
+			{secDef}
+			{comp}
+			{global}
+			isNew={id === null}
+			{canEdit}
+			{canPublish}
+			bind:published
+			bind:slug
+			bind:ty
+			bind:parentId
+			{uri}
+			{perSite}
+			{changed}
+			{errors}
+			{parents}
+			{revisions}
+			oncopy={copyFrom}
+			onview={view}
+			onrestore={restore}
+		/>
 	</div>
 {/if}
 
@@ -443,26 +432,16 @@
 		border: none;
 	}
 
-	.tabs {
+	.layout {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 24px;
-		margin: -14px -16px 24px;
-		padding: 0 16px;
-		border-bottom: 2px solid var(--line);
+		grid-template-columns: minmax(0, 1fr) 300px;
+		gap: 20px;
+		align-items: start;
+	}
 
-		button {
-			padding: 12px 0;
-			font-size: 18px;
-			border: none;
-			border-bottom: 2px solid transparent;
-			border-radius: 0;
-			background: none;
-			margin-bottom: -2px;
-
-			&.active {
-				border-bottom-color: var(--dark);
-			}
+	@media (max-width: 1100px) {
+		.layout {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>
