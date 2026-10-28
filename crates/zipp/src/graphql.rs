@@ -41,6 +41,7 @@ use axum::routing::get;
 use serde_json::Value;
 
 use crate::AppState;
+use crate::assets::{Asset, get_many};
 use crate::auth::session;
 use crate::db::Db;
 use crate::entries::{Entry, list};
@@ -67,6 +68,9 @@ pub const ENTRY_FIELDS: &[&str] = &[
 /// Fields every block has.
 pub const BLOCK_FIELDS: &[&str] = &["id", "typeHandle"];
 
+/// Put before asset urls.
+struct PublicUrl(String);
+
 /// Who asks, set per request.
 struct Viewer {
 	published_only: bool,
@@ -83,6 +87,7 @@ struct Block {
 pub fn build(
 	schema: Arc<Schema>,
 	db: Db,
+	public_url: String,
 ) -> std::result::Result<GqlSchema, String> {
 	let mut entry_iface = Interface::new("Entry");
 	for (name, ty) in entry_common() {
@@ -102,7 +107,8 @@ pub fn build(
 		.register(entry_iface)
 		.register(block_iface)
 		.register(where_input())
-		.register(site_object());
+		.register(site_object())
+		.register(asset_object());
 
 	for comp in &schema.components {
 		let mut obj = if comp.entry {
@@ -198,6 +204,7 @@ pub fn build(
 		.register(query)
 		.data(schema)
 		.data(db)
+		.data(PublicUrl(public_url))
 		.finish()
 		.map_err(|e| e.to_string())
 }
@@ -276,6 +283,7 @@ fn content_field(field: &crate::schema::Field) -> GqlField {
 		FieldKind::Number { .. } => TypeRef::named(TypeRef::FLOAT),
 		FieldKind::Boolean => TypeRef::named(TypeRef::BOOLEAN),
 		FieldKind::Relation { .. } => TypeRef::named_nn_list_nn("Entry"),
+		FieldKind::Assets { .. } => TypeRef::named_nn_list_nn("Asset"),
 		FieldKind::Blocks { .. } => TypeRef::named_nn_list_nn("Block"),
 	};
 	let handle = field.handle.clone();
@@ -317,6 +325,17 @@ fn content_field(field: &crate::schema::Field) -> GqlField {
 						entries.into_iter().map(entry_value),
 					)))
 				}
+				FieldKind::Assets { .. } => {
+					let ids: Vec<i64> = value
+						.as_array()
+						.map(|a| a.iter().filter_map(Value::as_i64).collect())
+						.unwrap_or_default();
+					let db = ctx.data::<Db>()?;
+					let assets = get_many(&db.conn(), &ids)?;
+					Ok(Some(FieldValue::list(
+						assets.into_iter().map(FieldValue::owned_any),
+					)))
+				}
 				FieldKind::Blocks { .. } => {
 					let blocks = value.as_array().cloned().unwrap_or_default();
 					let blocks = blocks.into_iter().map(|b| {
@@ -336,6 +355,145 @@ fn content_field(field: &crate::schema::Field) -> GqlField {
 				_ => Ok(Some(FieldValue::value(GqlValue::from_json(value)?))),
 			}
 		})
+	})
+}
+
+/// An asset, like Craft's: `url(transform: "medium")` and the size after
+/// the transform. Transforms are the named ones of the schema.
+fn asset_object() -> Object {
+	let plain = |name: &'static str, ty: TypeRef| {
+		GqlField::new(name, ty, move |ctx| {
+			FieldFuture::new(async move {
+				let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+				let v = match name {
+					"id" => GqlValue::from(a.id),
+					"filename" => GqlValue::from(a.filename.clone()),
+					"kind" => GqlValue::from(a.kind.clone()),
+					"mimeType" => GqlValue::from(a.mime.clone()),
+					"size" => GqlValue::from(a.size),
+					"alt" => GqlValue::from(a.alt.clone()),
+					"focalX" => GqlValue::from(a.focal_x),
+					"focalY" => GqlValue::from(a.focal_y),
+					_ => unreachable!(),
+				};
+				Ok(Some(FieldValue::value(v)))
+			})
+		})
+	};
+	let transform_arg =
+		|| InputValue::new("transform", TypeRef::named(TypeRef::STRING));
+	let s = || TypeRef::named_nn(TypeRef::STRING);
+	let f = || TypeRef::named_nn(TypeRef::FLOAT);
+
+	Object::new("Asset")
+		.field(plain("id", TypeRef::named_nn(TypeRef::INT)))
+		.field(plain("filename", s()))
+		.field(plain("kind", s()))
+		.field(plain("mimeType", s()))
+		.field(plain("size", TypeRef::named_nn(TypeRef::INT)))
+		.field(plain("alt", s()))
+		.field(plain("focalX", f()))
+		.field(plain("focalY", f()))
+		.field(
+			GqlField::new("url", s(), |ctx| {
+				FieldFuture::new(async move {
+					let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+					let t = transform_of(&ctx, a)?;
+					let url = asset_url(
+						&ctx,
+						a,
+						t.as_ref().map(|t| t.handle.as_str()),
+					)?;
+					Ok(Some(FieldValue::value(url)))
+				})
+			})
+			.argument(transform_arg()),
+		)
+		.field(
+			GqlField::new("width", TypeRef::named(TypeRef::INT), |ctx| {
+				asset_size(ctx, |(w, _)| w)
+			})
+			.argument(transform_arg()),
+		)
+		.field(
+			GqlField::new("height", TypeRef::named(TypeRef::INT), |ctx| {
+				asset_size(ctx, |(_, h)| h)
+			})
+			.argument(transform_arg()),
+		)
+		.field(
+			GqlField::new("srcset", TypeRef::named(TypeRef::STRING), |ctx| {
+				FieldFuture::new(async move {
+					let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+					let schema = ctx.data::<Arc<Schema>>()?;
+					let mut parts = vec![];
+					for name in ctx.args.try_get("transforms")?.list()?.iter() {
+						let name = name.string()?;
+						let t =
+							schema.get_transform(name).ok_or_else(|| {
+								GqlError::new(format!(
+									"unknown transform {name}"
+								))
+							})?;
+						let Some((w, _)) = a.size_after(t) else {
+							return Ok(None);
+						};
+						parts.push(format!(
+							"{} {w}w",
+							asset_url(&ctx, a, Some(name))?
+						));
+					}
+					Ok(Some(FieldValue::value(parts.join(", "))))
+				})
+			})
+			.argument(InputValue::new(
+				"transforms",
+				TypeRef::named_nn_list_nn(TypeRef::STRING),
+			)),
+		)
+}
+
+/// The transform of the `transform` argument, `None` for the original.
+fn transform_of(
+	ctx: &ResolverContext,
+	a: &Asset,
+) -> async_graphql::Result<Option<crate::schema::Transform>> {
+	let Some(name) = ctx.args.get("transform").filter(|v| !v.is_null()) else {
+		return Ok(None);
+	};
+	let name = name.string()?;
+	let schema = ctx.data::<Arc<Schema>>()?;
+	let t = schema
+		.get_transform(name)
+		.ok_or_else(|| GqlError::new(format!("unknown transform {name}")))?;
+	// only images have transforms, a file stays itself
+	Ok((a.kind == "image").then(|| t.clone()))
+}
+
+fn asset_url(
+	ctx: &ResolverContext,
+	a: &Asset,
+	transform: Option<&str>,
+) -> async_graphql::Result<String> {
+	let base = &ctx.data::<PublicUrl>()?.0;
+	Ok(format!(
+		"{}{}",
+		base.trim_end_matches('/'),
+		a.url(transform)
+	))
+}
+
+fn asset_size(
+	ctx: ResolverContext,
+	pick: fn((u32, u32)) -> u32,
+) -> FieldFuture {
+	FieldFuture::new(async move {
+		let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+		let size = match transform_of(&ctx, a)? {
+			Some(t) => a.size_after(&t),
+			None => a.width.zip(a.height),
+		};
+		Ok(size.map(|s| FieldValue::value(pick(s))))
 	})
 }
 
@@ -513,7 +671,7 @@ mod tests {
 	async fn loads_a_page_with_its_relations() {
 		let db = Db::memory().unwrap();
 		let s = Arc::new(site());
-		let gql = build(s.clone(), db.clone()).unwrap();
+		let gql = build(s.clone(), db.clone(), String::new()).unwrap();
 
 		let (about, event) = {
 			let conn = db.conn();
@@ -602,10 +760,64 @@ mod tests {
 	}
 
 	#[tokio::test]
+	async fn assets_with_transforms() {
+		let db = Db::memory().unwrap();
+		let s = Arc::new(site());
+		let gql =
+			build(s.clone(), db.clone(), "https://cms.test".into()).unwrap();
+		let dir = std::env::temp_dir()
+			.join(format!("zipp-gql-{}", rand::random::<u32>()));
+
+		let mut png = vec![];
+		image::RgbImage::new(400, 200)
+			.write_to(
+				&mut std::io::Cursor::new(&mut png),
+				image::ImageFormat::Png,
+			)
+			.unwrap();
+		{
+			let conn = db.conn();
+			let a = crate::assets::store(&conn, &dir, "hero.png", &png, None)
+				.unwrap();
+			let fields = json!({ "city": "Bern", "image": [a.id] });
+			save(&conn, &s, None, input("events", "event", "Jazz", fields))
+				.unwrap();
+		}
+
+		let data = run(
+			&gql,
+			r#"{ entry(uri: "events/jazz") { ... on event_Entry { image {
+				url
+				small: url(transform: "small")
+				width(transform: "small")
+				height(transform: "small")
+				sqHeight: height(transform: "square")
+				srcset(transforms: ["small", "square"])
+			} } } }"#,
+			true,
+		)
+		.await;
+		let img = &data["entry"]["image"][0];
+		assert_eq!(img["url"], "https://cms.test/assets/1/hero.png");
+		assert_eq!(img["small"], "https://cms.test/assets/1/small/hero.png");
+		assert_eq!(
+			(img["width"].clone(), img["height"].clone()),
+			(json!(100), json!(50))
+		);
+		assert_eq!(img["sqHeight"], 50);
+		assert_eq!(
+			img["srcset"],
+			"https://cms.test/assets/1/small/hero.png 100w, \
+			https://cms.test/assets/1/square/hero.png 50w"
+		);
+		std::fs::remove_dir_all(dir).unwrap();
+	}
+
+	#[tokio::test]
 	async fn hides_drafts_without_a_session() {
 		let db = Db::memory().unwrap();
 		let s = Arc::new(site());
-		let gql = build(s.clone(), db.clone()).unwrap();
+		let gql = build(s.clone(), db.clone(), String::new()).unwrap();
 		let mut draft = input("pages", "page", "Draft", json!({}));
 		draft.published = false;
 		save(&db.conn(), &s, None, draft).unwrap();

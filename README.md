@@ -83,6 +83,15 @@ fn main() {
   and `entryCount` take the same filters as the rest api (`where: [{
   field: "city", value: "Bern" }]`). Without a session only published
   entries show. A GET opens GraphiQL to try queries.
+- **Assets and transforms.** Uploads live in `--files`, `Field::images`
+  and `Field::assets` link them. Transforms are named in code
+  (`Transform::new("hero").width(1600).height(700).crop()`), generated
+  on their first request and cached; crops keep the focal point editors
+  set in the studio. GraphQL asks like Craft: `image { url(transform:
+  "hero") width(transform: "hero") srcset(transforms: ["small", "hero"])
+  alt }`. Only named transforms exist, so nobody can make the server
+  render arbitrary sizes. `--public-url` makes the urls absolute for
+  frontends on other domains.
 - **Types for the rest api.** `types` prints TypeScript types of all
   entries and blocks.
 

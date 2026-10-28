@@ -3,6 +3,7 @@ export type FieldKind =
 	| { kind: 'number'; min: number | null; max: number | null }
 	| { kind: 'boolean' }
 	| { kind: 'relation'; types: string[]; max: number | null }
+	| { kind: 'assets'; images: boolean; max: number | null }
 	| {
 			kind: 'blocks';
 			types: string[];
@@ -93,12 +94,18 @@ async function request(method: string, path: string, body?: unknown) {
 	const headers: Record<string, string> = {};
 	const t = token();
 	if (t) headers['session-token'] = t;
-	if (body !== undefined) headers['content-type'] = 'application/json';
+	// a form is sent as it is, the browser sets its content type
+	const form = body instanceof FormData;
+	if (body !== undefined && !form)
+		headers['content-type'] = 'application/json';
 
 	const resp = await fetch('/api' + path, {
 		method,
 		headers,
-		body: body === undefined ? undefined : JSON.stringify(body),
+		body:
+			body === undefined || form
+				? (body as FormData)
+				: JSON.stringify(body),
 	});
 	const text = await resp.text();
 	const data = text ? JSON.parse(text) : null;
@@ -174,4 +181,45 @@ export function saveEntry(
 
 export function deleteEntry(id: number): Promise<void> {
 	return request('DELETE', '/entries/' + id);
+}
+
+export type Asset = {
+	id: number;
+	filename: string;
+	kind: 'image' | 'file';
+	mime: string;
+	size: number;
+	width: number | null;
+	height: number | null;
+	alt: string;
+	focalX: number;
+	focalY: number;
+	createdAt: number;
+};
+
+export function assetUrl(a: Asset, thumb = false): string {
+	return thumb
+		? `/assets/${a.id}/_thumb/${a.filename}`
+		: `/assets/${a.id}/${a.filename}`;
+}
+
+export function listAssets(params: Record<string, string>): Promise<Asset[]> {
+	return request('GET', '/assets?' + new URLSearchParams(params));
+}
+
+export function uploadAssets(files: FileList | File[]): Promise<Asset[]> {
+	const form = new FormData();
+	for (const f of files) form.append('file', f, f.name);
+	return request('POST', '/assets', form);
+}
+
+export function updateAsset(
+	id: number,
+	data: { alt: string; focalX: number; focalY: number },
+): Promise<Asset> {
+	return request('PUT', '/assets/' + id, data);
+}
+
+export function deleteAsset(id: number): Promise<void> {
+	return request('DELETE', '/assets/' + id);
 }

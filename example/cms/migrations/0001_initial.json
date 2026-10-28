@@ -8,6 +8,16 @@
         "entry": true,
         "fields": [
           {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
             "handle": "intro",
             "label": "Intro",
             "required": false,
@@ -27,6 +37,7 @@
             "types": [
               "heading",
               "text",
+              "image",
               "button",
               "events"
             ],
@@ -44,6 +55,16 @@
         "entry": true,
         "fields": [
           {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
             "handle": "intro",
             "label": "Intro",
             "required": false,
@@ -63,6 +84,7 @@
             "types": [
               "heading",
               "text",
+              "image",
               "button",
               "events"
             ],
@@ -108,6 +130,16 @@
             "kind": "number",
             "min": 0.0,
             "max": 1000.0
+          },
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
           },
           {
             "handle": "description",
@@ -170,6 +202,36 @@
             "kind": "text",
             "max": null,
             "multiline": true
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "image",
+        "name": "Image",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "caption",
+            "label": "Caption",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 200,
+            "multiline": false
           }
         ]
       }
@@ -330,6 +392,16 @@
         "entry": true,
         "fields": [
           {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
             "handle": "intro",
             "label": "Intro",
             "required": false,
@@ -349,6 +421,7 @@
             "types": [
               "heading",
               "text",
+              "image",
               "button",
               "events"
             ],
@@ -363,6 +436,16 @@
         "entry": true,
         "fields": [
           {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
             "handle": "intro",
             "label": "Intro",
             "required": false,
@@ -382,6 +465,7 @@
             "types": [
               "heading",
               "text",
+              "image",
               "button",
               "events"
             ],
@@ -424,6 +508,16 @@
             "kind": "number",
             "min": 0.0,
             "max": 1000.0
+          },
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
           },
           {
             "handle": "description",
@@ -484,6 +578,33 @@
         ]
       },
       {
+        "handle": "image",
+        "name": "Image",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "caption",
+            "label": "Caption",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 200,
+            "multiline": false
+          }
+        ]
+      },
+      {
         "handle": "button",
         "name": "Button",
         "entry": false,
@@ -530,6 +651,32 @@
             "multiline": false
           }
         ]
+      }
+    ],
+    "transforms": [
+      {
+        "handle": "hero",
+        "width": 1600,
+        "height": 700,
+        "crop": true
+      },
+      {
+        "handle": "small",
+        "width": 600,
+        "height": null,
+        "crop": false
+      },
+      {
+        "handle": "medium",
+        "width": 1200,
+        "height": null,
+        "crop": false
+      },
+      {
+        "handle": "thumb",
+        "width": 160,
+        "height": 120,
+        "crop": true
       }
     ]
   }

@@ -101,9 +101,10 @@ fn validate_value(
 			}
 		}
 		(FieldKind::Boolean, Value::Bool(_)) => {}
-		(FieldKind::Relation { max, .. }, Value::Array(ids)) => {
+		(FieldKind::Relation { max, .. }, Value::Array(ids))
+		| (FieldKind::Assets { max, .. }, Value::Array(ids)) => {
 			if ids.iter().any(|id| !id.is_i64()) {
-				error(errors, path, "must be a list of entry ids");
+				error(errors, path, "must be a list of ids");
 			}
 			check_count(errors, path, ids.len(), None, *max);
 		}
@@ -220,11 +221,19 @@ pub fn walk_mut(
 #[derive(Debug, Clone, PartialEq)]
 pub struct RelationRef {
 	pub path: String,
-	pub types: Vec<String>,
+	pub target: Target,
 	pub ids: Vec<i64>,
 }
 
-/// All relations, also those inside blocks.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Target {
+	/// entries of these types
+	Entries(Vec<String>),
+	/// assets, only images if true
+	Assets(bool),
+}
+
+/// All relations to entries and assets, also those inside blocks.
 pub fn relations(
 	schema: &Schema,
 	comp: &Component,
@@ -251,7 +260,12 @@ fn collect_relations(
 		match &field.kind {
 			FieldKind::Relation { types, .. } => out.push(RelationRef {
 				path,
-				types: types.clone(),
+				target: Target::Entries(types.clone()),
+				ids: items.iter().filter_map(Value::as_i64).collect(),
+			}),
+			FieldKind::Assets { images, .. } => out.push(RelationRef {
+				path,
+				target: Target::Assets(*images),
 				ids: items.iter().filter_map(Value::as_i64).collect(),
 			}),
 			FieldKind::Blocks { .. } => {

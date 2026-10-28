@@ -3,6 +3,7 @@
 //! edited in the studio and read by any frontend over the api.
 
 pub mod apply;
+pub mod assets;
 pub mod auth;
 pub mod content;
 pub mod db;
@@ -31,7 +32,7 @@ use tracing::info;
 use crate::db::Db;
 use crate::migrate::{Migration, Migrations, Rename};
 
-pub use crate::schema::{Field, Schema, Section};
+pub use crate::schema::{Field, Schema, Section, Transform};
 
 #[doc(hidden)]
 pub use rust_embed;
@@ -58,6 +59,8 @@ pub struct AppState {
 	pub db: Db,
 	pub schema: Arc<Schema>,
 	pub gql: async_graphql::dynamic::Schema,
+	/// where uploads go
+	pub files: PathBuf,
 }
 
 #[derive(Debug, Parser)]
@@ -74,6 +77,13 @@ enum Cmd {
 	Serve {
 		#[arg(long, default_value = "127.0.0.1:8090")]
 		listen: String,
+		/// Where uploaded files go
+		#[arg(long, default_value = "files")]
+		files: PathBuf,
+		/// Put before asset urls in GraphQL, e.g. `https://cms.example.com`
+		/// when the frontend runs on another domain
+		#[arg(long, default_value = "")]
+		public_url: String,
 	},
 	/// Write a migration from the schema in code to `migrations/`.
 	Makemigration {
@@ -106,9 +116,18 @@ pub fn run(schema: Schema, migrations: Migrations) {
 
 	let opts = Opts::parse();
 	let res = match opts.cmd {
-		Cmd::Serve { listen } => tokio::runtime::Runtime::new()
-			.unwrap()
-			.block_on(serve(schema, &opts.db, &migrations, &listen)),
+		Cmd::Serve {
+			listen,
+			files,
+			public_url,
+		} => tokio::runtime::Runtime::new().unwrap().block_on(serve(
+			schema,
+			&opts.db,
+			&migrations,
+			&listen,
+			files,
+			public_url,
+		)),
 		Cmd::Makemigration { rename, name } => {
 			makemigration(&schema, &migrations, &rename, name.as_deref())
 		}
@@ -130,7 +149,10 @@ async fn serve(
 	db_path: &Path,
 	migrations: &Migrations,
 	listen: &str,
+	files: PathBuf,
+	public_url: String,
 ) -> Result<(), String> {
+	let files = assets::files_dir(files).map_err(|e| e.to_string())?;
 	let db = Db::open(db_path).map_err(|e| e.to_string())?;
 
 	let migrations = migrations.load()?;
@@ -150,13 +172,22 @@ async fn serve(
 	}
 
 	let schema = Arc::new(schema);
-	let gql = graphql::build(schema.clone(), db.clone())?;
-	let state = AppState { db, schema, gql };
+	let gql = graphql::build(schema.clone(), db.clone(), public_url)?;
+	let state = AppState {
+		db,
+		schema,
+		gql,
+		files,
+	};
 	let api = Router::new()
 		.nest("/auth", auth::routes())
 		.merge(entries::routes())
+		.merge(assets::api_routes())
 		.merge(graphql::routes());
-	let app = Router::new().nest("/api", api).merge(studio::routes());
+	let app = Router::new()
+		.nest("/api", api)
+		.merge(assets::file_routes())
+		.merge(studio::routes());
 
 	// frontends on other domains read the content, graphql is a POST
 	let app = app

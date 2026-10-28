@@ -5,8 +5,16 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 // `example-cms serve`
 export default defineConfig({
 	plugins: [svelte()],
-	build: { outDir: '../crates/zipp/studio', emptyOutDir: true },
+	// /assets are the uploaded files
+	build: {
+		outDir: '../crates/zipp/studio',
+		emptyOutDir: true,
+		assetsDir: '_studio',
+	},
 	server: {
-		proxy: { '/api': 'http://127.0.0.1:8090' },
+		proxy: {
+			'/api': 'http://127.0.0.1:8090',
+			'/assets': 'http://127.0.0.1:8090',
+		},
 	},
 });

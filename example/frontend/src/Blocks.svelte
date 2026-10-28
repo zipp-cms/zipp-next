@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { url, type Block } from './api';
 	import Events from './Events.svelte';
+	import Img from './Img.svelte';
 
 	let { blocks }: { blocks: Block[] } = $props();
 </script>
@@ -10,6 +11,13 @@
 		<h2>{block.text}</h2>
 	{:else if block.typeHandle === 'text'}
 		<p>{block.content}</p>
+	{:else if block.typeHandle === 'image'}
+		<figure>
+			{#each block.image as img (img.url)}
+				<Img {img} sizes="40rem" />
+			{/each}
+			{#if block.caption}<figcaption>{block.caption}</figcaption>{/if}
+		</figure>
 	{:else if block.typeHandle === 'button'}
 		<a class="button" href={block.link[0] ? url(block.link[0]) : '#'}>
 			{block.label}
@@ -20,6 +28,15 @@
 {/each}
 
 <style>
+	figure {
+		margin: 1.5rem 0;
+	}
+
+	figcaption {
+		color: #666;
+		font-size: 0.9rem;
+	}
+
 	.button {
 		display: inline-block;
 		padding: 0.5rem 1rem;

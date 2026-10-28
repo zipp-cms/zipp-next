@@ -15,7 +15,9 @@ use serde_json::Value;
 
 use crate::AppState;
 use crate::auth::{Authed, session};
-use crate::content::{FieldError, index_values, relations, share, validate};
+use crate::content::{
+	FieldError, Target, index_values, relations, share, validate,
+};
 use crate::db::now;
 use crate::error::{Error, Result};
 use crate::query::Query;
@@ -422,7 +424,8 @@ pub fn refresh_uris(
 	Ok(())
 }
 
-/// Relations must point to existing entries of the allowed types.
+/// Relations must point to existing entries of the allowed types, asset
+/// fields to existing assets (images if they only take images).
 fn check_relations(
 	conn: &Connection,
 	schema: &Schema,
@@ -433,25 +436,28 @@ fn check_relations(
 	let mut errors = vec![];
 
 	for rel in relations(schema, comp, fields) {
-		for id in rel.ids {
-			let target: Option<String> = conn
-				.query_row(
-					"SELECT type FROM entries WHERE id = ?1",
-					[id],
-					|r| r.get(0),
-				)
-				.optional()?;
-			match target {
-				Some(t) if rel.types.contains(&t) => {}
-				Some(t) => errors.push(field_error(
-					&rel.path,
-					&format!("entry {id} is a {t}, not allowed here"),
-				)),
-				None => errors.push(field_error(
-					&rel.path,
-					&format!("entry {id} doesn't exist"),
-				)),
+		let (sql, what) = match rel.target {
+			Target::Entries(_) => {
+				("SELECT type FROM entries WHERE id = ?1", "entry")
 			}
+			Target::Assets(_) => {
+				("SELECT kind FROM assets WHERE id = ?1", "asset")
+			}
+		};
+		for id in rel.ids {
+			let found: Option<String> =
+				conn.query_row(sql, [id], |r| r.get(0)).optional()?;
+			let error = match (&rel.target, found) {
+				(_, None) => format!("{what} {id} doesn't exist"),
+				(Target::Entries(types), Some(t)) if !types.contains(&t) => {
+					format!("entry {id} is a {t}, not allowed here")
+				}
+				(Target::Assets(true), Some(k)) if k != "image" => {
+					format!("asset {id} is not an image")
+				}
+				_ => continue,
+			};
+			errors.push(field_error(&rel.path, &error));
 		}
 	}
 
@@ -486,7 +492,11 @@ pub fn reindex(
 			params![id, site, v.field, v.text, v.num],
 		)?;
 	}
-	for rel in relations(schema, comp, fields) {
+	let rels = relations(schema, comp, fields);
+	for rel in rels
+		.iter()
+		.filter(|r| matches!(r.target, Target::Entries(_)))
+	{
 		for (pos, target) in rel.ids.iter().enumerate() {
 			conn.execute(
 				"INSERT INTO entry_relations

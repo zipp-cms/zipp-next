@@ -16,15 +16,15 @@
 - [x] Studio: sections, site switcher, tree of a structure
 - [x] GraphQL generated from the schema: `entry(uri, site)`, `entries`, `entryCount`,
       `sites`; relations resolve with their fields in the same query
-- [ ] Assets: uploads, image field with focal point, named transforms in code,
-      generated on first request and cached
+- [x] Assets: uploads, images and assets fields, focal point, named transforms in code,
+      generated on first request and cached, url/width/height/srcset in GraphQL
 - [ ] A crelte project on zipp as the real test
 
 ## Next
 
 - [ ] Drafts and revisions: a row per saved version, publish a version
 - [ ] Live preview: preview tokens, frontend renders unsaved content
-- [ ] Assets: uploads, image field with focal point, transforms
+- [ ] WebP/AVIF output for transforms, alt text per site
 - [ ] Rich text field
 - [ ] Field kinds as plugins: a crate with the Rust side and a studio
       package with its Svelte field

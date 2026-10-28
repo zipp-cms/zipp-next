@@ -27,6 +27,20 @@ pub struct Schema {
 	#[serde(default)]
 	pub sections: Vec<Section>,
 	pub components: Vec<Component>,
+	/// Named image transforms, only these are public.
+	#[serde(default)]
+	pub transforms: Vec<Transform>,
+}
+
+/// An image size, generated on its first request and cached. Without a
+/// height the image keeps its ratio, `crop` fills both dimensions around
+/// the focal point. Images are never made bigger.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Transform {
+	pub handle: String,
+	pub width: Option<u32>,
+	pub height: Option<u32>,
+	pub crop: bool,
 }
 
 /// A site has its own version of every entry: title, slug, uri, published
@@ -106,6 +120,11 @@ pub enum FieldKind {
 		types: Vec<String>,
 		max: Option<u32>,
 	},
+	/// Ids of assets, with `images` only images.
+	Assets {
+		images: bool,
+		max: Option<u32>,
+	},
 	/// A list of blocks of the given types.
 	Blocks {
 		types: Vec<String>,
@@ -131,6 +150,15 @@ impl Schema {
 	pub fn section(mut self, section: Section) -> Self {
 		self.sections.push(section);
 		self
+	}
+
+	pub fn transform(mut self, transform: Transform) -> Self {
+		self.transforms.push(transform);
+		self
+	}
+
+	pub fn get_transform(&self, handle: &str) -> Option<&Transform> {
+		self.transforms.iter().find(|t| t.handle == handle)
 	}
 
 	pub fn entry(
@@ -241,6 +269,22 @@ impl Schema {
 				}
 				self.check_field(comp, field)
 					.map_err(|e| format!("{at}: {e}"))?;
+			}
+		}
+
+		for (i, t) in self.transforms.iter().enumerate() {
+			check_handle(&t.handle)?;
+			if self.transforms[..i].iter().any(|x| x.handle == t.handle) {
+				return Err(format!("transform {} exists twice", t.handle));
+			}
+			if t.width.is_none() && t.height.is_none() {
+				return Err(format!("transform {} needs a size", t.handle));
+			}
+			if t.crop && (t.width.is_none() || t.height.is_none()) {
+				return Err(format!(
+					"transform {} crops, it needs both sizes",
+					t.handle
+				));
 			}
 		}
 
@@ -402,6 +446,28 @@ impl Field {
 		)
 	}
 
+	/// Any files.
+	pub fn assets(handle: &str) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Assets {
+				images: false,
+				max: None,
+			},
+		)
+	}
+
+	/// Only images.
+	pub fn images(handle: &str) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Assets {
+				images: true,
+				max: None,
+			},
+		)
+	}
+
 	pub fn blocks<'a>(
 		handle: &str,
 		types: impl IntoIterator<Item = &'a str>,
@@ -470,9 +536,37 @@ impl Field {
 		match &mut self.kind {
 			FieldKind::Text { max, .. }
 			| FieldKind::Relation { max, .. }
+			| FieldKind::Assets { max, .. }
 			| FieldKind::Blocks { max, .. } => *max = Some(n),
 			_ => panic!("{}: max is not for numbers, use range", self.handle),
 		}
+		self
+	}
+}
+
+impl Transform {
+	pub fn new(handle: &str) -> Self {
+		Self {
+			handle: handle.into(),
+			width: None,
+			height: None,
+			crop: false,
+		}
+	}
+
+	pub fn width(mut self, width: u32) -> Self {
+		self.width = Some(width);
+		self
+	}
+
+	pub fn height(mut self, height: u32) -> Self {
+		self.height = Some(height);
+		self
+	}
+
+	/// Fill width and height, cut around the focal point.
+	pub fn crop(mut self) -> Self {
+		self.crop = true;
 		self
 	}
 }
@@ -583,8 +677,11 @@ pub(crate) mod tests {
 					Field::text("city").indexed(),
 					Field::number("price").indexed(),
 					Field::relation("page", ["page"]).max(1),
+					Field::images("image").max(1),
 				],
 			)
+			.transform(Transform::new("small").width(100))
+			.transform(Transform::new("square").width(50).height(50).crop())
 			.block("text", "Text", [Field::text("content").required()])
 			.block(
 				"button",

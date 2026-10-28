@@ -3,3 +3,4 @@ node_modules
 dist
 *.db
 *.db-*
+/example/cms/files

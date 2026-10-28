@@ -1,14 +1,33 @@
 <script lang="ts">
 	import { gql, sites, uri, url, type Entry } from './api';
 	import Blocks from './Blocks.svelte';
+	import Img from './Img.svelte';
 
 	// everything the page shows in one request, linked entries included
 	const PAGE = `
+		fragment Hero on Asset {
+			url(transform: "hero")
+			srcset(transforms: ["small", "hero"])
+			width(transform: "hero")
+			height(transform: "hero")
+			alt
+		}
+
 		fragment Body on Block {
 			id
 			typeHandle
 			... on heading_Block { text }
 			... on text_Block { content }
+			... on image_Block {
+				caption
+				image {
+					url(transform: "medium")
+					srcset(transforms: ["small", "medium"])
+					width(transform: "medium")
+					height(transform: "medium")
+					alt
+				}
+			}
 			... on button_Block { label link { title uri } }
 			... on events_Block { city }
 		}
@@ -18,10 +37,11 @@
 				id
 				typeHandle
 				title
-				... on home_Entry { intro body { ...Body } }
-				... on page_Entry { intro body { ...Body } }
+				... on home_Entry { hero { ...Hero } intro body { ...Body } }
+				... on page_Entry { hero { ...Hero } intro body { ...Body } }
 				... on event_Entry {
 					date city price description
+					image { ...Hero }
 					page { title uri }
 				}
 			}
@@ -57,6 +77,9 @@
 	{#if missing}
 		<h1>Not found</h1>
 	{:else if entry?.typeHandle === 'event'}
+		{#each entry.image ?? [] as img (img.url)}
+			<Img {img} sizes="40rem" />
+		{/each}
 		<h1>{entry.title}</h1>
 		<p>
 			{entry.date} in {entry.city}{entry.price
@@ -68,6 +91,9 @@
 			<a href={url(p)}>{p.title}</a>
 		{/each}
 	{:else if entry}
+		{#each entry.hero ?? [] as img (img.url)}
+			<Img {img} sizes="40rem" />
+		{/each}
 		<h1>{entry.title}</h1>
 		{#if entry.intro}<p class="intro">{entry.intro}</p>{/if}
 		<Blocks blocks={entry.body ?? []} />

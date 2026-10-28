@@ -58,6 +58,23 @@ const MIGRATIONS: &[&str] = &[r#"
 	CREATE INDEX entry_relations_entry ON entry_relations(entry_id);
 	CREATE INDEX entry_relations_target ON entry_relations(target_id);
 
+	-- uploaded files, the file is files/<id>/<filename>
+	CREATE TABLE assets (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		filename TEXT NOT NULL,
+		-- image or file
+		kind TEXT NOT NULL,
+		mime TEXT NOT NULL,
+		size INTEGER NOT NULL,
+		width INTEGER,
+		height INTEGER,
+		alt TEXT NOT NULL DEFAULT '',
+		-- 0 to 1 from the left and the top
+		focal_x REAL NOT NULL DEFAULT 0.5,
+		focal_y REAL NOT NULL DEFAULT 0.5,
+		created_at INTEGER NOT NULL
+	);
+
 	CREATE TABLE users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		email TEXT NOT NULL UNIQUE,

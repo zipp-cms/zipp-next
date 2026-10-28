@@ -4,6 +4,7 @@
 	import Login from './pages/Login.svelte';
 	import List from './pages/List.svelte';
 	import Edit from './pages/Edit.svelte';
+	import Assets from './pages/Assets.svelte';
 
 	let schema = $state<Schema | null>(null);
 	let error = $state('');
@@ -52,6 +53,9 @@
 					{s.name}
 				</a>
 			{/each}
+			<a href="#/assets" class:active={route.current.page === 'assets'}>
+				Assets
+			</a>
 			<div class="bottom">
 				{#if schema.sites.length > 1}
 					<select
@@ -69,7 +73,9 @@
 		</nav>
 		<main>
 			{#key site.current}
-				{#if route.current.page === 'list' && current}
+				{#if route.current.page === 'assets'}
+					<Assets />
+				{:else if route.current.page === 'list' && current}
 					{#key current}
 						<List {schema} section={current} />
 					{/key}

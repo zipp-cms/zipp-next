@@ -31,7 +31,7 @@ async fn file(uri: Uri) -> Response {
 		_ => "application/octet-stream",
 	};
 	// file names of assets contain their hash
-	let cache = if path.starts_with("assets/") {
+	let cache = if path.starts_with("_studio/") {
 		"public, max-age=31536000, immutable"
 	} else {
 		"no-cache"

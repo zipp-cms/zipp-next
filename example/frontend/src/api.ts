@@ -34,9 +34,24 @@ export function url(e: { uri: string | null }, siteHandle = site): string {
 
 export type Link = { title: string; uri: string | null };
 
+/** An image with the url of one transform and a srcset of several. */
+export type Image = {
+	url: string;
+	srcset: string | null;
+	width: number | null;
+	height: number | null;
+	alt: string;
+};
+
 export type Block =
 	| { id: string; typeHandle: 'heading'; text: string }
 	| { id: string; typeHandle: 'text'; content: string }
+	| {
+			id: string;
+			typeHandle: 'image';
+			image: Image[];
+			caption: string | null;
+	  }
 	| { id: string; typeHandle: 'button'; label: string; link: Link[] }
 	| { id: string; typeHandle: 'events'; city: string | null };
 
@@ -45,6 +60,7 @@ export type Entry = {
 	typeHandle: 'home' | 'page' | 'event';
 	title: string;
 	// home and page
+	hero?: Image[];
 	intro?: string | null;
 	body?: Block[];
 	// event
@@ -52,5 +68,6 @@ export type Entry = {
 	city?: string;
 	price?: number | null;
 	description?: string | null;
+	image?: Image[];
 	page?: Link[];
 };

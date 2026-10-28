@@ -9,12 +9,16 @@
 		query ($site: String, $where: [Where!]) {
 			entries(type: "event", site: $site, where: $where, order: "date") {
 				title uri
-				... on event_Entry { date city }
+				... on event_Entry { date city image { url(transform: "thumb") alt } }
 			}
 		}
 	`;
 
-	type Event = Link & { date: string; city: string };
+	type Event = Link & {
+		date: string;
+		city: string;
+		image: { url: string; alt: string }[];
+	};
 	let events = $state<Event[]>([]);
 
 	$effect(() => {
@@ -30,6 +34,10 @@
 <ul>
 	{#each events as e (e.uri)}
 		<li>
+			{#each e.image as img (img.url)}<img
+					src={img.url}
+					alt={img.alt}
+				/>{/each}
 			<a href={url(e)}>{e.title}</a>
 			{e.date}, {e.city}
 		</li>
@@ -37,3 +45,23 @@
 		<li>No upcoming events</li>
 	{/each}
 </ul>
+
+<style>
+	ul {
+		padding: 0;
+		list-style: none;
+	}
+
+	li {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 0.5rem;
+	}
+
+	img {
+		width: 80px;
+		height: 60px;
+		border-radius: 0.2rem;
+	}
+</style>

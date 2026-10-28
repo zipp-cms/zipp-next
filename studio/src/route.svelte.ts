@@ -1,9 +1,10 @@
 /**
- * Hash routes: `#/login`, `#/list/<section>`, `#/new/<section>`,
+ * Hash routes: `#/login`, `#/assets`, `#/list/<section>`, `#/new/<section>`,
  * `#/entry/<id>`.
  */
 export type Route =
 	| { page: 'login' }
+	| { page: 'assets' }
 	| { page: 'list'; section: string | null }
 	| { page: 'new'; section: string }
 	| { page: 'entry'; id: number };
@@ -13,6 +14,8 @@ function parse(hash: string): Route {
 	switch (page) {
 		case 'login':
 			return { page: 'login' };
+		case 'assets':
+			return { page: 'assets' };
 		case 'new':
 			return { page: 'new', section: arg };
 		case 'entry':

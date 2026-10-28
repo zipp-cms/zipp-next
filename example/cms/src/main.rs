@@ -1,10 +1,10 @@
 //! The cms of the example site: its content model and nothing else.
 
-use zipp::{Field, Schema, Section};
+use zipp::{Field, Schema, Section, Transform};
 
 fn schema() -> Schema {
 	let body = || {
-		Field::blocks("body", ["heading", "text", "button", "events"])
+		Field::blocks("body", ["heading", "text", "image", "button", "events"])
 			.translatable()
 	};
 
@@ -16,10 +16,15 @@ fn schema() -> Schema {
 			Section::structure("pages", ["page"]).uri("{parent.uri}/{slug}"),
 		)
 		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
+		.transform(Transform::new("hero").width(1600).height(700).crop())
+		.transform(Transform::new("small").width(600))
+		.transform(Transform::new("medium").width(1200))
+		.transform(Transform::new("thumb").width(160).height(120).crop())
 		.entry(
 			"home",
 			"Home",
 			[
+				Field::images("hero").max(1),
 				Field::text("intro").multiline().max(300).translatable(),
 				body(),
 			],
@@ -28,6 +33,7 @@ fn schema() -> Schema {
 			"page",
 			"Page",
 			[
+				Field::images("hero").max(1),
 				Field::text("intro").multiline().max(300).translatable(),
 				body(),
 			],
@@ -42,6 +48,7 @@ fn schema() -> Schema {
 					.label("Date (YYYY-MM-DD)"),
 				Field::text("city").required().indexed(),
 				Field::number("price").range(0.0, 1000.0).indexed(),
+				Field::images("image").max(1),
 				Field::text("description").multiline().translatable(),
 				Field::relation("page", ["page"]).max(1).label("More info"),
 			],
@@ -55,6 +62,14 @@ fn schema() -> Schema {
 			"text",
 			"Text",
 			[Field::text("content").required().multiline()],
+		)
+		.block(
+			"image",
+			"Image",
+			[
+				Field::images("image").required().max(1),
+				Field::text("caption").max(200),
+			],
 		)
 		.block(
 			"button",

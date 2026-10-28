@@ -74,7 +74,9 @@ fn fields(comp: &Component) -> String {
 			FieldKind::Text { .. } => "string".into(),
 			FieldKind::Number { .. } => "number".into(),
 			FieldKind::Boolean => "boolean".into(),
-			FieldKind::Relation { .. } => "number[]".into(),
+			FieldKind::Relation { .. } | FieldKind::Assets { .. } => {
+				"number[]".into()
+			}
 			FieldKind::Blocks { types, .. } => {
 				let blocks: Vec<_> = types
 					.iter()
