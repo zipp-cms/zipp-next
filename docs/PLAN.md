@@ -33,7 +33,7 @@
 - [ ] Live preview: preview tokens, frontend renders unsaved content
 - [ ] WebP/AVIF output for transforms, alt text per site
 - [x] Rich text field (TipTap): headings, lists, links, button rows, embedded blocks, html + chunks
-- [ ] Field kinds as plugins: a crate with the Rust side and a studio
+- [x] Field kinds as plugins: a crate with the Rust side and a studio
       package with its Svelte field
 - [ ] Data migrations in code, for changes the ops can't express
 - [ ] crelte adapter, so a crelte project can use zipp instead of Craft
@@ -51,7 +51,7 @@
 - [x] Link field, rich text (TipTap) with button rows and embedded blocks
 - [x] Translations defined in code
 - [x] Cms builder: routes and on_change hooks of the site
-- [ ] Group field (zandi's ContentBlock), `localized` for language switches
+- [x] Group field (zandi's ContentBlock); `localized` is above
 - [ ] Port textrem or zandi to zipp
 
 ## Ideas of the operator (2026-10-28)
