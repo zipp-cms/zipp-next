@@ -36,7 +36,7 @@ fn entries(
 	q.with_uri = with_uri;
 	q.limit = limit;
 	q.offset = offset;
-	Ok(list(conn, &q)?)
+	list(conn, &q)
 }
 
 /// The global settings of a site as published.
