@@ -19,6 +19,7 @@ use crate::content::{
 	FieldError, Target, index_values, relations, share, validate,
 };
 use crate::db::now;
+use crate::drafts::record_revision;
 use crate::error::{Error, Result};
 use crate::query::Query;
 use crate::schema::{Schema, Section, SectionKind};
@@ -138,6 +139,36 @@ pub fn save(
 	id: Option<i64>,
 	input: EntryInput,
 ) -> Result<Entry> {
+	let c = check(conn, schema, id, input)?;
+	let tx = conn.unchecked_transaction()?;
+	let id = write(&tx, schema, &c)?;
+	tx.commit()?;
+	get_entry(conn, id, &c.site)
+}
+
+/// A save that passed all checks, ready to be written. Publishing a draft
+/// checks all its sites first and then writes them together.
+pub struct Checked {
+	id: Option<i64>,
+	site: String,
+	section: Section,
+	ty: String,
+	published: bool,
+	parent_id: Option<i64>,
+	title: String,
+	slug: String,
+	/// per site, only the saved site for an update
+	uris: HashMap<String, Option<String>>,
+	fields: Value,
+}
+
+/// Validates a save without writing anything.
+pub fn check(
+	conn: &Connection,
+	schema: &Schema,
+	id: Option<i64>,
+	input: EntryInput,
+) -> Result<Checked> {
 	let site = input
 		.site
 		.clone()
@@ -180,12 +211,12 @@ pub fn save(
 	};
 
 	let mut errors = vec![];
-	let title = input.title.trim();
+	let title = input.title.trim().to_string();
 	if title.is_empty() {
 		errors.push(field_error("title", "is required"));
 	}
 	let slug = match input.slug.trim() {
-		"" => slugify(title),
+		"" => slugify(&title),
 		s => slugify(s),
 	};
 
@@ -227,71 +258,91 @@ pub fn save(
 		return Err(Error::Invalid(errors));
 	}
 
-	let tx = conn.unchecked_transaction()?;
+	Ok(Checked {
+		id,
+		site,
+		section: section.clone(),
+		ty: input.ty,
+		published: input.published,
+		parent_id,
+		title: title.to_string(),
+		slug,
+		uris,
+		fields,
+	})
+}
+
+/// Writes a checked save, returns the id of the entry.
+pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
+	let comp = schema.entry_type(&c.ty).unwrap();
+	let section = &c.section;
+	let (site, title, slug, uris, fields) =
+		(&c.site, &c.title, &c.slug, &c.uris, &c.fields);
+
 	let now = now();
-	let id = match id {
+	let id = match c.id {
 		Some(id) => {
-			tx.execute(
+			conn.execute(
 				"UPDATE entry_sites SET title = ?1, slug = ?2, uri = ?3,
 				published = ?4, fields = ?5, updated_at = ?6
 				WHERE entry_id = ?7 AND site = ?8",
 				params![
 					title,
 					slug,
-					uris[&site],
-					input.published,
+					uris[site],
+					c.published,
 					fields.to_string(),
 					now,
 					id,
 					site
 				],
 			)?;
-			reindex(&tx, schema, id, &site, &input.ty, &fields)?;
+			reindex(conn, schema, id, site, &c.ty, fields)?;
 
-			for other in schema.sites.iter().filter(|s| s.handle != site) {
-				let theirs: String = tx.query_row(
+			for other in schema.sites.iter().filter(|s| &s.handle != site) {
+				let theirs: String = conn.query_row(
 					"SELECT fields FROM entry_sites
 					WHERE entry_id = ?1 AND site = ?2",
 					params![id, other.handle],
 					|r| r.get(0),
 				)?;
 				let theirs = serde_json::from_str(&theirs).unwrap_or_default();
-				let theirs = share(comp, &fields, &theirs);
-				tx.execute(
+				let theirs = share(comp, fields, &theirs);
+				conn.execute(
 					"UPDATE entry_sites SET fields = ?1
 					WHERE entry_id = ?2 AND site = ?3",
 					params![theirs.to_string(), id, other.handle],
 				)?;
-				reindex(&tx, schema, id, &other.handle, &input.ty, &theirs)?;
+				reindex(conn, schema, id, &other.handle, &c.ty, &theirs)?;
 			}
 
-			tx.execute(
+			conn.execute(
 				"UPDATE entries SET updated_at = ?1 WHERE id = ?2",
 				params![now, id],
 			)?;
 			// children follow the uri of their parent
 			if section.kind == SectionKind::Structure {
-				refresh_uris(&tx, schema, section)?;
+				refresh_uris(conn, schema, section)?;
 			}
 			id
 		}
 		None => {
-			let position: i64 = tx.query_row(
+			let position: i64 = conn.query_row(
 				"SELECT IFNULL(MAX(position) + 1, 0) FROM entries
 				WHERE section = ?1 AND parent_id IS ?2",
-				params![input.section, parent_id],
+				params![section.handle, c.parent_id],
 				|r| r.get(0),
 			)?;
-			tx.execute(
+			conn.execute(
 				"INSERT INTO entries
 				(section, type, parent_id, position, created_at, updated_at)
 				VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
-				params![input.section, input.ty, parent_id, position, now],
+				params![section.handle, c.ty, c.parent_id, position, now],
 			)?;
-			let id = tx.last_insert_rowid();
+			let id = conn.last_insert_rowid();
 
 			for s in &schema.sites {
-				tx.execute(
+				conn.execute(
 					"INSERT INTO entry_sites (entry_id, site, title, slug, uri,
 					published, fields, updated_at)
 					VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
@@ -301,19 +352,17 @@ pub fn save(
 						title,
 						slug,
 						uris[&s.handle],
-						input.published,
+						c.published,
 						fields.to_string(),
 						now
 					],
 				)?;
-				reindex(&tx, schema, id, &s.handle, &input.ty, &fields)?;
+				reindex(conn, schema, id, &s.handle, &c.ty, fields)?;
 			}
 			id
 		}
 	};
-	tx.commit()?;
-
-	get_entry(conn, id, &site)
+	Ok(id)
 }
 
 fn field_error(path: &str, message: &str) -> FieldError {
@@ -734,21 +783,26 @@ async fn get_route(
 
 async fn create_route(
 	State(state): State<AppState>,
-	_auth: Authed,
+	auth: Authed,
 	Json(input): Json<EntryInput>,
 ) -> Result<Json<Entry>> {
 	let conn = state.db.conn();
-	Ok(Json(save(&conn, &state.schema, None, input)?))
+	let entry = save(&conn, &state.schema, None, input)?;
+	record_revision(&conn, entry.id, Some(auth.user_id))?;
+	Ok(Json(entry))
 }
 
+/// Saves the live entry directly, without a draft (the api of scripts).
 async fn update_route(
 	State(state): State<AppState>,
-	_auth: Authed,
+	auth: Authed,
 	Path(id): Path<i64>,
 	Json(input): Json<EntryInput>,
 ) -> Result<Json<Entry>> {
 	let conn = state.db.conn();
-	Ok(Json(save(&conn, &state.schema, Some(id), input)?))
+	let entry = save(&conn, &state.schema, Some(id), input)?;
+	record_revision(&conn, id, Some(auth.user_id))?;
+	Ok(Json(entry))
 }
 
 #[derive(Debug, Deserialize)]

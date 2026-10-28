@@ -76,6 +76,12 @@ fn main() {
   applies new migrations to all content and refuses to start when the
   code changed without one. Labels, names, `required` and the field order
   change freely.
+- **Drafts, revisions and previews.** The studio saves every change into
+  a draft of the entry (one per entry, all sites), the website keeps the
+  live content until it is published. Publishing checks every site and
+  writes them in one transaction and keeps a revision; an old revision
+  can be restored into the draft. A preview token shows the draft on the
+  website: crelte passes `?token=` on to GraphQL.
 - **GraphQL for the frontend.** `/api/graphql` is generated from the
   schema: every entry type is `<handle>_Entry`, every block
   `<handle>_Block`, like Craft. Relations resolve to entries with their

@@ -7,6 +7,7 @@ use rusqlite::{Connection, params};
 use serde_json::Value;
 
 use crate::db::now;
+use crate::drafts::Doc;
 use crate::entries::{refresh_uris, reindex};
 use crate::error::{Error, Result};
 use crate::migrate::{Migration, Op};
@@ -71,6 +72,12 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 				updated_at FROM entry_sites WHERE site = ?2",
 				params![site.handle, primary.handle],
 			)?;
+			// a draft gets the new site too, revisions stay as they were
+			change_docs(conn, &["drafts"], |doc, _| {
+				if let Some(sd) = doc.get(&primary.handle).cloned() {
+					doc.insert(site.handle.clone(), sd);
+				}
+			})?;
 		}
 		Op::RemoveSite { site } => {
 			for table in ["entry_sites", "entry_values", "entry_relations"] {
@@ -79,6 +86,9 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 					[site],
 				)?;
 			}
+			change_docs(conn, &["drafts", "revisions"], |doc, _| {
+				doc.remove(site);
+			})?;
 		}
 		Op::AddSection { .. } => {}
 		Op::RemoveSection { section } => {
@@ -104,6 +114,11 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 		}
 		_ => {
 			change_content(conn, schema, op)?;
+			change_docs(conn, &["drafts", "revisions"], |doc, ty| {
+				for sd in doc.values_mut() {
+					op.apply_entry(schema, &mut ty.to_string(), &mut sd.fields);
+				}
+			})?;
 			if let Op::ChangeField { component, field } = op {
 				let was = schema
 					.get(component)
@@ -152,6 +167,36 @@ fn change_content(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 		}
 	}
 
+	Ok(())
+}
+
+/// Changes the content of drafts and revisions, `f` gets the type of the
+/// entry.
+fn change_docs(
+	conn: &Connection,
+	tables: &[&str],
+	mut f: impl FnMut(&mut Doc, &str),
+) -> Result<()> {
+	for table in tables {
+		let key = if *table == "drafts" { "entry_id" } else { "id" };
+		let mut stmt = conn.prepare(&format!(
+			"SELECT d.{key}, d.doc, e.type FROM {table} d
+			JOIN entries e ON e.id = d.entry_id"
+		))?;
+		let rows = stmt
+			.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+			.collect::<rusqlite::Result<Vec<(i64, String, String)>>>()?;
+		drop(stmt);
+
+		for (id, doc, ty) in rows {
+			let mut doc: Doc = serde_json::from_str(&doc).unwrap_or_default();
+			f(&mut doc, &ty);
+			conn.execute(
+				&format!("UPDATE {table} SET doc = ?1 WHERE {key} = ?2"),
+				params![serde_json::to_string(&doc).unwrap(), id],
+			)?;
+		}
+	}
 	Ok(())
 }
 
@@ -300,6 +345,14 @@ mod tests {
 		let e = save(&conn, &s, None, input("events", "event", "E", fields))
 			.unwrap();
 
+		let sd = crate::drafts::SiteDoc {
+			title: "E".into(),
+			slug: "e".into(),
+			published: true,
+			fields: json!({ "city": "Bern" }),
+		};
+		crate::drafts::put_draft(&conn, &s, e.id, "de", sd, None).unwrap();
+
 		// rename city to town
 		let mut s2 = s.clone();
 		s2.get_mut("event").unwrap().fields[0].handle = "town".into();
@@ -310,6 +363,8 @@ mod tests {
 
 		let entry = get_entry(&conn, e.id, "en").unwrap();
 		assert_eq!(entry.fields["town"], "Bern");
+		let draft = crate::drafts::get_draft(&conn, e.id).unwrap().unwrap();
+		assert_eq!(draft.doc["de"].fields["town"], "Bern");
 		let params = vec![
 			("type".to_string(), "event".to_string()),
 			("f.town".to_string(), "Bern".to_string()),

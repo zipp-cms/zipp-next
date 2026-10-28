@@ -248,3 +248,51 @@ export function entryUrl(
 	if (uri === null || !base) return null;
 	return `${base.replace(/\/$/, '')}/${uri}`;
 }
+
+export type SiteDoc = {
+	title: string;
+	slug: string;
+	published: boolean;
+	fields: Values;
+};
+
+export type Draft = {
+	doc: Record<string, SiteDoc>;
+	user: string | null;
+	updatedAt: number;
+};
+
+export type Revision = { id: number; user: string | null; createdAt: number };
+
+export async function getDraft(id: number): Promise<Draft | null> {
+	return (await request('GET', `/entries/${id}/draft`)).draft;
+}
+
+export function putDraft(
+	id: number,
+	site: string,
+	content: SiteDoc,
+): Promise<Draft> {
+	return request('PUT', `/entries/${id}/draft`, { site, ...content });
+}
+
+export function discardDraft(id: number): Promise<void> {
+	return request('DELETE', `/entries/${id}/draft`);
+}
+
+export function publishDraft(id: number): Promise<void> {
+	return request('POST', `/entries/${id}/publish`);
+}
+
+export function getRevisions(id: number): Promise<Revision[]> {
+	return request('GET', `/entries/${id}/revisions`);
+}
+
+export function restoreRevision(id: number, rev: number): Promise<Draft> {
+	return request('POST', `/entries/${id}/revisions/${rev}/restore`);
+}
+
+/** A link that shows the draft on the website for a day. */
+export async function previewToken(id: number): Promise<string> {
+	return (await request('POST', `/entries/${id}/preview`)).token;
+}

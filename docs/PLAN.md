@@ -24,11 +24,12 @@
 ## Next
 
 - [ ] `localized` on entries (the same entry in the other sites) for language switches
-- [ ] Preview: crelte's preview tokens and drafts
 - [x] Globals as singles without a url, `globalSet(handle:)` in GraphQL, navigation groups
       in the schema (`.nav("Settings", [...])`), preview button, status per site in lists
 
-- [ ] Drafts and revisions: a row per saved version, publish a version
+- [x] Drafts (one per entry, all sites, saved while typing), publish in one transaction,
+      revisions with restore, preview tokens that crelte passes to GraphQL
+- [ ] Releases: several drafts published together (Craft 6), on top of the drafts
 - [ ] Live preview: preview tokens, frontend renders unsaved content
 - [ ] WebP/AVIF output for transforms, alt text per site
 - [ ] Rich text field

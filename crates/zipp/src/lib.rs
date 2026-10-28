@@ -7,6 +7,7 @@ pub mod assets;
 pub mod auth;
 pub mod content;
 pub mod db;
+pub mod drafts;
 pub mod entries;
 pub mod error;
 pub mod graphql;
@@ -204,6 +205,7 @@ async fn serve(
 	let api = Router::new()
 		.nest("/auth", auth::routes())
 		.merge(entries::routes())
+		.merge(drafts::routes())
 		.merge(assets::api_routes())
 		.merge(graphql::routes());
 	let app = Router::new()

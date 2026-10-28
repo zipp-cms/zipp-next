@@ -58,6 +58,31 @@ const MIGRATIONS: &[&str] = &[r#"
 	CREATE INDEX entry_relations_entry ON entry_relations(entry_id);
 	CREATE INDEX entry_relations_target ON entry_relations(target_id);
 
+	-- unpublished changes of an entry, all sites as JSON, one per entry
+	CREATE TABLE drafts (
+		entry_id INTEGER PRIMARY KEY REFERENCES entries(id) ON DELETE CASCADE,
+		doc TEXT NOT NULL,
+		user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+		updated_at INTEGER NOT NULL
+	);
+
+	-- the published state after each save, to look back and restore
+	CREATE TABLE revisions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+		doc TEXT NOT NULL,
+		user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+		created_at INTEGER NOT NULL
+	);
+	CREATE INDEX revisions_entry ON revisions(entry_id);
+
+	-- short lived tokens that show the draft of an entry on the website
+	CREATE TABLE preview_tokens (
+		token TEXT PRIMARY KEY,
+		entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+		expires_at INTEGER NOT NULL
+	);
+
 	-- uploaded files, the file is files/<id>/<filename>
 	CREATE TABLE assets (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,

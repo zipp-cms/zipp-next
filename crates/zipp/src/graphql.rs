@@ -34,16 +34,18 @@ use async_graphql::http::GraphiQLSource;
 use async_graphql::{Error as GqlError, Value as GqlValue};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::Router;
-use axum::extract::State;
+use axum::extract::{Query as QueryParams, State};
 use axum::http::HeaderMap;
 use axum::response::Html;
 use axum::routing::get;
+use serde::Deserialize;
 use serde_json::Value;
 
 use crate::AppState;
 use crate::assets::{Asset, get_many};
 use crate::auth::session;
 use crate::db::Db;
+use crate::drafts::{Doc, preview};
 use crate::entries::{Entry, list};
 use crate::error::Result;
 use crate::query::Query;
@@ -79,6 +81,8 @@ pub type SiteUrls = std::collections::HashMap<String, String>;
 /// Who asks, set per request.
 struct Viewer {
 	published_only: bool,
+	/// the entry of a preview token and its draft
+	preview: Option<(i64, Doc)>,
 }
 
 /// A block as parent of its fields, it knows its site for relations.
@@ -738,6 +742,7 @@ fn query(
 	let viewer = ctx.data::<Viewer>()?;
 	let mut q = Query::parse(schema, params).map_err(GqlError::new)?;
 	q.published_only = viewer.published_only;
+	q.preview_id = viewer.preview.as_ref().map(|(id, _)| *id);
 	Ok(q)
 }
 
@@ -747,17 +752,44 @@ fn load(
 ) -> async_graphql::Result<Vec<Entry>> {
 	let q = query(ctx, params)?;
 	let db = ctx.data::<Db>()?;
-	let (entries, _) = list(&db.conn(), &q)?;
+	let (mut entries, _) = list(&db.conn(), &q)?;
+
+	// the entry of a preview shows its draft
+	if let Some((id, doc)) = &ctx.data::<Viewer>()?.preview {
+		for e in entries.iter_mut().filter(|e| e.id == *id) {
+			if let Some(sd) = doc.get(&e.site) {
+				e.title = sd.title.clone();
+				e.fields = sd.fields.clone();
+			}
+		}
+	}
 	Ok(entries)
+}
+
+#[derive(Debug, Deserialize)]
+struct TokenParam {
+	/// a preview token, crelte passes the one of the page on
+	token: Option<String>,
 }
 
 async fn graphql(
 	State(state): State<AppState>,
 	headers: HeaderMap,
+	QueryParams(p): QueryParams<TokenParam>,
 	req: GraphQLRequest,
 ) -> Result<GraphQLResponse> {
-	let published_only = session(&state.db.conn(), &headers)?.is_none();
-	let req = req.into_inner().data(Viewer { published_only });
+	let (published_only, preview) = {
+		let conn = state.db.conn();
+		let preview = match &p.token {
+			Some(t) => preview(&conn, t)?,
+			None => None,
+		};
+		(session(&conn, &headers)?.is_none(), preview)
+	};
+	let req = req.into_inner().data(Viewer {
+		published_only,
+		preview,
+	});
 	Ok(state.gql.execute(req).await.into())
 }
 
@@ -779,8 +811,10 @@ mod tests {
 	use crate::schema::tests::site;
 
 	async fn run(gql: &GqlSchema, query: &str, published_only: bool) -> Value {
-		let req =
-			async_graphql::Request::new(query).data(Viewer { published_only });
+		let req = async_graphql::Request::new(query).data(Viewer {
+			published_only,
+			preview: None,
+		});
 		let resp = gql.execute(req).await;
 		assert!(resp.errors.is_empty(), "{:?}", resp.errors);
 		resp.data.into_json().unwrap()
@@ -987,6 +1021,7 @@ mod tests {
 		))
 		.data(Viewer {
 			published_only: true,
+			preview: None,
 		});
 		let resp = gql.execute(req).await;
 		assert!(resp.errors.is_empty(), "{:?}", resp.errors);
@@ -996,6 +1031,40 @@ mod tests {
 			json!({ "id": 1, "siteId": 2, "url": "https://x.ch/en/",
 				"sectionHandle": "home", "typeHandle": "page", "title": "Home" })
 		);
+	}
+
+	#[tokio::test]
+	async fn preview_shows_the_draft() {
+		let db = Db::memory().unwrap();
+		let s = Arc::new(site());
+		let gql = build(s.clone(), db.clone(), String::new(), SiteUrls::new())
+			.unwrap();
+		let doc = {
+			let conn = db.conn();
+			let mut e =
+				input("pages", "page", "Live", json!({ "intro": "old" }));
+			e.published = false;
+			let e = save(&conn, &s, None, e).unwrap();
+			let sd = crate::drafts::SiteDoc {
+				title: "Draft".into(),
+				slug: "live".into(),
+				published: false,
+				fields: json!({ "intro": "new" }),
+			};
+			crate::drafts::put_draft(&conn, &s, e.id, "de", sd, None).unwrap();
+			let token = crate::drafts::create_token(&conn, e.id).unwrap();
+			crate::drafts::preview(&conn, &token).unwrap()
+		};
+
+		let req = async_graphql::Request::new(
+			r#"{ entry(uri: "live") { title ... on page_Entry { intro } } }"#,
+		)
+		.data(Viewer {
+			published_only: true,
+			preview: doc,
+		});
+		let data = gql.execute(req).await.data.into_json().unwrap();
+		assert_eq!(data["entry"], json!({ "title": "Draft", "intro": "new" }));
 	}
 
 	#[tokio::test]

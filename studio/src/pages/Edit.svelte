@@ -2,12 +2,21 @@
 	import {
 		ApiError,
 		deleteEntry,
-		getEntry,
+		discardDraft,
 		entryUrl,
+		getDraft,
+		getEntry,
+		getRevisions,
 		listEntries,
+		previewToken,
+		publishDraft,
+		putDraft,
+		restoreRevision,
 		saveEntry,
+		type Draft,
 		type Entry,
 		type Refs,
+		type Revision,
 		type Schema,
 		type Values,
 	} from '../api';
@@ -33,13 +42,16 @@
 	let fields = $state<Values>({});
 	let refs = $state<Refs>({});
 	let loaded = $state(untrack(() => id === null));
-	let saving = $state(false);
-	let saved = $state(false);
+	let busy = $state(false);
 	let error = $state('');
 	let errors = $state<Record<string, string>>({});
 	let tab = $state<'content' | 'options'>('content');
 	// possible parents of a new entry in a structure
 	let parents = $state<Entry[]>([]);
+	// unpublished changes, saved while typing
+	let draft = $state<Draft | null>(null);
+	let draftState = $state<'' | 'saving' | 'saved'>('');
+	let revisions = $state<Revision[]>([]);
 
 	const secDef = $derived(schema.sections.find(s => s.handle === sec));
 	const comp = $derived(schema.components.find(c => c.handle === ty));
@@ -49,6 +61,28 @@
 	$effect(() => {
 		shown.section = sec;
 	});
+
+	async function load() {
+		if (id === null) return;
+		const [{ entry, relations }, d] = await Promise.all([
+			getEntry(id, site.current),
+			getDraft(id),
+		]);
+		sec = entry.section;
+		ty = entry.type;
+		uri = entry.uri;
+		parentId = entry.parentId;
+		refs = relations;
+		draft = d;
+		const content = d?.doc[site.current] ?? entry;
+		title = content.title;
+		slug = content.slug;
+		published = content.published;
+		fields = content.fields;
+		lastSaved = snapshot();
+		loaded = true;
+		revisions = await getRevisions(id);
+	}
 
 	$effect(() => {
 		if (id === null) {
@@ -63,51 +97,111 @@
 			}
 			return;
 		}
-		getEntry(id, site.current)
-			.then(({ entry, relations }) => {
-				sec = entry.section;
-				ty = entry.type;
-				title = entry.title;
-				slug = entry.slug;
-				uri = entry.uri;
-				published = entry.published;
-				parentId = entry.parentId;
-				fields = entry.fields;
-				refs = relations;
-				loaded = true;
-			})
-			.catch(e => (error = e.message));
+		load().catch(e => (error = e.message));
 	});
 
-	async function save() {
-		saving = true;
+	function snapshot() {
+		return JSON.stringify([
+			title,
+			slug,
+			published,
+			$state.snapshot(fields),
+		]);
+	}
+
+	// every change goes into the draft, a moment after the last key
+	let lastSaved = '';
+	let timer: ReturnType<typeof setTimeout>;
+	$effect(() => {
+		const snap = snapshot();
+		if (!loaded || id === null || snap === lastSaved) return;
+		clearTimeout(timer);
+		draftState = 'saving';
+		timer = setTimeout(() => saveDraft(snap), 700);
+	});
+
+	async function saveDraft(snap: string) {
+		if (id === null) return;
+		const content = {
+			title,
+			slug,
+			published,
+			fields: $state.snapshot(fields),
+		};
+		try {
+			draft = await putDraft(id, site.current, content);
+			lastSaved = snap;
+			draftState = 'saved';
+		} catch (e: any) {
+			error = e.message;
+		}
+	}
+
+	async function run(f: () => Promise<unknown>) {
+		busy = true;
 		error = '';
 		errors = {};
 		try {
-			const entry = await saveEntry(id, {
-				section: sec,
-				type: ty,
-				site: site.current,
-				parentId,
-				title,
-				slug,
-				published,
-				fields: $state.snapshot(fields),
-			});
-			if (id === null) return go('#/entry/' + entry.id);
-			slug = entry.slug;
-			uri = entry.uri;
-			fields = entry.fields;
-			saved = true;
-			setTimeout(() => (saved = false), 1500);
+			await f();
 		} catch (e: any) {
 			error = e.message;
 			if (e instanceof ApiError) {
 				for (const f of e.fields) errors[f.path] = f.message;
 			}
 		} finally {
-			saving = false;
+			busy = false;
 		}
+	}
+
+	/** A new entry is created directly, a draft is published. */
+	function save() {
+		return run(async () => {
+			if (id === null) {
+				const entry = await saveEntry(null, {
+					section: sec,
+					type: ty,
+					site: site.current,
+					parentId,
+					title,
+					slug,
+					published,
+					fields: $state.snapshot(fields),
+				});
+				return go('#/entry/' + entry.id);
+			}
+			// the last keys first
+			clearTimeout(timer);
+			const snap = snapshot();
+			if (snap !== lastSaved) await saveDraft(snap);
+			if (!draft) return;
+			await publishDraft(id);
+			draftState = '';
+			await load();
+		});
+	}
+
+	function discard() {
+		if (id === null || !confirm('Throw away the unpublished changes?'))
+			return;
+		return run(async () => {
+			await discardDraft(id!);
+			draftState = '';
+			await load();
+		});
+	}
+
+	function restore(rev: Revision) {
+		return run(async () => {
+			await restoreRevision(id!, rev.id);
+			await load();
+			tab = 'content';
+		});
+	}
+
+	async function preview() {
+		if (id === null || !url) return;
+		const token = await previewToken(id);
+		window.open(`${url}?token=${token}`, '_blank');
 	}
 
 	async function remove() {
@@ -122,6 +216,10 @@
 			save();
 		}
 	}
+
+	function time(ms: number) {
+		return new Date(ms).toLocaleString();
+	}
 </script>
 
 <svelte:window {onkeydown} />
@@ -133,19 +231,36 @@
 		<h1>
 			{title || 'New entry'}
 			<span class="badge" class:draft={!published}>
-				{published ? 'Published' : 'Draft'}
+				{published ? 'Published' : 'Not published'}
 			</span>
+			{#if draft}
+				<span
+					class="badge changes"
+					title="Saved as draft, not live yet"
+				>
+					{draftState === 'saving'
+						? 'Saving…'
+						: 'Unpublished changes'}
+				</span>
+			{/if}
 		</h1>
 		{#if url}
-			<a
-				class="view"
-				href={url}
-				target="_blank"
-				title="View on the website"
-			>
-				<Icon name="view" />
-				View
-			</a>
+			{#if draft}
+				<button class="light" onclick={preview}>
+					<Icon name="view" />
+					Preview
+				</button>
+			{:else}
+				<a class="light" href={url} target="_blank">
+					<Icon name="view" />
+					View
+				</a>
+			{/if}
+		{/if}
+		{#if draft}
+			<button class="light" onclick={discard} disabled={busy}>
+				Discard
+			</button>
 		{/if}
 		{#if id !== null && !single}
 			<button class="dark" onclick={remove}>
@@ -153,9 +268,13 @@
 				Delete
 			</button>
 		{/if}
-		<button class="dark" onclick={save} disabled={saving}>
+		<button
+			class="dark"
+			onclick={save}
+			disabled={busy || (id !== null && !draft)}
+		>
 			<Icon name="save" />
-			{saved ? 'Saved' : 'Save'}
+			{id === null ? 'Create' : 'Publish'}
 		</button>
 	</div>
 
@@ -218,6 +337,32 @@
 				{:else}
 					<span>{comp.name}</span>
 				{/if}
+				{#if revisions.length}
+					<span>Revisions</span>
+					<ul class="revisions">
+						{#each revisions as rev, i (rev.id)}
+							<li>
+								<span>
+									{time(rev.createdAt)}
+									{#if rev.user}<span class="muted">
+											{rev.user}
+										</span>{/if}
+									{#if i === 0}<span class="muted">
+											live
+										</span>{/if}
+								</span>
+								{#if i > 0}
+									<button
+										class="link"
+										onclick={() => restore(rev)}
+									>
+										Restore
+									</button>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
 				{#if id === null && parents.length}
 					<span>Parent</span>
 					<select bind:value={parentId}>
@@ -233,7 +378,7 @@
 {/if}
 
 <style lang="scss">
-	.view {
+	.light {
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
@@ -244,6 +389,30 @@
 		border: 1px solid var(--dark);
 		border-radius: 2px;
 		background: white;
+	}
+
+	.changes {
+		background: #d98e04 !important;
+	}
+
+	.revisions {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+
+		li {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 6px 0;
+			border-bottom: 1px solid var(--line);
+		}
+	}
+
+	.muted {
+		margin-left: 8px;
+		color: var(--muted);
+		font-size: 14px;
 	}
 
 	h1 {

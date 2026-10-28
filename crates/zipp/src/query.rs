@@ -35,6 +35,8 @@ pub struct Query {
 	pub offset: i64,
 	/// set for requests without a session
 	pub published_only: bool,
+	/// shown even if not published, the entry of a preview token
+	pub preview_id: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -83,6 +85,7 @@ impl Query {
 			limit: 100,
 			offset: 0,
 			published_only: false,
+			preview_id: None,
 		};
 		let int = |k: &str, v: &str| {
 			v.parse::<i64>()
@@ -258,7 +261,8 @@ impl Query {
 			cond(sql.into(), vec![Value::Integer(id)]);
 		}
 		if self.published_only {
-			cond("s.published = 1".into(), vec![]);
+			let preview = Value::Integer(self.preview_id.unwrap_or(0));
+			cond("(s.published = 1 OR e.id = ?)".into(), vec![preview]);
 		}
 
 		for (i, f) in self.filters.iter().enumerate() {
