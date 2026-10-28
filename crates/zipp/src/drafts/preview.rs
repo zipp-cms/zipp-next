@@ -14,8 +14,7 @@ pub(super) fn insert_token(
 	conn: &Connection,
 	id: Option<i64>,
 ) -> Result<String> {
-	let n: u128 = rand::rng().random();
-	let token = format!("{n:032x}");
+	let token = crate::db::random_token();
 	conn.execute(
 		"INSERT INTO preview_tokens (token, entry_id, expires_at)
 		VALUES (?1, ?2, ?3)",
@@ -54,9 +53,6 @@ pub fn preview(conn: &Connection, token: &str) -> Result<Option<Preview>> {
 		Some(None) => return Ok(Some(Preview::All)),
 		Some(Some(id)) => id,
 	};
-	let doc = match get_draft(conn, id)? {
-		Some(d) => d.doc,
-		None => live_doc(conn, id)?,
-	};
+	let (doc, _) = draft_or_live(conn, id)?;
 	Ok(Some(Preview::Entry(id, doc)))
 }

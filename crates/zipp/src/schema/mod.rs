@@ -58,7 +58,7 @@ pub struct Schema {
 	/// Pages of markdown from the code, the studio shows them read only.
 	/// Not part of the content model, so not in migrations.
 	#[serde(skip)]
-	pub docs: Vec<Doc>,
+	pub docs: Vec<DocPage>,
 	/// Field types of other crates, see [`FieldType`].
 	#[serde(skip)]
 	pub field_types: FieldTypes,
@@ -66,7 +66,7 @@ pub struct Schema {
 
 /// A markdown file of the project shown in the studio, like a readme.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Doc {
+pub struct DocPage {
 	pub handle: String,
 	pub name: String,
 	pub markdown: String,
@@ -188,7 +188,7 @@ impl Schema {
 	/// `.doc("readme", "Readme", include_str!("../readme.md"))`. Put its
 	/// handle into a nav group like a section.
 	pub fn doc(mut self, handle: &str, name: &str, markdown: &str) -> Self {
-		self.docs.push(Doc {
+		self.docs.push(DocPage {
 			handle: handle.into(),
 			name: name.into(),
 			markdown: markdown.into(),

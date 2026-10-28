@@ -49,6 +49,15 @@ pub use axum;
 #[doc(hidden)]
 pub use rust_embed;
 
+/// The url of each site, by handle, like Craft's base urls.
+pub type SiteUrls = std::collections::HashMap<String, String>;
+
+/// The url of a page of a site, `None` if the site has no url.
+pub fn page_url(urls: &SiteUrls, site: &str, uri: &str) -> Option<String> {
+	let base = urls.get(site)?.trim_end_matches('/');
+	Some(format!("{base}/{uri}"))
+}
+
 /// The `migrations/` directory of the calling crate. Debug builds read it
 /// from disk, release builds contain it.
 #[macro_export]

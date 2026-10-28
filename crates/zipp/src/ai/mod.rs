@@ -16,7 +16,7 @@ use soe_llms::{Input, Llms, LlmsConfig, Model, Output, Request, Role, Tool};
 
 use crate::AppState;
 use crate::auth::Authed;
-use crate::drafts::{SiteDoc, get_draft, live_doc, put_draft};
+use crate::drafts::{SiteDoc, get_draft, put_draft};
 use crate::entries::{EntryInput, get_entry, list, save};
 use crate::error::{Error, Result};
 use crate::query::Query;

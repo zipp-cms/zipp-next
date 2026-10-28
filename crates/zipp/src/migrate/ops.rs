@@ -81,7 +81,7 @@ impl Op {
 		};
 
 		match self {
-			// sites and sections change rows, see entries::apply_migrations
+			// sites and sections change rows, see apply::apply_migrations
 			Self::AddComponent { .. }
 			| Self::AddField { .. }
 			| Self::AddSite { .. }

@@ -95,8 +95,7 @@ pub const BLOCK_FIELDS: &[&str] = &["id", "typeHandle"];
 /// Put before asset urls.
 struct PublicUrl(String);
 
-/// The url of each site, by handle, like Craft's base urls.
-pub type SiteUrls = std::collections::HashMap<String, String>;
+pub use crate::SiteUrls;
 
 /// Who asks, set per request.
 struct Viewer {

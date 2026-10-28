@@ -7,26 +7,26 @@ pub struct Revision {
 	pub user: Option<String>,
 	pub created_at: i64,
 	/// what changed since the revision before, empty for the first
-	pub changes: Vec<Change>,
+	pub changes: Vec<FieldChange>,
 }
 
 /// A field (or title, slug, published) that changed, and in which sites.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Change {
+pub struct FieldChange {
 	pub field: String,
 	pub sites: Vec<String>,
 }
 
 /// What differs between two versions of an entry, in the order of the
 /// fields of the newer one.
-pub fn diff_docs(old: &Doc, new: &Doc) -> Vec<Change> {
-	let mut changes: Vec<Change> = vec![];
+pub fn diff_docs(old: &Doc, new: &Doc) -> Vec<FieldChange> {
+	let mut changes: Vec<FieldChange> = vec![];
 	let mut add = |field: &str, site: &str| match changes
 		.iter_mut()
 		.find(|c| c.field == field)
 	{
 		Some(c) => c.sites.push(site.into()),
-		None => changes.push(Change {
+		None => changes.push(FieldChange {
 			field: field.into(),
 			sites: vec![site.into()],
 		}),

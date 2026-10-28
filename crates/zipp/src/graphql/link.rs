@@ -90,12 +90,9 @@ pub(super) fn entry_url(
 	site: &str,
 	uri: &str,
 ) -> async_graphql::Result<String> {
-	let base = ctx
-		.data::<SiteUrls>()?
-		.get(site)
-		.cloned()
-		.unwrap_or_default();
-	let url = format!("{}/{uri}", base.trim_end_matches('/'));
+	let urls = ctx.data::<SiteUrls>()?;
+	let url =
+		crate::page_url(urls, site, uri).unwrap_or_else(|| format!("/{uri}"));
 	let viewer = ctx.data::<Viewer>()?;
 	let Some(token) = &viewer.token else {
 		return Ok(url);

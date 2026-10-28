@@ -17,7 +17,6 @@ use std::collections::BTreeMap;
 use axum::extract::{Path, State};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use rand::Rng;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -40,7 +39,7 @@ pub use preview::Preview;
 pub use preview::create_site_token;
 pub use preview::create_token;
 pub use preview::preview;
-pub use revisions::Change;
+pub use revisions::FieldChange;
 pub use revisions::Revision;
 pub use revisions::diff_docs;
 pub use revisions::get_revision;
@@ -101,6 +100,15 @@ pub fn live_doc(conn: &Connection, id: i64) -> Result<Doc> {
 		return Err(Error::NotFound);
 	}
 	Ok(doc)
+}
+
+/// The content as the editors see it: the draft, the live content if
+/// there is none, and whether there is a draft.
+pub fn draft_or_live(conn: &Connection, id: i64) -> Result<(Doc, bool)> {
+	Ok(match get_draft(conn, id)? {
+		Some(d) => (d.doc, true),
+		None => (live_doc(conn, id)?, false),
+	})
 }
 
 pub fn get_draft(conn: &Connection, id: i64) -> Result<Option<Draft>> {

@@ -6,12 +6,11 @@ use axum::http::HeaderMap;
 use axum::http::request::Parts;
 use axum::routing::post;
 use axum::{Json, Router};
-use rand::Rng;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
 use crate::AppState;
-use crate::db::{Db, now};
+use crate::db::{Db, now, random_token};
 use crate::error::{Error, Result};
 
 const SESSION_DURATION_MS: i64 = 1000 * 60 * 60 * 24 * 30;
@@ -148,8 +147,7 @@ async fn login(
 		return Err(Error::LoginIncorrect);
 	}
 
-	let n: u128 = rand::rng().random();
-	let token = format!("{n:032x}");
+	let token = random_token();
 	let conn = db.conn();
 	conn.execute(
 		"DELETE FROM sessions WHERE created_at < ?1",

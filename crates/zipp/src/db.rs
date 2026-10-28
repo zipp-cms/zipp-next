@@ -166,6 +166,13 @@ impl Db {
 	}
 }
 
+/// 128 random bits as hex, for sessions and preview links.
+pub fn random_token() -> String {
+	use rand::Rng;
+	let n: u128 = rand::rng().random();
+	format!("{n:032x}")
+}
+
 pub fn now() -> i64 {
 	SystemTime::now()
 		.duration_since(UNIX_EPOCH)

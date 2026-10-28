@@ -195,17 +195,17 @@ async fn sitemap(State(state): State<AppState>) -> Result<impl IntoResponse> {
 		<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
 	);
 	for site in &state.schema.sites {
-		let Some(base) = state.site_urls.get(&site.handle) else {
-			continue;
-		};
 		let params = [("site", site.handle.as_str()), ("limit", "1000")]
 			.map(|(k, v)| (k.to_string(), v.to_string()));
 		let mut q = Query::parse(&state.schema, &params).unwrap();
 		q.published_only = true;
 		let (entries, _) = zipp::entries::list(&conn, &q)?;
 		for uri in entries.iter().filter_map(|e| e.uri.as_ref()) {
-			let base = base.trim_end_matches('/');
-			xml += &format!("<url><loc>{base}/{uri}</loc></url>\n");
+			if let Some(url) =
+				zipp::page_url(&state.site_urls, &site.handle, uri)
+			{
+				xml += &format!("<url><loc>{url}</loc></url>\n");
+			}
 		}
 	}
 	xml += "</urlset>\n";
