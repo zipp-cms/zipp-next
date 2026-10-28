@@ -34,6 +34,8 @@ pub struct Query {
 	pub parent: Option<i64>,
 	pub search: Option<String>,
 	pub related: Option<i64>,
+	/// by a relation field of the entries, `r.offerCategory=5`
+	pub relations: Vec<RelationFilter>,
 	pub filters: Vec<Filter>,
 	pub order: Order,
 	pub desc: bool,
@@ -49,6 +51,18 @@ pub struct Query {
 	pub with_uri: bool,
 	/// no entries at all, an offline site for a frontend
 	pub nothing: bool,
+}
+
+/// Entries whose relation field points to one of some entries, or to
+/// any (`:notempty:`) or none (`:empty:`), like Craft's arguments.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RelationFilter {
+	pub field: String,
+	/// empty with `any`: to anything
+	pub ids: Vec<i64>,
+	pub any: bool,
+	/// to nothing, `:empty:`
+	pub none: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -93,6 +107,7 @@ impl Query {
 			parent: None,
 			search: None,
 			related: None,
+			relations: vec![],
 			filters: vec![],
 			order: Order::Column("updated_at"),
 			desc: true,
@@ -145,6 +160,30 @@ impl Query {
 				"search" => q.search = Some(value.clone()),
 				"parent" => q.parent = Some(int(key, value)?),
 				"related" => q.related = Some(int(key, value)?),
+				_ if key.starts_with("r.") => {
+					let field = key[2..].to_string();
+					if !relation_field(schema, &field) {
+						return Err(format!("{field} is no relation field"));
+					}
+					let mut f = RelationFilter {
+						field,
+						ids: vec![],
+						any: false,
+						none: false,
+					};
+					match value.as_str() {
+						":notempty:" => f.any = true,
+						":empty:" => f.none = true,
+						v => {
+							f.ids = v
+								.split(',')
+								.filter(|s| !s.is_empty())
+								.map(|s| int(key, s))
+								.collect::<Result<_, _>>()?;
+						}
+					}
+					q.relations.push(f);
+				}
 				"limit" => q.limit = int(key, value)?.clamp(1, 1000),
 				"offset" => q.offset = int(key, value)?.max(0),
 				"ids" | "notIds" => {
@@ -350,6 +389,24 @@ impl Query {
 				WHERE target_id = ? AND site = s.site)";
 			cond(sql.into(), vec![Value::Integer(id)]);
 		}
+		for r in &self.relations {
+			let of = "SELECT entry_id FROM entry_relations \
+				WHERE path = ? AND site = s.site";
+			let field = Value::Text(r.field.clone());
+			if r.none {
+				cond(format!("e.id NOT IN ({of})"), vec![field]);
+			} else if r.any || r.ids.is_empty() {
+				cond(format!("e.id IN ({of})"), vec![field]);
+			} else {
+				let marks = vec!["?"; r.ids.len()].join(",");
+				let mut values = vec![field];
+				values.extend(r.ids.iter().map(|i| Value::Integer(*i)));
+				cond(
+					format!("e.id IN ({of} AND target_id IN ({marks}))"),
+					values,
+				);
+			}
+		}
 		if self.nothing {
 			cond("0".into(), vec![]);
 		}
@@ -484,4 +541,15 @@ mod tests {
 		assert_eq!(q.uri.as_deref(), Some("about"));
 		assert_eq!(q.order_by(), "ORDER BY t.sort ASC, e.id ASC");
 	}
+}
+
+/// Whether an entry type has a relation field of this handle, so
+/// `entries` can filter by it.
+pub fn relation_field(schema: &Schema, handle: &str) -> bool {
+	schema.components.iter().filter(|c| c.entry).any(|c| {
+		c.fields.iter().any(|f| {
+			f.handle == handle
+				&& matches!(f.kind, crate::schema::FieldKind::Relation { .. })
+		})
+	})
 }

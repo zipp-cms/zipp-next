@@ -29,7 +29,11 @@ is the studio's, it needs a session.
 Queries take `id` (one, several or
 `["not", 1, 2]`), `type` (one or several) and `orderBy` (`postDate
 DESC`, `title`, an indexed field); without an order a channel is newest
-first and a structure in its order, like Craft. Ids of entries and
+first and a structure in its order, like Craft. Every relation field
+of the entry types is an argument too: `entries(section: "offers",
+offerCategory: 5)` the entries pointing to 5, `offerCategory:
+":notempty:"` to anything, `":empty:"` to nothing. Image transforms may
+have Craft's names like `land_w800`. Ids of entries and
 assets are strings (`ID`) like Craft's. Entries have
 `postDate`, `dateCreated`, `dateUpdated`, `language` and `localized`
 (the entry in the other sites), images `focalPoint`, `title` and

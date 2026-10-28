@@ -252,7 +252,7 @@ pub fn build(
 	for obj in content_objects(&schema, &entry_fields) {
 		builder = builder.register(obj);
 	}
-	let mut query = query_object();
+	let mut query = query_object(&schema);
 	for field in root_fields {
 		query = query.field(field);
 	}

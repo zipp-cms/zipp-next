@@ -129,7 +129,18 @@ impl Schema {
 		}
 
 		for (i, t) in self.transforms.iter().enumerate() {
-			check_handle(&t.handle)?;
+			// only a name in urls, so also Craft's `land_w400`; `_thumb`
+			// and other zipp's own start with an underscore
+			let mut chars = t.handle.chars();
+			let ok = chars.next().is_some_and(|c| c.is_ascii_lowercase())
+				&& chars.all(|c| c.is_ascii_alphanumeric() || c == '_');
+			if !ok {
+				return Err(format!(
+					"transform {:?}: letters, digits and _, starting with a \
+					small letter",
+					t.handle
+				));
+			}
 			if self.transforms[..i].iter().any(|x| x.handle == t.handle) {
 				return Err(format!("transform {} exists twice", t.handle));
 			}

@@ -801,3 +801,41 @@ async fn craft_arguments_and_fields() {
 	assert!(resp.errors[0].message.contains("width 500 is not allowed"));
 	std::fs::remove_dir_all(dir).ok();
 }
+
+#[tokio::test]
+async fn filters_by_relation_fields_like_craft() {
+	let db = Db::memory().unwrap();
+	let s = Arc::new(site());
+	let gql =
+		build(s.clone(), db.clone(), String::new(), SiteUrls::new()).unwrap();
+	let about = {
+		let conn = db.conn();
+		let about =
+			save(&conn, &s, None, input("pages", "page", "About", json!({})))
+				.unwrap();
+		let with = json!({ "city": "Bern", "page": [about.id] });
+		save(&conn, &s, None, input("events", "event", "Jazz", with)).unwrap();
+		save(&conn, &s, None, input("events", "event", "Folk", json!({})))
+			.unwrap();
+		about
+	};
+	let titles = |q: String| {
+		let gql = gql.clone();
+		async move {
+			let data = run(&gql, &q, true).await;
+			data["entries"]
+				.as_array()
+				.unwrap()
+				.iter()
+				.map(|e| e["title"].as_str().unwrap().to_string())
+				.collect::<Vec<_>>()
+		}
+	};
+	let by = |arg: &str| {
+		format!(r#"{{ entries(section: "events", page: {arg}) {{ title }} }}"#)
+	};
+	assert_eq!(titles(by(&format!("[{}]", about.id))).await, ["Jazz"]);
+	assert_eq!(titles(by(r#"":notempty:""#)).await, ["Jazz"]);
+	assert_eq!(titles(by(r#"":empty:""#)).await, ["Folk"]);
+	assert!(titles(by("[999]")).await.is_empty());
+}

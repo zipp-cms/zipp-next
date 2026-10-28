@@ -1,12 +1,21 @@
 use super::*;
+use crate::query::relation_field;
 
 /// The arguments of `entry`, `entries` and `entryCount`, the same as the
 /// rest api (see query.rs).
-pub(super) fn entries_args(field: GqlField) -> GqlField {
+pub(super) fn entries_args(field: GqlField, schema: &Schema) -> GqlField {
 	let s = || TypeRef::named(TypeRef::STRING);
 	// lists like in Craft, so crelte's queries fit; one value is used
 	let l = || TypeRef::named_list(TypeRef::STRING);
 	let i = || TypeRef::named(TypeRef::INT);
+	let mut field = field;
+	// the relation fields like Craft's: ids, `:notempty:` or `:empty:`
+	for handle in relation_args(schema) {
+		field = field.argument(InputValue::new(
+			handle,
+			TypeRef::named_list("QueryArgument"),
+		));
+	}
 	field
 		.argument(InputValue::new("site", l()))
 		.argument(InputValue::new(
@@ -29,6 +38,24 @@ pub(super) fn entries_args(field: GqlField) -> GqlField {
 		.argument(InputValue::new("limit", i()))
 		.argument(InputValue::new("offset", i()))
 		.argument(InputValue::new("where", TypeRef::named_nn_list("Where")))
+}
+
+/// The relation fields of entry types, unless an argument has the name.
+fn relation_args(schema: &Schema) -> std::collections::BTreeSet<String> {
+	const TAKEN: &[&str] = &[
+		"site", "siteId", "section", "type", "uri", "slug", "id", "ids",
+		"parent", "related", "search", "order", "orderBy", "limit", "offset",
+		"where", "handle",
+	];
+	schema
+		.components
+		.iter()
+		.filter(|c| c.entry)
+		.flat_map(|c| &c.fields)
+		.filter(|f| matches!(f.kind, FieldKind::Relation { .. }))
+		.map(|f| f.handle.clone())
+		.filter(|h| !TAKEN.contains(&h.as_str()))
+		.collect()
 }
 
 /// A filter on an indexed field: `{ field: "city", value: "Bern" }`, op is
@@ -139,6 +166,9 @@ pub(super) fn params_from_args(
 					_ => v,
 				};
 				params.push((name.into(), v));
+			}
+			_ if relation_field(ctx.data::<Arc<Schema>>()?, name) => {
+				params.push((format!("r.{name}"), all(&value)?.join(",")));
 			}
 			// the position of a site, or its handle
 			"siteId" => {
@@ -270,46 +300,51 @@ pub(super) fn load(
 }
 
 /// The root: entries like Craft's, globals and the sites.
-pub(super) fn query_object() -> Object {
+pub(super) fn query_object(schema: &Schema) -> Object {
 	Object::new("Query")
-		.field(entries_args(GqlField::new(
-			"entry",
-			TypeRef::named("Entry"),
-			|ctx| {
+		.field(entries_args(
+			GqlField::new("entry", TypeRef::named("Entry"), |ctx| {
 				FieldFuture::new(async move {
 					let mut params = params_from_args(&ctx)?;
 					params.push(("limit".into(), "1".into()));
 					let e = load(&ctx, &params)?.into_iter().next();
 					Ok(e.map(entry_value))
 				})
-			},
-		)))
-		.field(entries_args(GqlField::new(
-			"entries",
-			TypeRef::named_nn_list_nn("Entry"),
-			|ctx| {
-				FieldFuture::new(async move {
-					let params = params_from_args(&ctx)?;
-					let entries = load(&ctx, &params)?;
-					Ok(Some(FieldValue::list(
-						entries.into_iter().map(entry_value),
-					)))
-				})
-			},
-		)))
-		.field(entries_args(GqlField::new(
-			"entryCount",
-			TypeRef::named_nn(TypeRef::INT),
-			|ctx| {
-				FieldFuture::new(async move {
-					let params = params_from_args(&ctx)?;
-					let q = query(&ctx, &params)?;
-					let db = ctx.data::<Db>()?;
-					let (_, total) = list(&db.conn(), &q)?;
-					Ok(Some(GqlValue::from(total)))
-				})
-			},
-		)))
+			}),
+			schema,
+		))
+		.field(entries_args(
+			GqlField::new(
+				"entries",
+				TypeRef::named_nn_list_nn("Entry"),
+				|ctx| {
+					FieldFuture::new(async move {
+						let params = params_from_args(&ctx)?;
+						let entries = load(&ctx, &params)?;
+						Ok(Some(FieldValue::list(
+							entries.into_iter().map(entry_value),
+						)))
+					})
+				},
+			),
+			schema,
+		))
+		.field(entries_args(
+			GqlField::new(
+				"entryCount",
+				TypeRef::named_nn(TypeRef::INT),
+				|ctx| {
+					FieldFuture::new(async move {
+						let params = params_from_args(&ctx)?;
+						let q = query(&ctx, &params)?;
+						let db = ctx.data::<Db>()?;
+						let (_, total) = list(&db.conn(), &q)?;
+						Ok(Some(GqlValue::from(total)))
+					})
+				},
+			),
+			schema,
+		))
 		// Craft's globals are singles here: the entry of the section
 		.field(
 			GqlField::new("globalSet", TypeRef::named("Entry"), |ctx| {
