@@ -39,9 +39,9 @@
 		{#each entries as e (e.id)}
 			<tr>
 				<td><a href="#/entry/{e.id}">{e.title}</a></td>
-				<td class="muted">/{e.slug}</td>
+				<td class="muted hide-small">/{e.slug}</td>
 				<td class="muted">{e.published ? 'Published' : 'Draft'}</td>
-				<td class="muted">{date(e.updatedAt)}</td>
+				<td class="muted hide-small">{date(e.updatedAt)}</td>
 			</tr>
 		{:else}
 			<tr><td class="muted">No entries yet</td></tr>
@@ -76,5 +76,11 @@
 
 	.muted {
 		color: var(--muted);
+	}
+
+	@media (max-width: 700px) {
+		.hide-small {
+			display: none;
+		}
 	}
 </style>

@@ -110,4 +110,30 @@
 		padding: 1.5rem 2rem;
 		max-width: 56rem;
 	}
+
+	@media (max-width: 700px) {
+		.layout {
+			flex-direction: column;
+		}
+
+		nav {
+			width: auto;
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: center;
+			padding: 0.6rem;
+
+			h1 {
+				margin: 0 0.75rem 0 0.25rem;
+			}
+
+			.link {
+				margin: 0 0 0 auto;
+			}
+		}
+
+		main {
+			padding: 1rem;
+		}
+	}
 </style>

@@ -32,5 +32,6 @@
 		color: white;
 		text-decoration: none;
 		border-radius: 0.3rem;
+		margin: 0 0.5rem 0.5rem 0;
 	}
 </style>

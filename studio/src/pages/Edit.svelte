@@ -137,6 +137,8 @@
 
 	.actions {
 		display: flex;
+		flex-wrap: wrap;
+		justify-content: flex-end;
 		gap: 0.5rem;
 		align-items: center;
 	}
