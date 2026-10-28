@@ -10,6 +10,7 @@ async fn run(gql: &GqlSchema, query: &str, published_only: bool) -> Value {
 		published_only,
 		preview: None,
 		token: None,
+		indexing: true,
 	});
 	let resp = gql.execute(req).await;
 	assert!(resp.errors.is_empty(), "{:?}", resp.errors);
@@ -210,6 +211,7 @@ async fn answers_crelte_like_craft() {
 		published_only: true,
 		preview: None,
 		token: None,
+		indexing: true,
 	});
 	let resp = gql.execute(req).await;
 	assert!(resp.errors.is_empty(), "{:?}", resp.errors);
@@ -251,6 +253,7 @@ async fn preview_shows_the_draft() {
 		published_only: true,
 		preview: doc,
 		token: None,
+		indexing: true,
 	});
 	let data = gql.execute(req).await.data.into_json().unwrap();
 	assert_eq!(data["entry"], json!({ "title": "Draft", "intro": "new" }));
@@ -312,6 +315,7 @@ async fn site_preview_shows_every_draft() {
 			published_only: true,
 			preview,
 			token: None,
+			indexing: true,
 		});
 		let gql = gql.clone();
 		async move { gql.execute(req).await.data.into_json().unwrap() }
@@ -347,6 +351,7 @@ async fn urls_of_a_preview_keep_the_token() {
 					published_only: true,
 					preview,
 					token: token.map(Into::into),
+					indexing: true,
 				});
 		let gql = gql.clone();
 		async move {
@@ -612,4 +617,117 @@ async fn checks_queries_of_frontends() {
 	let bad = "{ entries { ... on event_Entry { town } } }";
 	let errors = check_query(&gql, bad).await;
 	assert!(errors[0].contains("Unknown field \"town\""), "{errors:?}");
+}
+
+#[tokio::test]
+async fn seo_like_the_craft_plugin() {
+	use crate::schema::{Seo, SeoDefaults};
+	let db = Db::memory().unwrap();
+	let s = Arc::new(
+		site().seo(
+			Seo::new().section(
+				"events",
+				SeoDefaults::new()
+					.title_pattern("{title} – {sectionName} | {siteName}")
+					.description_from("notes"),
+			),
+		),
+	);
+	s.check().unwrap();
+	let urls = SiteUrls::from([
+		("de".to_string(), "https://x.ch".to_string()),
+		("en".to_string(), "https://x.ch/en".to_string()),
+	]);
+	let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
+	{
+		let conn = db.conn();
+		crate::apply::create_singles(&conn, &s).unwrap();
+		let id: i64 = conn
+			.query_row(
+				"SELECT id FROM entries WHERE section = 'seoSettings'",
+				[],
+				|r| r.get(0),
+			)
+			.unwrap();
+		let mut settings = input(
+			"seoSettings",
+			"seoSettings",
+			"SEO",
+			json!({
+				"siteName": "Zandi",
+				"description": "Augenärzte in Thun",
+				"organization": {
+					"type": "MedicalClinic", "name": "Zandi AG", "locality": "Thun",
+					"openingHours": [{ "type": "seoOpeningHours", "fields": {
+						"day": "Monday", "opens": "08:00", "closes": "17:00" } }],
+				},
+			}),
+		);
+		settings.site = Some("de".into());
+		save(&conn, &s, Some(id), settings).unwrap();
+		let fields = json!({ "notes": "Ein **schöner** Abend mit Musik." });
+		let e = save(
+			&conn,
+			&s,
+			None,
+			input("events", "event", "Konzert", fields.clone()),
+		)
+		.unwrap();
+		let mut en = input("events", "event", "Concert", fields);
+		en.site = Some("en".into());
+		save(&conn, &s, Some(e.id), en).unwrap();
+	}
+
+	let seo = |q: &'static str, indexing: bool| {
+		let req = async_graphql::Request::new(q).data(Viewer {
+			published_only: true,
+			preview: None,
+			token: None,
+			indexing,
+		});
+		let gql = gql.clone();
+		async move {
+			let resp = gql.execute(req).await;
+			assert!(resp.errors.is_empty(), "{:?}", resp.errors);
+			resp.data.into_json().unwrap()
+		}
+	};
+
+	let data = seo(r#"{ entry(section: "events") { seoJson } }"#, true).await;
+	let j = &data["entry"]["seoJson"];
+	assert_eq!(j["title"], "Konzert – Events | Zandi");
+	assert_eq!(j["description"], "Ein schöner Abend mit Musik.");
+	assert_eq!(j["canonical"], "https://x.ch/events/konzert");
+	assert_eq!(j["robots"], "index, follow");
+	assert_eq!(j["locale"], "de_CH");
+	let langs: Vec<&str> = j["alternates"]
+		.as_array()
+		.unwrap()
+		.iter()
+		.map(|a| a["hreflang"].as_str().unwrap())
+		.collect();
+	assert_eq!(langs, ["de-CH", "x-default", "en"]);
+	let meta = j["meta"].to_string();
+	assert!(meta.contains(r#""property":"og:title""#), "{meta}");
+	assert!(meta.contains(r#""og:locale:alternate""#), "{meta}");
+	let ld: Value =
+		serde_json::from_str(j["jsonLd"].as_str().unwrap()).unwrap();
+	let graph = ld["@graph"].as_array().unwrap();
+	assert_eq!(graph[0]["@type"], "MedicalClinic");
+	assert_eq!(graph[0]["address"]["addressLocality"], "Thun");
+	assert_eq!(graph[0]["openingHoursSpecification"][0]["opens"], "08:00");
+	assert!(graph.iter().any(|g| g["@type"] == "WebPage"));
+
+	// outside production nothing is indexed
+	let data = seo(
+		r#"{ entry(section: "events") { ... on event_Entry { seo { robots } } } }"#,
+		false,
+	)
+	.await;
+	assert_eq!(data["entry"]["seo"]["robots"], "noindex, nofollow");
+
+	// a page without an entry: the site, with the primary site's name
+	let data = seo(r#"{ seoJson(siteId: 2) }"#, true).await;
+	assert_eq!(data["seoJson"]["title"], "Zandi");
+	assert_eq!(data["seoJson"]["description"], Value::Null);
 }

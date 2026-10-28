@@ -58,6 +58,7 @@ mod entry;
 mod link;
 mod query;
 mod rich;
+mod seo;
 #[cfg(test)]
 pub(crate) mod tests;
 mod texts;
@@ -68,6 +69,7 @@ use link::*;
 use query::*;
 pub(crate) use rich::markdown_html;
 use rich::*;
+use seo::*;
 use texts::*;
 
 /// Fields every entry has, field handles can't use them.
@@ -86,6 +88,7 @@ pub const ENTRY_FIELDS: &[&str] = &[
 	"children",
 	"createdAt",
 	"updatedAt",
+	"seoJson",
 ];
 
 /// Fields every block has.
@@ -103,6 +106,8 @@ struct Viewer {
 	preview: Option<Preview>,
 	/// the valid preview token, urls of entries keep it like Craft's do
 	token: Option<String>,
+	/// whether search engines may index, not in development
+	indexing: bool,
 }
 
 /// A rich text field as parent of html and chunks.
@@ -168,6 +173,19 @@ pub fn build(
 	for (name, ty) in entry_common() {
 		entry_iface = entry_iface.field(InterfaceField::new(name, ty));
 	}
+	if crate::seo::enabled(&schema) {
+		entry_iface = entry_iface
+			.field(InterfaceField::new("seoJson", TypeRef::named(SEO_JSON)));
+		// `seo` too, unless an entry type has a field of its own named so
+		let own = schema
+			.components
+			.iter()
+			.any(|c| c.entry && c.fields.iter().any(|f| f.handle == "seo"));
+		if !own {
+			entry_iface = entry_iface
+				.field(InterfaceField::new("seo", TypeRef::named("Seo")));
+		}
+	}
 	let block_iface = Interface::new("Block")
 		.field(InterfaceField::new(
 			"id",
@@ -215,10 +233,25 @@ pub fn build(
 				.description("An id or a handle, like Craft's QueryArgument"),
 		);
 
+	// SEO like the Craft plugin meierlabs-seo
+	if crate::seo::enabled(&schema) {
+		builder = builder.register(Scalar::new(SEO_JSON).description(
+			"The resolved SEO as one JSON object, what the npm package \
+			meierlabs-seo reads",
+		));
+		for obj in seo_types() {
+			builder = builder.register(obj);
+		}
+	}
 	for obj in content_objects(&schema) {
 		builder = builder.register(obj);
 	}
 	let mut query = query_object();
+	if crate::seo::enabled(&schema) {
+		for field in root_fields() {
+			query = query.field(field);
+		}
+	}
 	if let Some((obj, field)) = translations_field(&schema) {
 		builder = builder.register(obj);
 		query = query.field(field);
@@ -287,6 +320,7 @@ async fn graphql(
 		published_only,
 		preview,
 		token,
+		indexing: state.indexing,
 	});
 	Ok(state.gql.execute(req).await.into())
 }
@@ -299,6 +333,7 @@ pub async fn check_query(gql: &GqlSchema, query: &str) -> Vec<String> {
 		published_only: true,
 		preview: None,
 		token: None,
+		indexing: true,
 	});
 	gql.execute(req)
 		.await

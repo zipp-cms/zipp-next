@@ -67,16 +67,13 @@ fragment Body on Block {
 query ($uri: [String], $siteId: [QueryArgument]) {
 	entry(uri: $uri, siteId: $siteId) {
 		id
+		seoJson
 		siteId
 		url
 		sectionHandle
 		typeHandle
 		title
 		... on home_Entry {
-			seo {
-				title
-				description
-			}
 			intro
 			hero {
 				...Hero
@@ -86,10 +83,6 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 			}
 		}
 		... on page_Entry {
-			seo {
-				title
-				description
-			}
 			intro
 			hero {
 				...Hero

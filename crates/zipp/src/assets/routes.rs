@@ -6,6 +6,8 @@ pub(super) fn transform_by_name(
 ) -> Option<Transform> {
 	match name {
 		"_thumb" => Some(Transform::new("_thumb").width(400).height(400)),
+		// the image of a page when it is shared, see seo
+		crate::seo::SOCIAL_TRANSFORM => Some(crate::seo::social_transform()),
 		_ => state.schema.get_transform(name).cloned(),
 	}
 }

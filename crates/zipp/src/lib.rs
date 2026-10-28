@@ -14,6 +14,7 @@ pub mod error;
 pub mod graphql;
 pub mod migrate;
 pub mod schema;
+pub mod seo;
 mod server;
 mod studio;
 pub mod typescript;
@@ -44,7 +45,7 @@ use server::*;
 
 pub use crate::field_type::{FieldType, GraphqlType, Scalar, StudioModule};
 pub use crate::schema::{
-	Access, Field, LinkKind, Role, Schema, Section, Transform,
+	Access, Field, LinkKind, Role, Schema, Section, Seo, SeoDefaults, Transform,
 };
 pub use axum;
 
@@ -92,6 +93,9 @@ pub struct AppState {
 	pub graphql_token: Option<Arc<String>>,
 	/// development mode, see `serve --dev`
 	pub dev: bool,
+	/// whether search engines may index, see `serve --noindex`
+	#[from_ref(skip)]
+	pub indexing: bool,
 	/// the AI chat, if there is an api key
 	pub ai: Option<ai::AiConfig>,
 	hooks: Arc<Vec<Hook>>,

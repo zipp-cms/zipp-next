@@ -19,6 +19,7 @@
 	import Footer from './components/Footer.svelte';
 	import Header from './components/Header.svelte';
 	import PreviewBridge from './components/PreviewBridge.svelte';
+	import { Seo } from 'meierlabs-seo';
 
 	/** @type {import('crelte').AppProps} */
 	let { route } = $props();
@@ -28,13 +29,9 @@
 	let templateData = $derived($route.loadedData);
 </script>
 
-<svelte:head>
-	<!-- the seo group of pages, the title as fallback -->
-	<title>{entry?.seo?.title || entry?.title || 'Not Found'}</title>
-	{#if entry?.seo?.description}
-		<meta name="description" content={entry.seo.description} />
-	{/if}
-</svelte:head>
+<!-- title, meta tags, links and JSON-LD from zipp's SEO, the npm package
+of the Craft plugin meierlabs-seo -->
+<Seo seo={entry?.seoJson} />
 
 <PreviewBridge />
 <Header />

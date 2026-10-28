@@ -16,6 +16,7 @@ pub(super) async fn serve(
 		frame_ancestor,
 		graphql_token,
 		dev,
+		noindex,
 	} = args;
 	if graphql_token.is_none() && !dev {
 		tracing::warn!(
@@ -70,6 +71,7 @@ pub(super) async fn serve(
 		frame_ancestors: Arc::new(frame_ancestor),
 		graphql_token: graphql_token.map(Arc::new),
 		dev,
+		indexing: !dev && !noindex,
 		ai,
 		hooks: Arc::new(hooks),
 	};
@@ -78,6 +80,7 @@ pub(super) async fn serve(
 		.merge(studio::api_routes())
 		.merge(entries::routes())
 		.merge(users::routes())
+		.merge(seo::routes::routes())
 		.merge(drafts::routes())
 		.merge(ai::routes())
 		.merge(assets::api_routes())
@@ -85,6 +88,7 @@ pub(super) async fn serve(
 	let app = Router::new()
 		.nest("/api", api)
 		.merge(assets::file_routes())
+		.merge(seo::sitemap::routes())
 		.merge(routes)
 		.merge(studio::routes());
 

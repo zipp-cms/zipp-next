@@ -38,6 +38,11 @@ pub(super) struct ServeArgs {
 	/// there is no token
 	#[arg(long, env = "ZIPP_DEV")]
 	pub(super) dev: bool,
+	/// Search engines may not index, like a staging site: noindex on
+	/// every page and a robots.txt that disallows everything (always so
+	/// in development)
+	#[arg(long, env = "ZIPP_NOINDEX")]
+	pub(super) noindex: bool,
 }
 
 #[derive(Debug, Subcommand)]

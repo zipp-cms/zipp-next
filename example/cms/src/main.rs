@@ -8,7 +8,8 @@ use zipp::axum::routing::get;
 use zipp::error::Result;
 use zipp::query::Query;
 use zipp::{
-	Access, AppState, Cms, Field, LinkKind, Role, Schema, Section, Transform,
+	Access, AppState, Cms, Field, LinkKind, Role, Schema, Section, Seo,
+	SeoDefaults, Transform,
 };
 use zipp_button_group::{ButtonGroup, button_group};
 
@@ -36,7 +37,33 @@ fn schema() -> Schema {
 		// the readme of the demo, a page of the studio from this repo
 		.doc("readme", "Readme", include_str!("../../readme.md"))
 		.nav("Content", ["readme", "pages", "events"])
-		.nav("Settings", ["header", "footer", "translations"])
+		.nav(
+			"Settings",
+			["header", "footer", "translations", "seoSettings"],
+		)
+		// SEO like the Craft plugin meierlabs-seo: the global settings are
+		// the single seoSettings, defaults per section and entry type here
+		.seo(
+			Seo::new()
+				.section(
+					"events",
+					SeoDefaults::new()
+						.title_pattern("{title} – Veranstaltungen | {siteName}")
+						.description_from("description"),
+				)
+				.entry_type(
+					"page",
+					SeoDefaults::new()
+						.description_from("intro")
+						.image_from("hero"),
+				)
+				.entry_type(
+					"home",
+					SeoDefaults::new()
+						.description_from("intro")
+						.image_from("hero"),
+				),
+		)
 		// roles of studio users, a user without one is an admin
 		.role(
 			Role::new("editor", "Editor")
@@ -78,7 +105,7 @@ fn schema() -> Schema {
 				Field::images("hero").max(1),
 				Field::text("intro").multiline().max(300).translatable(),
 				body(),
-				Field::group("seo", "seo").label("SEO").translatable(),
+				Field::seo("seo"),
 			],
 		)
 		.entry(
@@ -88,7 +115,7 @@ fn schema() -> Schema {
 				Field::images("hero").max(1),
 				Field::text("intro").multiline().max(300).translatable(),
 				body(),
-				Field::group("seo", "seo").label("SEO").translatable(),
+				Field::seo("seo"),
 			],
 		)
 		.entry(
@@ -138,17 +165,6 @@ fn schema() -> Schema {
 			"footer",
 			"Footer",
 			[Field::text("text").multiline().translatable()],
-		)
-		// the fields of the seo group of pages
-		.block(
-			"seo",
-			"SEO",
-			[
-				Field::text("title")
-					.max(60)
-					.label("Title for search engines"),
-				Field::text("description").multiline().max(160),
-			],
 		)
 		.block(
 			"heading",
@@ -205,35 +221,45 @@ fn schema() -> Schema {
 		)
 }
 
-/// A route of the site next to zipp's: every published entry with a url,
-/// in every site that has a url.
-async fn sitemap(State(state): State<AppState>) -> Result<impl IntoResponse> {
+/// A route of the site next to zipp's: the upcoming events as JSON, for a
+/// widget on another site.
+async fn events(State(state): State<AppState>) -> Result<impl IntoResponse> {
 	let conn = state.db.conn();
-	let mut xml = String::from(
-		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
-		<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
-	);
-	for site in &state.schema.sites {
-		let params = [("site", site.handle.as_str()), ("limit", "1000")]
-			.map(|(k, v)| (k.to_string(), v.to_string()));
-		let mut q = Query::parse(&state.schema, &params).unwrap();
-		q.published_only = true;
-		let (entries, _) = zipp::entries::list(&conn, &q)?;
-		for uri in entries.iter().filter_map(|e| e.uri.as_ref()) {
-			if let Some(url) =
-				zipp::page_url(&state.site_urls, &site.handle, uri)
-			{
-				xml += &format!("<url><loc>{url}</loc></url>\n");
-			}
-		}
-	}
-	xml += "</urlset>\n";
-	Ok(([(header::CONTENT_TYPE, "application/xml")], xml))
+	let today = zipp::seo::iso(zipp::db::now())[..10].to_string();
+	let params = [("site", "de"), ("type", "event"), ("order", "date")]
+		.map(|(k, v)| (k.to_string(), v.to_string()));
+	let mut q = Query::parse(&state.schema, &params).unwrap();
+	q.published_only = true;
+	let (entries, _) = zipp::entries::list(&conn, &q)?;
+	let events: Vec<_> = entries
+		.into_iter()
+		.filter(|e| {
+			e.fields["date"]
+				.as_str()
+				.is_some_and(|d| d >= today.as_str())
+		})
+		.map(|e| {
+			let url = e
+				.uri
+				.as_deref()
+				.and_then(|u| zipp::page_url(&state.site_urls, &e.site, u));
+			serde_json::json!({
+				"title": e.title,
+				"date": e.fields["date"],
+				"city": e.fields["city"],
+				"url": url,
+			})
+		})
+		.collect();
+	Ok((
+		[(header::CONTENT_TYPE, "application/json")],
+		serde_json::to_string(&events).unwrap(),
+	))
 }
 
 fn main() {
 	Cms::new(schema(), zipp::migrations!())
-		.routes(Router::new().route("/sitemap.xml", get(sitemap)))
+		.routes(Router::new().route("/events.json", get(events)))
 		.on_change(|c| println!("{:?} {} in {}", c.kind, c.entry_id, c.section))
 		.run();
 }

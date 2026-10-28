@@ -24,12 +24,14 @@ use serde_json::Value;
 
 use crate::field_type::{FieldType, FieldTypes, GraphqlType};
 pub use role::{Access, Role};
+pub use seo::{Seo, SeoDefaults};
 
 mod builders;
 mod check;
 mod field;
 pub mod field_type;
 pub mod role;
+pub mod seo;
 #[cfg(test)]
 pub(crate) mod tests;
 
@@ -67,6 +69,9 @@ pub struct Schema {
 	/// Roles of studio users, not part of the content model.
 	#[serde(skip)]
 	pub roles: Vec<Role>,
+	/// SEO defaults of sections and entry types, see [`Schema::seo`].
+	#[serde(skip)]
+	pub seo: Option<Seo>,
 }
 
 /// A markdown file of the project shown in the studio, like a readme.

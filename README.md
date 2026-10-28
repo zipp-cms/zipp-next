@@ -188,6 +188,20 @@ Cms::new(schema(), zipp::migrations!())
   entry types, uri, number of entries), entry types and blocks with
   their fields (handle, kind and settings, per site or shared, where
   they are used, the GraphQL type), sites, transforms and roles.
+- **SEO, like the Craft plugin meierlabs-seo.** `.seo(Seo::new()
+  .section("events", SeoDefaults::new().title_pattern("{title} – Events |
+  {siteName}")).entry_type("page", SeoDefaults::new()
+  .description_from("intro").image_from("hero")))` adds the single
+  `seoSettings` (site name, title pattern, description, image, robots,
+  robots.txt, structured data of the organization) and `Field::seo` for
+  single entries. Every value comes from the entry's SEO field, its entry
+  type, its section or the settings. GraphQL has `seoJson` on every entry
+  and the root `seoJson(siteId:)` in the plugin's shape (title, meta, links,
+  JSON-LD with Organization, WebSite, WebPage and breadcrumbs, hreflang
+  alternates, a 1200×630 social image), so the npm package `meierlabs-seo`
+  (`<Seo>`, `seoRoutes`) works unchanged: zipp answers its sitemap and
+  robots.txt actions. `serve --noindex` (and `--dev`) makes every page
+  noindex and robots.txt disallow everything.
 - **Check before a deploy.** Every command checks the schema first (the
   handles it names: types of sections, relations, groups, blocks, nav,
   roles). `serve` applies new migrations and refuses to start when the

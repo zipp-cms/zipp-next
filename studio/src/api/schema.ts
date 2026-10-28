@@ -18,6 +18,8 @@ export type FieldKind =
 	| { kind: 'link'; to: LinkKind[]; labels: boolean; newTab: boolean }
 	| { kind: 'group'; component: string }
 	| { kind: 'markdown' }
+	/** the SEO of single entries, see zipp's seo */
+	| { kind: 'seo' }
 	/** texts of the frontend by key, [key, text of the code] */
 	| { kind: 'texts'; keys: [string, string][] }
 	| { kind: 'dropdown'; options: { value: string; label: string }[] }

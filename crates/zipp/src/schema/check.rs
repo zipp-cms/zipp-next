@@ -80,6 +80,24 @@ impl Schema {
 			}
 		}
 
+		if let Some(seo) = &self.seo {
+			for s in seo.sections.keys() {
+				if self.get_section(s).is_none() {
+					return Err(format!("seo: unknown section {s}"));
+				}
+			}
+			for (ty, d) in &seo.types {
+				let Some(comp) = self.entry_type(ty) else {
+					return Err(format!("seo: unknown entry type {ty}"));
+				};
+				for path in d.description_from.iter().chain(&d.image_from) {
+					if self.field_at(comp, path).is_none() {
+						return Err(format!("seo: {ty} has no field {path}"));
+					}
+				}
+			}
+		}
+
 		for (i, r) in self.roles.iter().enumerate() {
 			check_handle(&r.handle)?;
 			if r.handle == "admin"
@@ -203,6 +221,9 @@ impl Schema {
 		{
 			return Err("a link needs something to point to".into());
 		}
+		if field.kind == FieldKind::Seo && !comp.entry {
+			return Err("an seo field belongs to an entry type".into());
+		}
 		if let FieldKind::Texts { keys } = &field.kind {
 			for (i, (key, _)) in keys.iter().enumerate() {
 				if keys[..i].iter().any(|(k, _)| k == key) {
@@ -276,6 +297,26 @@ impl Schema {
 }
 
 impl Schema {
+	/// The field at a path like `pageIntro.text`, through group fields.
+	pub(crate) fn field_at<'a>(
+		&'a self,
+		comp: &'a Component,
+		path: &str,
+	) -> Option<&'a Field> {
+		let (first, rest) = match path.split_once('.') {
+			Some((f, r)) => (f, Some(r)),
+			None => (path, None),
+		};
+		let field = comp.fields.iter().find(|f| f.handle == first)?;
+		match (rest, &field.kind) {
+			(None, _) => Some(field),
+			(Some(rest), FieldKind::Group { component }) => {
+				self.field_at(self.get(component)?, rest)
+			}
+			_ => None,
+		}
+	}
+
 	/// Whether a field is of a custom type GraphQL shows as a scalar.
 	pub(crate) fn custom_scalar(&self, kind: &FieldKind) -> bool {
 		let FieldKind::Custom { ty, .. } = kind else {

@@ -3,6 +3,502 @@
     {
       "op": "addComponent",
       "component": {
+        "handle": "seoSettings",
+        "name": "SEO",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "siteName",
+            "label": "Site name, empty: the name of the site",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "titlePattern",
+            "label": "Title pattern, empty: {title} | {siteName}",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "image",
+            "label": "Image for sharing",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "robots",
+            "label": "Robots, empty: index, follow",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "index, follow",
+                "label": "Index, follow links"
+              },
+              {
+                "value": "noindex, follow",
+                "label": "No index, follow links"
+              },
+              {
+                "value": "index, nofollow",
+                "label": "Index, don't follow links"
+              },
+              {
+                "value": "noindex, nofollow",
+                "label": "No index, don't follow links"
+              }
+            ]
+          },
+          {
+            "handle": "twitterHandle",
+            "label": "X handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "robotsTxt",
+            "label": "robots.txt, empty: allow everything",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "organization",
+            "label": "Structured data",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "group",
+            "component": "seoOrganization"
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "seoOrganization",
+        "name": "Organization",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "type",
+            "label": "Type",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Organization",
+                "label": "Organization"
+              },
+              {
+                "value": "Corporation",
+                "label": "Corporation"
+              },
+              {
+                "value": "LocalBusiness",
+                "label": "LocalBusiness"
+              },
+              {
+                "value": "ProfessionalService",
+                "label": "ProfessionalService"
+              },
+              {
+                "value": "MedicalBusiness",
+                "label": "MedicalBusiness"
+              },
+              {
+                "value": "MedicalClinic",
+                "label": "MedicalClinic"
+              },
+              {
+                "value": "Physician",
+                "label": "Physician"
+              },
+              {
+                "value": "Dentist",
+                "label": "Dentist"
+              },
+              {
+                "value": "LegalService",
+                "label": "LegalService"
+              },
+              {
+                "value": "FinancialService",
+                "label": "FinancialService"
+              },
+              {
+                "value": "RealEstateAgent",
+                "label": "RealEstateAgent"
+              },
+              {
+                "value": "Store",
+                "label": "Store"
+              },
+              {
+                "value": "Restaurant",
+                "label": "Restaurant"
+              },
+              {
+                "value": "LodgingBusiness",
+                "label": "LodgingBusiness"
+              },
+              {
+                "value": "EducationalOrganization",
+                "label": "EducationalOrganization"
+              },
+              {
+                "value": "NGO",
+                "label": "NGO"
+              },
+              {
+                "value": "GovernmentOrganization",
+                "label": "GovernmentOrganization"
+              },
+              {
+                "value": "Person",
+                "label": "Person"
+              }
+            ]
+          },
+          {
+            "handle": "name",
+            "label": "Name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "alternateName",
+            "label": "Alternate name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "legalName",
+            "label": "Legal name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "url",
+            "label": "URL, empty: the site",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "logo",
+            "label": "Logo",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "email",
+            "label": "Email",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "telephone",
+            "label": "Telephone",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "street",
+            "label": "Street",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "postalCode",
+            "label": "Postal code",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "locality",
+            "label": "Locality",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "region",
+            "label": "Region",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "country",
+            "label": "Country",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "latitude",
+            "label": "Latitude",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "number",
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "longitude",
+            "label": "Longitude",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "number",
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "priceRange",
+            "label": "Price range",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "openingHours",
+            "label": "Opening hours",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "blocks",
+            "types": [
+              "seoOpeningHours"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "sameAs",
+            "label": "Profiles, one url per line",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "creatorName",
+            "label": "Made by",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "creatorType",
+            "label": "Creator type",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Organization",
+                "label": "Organization"
+              },
+              {
+                "value": "Person",
+                "label": "Person"
+              }
+            ]
+          },
+          {
+            "handle": "creatorUrl",
+            "label": "Creator url",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "seoOpeningHours",
+        "name": "Opening hours",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "day",
+            "label": "Day",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Monday",
+                "label": "Monday"
+              },
+              {
+                "value": "Tuesday",
+                "label": "Tuesday"
+              },
+              {
+                "value": "Wednesday",
+                "label": "Wednesday"
+              },
+              {
+                "value": "Thursday",
+                "label": "Thursday"
+              },
+              {
+                "value": "Friday",
+                "label": "Friday"
+              },
+              {
+                "value": "Saturday",
+                "label": "Saturday"
+              },
+              {
+                "value": "Sunday",
+                "label": "Sunday"
+              }
+            ]
+          },
+          {
+            "handle": "opens",
+            "label": "Opens (09:00)",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "closes",
+            "label": "Closes (18:00)",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
         "handle": "translations",
         "name": "Translations",
         "entry": true,
@@ -86,8 +582,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "group",
-            "component": "seo"
+            "kind": "seo"
           }
         ]
       }
@@ -142,8 +637,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "group",
-            "component": "seo"
+            "kind": "seo"
           }
         ]
       }
@@ -320,36 +814,6 @@
             "translatable": true,
             "kind": "text",
             "max": null,
-            "multiline": true
-          }
-        ]
-      }
-    },
-    {
-      "op": "addComponent",
-      "component": {
-        "handle": "seo",
-        "name": "SEO",
-        "entry": false,
-        "fields": [
-          {
-            "handle": "title",
-            "label": "Title for search engines",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "kind": "text",
-            "max": 60,
-            "multiline": false
-          },
-          {
-            "handle": "description",
-            "label": "Description",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "kind": "text",
-            "max": 160,
             "multiline": true
           }
         ]
@@ -572,6 +1036,18 @@
     {
       "op": "addSection",
       "section": {
+        "handle": "seoSettings",
+        "name": "SEO",
+        "kind": "single",
+        "types": [
+          "seoSettings"
+        ],
+        "uri": null
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
         "handle": "translations",
         "name": "Translations",
         "kind": "single",
@@ -637,6 +1113,15 @@
         "uri": null
       },
       {
+        "handle": "seoSettings",
+        "name": "SEO",
+        "kind": "single",
+        "types": [
+          "seoSettings"
+        ],
+        "uri": null
+      },
+      {
         "handle": "translations",
         "name": "Translations",
         "kind": "single",
@@ -647,6 +1132,493 @@
       }
     ],
     "components": [
+      {
+        "handle": "seoSettings",
+        "name": "SEO",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "siteName",
+            "label": "Site name, empty: the name of the site",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "titlePattern",
+            "label": "Title pattern, empty: {title} | {siteName}",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "image",
+            "label": "Image for sharing",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "robots",
+            "label": "Robots, empty: index, follow",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "index, follow",
+                "label": "Index, follow links"
+              },
+              {
+                "value": "noindex, follow",
+                "label": "No index, follow links"
+              },
+              {
+                "value": "index, nofollow",
+                "label": "Index, don't follow links"
+              },
+              {
+                "value": "noindex, nofollow",
+                "label": "No index, don't follow links"
+              }
+            ]
+          },
+          {
+            "handle": "twitterHandle",
+            "label": "X handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "robotsTxt",
+            "label": "robots.txt, empty: allow everything",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "organization",
+            "label": "Structured data",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "group",
+            "component": "seoOrganization"
+          }
+        ]
+      },
+      {
+        "handle": "seoOrganization",
+        "name": "Organization",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "type",
+            "label": "Type",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Organization",
+                "label": "Organization"
+              },
+              {
+                "value": "Corporation",
+                "label": "Corporation"
+              },
+              {
+                "value": "LocalBusiness",
+                "label": "LocalBusiness"
+              },
+              {
+                "value": "ProfessionalService",
+                "label": "ProfessionalService"
+              },
+              {
+                "value": "MedicalBusiness",
+                "label": "MedicalBusiness"
+              },
+              {
+                "value": "MedicalClinic",
+                "label": "MedicalClinic"
+              },
+              {
+                "value": "Physician",
+                "label": "Physician"
+              },
+              {
+                "value": "Dentist",
+                "label": "Dentist"
+              },
+              {
+                "value": "LegalService",
+                "label": "LegalService"
+              },
+              {
+                "value": "FinancialService",
+                "label": "FinancialService"
+              },
+              {
+                "value": "RealEstateAgent",
+                "label": "RealEstateAgent"
+              },
+              {
+                "value": "Store",
+                "label": "Store"
+              },
+              {
+                "value": "Restaurant",
+                "label": "Restaurant"
+              },
+              {
+                "value": "LodgingBusiness",
+                "label": "LodgingBusiness"
+              },
+              {
+                "value": "EducationalOrganization",
+                "label": "EducationalOrganization"
+              },
+              {
+                "value": "NGO",
+                "label": "NGO"
+              },
+              {
+                "value": "GovernmentOrganization",
+                "label": "GovernmentOrganization"
+              },
+              {
+                "value": "Person",
+                "label": "Person"
+              }
+            ]
+          },
+          {
+            "handle": "name",
+            "label": "Name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "alternateName",
+            "label": "Alternate name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "legalName",
+            "label": "Legal name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "url",
+            "label": "URL, empty: the site",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "logo",
+            "label": "Logo",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "email",
+            "label": "Email",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "telephone",
+            "label": "Telephone",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "street",
+            "label": "Street",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "postalCode",
+            "label": "Postal code",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "locality",
+            "label": "Locality",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "region",
+            "label": "Region",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "country",
+            "label": "Country",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "latitude",
+            "label": "Latitude",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "number",
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "longitude",
+            "label": "Longitude",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "number",
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "priceRange",
+            "label": "Price range",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "openingHours",
+            "label": "Opening hours",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "blocks",
+            "types": [
+              "seoOpeningHours"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "sameAs",
+            "label": "Profiles, one url per line",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "creatorName",
+            "label": "Made by",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "creatorType",
+            "label": "Creator type",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Organization",
+                "label": "Organization"
+              },
+              {
+                "value": "Person",
+                "label": "Person"
+              }
+            ]
+          },
+          {
+            "handle": "creatorUrl",
+            "label": "Creator url",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      },
+      {
+        "handle": "seoOpeningHours",
+        "name": "Opening hours",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "day",
+            "label": "Day",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Monday",
+                "label": "Monday"
+              },
+              {
+                "value": "Tuesday",
+                "label": "Tuesday"
+              },
+              {
+                "value": "Wednesday",
+                "label": "Wednesday"
+              },
+              {
+                "value": "Thursday",
+                "label": "Thursday"
+              },
+              {
+                "value": "Friday",
+                "label": "Friday"
+              },
+              {
+                "value": "Saturday",
+                "label": "Saturday"
+              },
+              {
+                "value": "Sunday",
+                "label": "Sunday"
+              }
+            ]
+          },
+          {
+            "handle": "opens",
+            "label": "Opens (09:00)",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "closes",
+            "label": "Closes (18:00)",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      },
       {
         "handle": "translations",
         "name": "Translations",
@@ -728,8 +1700,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "group",
-            "component": "seo"
+            "kind": "seo"
           }
         ]
       },
@@ -781,8 +1752,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "group",
-            "component": "seo"
+            "kind": "seo"
           }
         ]
       },
@@ -950,33 +1920,6 @@
             "translatable": true,
             "kind": "text",
             "max": null,
-            "multiline": true
-          }
-        ]
-      },
-      {
-        "handle": "seo",
-        "name": "SEO",
-        "entry": false,
-        "fields": [
-          {
-            "handle": "title",
-            "label": "Title for search engines",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "kind": "text",
-            "max": 60,
-            "multiline": false
-          },
-          {
-            "handle": "description",
-            "label": "Description",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "kind": "text",
-            "max": 160,
             "multiline": true
           }
         ]
@@ -1153,7 +2096,8 @@
         "sections": [
           "header",
           "footer",
-          "translations"
+          "translations",
+          "seoSettings"
         ]
       }
     ]

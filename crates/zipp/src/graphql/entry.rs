@@ -106,6 +106,8 @@ pub(super) fn content_field(
 		FieldKind::Markdown => TypeRef::named("Markdown"),
 		// as JSON, like crelte's translations want them
 		FieldKind::Texts { .. } => TypeRef::named_nn(TypeRef::STRING),
+		// the resolved SEO, like the plugin's `seo`
+		FieldKind::Seo => TypeRef::named("Seo"),
 		// the value, like Craft's dropdown
 		FieldKind::Dropdown { .. } => TypeRef::named(TypeRef::STRING),
 		FieldKind::Group { component } => {
@@ -210,6 +212,11 @@ pub(super) fn content_field(
 					let out = t.output(&options, &value);
 					Ok(Some(FieldValue::value(GqlValue::from_json(out)?)))
 				}
+				FieldKind::Seo => {
+					let e = ctx.parent_value.try_downcast_ref::<Entry>()?;
+					let v = resolve_seo(&ctx, &e.site, Some(e))?;
+					Ok(Some(FieldValue::value(GqlValue::from_json(v)?)))
+				}
 				FieldKind::Texts { keys } => {
 					let texts = crate::content::texts_of(&keys, &value);
 					let json = serde_json::to_string(&texts)?;
@@ -281,6 +288,13 @@ pub(super) fn content_objects(schema: &Schema) -> Vec<Object> {
 				.implement("Entry");
 			for (name, _) in entry_common() {
 				obj = obj.field(entry_common_field(name));
+			}
+			if crate::seo::enabled(schema) {
+				obj = obj.field(seo_json_field());
+				// `seo` like the plugin's, unless a field has the name
+				if !comp.fields.iter().any(|f| f.handle == "seo") {
+					obj = obj.field(seo_field("seo"));
+				}
 			}
 			obj
 		} else {

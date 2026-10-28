@@ -34,6 +34,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |
 | Globals | Settings → Header, Footer | singles without a url, crelte reads them like Craft's globals |
 | Translations | Settings → Translations | the keys come from the code, editors only translate |
+| SEO | Settings → SEO, a page → SEO | the search result preview; on the website title, meta, JSON-LD, `/sitemap.xml` and `/robots.txt` from the npm package `meierlabs-seo` (the demo is noindex) |
 | Roles | Users (admins) | log in as `second@meierlabs.dev` (Author): only events, as drafts someone else publishes; pages read only |
 | AI chat | AI in the top bar | ask for anything, also a new event; it writes drafts, stays on your page when the change shows there and opens another page when not |
 

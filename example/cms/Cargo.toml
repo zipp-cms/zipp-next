@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+serde_json = "1.0"
 zipp = { path = "../../crates/zipp" }
 zipp-button-group = { path = "../button-group" }
