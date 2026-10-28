@@ -1,3 +1,3 @@
 [workspace]
-resolver = "2"
-members = ["apps/zipp", "crates/database", "crates/graphql"]
+resolver = "3"
+members = ["crates/zipp", "example/cms"]

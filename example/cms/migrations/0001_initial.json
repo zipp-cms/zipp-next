@@ -1,0 +1,348 @@
+{
+  "ops": [
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "page",
+        "name": "Page",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "body",
+            "label": "Body",
+            "required": false,
+            "indexed": false,
+            "kind": "blocks",
+            "types": [
+              "heading",
+              "text",
+              "button",
+              "events"
+            ],
+            "min": null,
+            "max": null
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "event",
+        "name": "Event",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "date",
+            "label": "Date (YYYY-MM-DD)",
+            "required": true,
+            "indexed": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "city",
+            "label": "City",
+            "required": true,
+            "indexed": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "price",
+            "label": "Price",
+            "required": false,
+            "indexed": true,
+            "kind": "number",
+            "min": 0.0,
+            "max": 1000.0
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "page",
+            "label": "More info",
+            "required": false,
+            "indexed": false,
+            "kind": "relation",
+            "types": [
+              "page"
+            ],
+            "max": 1
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "heading",
+        "name": "Heading",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "text",
+            "label": "Text",
+            "required": true,
+            "indexed": false,
+            "kind": "text",
+            "max": 80,
+            "multiline": false
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "text",
+        "name": "Text",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": true,
+            "indexed": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "button",
+        "name": "Button",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": true,
+            "indexed": false,
+            "kind": "text",
+            "max": 30,
+            "multiline": false
+          },
+          {
+            "handle": "link",
+            "label": "Link",
+            "required": false,
+            "indexed": false,
+            "kind": "relation",
+            "types": [
+              "page",
+              "event"
+            ],
+            "max": 1
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "events",
+        "name": "Upcoming events",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "city",
+            "label": "Only in city",
+            "required": false,
+            "indexed": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      }
+    }
+  ],
+  "schema": {
+    "components": [
+      {
+        "handle": "page",
+        "name": "Page",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "body",
+            "label": "Body",
+            "required": false,
+            "indexed": false,
+            "kind": "blocks",
+            "types": [
+              "heading",
+              "text",
+              "button",
+              "events"
+            ],
+            "min": null,
+            "max": null
+          }
+        ]
+      },
+      {
+        "handle": "event",
+        "name": "Event",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "date",
+            "label": "Date (YYYY-MM-DD)",
+            "required": true,
+            "indexed": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "city",
+            "label": "City",
+            "required": true,
+            "indexed": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "price",
+            "label": "Price",
+            "required": false,
+            "indexed": true,
+            "kind": "number",
+            "min": 0.0,
+            "max": 1000.0
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "page",
+            "label": "More info",
+            "required": false,
+            "indexed": false,
+            "kind": "relation",
+            "types": [
+              "page"
+            ],
+            "max": 1
+          }
+        ]
+      },
+      {
+        "handle": "heading",
+        "name": "Heading",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "text",
+            "label": "Text",
+            "required": true,
+            "indexed": false,
+            "kind": "text",
+            "max": 80,
+            "multiline": false
+          }
+        ]
+      },
+      {
+        "handle": "text",
+        "name": "Text",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": true,
+            "indexed": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          }
+        ]
+      },
+      {
+        "handle": "button",
+        "name": "Button",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": true,
+            "indexed": false,
+            "kind": "text",
+            "max": 30,
+            "multiline": false
+          },
+          {
+            "handle": "link",
+            "label": "Link",
+            "required": false,
+            "indexed": false,
+            "kind": "relation",
+            "types": [
+              "page",
+              "event"
+            ],
+            "max": 1
+          }
+        ]
+      },
+      {
+        "handle": "events",
+        "name": "Upcoming events",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "city",
+            "label": "Only in city",
+            "required": false,
+            "indexed": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      }
+    ]
+  }
+}
