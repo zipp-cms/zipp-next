@@ -60,7 +60,7 @@
   (header, footer, translations) have their own place in the top bar
 - Preview button, later live preview like Craft (drafts + preview tokens)
 - Status per site in the lists (DE, EN)
-- AI mode: chat with the whole website in the studio ("fix the translation on this
+- [x] AI mode: chat with the whole website in the studio ("fix the translation on this
   page"), split view like noah: chat on the left, the live site on the right, changes as
   drafts the editor publishes
 - Rich text in Svelte instead of CKEditor, a mix of Notion style typing and blocks

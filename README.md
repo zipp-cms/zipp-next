@@ -137,6 +137,11 @@ Cms::new(schema(), zipp::migrations!())
   templates by `<sectionHandle>-<typeHandle>`. The base url of each site
   is `--site-url de=https://example.ch`. crelte reads its settings from
   `../craft/.env`, see `example/crelte/craft/.env.example`.
+- **AI chat.** `--openrouter-key-file <file>` adds *AI* to the studio:
+  a chat on the left, the website on the right. The model (Claude
+  Sonnet, GPT Sol or Gemini over OpenRouter, through soe-llms) lists,
+  reads and changes entries with tools, but only as drafts: the website
+  on the right shows them with a preview token, an editor publishes.
 - **Types for the rest api.** `types` prints TypeScript types of all
   entries and blocks.
 

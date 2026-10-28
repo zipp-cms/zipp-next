@@ -67,6 +67,8 @@ export type Schema = {
 	translations: { namespace: string; keys: [string, string][] }[];
 	/** the url of each site, by handle */
 	siteUrls: Record<string, string>;
+	/** the models of the AI chat, empty if it is off */
+	aiModels: { id: string; name: string }[];
 };
 
 export type Block = { id?: string; type: string; fields: Values };
@@ -354,4 +356,25 @@ export function putTranslation(
 	value: string,
 ): Promise<void> {
 	return request('PUT', '/translations', { site, namespace, key, value });
+}
+
+/** A message of the AI chat, the studio keeps the conversation. */
+export type AiMessage =
+	| { kind: 'user'; text: string }
+	| { kind: 'assistant'; text: string }
+	| { kind: 'toolCall'; id: string; name: string; input: unknown }
+	| { kind: 'toolOutput'; id: string; output: string };
+
+/** A draft the AI changed, with a link that previews it. */
+export type AiAction = {
+	text: string;
+	entryId: number | null;
+	preview: string | null;
+};
+
+export function aiChat(
+	model: string,
+	messages: AiMessage[],
+): Promise<{ messages: AiMessage[]; text: string; actions: AiAction[] }> {
+	return request('POST', '/ai/chat', { model, messages });
 }

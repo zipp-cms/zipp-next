@@ -861,12 +861,20 @@ async fn delete_route(
 }
 
 #[derive(Debug, Serialize)]
+struct AiModel {
+	id: String,
+	name: String,
+}
+
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SchemaResp {
 	#[serde(flatten)]
 	schema: Schema,
 	/// for the preview button of the studio
 	site_urls: crate::graphql::SiteUrls,
+	/// the models of the AI chat, none if it is off
+	ai_models: Vec<AiModel>,
 }
 
 async fn schema_route(
@@ -876,6 +884,16 @@ async fn schema_route(
 	Json(SchemaResp {
 		schema: (*state.schema).clone(),
 		site_urls: (*state.site_urls).clone(),
+		ai_models: match state.ai {
+			Some(_) => crate::ai::MODELS
+				.iter()
+				.map(|(id, name)| AiModel {
+					id: id.to_string(),
+					name: name.to_string(),
+				})
+				.collect(),
+			None => vec![],
+		},
 	})
 }
 

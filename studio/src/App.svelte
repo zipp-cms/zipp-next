@@ -6,6 +6,7 @@
 	import Edit from './pages/Edit.svelte';
 	import Assets from './pages/Assets.svelte';
 	import Translations from './pages/Translations.svelte';
+	import Ai from './pages/Ai.svelte';
 	import Icon from './lib/Icon.svelte';
 
 	let schema = $state<Schema | null>(null);
@@ -59,19 +60,23 @@
 	<p class="error">{error}</p>
 {:else if schema}
 	{@const assets = route.current.page === 'assets'}
-	<div class="layout">
+	{@const ai = route.current.page === 'ai'}
+	<div class="layout" class:wide={ai}>
 		<div class="logo">zipp</div>
 		<header>
 			<nav class="top">
 				{#each groups as g (g.name)}
 					<a
 						href="#/list/{g.sections[0]}"
-						class:active={!assets && g === group}
+						class:active={!assets && !ai && g === group}
 					>
 						{g.name}
 					</a>
 				{/each}
 				<a href="#/assets" class:active={assets}>Assets</a>
+				{#if schema.aiModels.length}
+					<a href="#/ai" class:active={ai}>AI</a>
+				{/if}
 			</nav>
 			<div class="right">
 				{#if schema.sites.length > 1}
@@ -121,6 +126,8 @@
 			{#key site.current}
 				{#if assets}
 					<Assets />
+				{:else if ai}
+					<Ai {schema} />
 				{:else if route.current.page === 'translations'}
 					<Translations {schema} />
 				{:else if route.current.page === 'list' && current}
@@ -231,6 +238,21 @@
 	main {
 		min-width: 0;
 		padding: 16px 32px;
+	}
+
+	// the AI chat and the website take the whole width
+	.wide {
+		height: 100vh;
+		grid-template-rows: 60px minmax(0, 1fr);
+
+		.side {
+			display: none;
+		}
+
+		main {
+			grid-column: 1 / -1;
+			padding: 0;
+		}
 	}
 
 	@media (max-width: 800px) {

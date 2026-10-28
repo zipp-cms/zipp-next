@@ -2,6 +2,7 @@
 //! crate that builds its [`Schema`] and calls [`run`]. The content is
 //! edited in the studio and read by any frontend over the api.
 
+pub mod ai;
 pub mod apply;
 pub mod assets;
 pub mod auth;
@@ -67,6 +68,8 @@ pub struct AppState {
 	pub files: PathBuf,
 	/// the url of each site, for previews
 	pub site_urls: Arc<graphql::SiteUrls>,
+	/// the AI chat, if there is an api key
+	pub ai: Option<ai::AiConfig>,
 	hooks: Arc<Vec<Hook>>,
 }
 
@@ -176,13 +179,14 @@ impl Cms {
 				files,
 				public_url,
 				site_url,
+				openrouter_key_file,
 			} => tokio::runtime::Runtime::new().unwrap().block_on(serve(
 				schema,
 				&opts.db,
 				&migrations,
 				&listen,
 				files,
-				(public_url, site_url),
+				(public_url, site_url, openrouter_key_file),
 				(routes, hooks),
 			)),
 			Cmd::Makemigration { rename, name } => {
@@ -227,6 +231,9 @@ enum Cmd {
 		/// `--site-url de=https://example.ch`, repeat for each site
 		#[arg(long)]
 		site_url: Vec<String>,
+		/// A file with an OpenRouter api key, turns on the AI chat
+		#[arg(long)]
+		openrouter_key_file: Option<PathBuf>,
 	},
 	/// Write a migration from the schema in code to `migrations/`.
 	Makemigration {
@@ -255,7 +262,7 @@ async fn serve(
 	migrations: &Migrations,
 	listen: &str,
 	files: PathBuf,
-	(public_url, site_urls): (String, Vec<String>),
+	(public_url, site_urls, key_file): (String, Vec<String>, Option<PathBuf>),
 	(routes, hooks): (Router<AppState>, Vec<Hook>),
 ) -> Result<(), String> {
 	let site_urls = site_urls
@@ -287,6 +294,14 @@ async fn serve(
 	}
 
 	let schema = Arc::new(schema);
+	let ai = match key_file {
+		Some(path) => {
+			let key = fs::read_to_string(&path)
+				.map_err(|e| format!("{}: {e}", path.display()))?;
+			Some(ai::AiConfig::openrouter(key.trim().to_string()))
+		}
+		None => None,
+	};
 	let gql = graphql::build(
 		schema.clone(),
 		db.clone(),
@@ -299,12 +314,14 @@ async fn serve(
 		gql,
 		files,
 		site_urls: Arc::new(site_urls),
+		ai,
 		hooks: Arc::new(hooks),
 	};
 	let api = Router::new()
 		.nest("/auth", auth::routes())
 		.merge(entries::routes())
 		.merge(drafts::routes())
+		.merge(ai::routes())
 		.merge(translations::routes())
 		.merge(assets::api_routes())
 		.merge(graphql::routes());
