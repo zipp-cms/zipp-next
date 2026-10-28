@@ -5,6 +5,7 @@
 	import List from './pages/List.svelte';
 	import Edit from './pages/Edit.svelte';
 	import Assets from './pages/Assets.svelte';
+	import Icon from './lib/Icon.svelte';
 
 	let schema = $state<Schema | null>(null);
 	let error = $state('');
@@ -45,18 +46,15 @@
 {:else if error}
 	<p class="error">{error}</p>
 {:else if schema}
+	{@const assets = route.current.page === 'assets'}
 	<div class="layout">
-		<nav>
-			<h1>zipp</h1>
-			{#each schema.sections as s (s.handle)}
-				<a href="#/list/{s.handle}" class:active={current === s.handle}>
-					{s.name}
-				</a>
-			{/each}
-			<a href="#/assets" class:active={route.current.page === 'assets'}>
-				Assets
-			</a>
-			<div class="bottom">
+		<div class="logo">zipp</div>
+		<header>
+			<nav class="top">
+				<a href="#/list" class:active={!assets}>Entries</a>
+				<a href="#/assets" class:active={assets}>Assets</a>
+			</nav>
+			<div class="right">
 				{#if schema.sites.length > 1}
 					<select
 						value={site.current}
@@ -70,10 +68,30 @@
 				{/if}
 				<button class="link" onclick={onLogout}>Log out</button>
 			</div>
+		</header>
+		<nav class="side">
+			{#if assets}
+				<a href="#/assets" class="active">
+					<Icon name="dashboard" />
+					Assets
+				</a>
+			{:else}
+				{#each schema.sections as s (s.handle)}
+					<a
+						href="#/list/{s.handle}"
+						class:active={current === s.handle}
+					>
+						<Icon
+							name={s.kind === 'single' ? 'default' : 'all_pages'}
+						/>
+						{s.name}
+					</a>
+				{/each}
+			{/if}
 		</nav>
 		<main>
 			{#key site.current}
-				{#if route.current.page === 'assets'}
+				{#if assets}
 					<Assets />
 				{:else if route.current.page === 'list' && current}
 					{#key current}
@@ -99,78 +117,123 @@
 
 <style lang="scss">
 	.layout {
-		display: flex;
+		display: grid;
+		grid-template-columns: 240px 1fr;
+		grid-template-rows: 60px 1fr;
 		min-height: 100vh;
 	}
 
-	nav {
-		width: 13rem;
-		flex-shrink: 0;
-		padding: 1.5rem 1rem;
-		background: var(--side);
+	.logo {
 		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
+		align-items: center;
+		justify-content: center;
+		background: var(--bar);
+		color: white;
+		font-size: 22px;
+		font-weight: 900;
+		text-transform: uppercase;
+	}
 
-		h1 {
-			font-size: 1.3rem;
-			margin: 0 0.5rem 1rem;
-		}
+	header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 32px;
+		background: var(--bar);
+		color: white;
+	}
+
+	.top {
+		display: flex;
+		gap: 32px;
 
 		a {
-			padding: 0.4rem 0.5rem;
-			border-radius: 0.3rem;
-			color: inherit;
+			color: rgba(255, 255, 255, 0.7);
 			text-decoration: none;
+			transition: color 0.4s ease;
 
-			&.active {
-				background: var(--line);
+			&.active,
+			&:hover {
+				color: white;
 			}
 		}
+	}
 
-		.bottom {
-			margin-top: auto;
-			display: flex;
-			flex-direction: column;
-			gap: 0.5rem;
+	.right {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+
+		select {
+			width: auto;
+			padding: 6px 10px;
+			background: #3a3b44;
+			color: white;
 		}
 
 		.link {
-			text-align: left;
+			color: white;
+		}
+	}
+
+	.side {
+		padding: 16px;
+		background: white;
+
+		a {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			margin-bottom: 8px;
+			padding: 9px 8px;
+			border-radius: 2px;
+			color: inherit;
+			text-decoration: none;
+			transition: background-color 0.4s ease;
+
+			&.active,
+			&:hover {
+				background: var(--hover);
+			}
 		}
 	}
 
 	main {
-		flex: 1;
-		padding: 1.5rem 2rem;
-		max-width: 56rem;
+		min-width: 0;
+		padding: 16px 32px;
 	}
 
-	@media (max-width: 700px) {
+	@media (max-width: 800px) {
 		.layout {
-			flex-direction: column;
+			grid-template-columns: 1fr;
+			grid-template-rows: auto;
+			align-content: start;
 		}
 
-		nav {
-			width: auto;
-			flex-direction: row;
+		.logo {
+			justify-content: flex-start;
+			padding: 12px 16px 0;
+		}
+
+		header {
 			flex-wrap: wrap;
-			align-items: center;
-			padding: 0.6rem;
+			gap: 12px;
+			padding: 12px 16px;
+		}
 
-			h1 {
-				margin: 0 0.75rem 0 0.25rem;
-			}
+		.side {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 4px;
+			padding: 8px;
 
-			.bottom {
-				margin: 0 0 0 auto;
-				flex-direction: row;
-				align-items: center;
+			a {
+				margin: 0;
 			}
 		}
 
 		main {
-			padding: 1rem;
+			padding: 16px;
 		}
 	}
 </style>

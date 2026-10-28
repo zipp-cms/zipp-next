@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { listEntries, moveEntry, type Entry, type Schema } from '../api';
 	import { go, site } from '../route.svelte';
+	import Icon from '../lib/Icon.svelte';
 
 	let { schema, section }: { schema: Schema; section: string } = $props();
 
@@ -69,116 +70,175 @@
 	}
 </script>
 
-<header>
-	<h2>{sec.name}</h2>
+<div class="page-top">
+	<h1>{sec.name}</h1>
 	{#if sec.kind !== 'single'}
-		<button class="primary" onclick={() => go('#/new/' + section)}>
+		<button class="dark" onclick={() => go('#/new/' + section)}>
+			<Icon name="add" />
 			New entry
 		</button>
 	{/if}
-</header>
-
-{#if !tree}
-	<input placeholder="Search titles" bind:value={search} />
-{/if}
+</div>
 
 {#if error}<p class="error">{error}</p>{/if}
 
-<table>
-	<tbody>
-		{#each entries as e (e.id)}
-			{@const sibs = siblings(e)}
-			{@const i = sibs.indexOf(e)}
-			<tr>
-				<td style:padding-left="{0.5 + depth(e) * 1.5}rem">
-					<a href="#/entry/{e.id}">{e.title}</a>
-				</td>
-				<td class="muted hide-small">
-					{e.uri === null ? '' : '/' + e.uri}
-				</td>
-				<td class="muted">{e.published ? 'Published' : 'Draft'}</td>
-				{#if tree}
-					<td class="moves">
-						<button
-							class="icon"
-							title="Up"
-							disabled={i === 0}
-							onclick={() => move(e, 'up')}
-						>
-							↑
-						</button>
-						<button
-							class="icon"
-							title="Down"
-							disabled={i === sibs.length - 1}
-							onclick={() => move(e, 'down')}
-						>
-							↓
-						</button>
-						<button
-							class="icon"
-							title="Into the entry above"
-							disabled={i === 0}
-							onclick={() => move(e, 'in')}
-						>
-							→
-						</button>
-						<button
-							class="icon"
-							title="Out of its parent"
-							disabled={e.parentId === null}
-							onclick={() => move(e, 'out')}
-						>
-							←
-						</button>
-					</td>
-				{:else}
-					<td class="muted hide-small">{date(e.updatedAt)}</td>
-				{/if}
-			</tr>
-		{:else}
-			<tr><td class="muted">No entries yet</td></tr>
-		{/each}
-	</tbody>
-</table>
-{#if total > entries.length}
-	<p class="muted">{entries.length} of {total}</p>
-{/if}
+<div class="card list">
+	{#if !tree}
+		<div class="search">
+			<input placeholder="Search entries" bind:value={search} />
+			<Icon name="search" />
+		</div>
+	{/if}
 
-<style>
-	header {
+	{#each entries as e (e.id)}
+		{@const sibs = siblings(e)}
+		{@const i = sibs.indexOf(e)}
+		<div class="row">
+			<a
+				class="title"
+				href="#/entry/{e.id}"
+				style:padding-left="{depth(e) * 1.5}rem"
+			>
+				{e.title}
+			</a>
+			<span
+				class="badge"
+				class:draft={!e.published}
+				title={e.published ? 'Published' : 'Draft'}
+			>
+				{site.current.toUpperCase()}
+			</span>
+			<span class="type hide-small">
+				Type: {schema.components.find(c => c.handle === e.type)?.name}
+			</span>
+			{#if tree}
+				<span class="moves">
+					<button
+						class="icon"
+						title="Up"
+						disabled={i === 0}
+						onclick={() => move(e, 'up')}
+					>
+						↑
+					</button>
+					<button
+						class="icon"
+						title="Down"
+						disabled={i === sibs.length - 1}
+						onclick={() => move(e, 'down')}
+					>
+						↓
+					</button>
+					<button
+						class="icon"
+						title="Into the entry above"
+						disabled={i === 0}
+						onclick={() => move(e, 'in')}
+					>
+						→
+					</button>
+					<button
+						class="icon"
+						title="Out of its parent"
+						disabled={e.parentId === null}
+						onclick={() => move(e, 'out')}
+					>
+						←
+					</button>
+				</span>
+			{:else}
+				<span class="type hide-small">{date(e.updatedAt)}</span>
+			{/if}
+		</div>
+	{:else}
+		<p class="empty">No entries yet</p>
+	{/each}
+	{#if total > entries.length}
+		<p class="empty">{entries.length} of {total}</p>
+	{/if}
+</div>
+
+<style lang="scss">
+	.list {
+		padding: 0 0 8px;
+	}
+
+	.search {
+		position: relative;
 		display: flex;
-		justify-content: space-between;
+		justify-content: flex-end;
+		padding: 10px 16px;
+		border-bottom: 2px solid var(--line);
+
+		input {
+			width: 340px;
+			padding-right: 36px;
+		}
+
+		:global(.icon) {
+			position: absolute;
+			right: 28px;
+			top: 50%;
+			transform: translateY(-50%);
+		}
+	}
+
+	.row {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 4rem 12rem 9rem;
 		align-items: center;
+		padding: 10px 26px;
 	}
 
-	table {
-		width: 100%;
-		margin-top: 1rem;
-		border-collapse: collapse;
+	.title {
+		font-size: 17px;
+		color: inherit;
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
 	}
 
-	td {
-		padding: 0.6rem 0.5rem;
-		border-bottom: 1px solid var(--line);
+	.badge {
+		justify-self: start;
+		padding: 2px 6px;
+		font-size: 13px;
+		color: white;
+		background: var(--dark);
+		border-radius: 2px;
+
+		&.draft {
+			background: #c4c4c8;
+		}
+	}
+
+	.type {
+		font-size: 14px;
 	}
 
 	.moves {
+		justify-self: end;
 		white-space: nowrap;
-		text-align: right;
 	}
 
-	a {
-		color: inherit;
-	}
-
-	.muted {
+	.empty {
+		padding: 10px 26px;
 		color: var(--muted);
 	}
 
-	@media (max-width: 700px) {
+	@media (max-width: 800px) {
+		.row {
+			grid-template-columns: minmax(0, 1fr) 3rem auto;
+			padding: 10px 16px;
+		}
+
 		.hide-small {
 			display: none;
+		}
+
+		.search input {
+			width: 100%;
 		}
 	}
 </style>

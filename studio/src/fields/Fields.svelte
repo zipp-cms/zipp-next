@@ -28,30 +28,22 @@
 	}
 </script>
 
-<div class="fields">
+<!-- the old Zipp grid: labels on the left, fields on the right -->
+<div class="fields" class:nested={prefix !== ''}>
 	{#each component.fields as field (field.handle)}
 		{@const path = prefix + field.handle}
-		<div class="field">
+		<label for={path}>
+			{field.label}{#if field.required}<span class="req">*</span>{/if}
+			{#if shared(field)}<span class="shared">all sites</span>{/if}
+		</label>
+		<div class="value">
 			{#if field.kind === 'boolean'}
-				<label class="check">
-					<input
-						type="checkbox"
-						bind:checked={values[field.handle]}
-					/>
-					{field.label}
-				</label>
-			{:else}
-				<label for={path}>
-					{field.label}{#if field.required}<span class="req">
-							*
-						</span>{/if}
-					{#if shared(field)}<span class="shared">
-							all sites
-						</span>{/if}
-				</label>
-			{/if}
-
-			{#if field.kind === 'text' && field.multiline}
+				<input
+					id={path}
+					type="checkbox"
+					bind:checked={values[field.handle]}
+				/>
+			{:else if field.kind === 'text' && field.multiline}
 				<textarea
 					id={path}
 					maxlength={field.max ?? undefined}
@@ -86,36 +78,40 @@
 
 <style lang="scss">
 	.fields {
-		display: flex;
-		flex-direction: column;
-		gap: 1.1rem;
+		display: grid;
+		grid-template-columns: 200px minmax(0, 1fr);
+		gap: 10px 30px;
+		align-items: center;
+	}
+
+	.nested {
+		grid-template-columns: 130px minmax(0, 1fr);
 	}
 
 	label {
-		display: block;
-		font-weight: 500;
-		margin-bottom: 0.35rem;
-	}
-
-	.check {
-		display: flex;
-		gap: 0.4rem;
-		align-items: center;
-
-		input {
-			width: auto;
-		}
+		align-self: center;
 	}
 
 	.shared {
-		margin-left: 0.4rem;
-		font-size: 0.75rem;
-		font-weight: normal;
+		display: block;
+		margin-top: 2px;
+		font-size: 12px;
 		color: var(--muted);
 	}
 
 	.req {
 		color: var(--danger);
-		margin-left: 0.15rem;
+		margin-left: 2px;
+	}
+
+	@media (max-width: 800px) {
+		.fields {
+			grid-template-columns: 1fr;
+			gap: 6px;
+		}
+
+		.value {
+			margin-bottom: 10px;
+		}
 	}
 </style>

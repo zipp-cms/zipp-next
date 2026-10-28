@@ -2,6 +2,7 @@
 	import type { Block, Field, Refs, Schema, Values } from '../api';
 	import BlockMenu from './BlockMenu.svelte';
 	import Fields from './Fields.svelte';
+	import Icon from '../lib/Icon.svelte';
 
 	let {
 		schema,
@@ -58,6 +59,8 @@
 	}
 </script>
 
+<!-- like the repeat fields of the old Zipp: one after the other, the
+	actions on the right -->
 <div class="blocks">
 	{#each blocks as block, i (key(block))}
 		{@const comp = schema.components.find(c => c.handle === block.type)}
@@ -65,10 +68,9 @@
 		<div class="block">
 			<div class="head">
 				<button
-					class="icon name"
+					class="link name"
 					onclick={() => (collapsed[k] = !collapsed[k])}
 				>
-					{collapsed[k] ? '▸' : '▾'}
 					{comp?.name ?? block.type}
 					{#if collapsed[k]}<span class="muted">
 							{summary(block)}
@@ -91,23 +93,21 @@
 					↓
 				</button>
 				<button class="icon" title="Remove" onclick={() => remove(i)}>
-					×
+					<Icon name="delete" />
 				</button>
 			</div>
 			{#if errors[`${path}.${i}`]}
 				<p class="error">{errors[`${path}.${i}`]}</p>
 			{/if}
 			{#if comp && !collapsed[k]}
-				<div class="body">
-					<Fields
-						{schema}
-						component={comp}
-						values={block.fields}
-						{errors}
-						{refs}
-						prefix="{path}.{i}."
-					/>
-				</div>
+				<Fields
+					{schema}
+					component={comp}
+					values={block.fields}
+					{errors}
+					{refs}
+					prefix="{path}.{i}."
+				/>
 			{/if}
 		</div>
 	{/each}
@@ -121,33 +121,31 @@
 	.blocks {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
 	}
 
 	.block {
-		border: 1px solid var(--line);
-		border-radius: 0.4rem;
+		padding: 10px 0 16px;
+		border-bottom: 2px solid var(--line);
+
+		&:first-child {
+			padding-top: 0;
+		}
 	}
 
 	.head {
 		display: flex;
 		align-items: center;
-		padding: 0.3rem 0.4rem;
-		background: var(--side);
-		border-radius: 0.4rem 0.4rem 0 0;
+		margin-bottom: 8px;
 
 		.name {
 			flex: 1;
-			text-align: left;
+			gap: 10px;
+			padding: 4px 0;
 			color: var(--text);
-			font-weight: 500;
-			display: flex;
-			gap: 0.5rem;
+			font-weight: 600;
+			text-align: left;
+			min-width: 0;
 		}
-	}
-
-	.body {
-		padding: 0.9rem;
 	}
 
 	.muted {

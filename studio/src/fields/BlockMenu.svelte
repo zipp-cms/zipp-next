@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '../lib/Icon.svelte';
 	import type { Component } from '../api';
 
 	let {
@@ -34,8 +35,9 @@
 </script>
 
 <div class="menu">
-	<button onclick={toggle}>
-		+ Add {types.length === 1 ? types[0].name : 'block'}
+	<button class="add" onclick={toggle}>
+		<Icon name="add" />
+		Add {types.length === 1 ? types[0].name : 'block'}
 	</button>
 	{#if open}
 		<div class="popup">
@@ -57,6 +59,13 @@
 <style lang="scss">
 	.menu {
 		position: relative;
+		margin-top: 10px;
+	}
+
+	.add {
+		padding: 4px 0;
+		border: none;
+		background: none;
 	}
 
 	.popup {
@@ -67,9 +76,7 @@
 		width: 16rem;
 		padding: 0.4rem;
 		background: white;
-		border: 1px solid var(--line);
-		border-radius: 0.4rem;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+		box-shadow: var(--shadow);
 		display: flex;
 		flex-direction: column;
 		gap: 0.2rem;
@@ -78,5 +85,9 @@
 	.item {
 		border: none;
 		text-align: left;
+
+		&:hover {
+			background: var(--hover);
+		}
 	}
 </style>

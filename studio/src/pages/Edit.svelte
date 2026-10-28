@@ -13,6 +13,7 @@
 	import { untrack } from 'svelte';
 	import { go, site } from '../route.svelte';
 	import Fields from '../fields/Fields.svelte';
+	import Icon from '../lib/Icon.svelte';
 
 	let {
 		schema,
@@ -35,6 +36,7 @@
 	let saved = $state(false);
 	let error = $state('');
 	let errors = $state<Record<string, string>>({});
+	let tab = $state<'content' | 'options'>('content');
 	// possible parents of a new entry in a structure
 	let parents = $state<Entry[]>([]);
 
@@ -121,27 +123,73 @@
 {#if error && !loaded}
 	<p class="error">{error}</p>
 {:else if loaded && secDef && comp}
-	<header>
-		<a href="#/list/{sec}">{secDef.name}</a>
-		<div class="actions">
-			<label class="toggle">
-				<input type="checkbox" bind:checked={published} />
-				Published
-			</label>
-			{#if id !== null && !single}
-				<button class="danger" onclick={remove}>Delete</button>
-			{/if}
-			<button class="primary" onclick={save} disabled={saving}>
-				{saved ? 'Saved' : 'Save'}
+	<div class="page-top">
+		<h1>
+			{title || 'New entry'}
+			<span class="badge" class:draft={!published}>
+				{published ? 'Published' : 'Draft'}
+			</span>
+		</h1>
+		{#if id !== null && !single}
+			<button class="dark" onclick={remove}>
+				<Icon name="delete" />
+				Delete
+			</button>
+		{/if}
+		<button class="dark" onclick={save} disabled={saving}>
+			<Icon name="save" />
+			{saved ? 'Saved' : 'Save'}
+		</button>
+	</div>
+
+	<div class="card">
+		<div class="tabs">
+			<button
+				class:active={tab === 'content'}
+				onclick={() => (tab = 'content')}
+			>
+				Content
+			</button>
+			<button
+				class:active={tab === 'options'}
+				onclick={() => (tab = 'options')}
+			>
+				Options
 			</button>
 		</div>
-	</header>
 
-	{#if id === null && (secDef.types.length > 1 || parents.length)}
-		<div class="meta">
-			{#if secDef.types.length > 1}
+		{#if error}<p class="error">{error}</p>{/if}
+
+		{#if tab === 'content'}
+			<div class="head">
 				<label>
-					Type
+					Title
+					<input placeholder="Title" bind:value={title} />
+					{#if errors.title}<span class="error">
+							{errors.title}
+						</span>{/if}
+				</label>
+				{#if !single}
+					<label>
+						Slug
+						<input placeholder="from the title" bind:value={slug} />
+						{#if uri !== null}<span class="uri">/{uri}</span>{/if}
+						{#if errors.slug}<span class="error">
+								{errors.slug}
+							</span>{/if}
+					</label>
+				{/if}
+			</div>
+
+			<Fields {schema} component={comp} values={fields} {errors} {refs} />
+		{:else}
+			<div class="options">
+				<span>Published</span>
+				<input type="checkbox" bind:checked={published} />
+				<span>Section</span>
+				<span>{secDef.name}</span>
+				<span>Type</span>
+				{#if id === null && secDef.types.length > 1}
 					<select bind:value={ty}>
 						{#each secDef.types as t (t)}
 							<option value={t}>
@@ -150,101 +198,100 @@
 							</option>
 						{/each}
 					</select>
-				</label>
-			{/if}
-			{#if parents.length}
-				<label>
-					Parent
+				{:else}
+					<span>{comp.name}</span>
+				{/if}
+				{#if id === null && parents.length}
+					<span>Parent</span>
 					<select bind:value={parentId}>
 						<option value={null}>None, on the top</option>
 						{#each parents as p (p.id)}
 							<option value={p.id}>{p.title}</option>
 						{/each}
 					</select>
-				</label>
-			{/if}
-		</div>
-	{/if}
-
-	<input class="title" placeholder="Title" bind:value={title} />
-	{#if errors.title}<p class="error">{errors.title}</p>{/if}
-	{#if !single}
-		<div class="slug">
-			<input placeholder="slug from title" bind:value={slug} />
-			{#if uri !== null}<span>/{uri}</span>{/if}
-		</div>
-	{/if}
-	{#if errors.slug}<p class="error">{errors.slug}</p>{/if}
-
-	{#if error}<p class="error">{error}</p>{/if}
-
-	<Fields {schema} component={comp} values={fields} {errors} {refs} />
+				{/if}
+			</div>
+		{/if}
+	</div>
 {/if}
 
 <style lang="scss">
-	header {
+	h1 {
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 1.5rem;
+		gap: 10px;
+	}
 
-		a {
-			color: var(--muted);
+	.badge {
+		padding: 2px 6px;
+		font-size: 13px;
+		font-weight: normal;
+		color: white;
+		background: var(--dark);
+		border-radius: 2px;
+
+		&.draft {
+			background: #c4c4c8;
 		}
 	}
 
-	.actions {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-end;
-		gap: 0.5rem;
-		align-items: center;
-	}
+	.tabs {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 24px;
+		margin: -14px -16px 24px;
+		padding: 0 16px;
+		border-bottom: 2px solid var(--line);
 
-	.toggle {
-		display: flex;
-		gap: 0.3rem;
-		align-items: center;
-		margin-right: 0.5rem;
+		button {
+			padding: 12px 0;
+			font-size: 18px;
+			border: none;
+			border-bottom: 2px solid transparent;
+			border-radius: 0;
+			background: none;
+			margin-bottom: -2px;
 
-		input {
-			width: auto;
+			&.active {
+				border-bottom-color: var(--dark);
+			}
 		}
 	}
 
-	.title {
-		font-size: 1.6rem;
-		font-weight: 600;
-		border: none;
-		padding: 0.2rem 0;
-	}
-
-	.meta {
-		display: flex;
-		gap: 1rem;
-		margin-bottom: 1rem;
+	.head {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 24px;
+		margin-bottom: 30px;
 
 		label {
 			display: flex;
 			flex-direction: column;
-			gap: 0.2rem;
-			color: var(--muted);
-			font-size: 0.9rem;
+			gap: 10px;
 		}
 	}
 
-	.slug {
-		display: flex;
-		gap: 0.75rem;
-		align-items: center;
+	.uri {
+		margin-top: -4px;
 		color: var(--muted);
-		margin-bottom: 1.5rem;
+		font-size: 14px;
+	}
 
-		input {
-			width: 14rem;
-			border: none;
-			padding: 0.2rem;
-			color: inherit;
+	.options {
+		display: grid;
+		grid-template-columns: 200px 1fr;
+		gap: 16px 30px;
+		align-items: center;
+
+		select {
+			max-width: 24rem;
+		}
+	}
+
+	@media (max-width: 800px) {
+		.head,
+		.options {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

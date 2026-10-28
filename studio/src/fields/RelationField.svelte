@@ -8,6 +8,7 @@
 		type Values,
 	} from '../api';
 	import { site } from '../route.svelte';
+	import Icon from '../lib/Icon.svelte';
 
 	let {
 		schema,
@@ -58,7 +59,7 @@
 					{typeName(refs[id].type)}
 				</span>{/if}
 			<button class="icon" onclick={() => remove(id)} title="Remove">
-				×
+				<Icon name="delete" />
 			</button>
 		</div>
 	{/each}
@@ -87,16 +88,17 @@
 	.relation {
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		gap: 8px;
 	}
 
+	// like a filled input, with the remove action on the right
 	.chip {
 		display: flex;
-		gap: 0.5rem;
 		align-items: center;
-		padding: 0.3rem 0.4rem 0.3rem 0.7rem;
-		border: 1px solid var(--line);
-		border-radius: 0.3rem;
+		gap: 10px;
+		padding: 5px 4px 5px 12px;
+		border-radius: 2px;
+		background: var(--input);
 
 		button {
 			margin-left: auto;
@@ -109,25 +111,28 @@
 
 	.results {
 		position: absolute;
-		z-index: 2;
+		z-index: 5;
 		left: 0;
 		right: 0;
+		padding: 4px;
 		background: white;
-		border: 1px solid var(--line);
-		border-radius: 0.3rem;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+		box-shadow: var(--shadow);
 
 		button {
 			display: flex;
-			gap: 0.5rem;
+			gap: 10px;
 			width: 100%;
 			border: none;
 			text-align: left;
+
+			&:hover {
+				background: var(--hover);
+			}
 		}
 	}
 
 	.muted {
 		color: var(--muted);
-		font-size: 0.85rem;
+		font-size: 13px;
 	}
 </style>

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import {
-		assetUrl,
 		listAssets,
 		uploadAssets,
 		type Asset,
@@ -8,6 +7,8 @@
 		type Values,
 	} from '../api';
 	import AssetGrid from './AssetGrid.svelte';
+	import Thumb from './Thumb.svelte';
+	import Icon from '../lib/Icon.svelte';
 
 	let { field, values }: { field: Field; values: Values } = $props();
 
@@ -55,12 +56,9 @@
 <div class="assets">
 	{#each chosen as a (a.id)}
 		<div class="chosen">
-			{#if a.kind === 'image'}
-				<img src={assetUrl(a, true)} alt={a.alt} />
-			{/if}
-			<span>{a.filename}</span>
+			<div class="tile"><Thumb asset={a} /></div>
 			<button class="icon" title="Remove" onclick={() => toggle(a)}>
-				×
+				<Icon name="delete" />
 			</button>
 		</div>
 	{/each}
@@ -104,32 +102,18 @@
 	.assets {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.5rem;
+		gap: 16px;
 		align-items: center;
 	}
 
 	.chosen {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		padding: 0.25rem 0.25rem 0.25rem 0.25rem;
-		border: 1px solid var(--line);
-		border-radius: 0.3rem;
+		gap: 6px;
+	}
 
-		img {
-			width: 3rem;
-			height: 3rem;
-			object-fit: cover;
-			border-radius: 0.2rem;
-		}
-
-		span {
-			font-size: 0.85rem;
-			max-width: 12rem;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
-		}
+	.tile {
+		width: 117px;
 	}
 
 	.overlay {
@@ -139,7 +123,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(0, 0, 0, 0.35);
+		background: rgba(0, 0, 0, 0.6);
 	}
 
 	.panel {
@@ -148,7 +132,7 @@
 		overflow: auto;
 		padding: 1rem;
 		background: white;
-		border-radius: 0.5rem;
+		box-shadow: var(--shadow);
 
 		header {
 			display: flex;
@@ -160,8 +144,9 @@
 	.upload {
 		cursor: pointer;
 		padding: 0.45rem 0.9rem;
-		border: 1px solid var(--line);
-		border-radius: 0.3rem;
+		border: 1px solid var(--dark);
+		border-radius: 2px;
+		font-size: 14px;
 		white-space: nowrap;
 
 		input {

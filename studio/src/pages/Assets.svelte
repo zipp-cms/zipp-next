@@ -8,6 +8,7 @@
 		type Asset,
 	} from '../api';
 	import AssetGrid from '../fields/AssetGrid.svelte';
+	import Icon from '../lib/Icon.svelte';
 
 	let assets = $state<Asset[]>([]);
 	let search = $state('');
@@ -84,9 +85,10 @@
 	ondragover={e => e.preventDefault()}
 	{ondrop}
 >
-	<header>
-		<h2>Assets</h2>
-		<label class="button primary">
+	<div class="page-top">
+		<h1>Assets</h1>
+		<label class="upload">
+			<Icon name="add" />
 			{uploading ? 'Uploading…' : 'Upload'}
 			<input
 				type="file"
@@ -94,12 +96,14 @@
 				onchange={e => upload(e.currentTarget.files)}
 			/>
 		</label>
-	</header>
+	</div>
 
-	<input placeholder="Search files" bind:value={search} />
 	{#if error}<p class="error">{error}</p>{/if}
 
-	<div class="grid">
+	<div class="card">
+		<div class="search">
+			<input placeholder="Search files" bind:value={search} />
+		</div>
 		<AssetGrid {assets} onpick={open} />
 	</div>
 </div>
@@ -156,17 +160,15 @@
 		min-height: 80vh;
 	}
 
-	header {
-		display: flex;
-		justify-content: space-between;
+	.upload {
+		display: inline-flex;
 		align-items: center;
-	}
-
-	.button {
+		gap: 8px;
+		padding: 10px 12px;
+		font-size: 14px;
 		cursor: pointer;
-		padding: 0.45rem 0.9rem;
-		border-radius: 0.3rem;
-		background: var(--accent);
+		border-radius: 2px;
+		background: var(--dark);
 		color: white;
 
 		input {
@@ -174,8 +176,14 @@
 		}
 	}
 
-	.grid {
-		margin-top: 1rem;
+	.search {
+		display: flex;
+		justify-content: flex-end;
+		margin-bottom: 16px;
+
+		input {
+			width: 340px;
+		}
 	}
 
 	.overlay {
@@ -185,7 +193,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(0, 0, 0, 0.35);
+		background: rgba(0, 0, 0, 0.6);
 	}
 
 	.panel {
@@ -194,7 +202,7 @@
 		overflow: auto;
 		padding: 1.25rem;
 		background: white;
-		border-radius: 0.5rem;
+		box-shadow: var(--shadow);
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
