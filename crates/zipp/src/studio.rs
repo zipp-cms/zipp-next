@@ -13,7 +13,7 @@ use crate::AppState;
 #[folder = "studio/"]
 struct Files;
 
-async fn file(uri: Uri) -> Response {
+async fn file(State(state): State<AppState>, uri: Uri) -> Response {
 	let path = uri.path().trim_start_matches('/');
 
 	// the pages of the studio are under /admin, any other path is a file
@@ -42,8 +42,15 @@ async fn file(uri: Uri) -> Response {
 		"no-cache"
 	};
 
+	let frames =
+		format!("frame-ancestors 'self' {}", state.frame_ancestors.join(" "));
 	(
-		[(header::CONTENT_TYPE, mime), (header::CACHE_CONTROL, cache)],
+		[
+			(header::CONTENT_TYPE, mime),
+			(header::CACHE_CONTROL, cache),
+			// no other site may frame the studio and click for an editor
+			(header::CONTENT_SECURITY_POLICY, frames.as_str()),
+		],
 		file.data,
 	)
 		.into_response()

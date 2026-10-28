@@ -1,3 +1,6 @@
+use std::collections::BTreeMap;
+use std::sync::{Mutex, OnceLock};
+
 use axum::extract::{FromRef, FromRequestParts, State};
 use axum::http::HeaderMap;
 use axum::http::request::Parts;
@@ -12,6 +15,15 @@ use crate::db::{Db, now};
 use crate::error::{Error, Result};
 
 const SESSION_DURATION_MS: i64 = 1000 * 60 * 60 * 24 * 30;
+/// Wrong passwords of an email before it has to wait.
+const MAX_FAILS: u32 = 10;
+const FAIL_WINDOW_MS: i64 = 1000 * 60 * 15;
+
+/// Failed logins per email: count and the time of the first one.
+static FAILS: Mutex<BTreeMap<String, (u32, i64)>> = Mutex::new(BTreeMap::new());
+
+/// A hash to verify against for unknown emails, so they take as long.
+static DUMMY_HASH: OnceLock<String> = OnceLock::new();
 
 /// Extractor that only succeeds with a valid `session-token` header.
 pub struct Authed {
@@ -66,7 +78,25 @@ pub fn add_user(conn: &Connection, email: &str, password: &str) -> Result<()> {
 		ON CONFLICT (email) DO UPDATE SET password_hash = ?2",
 		params![email, hash, now()],
 	)?;
+	// a new password logs out everywhere
+	conn.execute(
+		"DELETE FROM sessions WHERE user_id =
+		(SELECT id FROM users WHERE email = ?1)",
+		[email],
+	)?;
 	Ok(())
+}
+
+/// Whether the email may try again, see [`MAX_FAILS`].
+fn may_try(email: &str) -> bool {
+	let mut fails = FAILS.lock().unwrap();
+	fails.retain(|_, (_, first)| *first + FAIL_WINDOW_MS > now());
+	fails.get(email).is_none_or(|(n, _)| *n < MAX_FAILS)
+}
+
+fn failed(email: &str) {
+	let mut fails = FAILS.lock().unwrap();
+	fails.entry(email.to_string()).or_insert((0, now())).0 += 1;
 }
 
 #[derive(Debug, Deserialize)]
@@ -84,23 +114,47 @@ async fn login(
 	State(db): State<Db>,
 	Json(req): Json<LoginReq>,
 ) -> Result<Json<LoginResp>> {
-	let conn = db.conn();
-	let user: Option<(i64, String)> = conn
+	if !may_try(&req.email) {
+		return Err(Error::Request(
+			"Too many wrong passwords, try again in 15 minutes".into(),
+		));
+	}
+	let user: Option<(i64, String)> = db
+		.conn()
 		.query_row(
 			"SELECT id, password_hash FROM users WHERE email = ?1",
 			[&req.email],
 			|r| Ok((r.get(0)?, r.get(1)?)),
 		)
 		.optional()?;
-	let Some((user_id, hash)) = user else {
-		return Err(Error::LoginIncorrect);
-	};
-	if !bcrypt::verify(&req.password, &hash).unwrap_or(false) {
+
+	// bcrypt takes a while: not with the database locked, not on the
+	// async workers, and as long for unknown emails
+	let known = user.is_some();
+	let (user_id, hash) = user.unwrap_or_else(|| {
+		let dummy = DUMMY_HASH.get_or_init(|| {
+			bcrypt::hash("not a password", bcrypt::DEFAULT_COST).unwrap()
+		});
+		(0, dummy.clone())
+	});
+	let password = req.password.clone();
+	let ok = tokio::task::spawn_blocking(move || {
+		bcrypt::verify(password, &hash).unwrap_or(false)
+	})
+	.await
+	.map_err(|e| Error::Internal(e.to_string()))?;
+	if !ok || !known {
+		failed(&req.email);
 		return Err(Error::LoginIncorrect);
 	}
 
 	let n: u128 = rand::rng().random();
 	let token = format!("{n:032x}");
+	let conn = db.conn();
+	conn.execute(
+		"DELETE FROM sessions WHERE created_at < ?1",
+		[now() - SESSION_DURATION_MS],
+	)?;
 	conn.execute(
 		"INSERT INTO sessions (token, user_id, created_at) VALUES (?1, ?2, ?3)",
 		params![token, user_id, now()],

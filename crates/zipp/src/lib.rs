@@ -70,6 +70,8 @@ pub struct AppState {
 	pub files: PathBuf,
 	/// the url of each site, for previews
 	pub site_urls: Arc<graphql::SiteUrls>,
+	/// origins that may frame the studio
+	pub frame_ancestors: Arc<Vec<String>>,
 	/// the AI chat, if there is an api key
 	pub ai: Option<ai::AiConfig>,
 	hooks: Arc<Vec<Hook>>,
@@ -176,21 +178,15 @@ impl Cms {
 
 		let opts = Opts::parse();
 		let res = match opts.cmd {
-			Cmd::Serve {
-				listen,
-				files,
-				public_url,
-				site_url,
-				openrouter_key_file,
-			} => tokio::runtime::Runtime::new().unwrap().block_on(serve(
-				schema,
-				&opts.db,
-				&migrations,
-				&listen,
-				files,
-				(public_url, site_url, openrouter_key_file),
-				(routes, hooks),
-			)),
+			Cmd::Serve(args) => {
+				tokio::runtime::Runtime::new().unwrap().block_on(serve(
+					schema,
+					&opts.db,
+					&migrations,
+					args,
+					(routes, hooks),
+				))
+			}
 			Cmd::Makemigration { rename, name } => {
 				makemigration(&schema, &migrations, &rename, name.as_deref())
 			}
@@ -216,27 +212,34 @@ struct Opts {
 	cmd: Cmd,
 }
 
+#[derive(Debug, clap::Args)]
+struct ServeArgs {
+	#[arg(long, default_value = "127.0.0.1:8090")]
+	listen: String,
+	/// Where uploaded files go
+	#[arg(long, default_value = "files")]
+	files: PathBuf,
+	/// Put before asset urls in GraphQL, e.g. `https://cms.example.com`
+	/// when the frontend runs on another domain
+	#[arg(long, default_value = "")]
+	public_url: String,
+	/// The url of a site for crelte and `url` in GraphQL:
+	/// `--site-url de=https://example.ch`, repeat for each site
+	#[arg(long)]
+	site_url: Vec<String>,
+	/// A file with an OpenRouter api key, turns on the AI chat
+	#[arg(long)]
+	openrouter_key_file: Option<PathBuf>,
+	/// A site that may show the studio in a frame, like a dashboard:
+	/// `--frame-ancestor https://dash.example.com`, repeat for more
+	#[arg(long)]
+	frame_ancestor: Vec<String>,
+}
+
 #[derive(Debug, Subcommand)]
 enum Cmd {
 	/// Apply new migrations and serve the api and the studio.
-	Serve {
-		#[arg(long, default_value = "127.0.0.1:8090")]
-		listen: String,
-		/// Where uploaded files go
-		#[arg(long, default_value = "files")]
-		files: PathBuf,
-		/// Put before asset urls in GraphQL, e.g. `https://cms.example.com`
-		/// when the frontend runs on another domain
-		#[arg(long, default_value = "")]
-		public_url: String,
-		/// The url of a site for crelte and `url` in GraphQL:
-		/// `--site-url de=https://example.ch`, repeat for each site
-		#[arg(long)]
-		site_url: Vec<String>,
-		/// A file with an OpenRouter api key, turns on the AI chat
-		#[arg(long)]
-		openrouter_key_file: Option<PathBuf>,
-	},
+	Serve(ServeArgs),
 	/// Write a migration from the schema in code to `migrations/`.
 	Makemigration {
 		/// A rename instead of remove and add: `old=new` for a component,
@@ -262,11 +265,17 @@ async fn serve(
 	schema: Schema,
 	db_path: &Path,
 	migrations: &Migrations,
-	listen: &str,
-	files: PathBuf,
-	(public_url, site_urls, key_file): (String, Vec<String>, Option<PathBuf>),
+	args: ServeArgs,
 	(routes, hooks): (Router<AppState>, Vec<Hook>),
 ) -> Result<(), String> {
+	let ServeArgs {
+		listen,
+		files,
+		public_url,
+		site_url: site_urls,
+		openrouter_key_file: key_file,
+		frame_ancestor,
+	} = args;
 	let site_urls = site_urls
 		.iter()
 		.map(|s| match s.split_once('=') {
@@ -316,6 +325,7 @@ async fn serve(
 		gql,
 		files,
 		site_urls: Arc::new(site_urls),
+		frame_ancestors: Arc::new(frame_ancestor),
 		ai,
 		hooks: Arc::new(hooks),
 	};
@@ -344,7 +354,7 @@ async fn serve(
 		.layer(TraceLayer::new_for_http())
 		.with_state(state);
 
-	let listener = tokio::net::TcpListener::bind(listen)
+	let listener = tokio::net::TcpListener::bind(&listen)
 		.await
 		.map_err(|e| e.to_string())?;
 	info!("listening on {listen}");

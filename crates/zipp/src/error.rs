@@ -53,11 +53,19 @@ struct ErrorResponse {
 impl IntoResponse for Error {
 	fn into_response(self) -> Response {
 		let status = self.status_code();
+		// what failed inside is for the log, not for whoever asked
+		let this = match self {
+			Self::Internal(msg) => {
+				tracing::error!("{msg}");
+				Self::Internal("see the log".into())
+			}
+			e => e,
+		};
 		(
 			status,
 			Json(ErrorResponse {
-				message: self.to_string(),
-				error: self,
+				message: this.to_string(),
+				error: this,
 			}),
 		)
 			.into_response()

@@ -1,11 +1,5 @@
-<script module lang="ts">
-	import { marked } from 'marked';
-
-	// html in the text is dropped, like zipp does for the website
-	marked.use({ renderer: { html: () => '' } });
-</script>
-
 <script lang="ts">
+	import { markdown } from '../lib/markdown';
 	import { untrack } from 'svelte';
 	import type { Field, Values } from '../api';
 
@@ -17,9 +11,7 @@
 		$props();
 
 	let writing = $state(untrack(() => !values[field.handle]));
-	const html = $derived(
-		marked.parse(values[field.handle] ?? '', { async: false }) as string,
-	);
+	const html = $derived(markdown(values[field.handle] ?? ''));
 </script>
 
 <div class="markdown">

@@ -234,6 +234,7 @@ async fn serve_transform(
 	let original = dir.join(&asset.filename);
 	let out = dir.join("t").join(format!("{name}-{}", asset.filename));
 	if !out.exists() {
+		let _permit = GENERATING.acquire().await.unwrap();
 		let (a, o) = (asset.clone(), out.clone());
 		tokio::task::spawn_blocking(move || generate(&a, &original, &t, &o))
 			.await
@@ -244,16 +245,63 @@ async fn serve_transform(
 	Ok(file_response(&asset.mime, data))
 }
 
+/// Files are served from the studio's origin: nothing may run as a page
+/// there. Images, video, audio and pdf show in the browser, everything
+/// else (svg too) downloads.
 fn file_response(mime: &str, data: Vec<u8>) -> Response {
+	let inline = (mime.starts_with("image/") && mime != "image/svg+xml")
+		|| mime.starts_with("video/")
+		|| mime.starts_with("audio/")
+		|| mime == "application/pdf";
 	(
 		[
 			(header::CONTENT_TYPE, mime.to_string()),
 			(header::CACHE_CONTROL, "public, max-age=86400".into()),
+			(header::X_CONTENT_TYPE_OPTIONS, "nosniff".into()),
+			(header::CONTENT_SECURITY_POLICY, "sandbox".into()),
+			(
+				header::CONTENT_DISPOSITION,
+				if inline { "inline" } else { "attachment" }.into(),
+			),
 		],
 		data,
 	)
 		.into_response()
 }
+
+/// The type of a file that is no image, by its name: never what the
+/// upload claims.
+fn file_mime(filename: &str) -> &'static str {
+	let ext = filename
+		.rsplit_once('.')
+		.map(|(_, e)| e.to_ascii_lowercase());
+	match ext.as_deref() {
+		Some("pdf") => "application/pdf",
+		Some("mp4") => "video/mp4",
+		Some("webm") => "video/webm",
+		Some("mov") => "video/quicktime",
+		Some("mp3") => "audio/mpeg",
+		Some("svg") => "image/svg+xml",
+		Some("zip") => "application/zip",
+		Some("txt") => "text/plain",
+		Some("csv") => "text/csv",
+		Some("docx") => {
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+		}
+		Some("xlsx") => {
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+		}
+		_ => "application/octet-stream",
+	}
+}
+
+/// Images above this many pixels are refused, decoding them for a
+/// transform would take too much memory.
+const MAX_PIXELS: u64 = 40_000_000;
+
+/// Transforms generated at once, each decodes a whole image.
+static GENERATING: tokio::sync::Semaphore =
+	tokio::sync::Semaphore::const_new(2);
 
 /// Stores an upload: the row first for the id, then the file.
 pub fn store(
@@ -261,7 +309,6 @@ pub fn store(
 	files: &FsPath,
 	filename: &str,
 	data: &[u8],
-	mime: Option<&str>,
 ) -> Result<Asset> {
 	let filename = clean_filename(filename);
 	let image = image::guess_format(data).ok().and_then(|f| {
@@ -273,13 +320,15 @@ pub fn store(
 		Some((f, w, h)) => {
 			("image", f.to_mime_type().to_string(), Some(w), Some(h))
 		}
-		None => (
-			"file",
-			mime.unwrap_or("application/octet-stream").to_string(),
-			None,
-			None,
-		),
+		None => ("file", file_mime(&filename).to_string(), None, None),
 	};
+	if let (Some(w), Some(h)) = (width, height)
+		&& u64::from(w) * u64::from(h) > MAX_PIXELS
+	{
+		return Err(Error::Request(format!(
+			"{filename}: the image is too big ({w}×{h}), at most 40 megapixels"
+		)));
+	}
 
 	conn.execute(
 		"INSERT INTO assets (filename, kind, mime, size, width, height,
@@ -311,19 +360,12 @@ async fn upload(
 		.map_err(|e| Error::Request(e.to_string()))?
 	{
 		let filename = field.file_name().unwrap_or("file").to_string();
-		let mime = field.content_type().map(String::from);
 		let data = field
 			.bytes()
 			.await
 			.map_err(|e| Error::Request(e.to_string()))?;
 		let conn = state.db.conn();
-		assets.push(store(
-			&conn,
-			&state.files,
-			&filename,
-			&data,
-			mime.as_deref(),
-		)?);
+		assets.push(store(&conn, &state.files, &filename, &data)?);
 	}
 	Ok(Json(assets))
 }
@@ -478,7 +520,7 @@ mod tests {
 			.write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
 			.unwrap();
 
-		let a = store(&db.conn(), &dir, "test image.png", &png, None).unwrap();
+		let a = store(&db.conn(), &dir, "test image.png", &png).unwrap();
 		assert_eq!(
 			(a.kind.as_str(), a.width, a.height),
 			("image", Some(300), Some(200))
@@ -495,10 +537,22 @@ mod tests {
 		let img = image::open(&out).unwrap();
 		assert_eq!((img.width(), img.height()), (100, 100));
 
-		let f =
-			store(&db.conn(), &dir, "notes.txt", b"hello", Some("text/plain"))
-				.unwrap();
+		let f = store(&db.conn(), &dir, "notes.txt", b"hello").unwrap();
 		assert_eq!((f.kind.as_str(), f.mime.as_str()), ("file", "text/plain"));
+		// html is no type of ours, whatever the upload says
+		let f = store(&db.conn(), &dir, "x.html", b"<script>").unwrap();
+		assert_eq!(f.mime, "application/octet-stream");
 		fs::remove_dir_all(dir).unwrap();
+	}
+
+	#[test]
+	fn files_never_run_as_pages() {
+		let r = file_response("image/svg+xml", vec![]);
+		let h = r.headers();
+		assert_eq!(h[header::CONTENT_DISPOSITION], "attachment");
+		assert_eq!(h[header::CONTENT_SECURITY_POLICY], "sandbox");
+		assert_eq!(h[header::X_CONTENT_TYPE_OPTIONS], "nosniff");
+		let r = file_response("image/png", vec![]);
+		assert_eq!(r.headers()[header::CONTENT_DISPOSITION], "inline");
 	}
 }

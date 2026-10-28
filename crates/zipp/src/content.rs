@@ -208,6 +208,15 @@ fn validate_block(
 	serde_json::json!({ "id": id, "type": ty, "fields": fields })
 }
 
+/// A url a link may have: the web, or a path or anchor of the site. No
+/// `javascript:` and the like, they run as the website.
+pub(crate) fn safe_url(u: &str) -> bool {
+	u.starts_with("https://")
+		|| u.starts_with("http://")
+		|| (u.starts_with('/') && !u.starts_with("//"))
+		|| u.starts_with('#')
+}
+
 /// `{ "type": "url", "value": "https://…", "label": "…", "newTab": true }`,
 /// value is the id for an entry or an asset.
 pub(crate) fn check_link(
@@ -231,12 +240,7 @@ pub(crate) fn check_link(
 	let value = link.get("value").unwrap_or(&Value::Null);
 	let ok = match kind {
 		LinkKind::Entry | LinkKind::Asset => value.is_i64(),
-		LinkKind::Url => value.as_str().is_some_and(|u| {
-			u.starts_with("https://")
-				|| u.starts_with("http://")
-				|| u.starts_with('/')
-				|| u.starts_with('#')
-		}),
+		LinkKind::Url => value.as_str().is_some_and(safe_url),
 		LinkKind::Email => value.as_str().is_some_and(|e| e.contains('@')),
 		LinkKind::Phone => value.as_str().is_some_and(|p| {
 			!p.is_empty()

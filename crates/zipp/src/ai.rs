@@ -31,6 +31,8 @@ pub const MODELS: &[(&str, &str)] = &[
 ];
 /// Tool calls of one message, then the chat answers anyway.
 const MAX_TURNS: usize = 12;
+/// Bytes of a conversation, it is sent to the model on every turn.
+const MAX_CONVERSATION: usize = 400_000;
 
 /// The llms, set up with `serve --openrouter-key-file`.
 #[derive(Clone)]
@@ -497,8 +499,9 @@ fn describe_view(state: &AppState, url: Option<&str>) -> String {
 		}
 		Some((site.clone(), rest.trim_matches('/').to_string()))
 	});
+	// anything else comes from whatever the preview navigated to
 	let Some((site, uri)) = found else {
-		return format!("The preview shows {url}.");
+		return "The preview shows a page outside the site.".into();
 	};
 	let conn = state.db.conn();
 	let uri = percent_decode(&uri);
@@ -634,7 +637,19 @@ async fn chat(
 		None => MODELS[0].0.into(),
 	};
 
-	let view = describe_view(&state, req.view.as_deref());
+	// the conversation goes to the model on every turn
+	let size: usize = req
+		.messages
+		.iter()
+		.map(|m| serde_json::to_string(m).map_or(0, |s| s.len()))
+		.sum();
+	if size > MAX_CONVERSATION {
+		return Err(Error::Request(
+			"The conversation is too long, start a new one".into(),
+		));
+	}
+	let view = req.view.as_deref().filter(|v| v.len() < 2000);
+	let view = describe_view(&state, view);
 	let mut messages = req.messages;
 	let start = messages.len();
 	let mut actions = vec![];

@@ -1,11 +1,5 @@
-<script module lang="ts">
-	import { marked } from 'marked';
-
-	// html in the answers is dropped
-	marked.use({ renderer: { html: () => '' } });
-</script>
-
 <script lang="ts">
+	import { markdown } from '../lib/markdown';
 	import {
 		aiChat,
 		sitePreviewToken,
@@ -68,10 +62,25 @@
 		})
 		.catch(e => (error = e.message));
 
+	// only pages of the website may talk to the studio, the preview could
+	// have navigated anywhere
+	const bases = untrack(() => Object.values(schema.siteUrls));
+	const origins = new Set(bases.map(b => new URL(b).origin));
+	function ofSite(url: unknown): url is string {
+		return (
+			typeof url === 'string' &&
+			bases.some(b => url === b || url.startsWith(b.replace(/\/?$/, '/')))
+		);
+	}
+
+	// from before, it may be of a site that changed
+	if (!ofSite(untrack(() => view))) view = home;
+
 	$effect(() => {
 		const onMessage = (e: MessageEvent) => {
 			if (e.source !== frame?.contentWindow) return;
-			if (e.data?.type === 'zipp:location') {
+			if (!origins.has(e.origin)) return;
+			if (e.data?.type === 'zipp:location' && ofSite(e.data.url)) {
 				bridge = true;
 				view = e.data.url;
 			}
@@ -88,14 +97,16 @@
 		return u.href;
 	}
 
-	function post(msg: object) {
-		frame?.contentWindow?.postMessage(msg, '*');
+	/** To the website only, the url has the token. */
+	function post(msg: object, url: string) {
+		frame?.contentWindow?.postMessage(msg, new URL(url).origin);
 	}
 
 	/** Opens a page in the preview. */
 	function open(url: string) {
+		if (!ofSite(url)) return;
 		view = url;
-		if (bridge) post({ type: 'zipp:open', url: withToken(url) });
+		if (bridge) post({ type: 'zipp:open', url: withToken(url) }, url);
 		else src = withToken(url);
 	}
 
@@ -202,7 +213,7 @@
 					</div>
 				{:else if line.who === 'ai'}
 					<div class="msg ai">
-						{@html marked.parse(line.text, { async: false })}
+						{@html markdown(line.text)}
 					</div>
 				{:else}
 					<div class="msg user">{line.text}</div>

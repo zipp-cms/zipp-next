@@ -27,7 +27,10 @@
 		tell(window.location.href);
 		const onMessage = e => {
 			if (e.source !== window.parent) return;
-			if (e.data?.type === 'zipp:open' && e.data.url) router.open(e.data.url);
+			const url = e.data?.type === 'zipp:open' && e.data.url;
+			// only pages of this site, whoever framed it
+			if (url && new URL(url, location.href).origin === location.origin)
+				router.open(url);
 		};
 		window.addEventListener('message', onMessage);
 		return () => window.removeEventListener('message', onMessage);

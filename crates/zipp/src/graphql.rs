@@ -90,14 +90,42 @@ struct Viewer {
 	token: Option<String>,
 }
 
-/// Markdown to html, raw html in it is dropped (editors write text).
+/// Markdown to html, raw html in it is dropped (editors write text) and
+/// links and images only point to the web or the site.
 pub(crate) fn markdown_html(md: &str) -> String {
-	use pulldown_cmark::{Event, Options, Parser, html};
+	use pulldown_cmark::{Event, Options, Parser, Tag, html};
+	let safe =
+		|url: &str| crate::content::safe_url(url) || url.starts_with("mailto:");
 	let parser = Parser::new_ext(
 		md,
 		Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
 	)
-	.filter(|e| !matches!(e, Event::Html(_) | Event::InlineHtml(_)));
+	.filter(|e| !matches!(e, Event::Html(_) | Event::InlineHtml(_)))
+	.map(|e| match e {
+		Event::Start(Tag::Link {
+			link_type,
+			dest_url,
+			title,
+			id,
+		}) if !safe(&dest_url) => Event::Start(Tag::Link {
+			link_type,
+			dest_url: "#".into(),
+			title,
+			id,
+		}),
+		Event::Start(Tag::Image {
+			link_type,
+			dest_url,
+			title,
+			id,
+		}) if !safe(&dest_url) => Event::Start(Tag::Image {
+			link_type,
+			dest_url: "".into(),
+			title,
+			id,
+		}),
+		e => e,
+	});
 	let mut out = String::new();
 	html::push_html(&mut out, parser);
 	out
@@ -505,6 +533,9 @@ pub fn build(
 		.data(db)
 		.data(PublicUrl(public_url))
 		.data(site_urls)
+		// nested relations multiply the work, anyone may ask
+		.limit_depth(12)
+		.limit_complexity(2000)
 		.finish()
 		.map_err(|e| e.to_string())
 }
@@ -1092,6 +1123,8 @@ fn resolve_link(
 				.collect();
 			(format!("tel:{digits}"), text, false)
 		}
+		// drafts aren't checked yet, what reaches a preview is
+		_ if !crate::content::safe_url(&text) => return Ok(None),
 		_ => {
 			// our own sites aren't external
 			let urls = ctx.data::<SiteUrls>()?;
@@ -1253,7 +1286,13 @@ async fn graphiql() -> Html<String> {
 }
 
 pub fn routes() -> Router<AppState> {
-	Router::new().route("/graphql", get(graphiql).post(graphql))
+	Router::new().route(
+		"/graphql",
+		get(graphiql)
+			.post(graphql)
+			// async-graphql reads the body itself, past axum's limit
+			.layer(tower_http::limit::RequestBodyLimitLayer::new(256 * 1024)),
+	)
 }
 
 #[cfg(test)]
@@ -1392,8 +1431,8 @@ mod tests {
 			.unwrap();
 		{
 			let conn = db.conn();
-			let a = crate::assets::store(&conn, &dir, "hero.png", &png, None)
-				.unwrap();
+			let a =
+				crate::assets::store(&conn, &dir, "hero.png", &png).unwrap();
 			let fields = json!({ "city": "Bern", "image": [a.id] });
 			save(&conn, &s, None, input("events", "event", "Jazz", fields))
 				.unwrap();
@@ -1631,6 +1670,17 @@ mod tests {
 			url(Some(Preview::All), Some("t")).await,
 			"https://x.ch/team?token=t&x-craft-live-preview=1"
 		);
+	}
+
+	#[test]
+	fn markdown_links_only_go_to_the_web() {
+		let html = markdown_html(
+			"[a](javascript:alert(1)) [b](https://x.ch) <b>c</b> ![d](data:x)",
+		);
+		assert!(!html.contains("javascript"), "{html}");
+		assert!(!html.contains("data:"), "{html}");
+		assert!(html.contains(r#"href="https://x.ch""#));
+		assert!(!html.contains("<b>"));
 	}
 
 	#[tokio::test]
