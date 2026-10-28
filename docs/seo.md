@@ -19,3 +19,14 @@ alternates, a 1200×630 social image), so the npm package `meierlabs-seo`
 (`<Seo>`, `seoRoutes`) works unchanged: zipp answers its sitemap and
 robots.txt actions. `serve --noindex` (and `--dev`) makes every page
 noindex and robots.txt disallow everything.
+
+## Differences from the plugin
+
+- Defaults of sections and entry types are code, not settings of the
+  control panel; they have no image of their own, an entry type takes it
+  from one of its fields (`image_from`).
+- Title patterns know `{title}`, `{siteName}` and `{sectionName}`, not
+  Craft's object templates.
+- `postDate` is when the entry was created; zipp has no scheduled posts.
+- Without a site name the title uses the site's name (like "Deutsch"):
+  set the site name in the settings.

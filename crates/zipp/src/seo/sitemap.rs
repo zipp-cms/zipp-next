@@ -13,28 +13,30 @@ use serde::Deserialize;
 
 use super::{Globals, globals, in_sitemap};
 use crate::AppState;
+use crate::db::iso;
 use crate::entries::{Entry, list};
 use crate::error::{Error, Result};
 use crate::query::Query;
 use crate::schema::seo::SEO_SETTINGS;
 use crate::schema::{Schema, Site};
 
-/// The published entries of a site, `None` filters nothing more.
+/// Published entries of a site and how many there are in all, with
+/// `with_uri` only the ones with a page.
 fn entries(
 	conn: &Connection,
 	schema: &Schema,
 	site: &str,
 	extra: &[(&str, String)],
-	limit: i64,
-	offset: i64,
-) -> Result<Vec<Entry>> {
+	(limit, offset, with_uri): (i64, i64, bool),
+) -> Result<(Vec<Entry>, i64)> {
 	let mut params = vec![("site".to_string(), site.to_string())];
 	params.extend(extra.iter().map(|(k, v)| (k.to_string(), v.clone())));
 	let mut q = Query::parse(schema, &params).map_err(Error::Request)?;
 	q.published_only = true;
+	q.with_uri = with_uri;
 	q.limit = limit;
 	q.offset = offset;
-	Ok(list(conn, &q)?.0)
+	Ok(list(conn, &q)?)
 }
 
 /// The global settings of a site as published.
@@ -45,7 +47,7 @@ pub fn load_globals(
 ) -> Result<Globals> {
 	let fields = |s: &str| -> Result<serde_json::Value> {
 		let section = [("section", SEO_SETTINGS.to_string())];
-		let e = entries(conn, schema, s, &section, 1, 0)?;
+		let (e, _) = entries(conn, schema, s, &section, (1, 0, false))?;
 		Ok(e.into_iter().next().map(|e| e.fields).unwrap_or_default())
 	};
 	let primary = schema.primary_site().handle.clone();
@@ -156,18 +158,16 @@ async fn index(
 	);
 	for site in sites_for(&state, &origin_) {
 		for section in sections(&state.schema) {
-			let all = entries(
+			// the last changed one and how many there are
+			let (last, count) = entries(
 				&conn,
 				&state.schema,
 				&site.handle,
-				&[("section", section.into()), ("order", "updated".into())],
-				1_000_000,
-				0,
+				&[("section", section.into()), ("order", "-updated".into())],
+				(1, 0, true),
 			)?;
-			let with_uri: Vec<&Entry> =
-				all.iter().filter(|e| e.uri.is_some()).collect();
-			let pages = (with_uri.len() as i64 + size - 1) / size;
-			let last = with_uri.iter().map(|e| e.updated_at).max();
+			let pages = (count + size - 1) / size;
+			let last = last.first().map(|e| e.updated_at);
 			for page in 1..=pages {
 				out += &format!(
 					"\t<sitemap>\n\t\t<loc>{}</loc>\n",
@@ -177,10 +177,7 @@ async fn index(
 					))
 				);
 				if let Some(last) = last {
-					out += &format!(
-						"\t\t<lastmod>{}</lastmod>\n",
-						super::iso(last)
-					);
+					out += &format!("\t\t<lastmod>{}</lastmod>\n", iso(last));
 				}
 				out += "\t</sitemap>\n";
 			}
@@ -214,13 +211,8 @@ async fn page(
 	let conn = state.db.conn();
 	let size = page_size(schema);
 	let section = [("section", p.section.clone()), ("order", "created".into())];
-	let found: Vec<Entry> =
-		entries(&conn, schema, &site.handle, &section, 1_000_000, 0)?
-			.into_iter()
-			.filter(|e| e.uri.is_some())
-			.skip(((p.page - 1) * size) as usize)
-			.take(size as usize)
-			.collect();
+	let page = (size, (p.page - 1) * size, true);
+	let (found, _) = entries(&conn, schema, &site.handle, &section, page)?;
 	if found.is_empty() && p.page > 1 {
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	}
@@ -233,15 +225,19 @@ async fn page(
 		.collect::<Vec<_>>()
 		.join(",");
 	let mut others = vec![];
-	for s in &schema.sites {
+	for s in schema
+		.sites
+		.iter()
+		.filter(|s| !schema.is_offline(&s.handle))
+	{
 		if !ids.is_empty() {
-			let list = entries(
+			let all = (size, 0, true);
+			let (list, _) = entries(
 				&conn,
 				schema,
 				&s.handle,
 				&[("ids", ids.clone())],
-				1_000_000,
-				0,
+				all,
 			)?;
 			others.extend(list.into_iter().map(|e| (s, e)));
 		}
@@ -265,8 +261,7 @@ async fn page(
 			continue;
 		}
 		out += &format!("\t<url>\n\t\t<loc>{}</loc>\n", escape(&url));
-		out +=
-			&format!("\t\t<lastmod>{}</lastmod>\n", super::iso(e.updated_at));
+		out += &format!("\t\t<lastmod>{}</lastmod>\n", iso(e.updated_at));
 		let mut alts = vec![];
 		for (s, other) in others.iter().filter(|(_, o)| o.id == e.id) {
 			let Some(u) = other.uri.as_deref().and_then(|uri| {

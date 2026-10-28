@@ -101,6 +101,25 @@ pub(super) fn collect_relations(
 			out.extend(link_relation(schema, &fields[&field.handle], &path));
 			continue;
 		}
+		// the images of an seo field are images like an images field's
+		if let FieldKind::Seo = field.kind {
+			for key in ["image", "socialImage"] {
+				let ids = fields[&field.handle][key].as_array();
+				let ids: Vec<i64> = ids
+					.into_iter()
+					.flatten()
+					.filter_map(Value::as_i64)
+					.collect();
+				if !ids.is_empty() {
+					out.push(RelationRef {
+						path: format!("{path}.{key}"),
+						target: Target::Assets(true),
+						ids,
+					});
+				}
+			}
+			continue;
+		}
 		if let FieldKind::Navigation { .. } = field.kind {
 			nav_relations(schema, &fields[&field.handle], &path, out);
 			continue;

@@ -2,6 +2,7 @@
 	import NavItems from './NavItems.svelte';
 	import LinkField from './LinkField.svelte';
 	import Icon from '../lib/Icon.svelte';
+	import { moved } from '../lib/list';
 	import type { Field, LinkKind, NavItem, Refs, Schema } from '../api';
 
 	/**
@@ -53,12 +54,7 @@
 		onchange(items.map((x, j) => (j === i ? item : x)));
 	}
 
-	function move(i: number, by: number) {
-		const next = [...items];
-		const [item] = next.splice(i, 1);
-		next.splice(i + by, 0, item);
-		onchange(next);
-	}
+	const move = (i: number, by: number) => onchange(moved(items, i, by));
 </script>
 
 {#each items as item, i (i)}

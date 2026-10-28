@@ -14,6 +14,11 @@ fn texts_for_descriptions() {
 		{ "type": "paragraph", "content": [{ "type": "text", "text": "two" }] },
 	]});
 	assert_eq!(plain_text(&doc), "One two");
+	// entities decoded, no space after inline tags
+	assert_eq!(
+		plain_text(&json!("<p><em>Konzert</em>, Müller &amp; Söhne</p>")),
+		"Konzert, Müller & Söhne"
+	);
 
 	assert_eq!(truncate("short", 160), "short");
 	let long = "word ".repeat(50);

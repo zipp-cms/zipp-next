@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Field, Values } from '../api';
 	import Icon from '../lib/Icon.svelte';
+	import { moved } from '../lib/list';
 
 	/** Rows of the columns of the code, like Craft's table field. */
 	let { field, values }: { field: Field; values: Values } = $props();
@@ -16,12 +17,7 @@
 		set(rows.map((r, j) => (j === i ? { ...r, [column]: text } : r)));
 	}
 
-	function move(i: number, by: number) {
-		const next = [...rows];
-		const [row] = next.splice(i, 1);
-		next.splice(i + by, 0, row);
-		set(next);
-	}
+	const move = (i: number, by: number) => set(moved(rows, i, by));
 </script>
 
 <table>

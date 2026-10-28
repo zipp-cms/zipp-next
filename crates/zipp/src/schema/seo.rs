@@ -168,9 +168,9 @@ impl Schema {
 				SEO_SETTINGS,
 				"SEO",
 				[
-					Field::text("siteName")
-						.translatable()
-						.label("Site name, empty: the name of the site"),
+					Field::text("siteName").translatable().label(
+						"Site name, set it: else the name of the site (Deutsch)",
+					),
 					Field::text("titlePattern")
 						.translatable()
 						.label("Title pattern, empty: {title} | {siteName}"),

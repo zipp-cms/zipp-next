@@ -35,6 +35,7 @@ export type NavItem = {
 	value: string | number;
 	label?: string;
 	newTab?: boolean;
+	download?: boolean;
 	children?: NavItem[];
 };
 ";
@@ -125,7 +126,8 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 			}
 			FieldKind::Link { .. } => {
 				"{ type: 'entry' | 'url' | 'email' | 'phone' | 'asset'; \
-				value: string | number; label?: string; newTab?: boolean }"
+				value: string | number; label?: string; newTab?: boolean; \
+				download?: boolean }"
 					.into()
 			}
 			FieldKind::Blocks { types, .. } => {

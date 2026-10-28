@@ -62,12 +62,12 @@ async fn defaults_route(
 		site: site_def,
 		site_url: state.site_urls.get(&site).cloned().unwrap_or_default(),
 		public_url: "",
-		globals: globals.clone(),
-		entry: None,
+		globals,
+		entry: Some(e),
 		asset: &asset,
 		indexing: state.indexing,
 	};
-	Ok(Json(defaults_for_entry(&page, &e)))
+	Ok(Json(defaults_for_entry(&page).unwrap_or_default()))
 }
 
 pub fn routes() -> Router<AppState> {

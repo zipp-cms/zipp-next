@@ -105,6 +105,40 @@ fn at<'a>(fields: &'a Value, path: &str) -> &'a Value {
 	path.split('.').fold(fields, |v, key| &v[key])
 }
 
+/// The text of html: tags out, entities decoded, the words of blocks
+/// kept apart (`<p>a</p><p>b</p>` is `a b`, `<em>a</em>,` is `a,`).
+fn html_text(html: &str) -> String {
+	let mut out = String::new();
+	let mut rest = html;
+	while let Some(start) = rest.find('<') {
+		out.push_str(&rest[..start]);
+		let Some(end) = rest[start..].find('>') else {
+			break;
+		};
+		let tag = rest[start + 1..start + end].trim_start_matches('/');
+		let name = tag
+			.chars()
+			.take_while(|c| c.is_ascii_alphanumeric())
+			.collect::<String>()
+			.to_ascii_lowercase();
+		let block = matches!(
+			name.as_str(),
+			"p" | "div" | "li" | "br" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
+		);
+		if block {
+			out.push(' ');
+		}
+		rest = &rest[start + end + 1..];
+	}
+	out.push_str(rest);
+	out.replace("&lt;", "<")
+		.replace("&gt;", ">")
+		.replace("&quot;", "\"")
+		.replace("&#39;", "'")
+		.replace("&nbsp;", " ")
+		.replace("&amp;", "&")
+}
+
 /// The text of a text, markdown or rich text value.
 pub fn plain_text(v: &Value) -> String {
 	fn walk(v: &Value, out: &mut String) {
@@ -125,21 +159,7 @@ pub fn plain_text(v: &Value) -> String {
 	}
 	let mut out = String::new();
 	match v {
-		Value::String(s) => {
-			// tags of html, keeping the words of blocks apart
-			let mut inside = false;
-			for c in s.chars() {
-				match c {
-					'<' => inside = true,
-					'>' => {
-						inside = false;
-						out.push(' ');
-					}
-					c if !inside => out.push(c),
-					_ => {}
-				}
-			}
-		}
+		Value::String(s) => out = html_text(s),
 		Value::Object(_) => walk(v, &mut out),
 		_ => {}
 	}
@@ -233,7 +253,8 @@ pub struct Page<'a> {
 
 /// What an entry has without its own SEO field values, the placeholders
 /// of the studio: the title is the pattern around `{title}`.
-pub fn defaults_for_entry(page: &Page, e: &EntryPage) -> Value {
+pub fn defaults_for_entry(page: &Page) -> Option<Value> {
+	let e = page.entry.as_ref()?;
 	let entry = e.entry;
 	let defaults = defaults(page.schema, entry);
 	let pattern = first(&defaults, |d| d.title_pattern.as_ref())
@@ -247,7 +268,7 @@ pub fn defaults_for_entry(page: &Page, e: &EntryPage) -> Value {
 		.or(page.globals.image)
 		.and_then(|id| (page.asset)(id));
 
-	json!({
+	Some(json!({
 		"title": entry.title,
 		"titlePrefix": prefix,
 		"titleSuffix": suffix,
@@ -260,7 +281,7 @@ pub fn defaults_for_entry(page: &Page, e: &EntryPage) -> Value {
 		"canonicalUrl": e.url,
 		"url": e.url,
 		"siteName": page.globals.site_name,
-	})
+	}))
 }
 
 fn section_name(schema: &Schema, entry: &Entry) -> String {
@@ -283,6 +304,8 @@ fn mapped_description(schema: &Schema, entry: &Entry) -> Option<String> {
 		(true, Some(md)) => {
 			plain_text(&Value::from(crate::graphql::markdown_html(md)))
 		}
+		// plain text has no tags to take out
+		(false, Some(t)) => t.split_whitespace().collect::<Vec<_>>().join(" "),
 		_ => plain_text(value),
 	};
 	(!text.is_empty()).then(|| truncate(&text, DESCRIPTION_LENGTH))

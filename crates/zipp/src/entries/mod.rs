@@ -222,7 +222,6 @@ pub fn refs(
 	Ok(out)
 }
 
-/// Whether the entries are published, per site.
 /// Which of the entries have a draft.
 pub fn with_drafts(conn: &Connection, ids: &[i64]) -> Result<Vec<i64>> {
 	let marks = vec!["?"; ids.len()].join(", ");
@@ -233,6 +232,7 @@ pub fn with_drafts(conn: &Connection, ids: &[i64]) -> Result<Vec<i64>> {
 	Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
+/// Whether the entries are published, per site.
 pub fn published_per_site(
 	conn: &Connection,
 	ids: &[i64],

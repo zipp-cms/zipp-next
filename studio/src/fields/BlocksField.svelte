@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { moved } from '../lib/list';
 	import type { Block, Field, Refs, Schema, Values } from '../api';
 	import BlockMenu from './BlockMenu.svelte';
 	import Fields from './Fields.svelte';
@@ -44,11 +45,8 @@
 		values[field.handle] = [...blocks, { type, fields: {} }];
 	}
 
-	function move(i: number, by: number) {
-		const list = [...blocks];
-		[list[i], list[i + by]] = [list[i + by], list[i]];
-		values[field.handle] = list;
-	}
+	const move = (i: number, by: number) =>
+		(values[field.handle] = moved(blocks, i, by));
 
 	function remove(i: number) {
 		values[field.handle] = blocks.filter((_, j) => j !== i);

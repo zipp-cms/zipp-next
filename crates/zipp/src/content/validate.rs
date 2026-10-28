@@ -166,7 +166,12 @@ pub(super) fn validate_value(
 						if crate::schema::seo::ROBOTS
 							.iter()
 							.any(|(r, _)| v == *r) => {}
-					"canonicalUrl" if v.as_str().is_some_and(safe_url) => {}
+					// absolute, it is what search engines index
+					"canonicalUrl"
+						if v.as_str().is_some_and(|u| {
+							u.starts_with("https://")
+								|| u.starts_with("http://")
+						}) => {}
 					_ => {
 						error(errors, &p, "not a valid value");
 						continue;

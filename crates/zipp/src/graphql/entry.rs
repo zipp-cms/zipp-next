@@ -267,11 +267,7 @@ pub(super) fn content_field(
 						items.into_iter().map(FieldValue::value),
 					)))
 				}
-				FieldKind::Seo => {
-					let e = ctx.parent_value.try_downcast_ref::<Entry>()?;
-					let v = resolve_seo(&ctx, &e.site, Some(e))?;
-					Ok(Some(FieldValue::value(GqlValue::from_json(v)?)))
-				}
+				FieldKind::Seo => entry_seo(&ctx),
 				FieldKind::Texts { keys } => {
 					let texts = crate::content::texts_of(&keys, &value);
 					let json = serde_json::to_string(&texts)?;
@@ -375,10 +371,10 @@ pub(super) fn content_objects(schema: &Schema) -> Vec<Object> {
 				obj = obj.field(entry_common_field(name));
 			}
 			if crate::seo::enabled(schema) {
-				obj = obj.field(seo_json_field());
+				obj = obj.field(entry_seo_field("seoJson", SEO_JSON));
 				// `seo` like the plugin's, unless a field has the name
 				if !comp.fields.iter().any(|f| f.handle == "seo") {
-					obj = obj.field(seo_field("seo"));
+					obj = obj.field(entry_seo_field("seo", "Seo"));
 				}
 			}
 			obj

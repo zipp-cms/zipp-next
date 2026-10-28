@@ -45,6 +45,10 @@ pub struct Query {
 	pub preview_id: Option<i64>,
 	/// every draft is shown, see [`Preview::All`](crate::drafts::Preview)
 	pub preview_all: bool,
+	/// only entries with a page
+	pub with_uri: bool,
+	/// no entries at all, an offline site for a frontend
+	pub nothing: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -97,6 +101,8 @@ impl Query {
 			published_only: false,
 			preview_id: None,
 			preview_all: false,
+			with_uri: false,
+			nothing: false,
 		};
 		let int = |k: &str, v: &str| {
 			v.parse::<i64>()
@@ -343,6 +349,12 @@ impl Query {
 			let sql = "e.id IN (SELECT entry_id FROM entry_relations \
 				WHERE target_id = ? AND site = s.site)";
 			cond(sql.into(), vec![Value::Integer(id)]);
+		}
+		if self.nothing {
+			cond("0".into(), vec![]);
+		}
+		if self.with_uri {
+			cond("s.uri IS NOT NULL".into(), vec![]);
 		}
 		if self.published_only && self.preview_all {
 			// published as the draft has it, or live without a draft

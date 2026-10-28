@@ -229,6 +229,8 @@ pub(super) fn query(
 		Some(Preview::All) => q.preview_all = true,
 		None => {}
 	}
+	// a frontend gets nothing of an offline site, counts neither
+	q.nothing = schema.is_offline(&q.site) && hides_offline(viewer);
 	Ok(q)
 }
 
@@ -237,10 +239,6 @@ pub(super) fn load(
 	params: &[(String, String)],
 ) -> async_graphql::Result<Vec<Entry>> {
 	let q = query(ctx, params)?;
-	let schema = ctx.data::<Arc<Schema>>()?;
-	if schema.is_offline(&q.site) && hides_offline(ctx.data::<Viewer>()?) {
-		return Ok(vec![]);
-	}
 	let db = ctx.data::<Db>()?;
 	let (mut entries, _) = list(&db.conn(), &q)?;
 

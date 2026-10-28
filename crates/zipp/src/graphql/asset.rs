@@ -119,13 +119,13 @@ pub(super) fn transform_of(
 	let t = match (arg("transform"), arg("width")) {
 		(Some(name), _) => {
 			let name = name.string()?;
-			schema.get_transform(name).cloned().ok_or_else(|| {
+			schema.transform_named(name).ok_or_else(|| {
 				GqlError::new(format!("unknown transform {name}"))
 			})?
 		}
 		// Craft's `url(width: 800)`, of the widths the schema allows
 		(None, Some(w)) => {
-			let w = w.i64()? as u32;
+			let w = u32::try_from(w.i64()?).unwrap_or(0);
 			schema.width_transform(w).ok_or_else(|| {
 				GqlError::new(format!(
 					"width {w} is not allowed, the schema has {:?}",

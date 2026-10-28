@@ -69,12 +69,11 @@ pub(super) fn resolve_seo(
 				}
 				let mut parents = vec![];
 				let mut parent = e.parent_id;
+				// a parent the viewer doesn't see is left out, not its parents
 				while let Some(id) = parent {
-					let Some(p) = one(site, [("ids", id.to_string())])? else {
-						break;
-					};
-					parent = p.parent_id;
-					parents.push(p);
+					let raw = crate::entries::get_entry(&db.conn(), id, site);
+					parent = raw.ok().and_then(|p| p.parent_id);
+					parents.extend(one(site, [("ids", id.to_string())])?);
 				}
 				for p in parents.iter().rev() {
 					if let Some(u) =
@@ -112,26 +111,21 @@ pub(super) fn resolve_seo(
 	Ok(seo::resolve(&page))
 }
 
-/// `seoJson` of an entry: everything as one JSON object, so the npm
-/// package gets new values without a new query.
-pub(super) fn seo_json_field() -> GqlField {
-	GqlField::new("seoJson", TypeRef::named(SEO_JSON), |ctx| {
-		FieldFuture::new(async move {
-			let e = ctx.parent_value.try_downcast_ref::<Entry>()?;
-			let v = resolve_seo(&ctx, &e.site, Some(e))?;
-			Ok(Some(FieldValue::value(GqlValue::from_json(v)?)))
-		})
-	})
+/// The SEO of the entry that is the parent.
+pub(super) fn entry_seo(
+	ctx: &ResolverContext,
+) -> async_graphql::Result<Option<FieldValue<'static>>> {
+	let e = ctx.parent_value.try_downcast_ref::<Entry>()?;
+	let v = resolve_seo(ctx, &e.site, Some(e))?;
+	Ok(Some(FieldValue::value(GqlValue::from_json(v)?)))
 }
 
-/// `seo { ... }` of an entry, the same as a GraphQL type.
-pub(super) fn seo_field(name: &str) -> GqlField {
-	GqlField::new(name, TypeRef::named("Seo"), |ctx| {
-		FieldFuture::new(async move {
-			let e = ctx.parent_value.try_downcast_ref::<Entry>()?;
-			let v = resolve_seo(&ctx, &e.site, Some(e))?;
-			Ok(Some(FieldValue::value(GqlValue::from_json(v)?)))
-		})
+/// `seoJson` of an entry, everything as one JSON object so the npm
+/// package gets new values without a new query, or `seo { ... }`, the same
+/// as a type.
+pub(super) fn entry_seo_field(name: &str, ty: &str) -> GqlField {
+	GqlField::new(name, TypeRef::named(ty), |ctx| {
+		FieldFuture::new(async move { entry_seo(&ctx) })
 	})
 }
 

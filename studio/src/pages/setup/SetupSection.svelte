@@ -12,6 +12,7 @@
 	let entries = $state<Entry[]>([]);
 	let published = $state<Record<number, Record<string, boolean>>>({});
 	let drafts = $state<number[]>([]);
+	let total = $state(0);
 	let error = $state('');
 
 	$effect(() => {
@@ -27,6 +28,7 @@
 				entries = r.entries;
 				published = r.published;
 				drafts = r.drafts;
+				total = r.total;
 			})
 			.catch(e => (error = e.message));
 	});
@@ -63,7 +65,18 @@
 				{/each}
 			</dd>
 			<dt>URI</dt>
-			<dd><code>{section.uri ?? 'no pages'}</code></dd>
+			<dd>
+				<code>
+					{section.uri ?? (section.type_uris ? '' : 'no pages')}
+				</code>
+				{#each Object.entries(section.type_uris ?? {}) as [t, u] (t)}
+					<br />
+					<small>
+						{t}:
+						<code>{u || '/'}</code>
+					</small>
+				{/each}
+			</dd>
 			<dt>You may</dt>
 			<dd>{cap(accessOf(schema, handle) ?? 'nothing')}</dd>
 		</dl>
@@ -73,7 +86,10 @@
 
 	<div class="card">
 		<h2>
-			Entries <span class="muted">{entries.length}</span>
+			Entries <span class="muted">{total}</span>
+			{#if total > entries.length}
+				<span class="muted">(the first {entries.length})</span>
+			{/if}
 		</h2>
 		<table>
 			<thead>

@@ -95,14 +95,33 @@ impl Schema {
 					return Err(format!("seo: unknown section {s}"));
 				}
 			}
+			// the fields defaults come from, in every entry type they apply to
+			let mut uses = vec![];
 			for (ty, d) in &seo.types {
-				let Some(comp) = self.entry_type(ty) else {
+				if self.entry_type(ty).is_none() {
 					return Err(format!("seo: unknown entry type {ty}"));
-				};
+				}
+				uses.push((ty.as_str(), d));
+			}
+			for (s, d) in &seo.sections {
+				let types = self.get_section(s).map(|s| &s.types);
+				uses.extend(
+					types.into_iter().flatten().map(|t| (t.as_str(), d)),
+				);
+			}
+			for (ty, d) in uses {
+				let comp = self.entry_type(ty).unwrap();
 				for path in d.description_from.iter().chain(&d.image_from) {
 					if self.field_at(comp, path).is_none() {
 						return Err(format!("seo: {ty} has no field {path}"));
 					}
+				}
+				if let Some(path) = &d.image_from
+					&& !matches!(
+						self.field_at(comp, path).map(|f| &f.kind),
+						Some(FieldKind::Assets { .. })
+					) {
+					return Err(format!("seo: {ty}.{path} is no images field"));
 				}
 			}
 		}
