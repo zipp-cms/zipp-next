@@ -219,6 +219,26 @@
 		});
 	}
 
+	/**
+	 * Takes title and fields of another site into the draft of this one,
+	 * e.g. to start a translation from the German text. The slug stays.
+	 */
+	function copyFrom(other: string) {
+		const name = schema.sites.find(s => s.handle === other)?.name;
+		if (
+			id === null ||
+			!confirm(`Replace the content with the one of ${name}?`)
+		)
+			return;
+		return run(async () => {
+			// the other site as the editor sees it: its draft, or live
+			const d = await getDraft(id!);
+			const theirs = d?.doc[other] ?? (await getEntry(id!, other)).entry;
+			title = theirs.title;
+			fields = theirs.fields;
+		});
+	}
+
 	/** Throws away the own changes and shows the ones of the other. */
 	async function loadTheirs() {
 		clearTimeout(timer);
@@ -521,6 +541,24 @@
 					</select>
 				{:else}
 					<span>{comp.name}</span>
+				{/if}
+				{#if id !== null && schema.sites.length > 1}
+					<span>Content</span>
+					<select
+						value=""
+						onchange={e => {
+							const other = e.currentTarget.value;
+							e.currentTarget.value = '';
+							copyFrom(other);
+						}}
+					>
+						<option value="" disabled>
+							Copy from another site…
+						</option>
+						{#each schema.sites.filter(s => s.handle !== site.current) as s (s.handle)}
+							<option value={s.handle}>{s.name}</option>
+						{/each}
+					</select>
 				{/if}
 				{#if revisions.length}
 					<span>Revisions</span>
