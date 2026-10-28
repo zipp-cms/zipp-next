@@ -3,6 +3,7 @@
 	import { accessOf, can, isAdmin, roleName } from '../../lib/access';
 	import { describeField } from '../../lib/fieldKind';
 	import SetupSection from './SetupSection.svelte';
+	import TypePreview from './TypePreview.svelte';
 	import { shown } from '../../route.svelte';
 
 	/**
@@ -155,48 +156,67 @@
 	{@const c = schema.components.find(c => c.handle === handle)}
 	{#if c}
 		<div class="layout">
-			<div class="card">
-				<h2>
-					Fields
-					<code class="gql">
-						{c.handle}_{c.entry ? 'Entry' : 'Block'}
-					</code>
-				</h2>
-				{#if c.fields.length}
-					<table>
-						<thead>
-							<tr>
-								<th>Label</th>
-								<th>Handle</th>
-								<th>Kind</th>
-								<th>Sites</th>
-								<th></th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each c.fields as f (f.handle)}
-								<tr id={f.handle}>
-									<td>{f.label}</td>
-									<td><code>{f.handle}</code></td>
-									<td>{describeField(f)}</td>
-									<td>
-										{c.entry
-											? f.translatable
-												? 'per site'
-												: 'all sites'
-											: ''}
-									</td>
-									<td class="flags">
-										{f.required ? 'required' : ''}
-										{f.indexed ? 'indexed' : ''}
-									</td>
+			<div>
+				<div class="card preview">
+					<h2>
+						Editor
+						<span class="muted">how editors see it, read only</span>
+					</h2>
+					{#key c.handle}
+						<TypePreview {schema} component={c} />
+					{/key}
+				</div>
+				<div class="card">
+					<h2>
+						Fields
+						<code class="gql">
+							{c.handle}_{c.entry ? 'Entry' : 'Block'}
+						</code>
+					</h2>
+					{#if c.fields.length}
+						<table>
+							<thead>
+								<tr>
+									<th>Label</th>
+									<th>Handle</th>
+									{#if c.tabs?.length}<th>Tab</th>{/if}
+									<th>Kind</th>
+									<th>Sites</th>
+									<th></th>
 								</tr>
-							{/each}
-						</tbody>
-					</table>
-				{:else}
-					<p class="muted">No fields, only a title.</p>
-				{/if}
+							</thead>
+							<tbody>
+								{#each c.fields as f (f.handle)}
+									<tr id={f.handle}>
+										<td>{f.label}</td>
+										<td><code>{f.handle}</code></td>
+										{#if c.tabs?.length}
+											<td>
+												{c.tabs.find(t =>
+													t.fields.includes(f.handle),
+												)?.name}
+											</td>
+										{/if}
+										<td>{describeField(f)}</td>
+										<td>
+											{c.entry
+												? f.translatable
+													? 'per site'
+													: 'all sites'
+												: ''}
+										</td>
+										<td class="flags">
+											{f.required ? 'required' : ''}
+											{f.indexed ? 'indexed' : ''}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					{:else}
+						<p class="muted">No fields, only a title.</p>
+					{/if}
+				</div>
 			</div>
 			<aside class="card">
 				<h2>Used in</h2>

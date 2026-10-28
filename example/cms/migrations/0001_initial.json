@@ -711,6 +711,22 @@
             "translatable": true,
             "kind": "seo"
           }
+        ],
+        "tabs": [
+          {
+            "name": "Content",
+            "fields": [
+              "hero",
+              "intro",
+              "body"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
         ]
       }
     },
@@ -765,6 +781,22 @@
             "indexed": false,
             "translatable": true,
             "kind": "seo"
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Content",
+            "fields": [
+              "hero",
+              "intro",
+              "body"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
           }
         ]
       }
@@ -1995,6 +2027,22 @@
             "translatable": true,
             "kind": "seo"
           }
+        ],
+        "tabs": [
+          {
+            "name": "Content",
+            "fields": [
+              "hero",
+              "intro",
+              "body"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
         ]
       },
       {
@@ -2046,6 +2094,22 @@
             "indexed": false,
             "translatable": true,
             "kind": "seo"
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Content",
+            "fields": [
+              "hero",
+              "intro",
+              "body"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
           }
         ]
       },

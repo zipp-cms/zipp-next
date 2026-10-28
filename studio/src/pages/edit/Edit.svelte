@@ -31,6 +31,7 @@
 	import EditHeader from './EditHeader.svelte';
 	import EntryHead from './EntryHead.svelte';
 	import EntrySidebar from './EntrySidebar.svelte';
+	import TabBar from './TabBar.svelte';
 	import RevisionView from './RevisionView.svelte';
 
 	let {
@@ -75,6 +76,12 @@
 	const secDef = $derived(schema.sections.find(s => s.handle === sec));
 	const comp = $derived(schema.components.find(c => c.handle === ty));
 	const single = $derived(secDef?.kind === 'single');
+	// the tabs of the entry type, the first one open
+	const tabs = $derived(comp?.tabs ?? []);
+	let tab = $state('');
+	$effect(() => {
+		if (tabs.length && !tabs.some(t => t.name === tab)) tab = tabs[0].name;
+	});
 	// a global: a single without a page, its title is the section's name
 	const global = $derived(
 		single &&
@@ -384,8 +391,12 @@
 				/>
 			{:else}
 				<!-- read only for a role that may only look -->
+				{#if tabs.length}
+					<TabBar {tabs} bind:current={tab} {changed} {errors} />
+				{/if}
 				<fieldset disabled={!canEdit}>
-					{#if !global}
+					<!-- the title is in the first tab, like in Craft -->
+					{#if !global && (!tabs.length || tab === tabs[0].name)}
 						<EntryHead bind:title {changed} {errors} />
 					{/if}
 					<Fields
@@ -395,6 +406,7 @@
 						{errors}
 						{refs}
 						{changed}
+						only={tabs.find(t => t.name === tab)?.fields ?? null}
 					/>
 				</fieldset>
 			{/if}

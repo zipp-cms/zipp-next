@@ -152,6 +152,18 @@ pub struct Component {
 	pub name: String,
 	pub entry: bool,
 	pub fields: Vec<Field>,
+	/// The tabs of the editor with the handles of their fields, like
+	/// Craft's field layout; empty is one tab. Only looks, not in
+	/// migrations' ops.
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub tabs: Vec<Tab>,
+}
+
+/// A tab of an entry type in the editor, see [`Schema::entry_tabs`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Tab {
+	pub name: String,
+	pub fields: Vec<String>,
 }
 
 impl Schema {
@@ -294,6 +306,28 @@ impl Schema {
 		self.component(handle, name, true, fields)
 	}
 
+	/// An entry type with its fields in tabs, like Craft's field layout:
+	/// `[("Content", vec![...]), ("SEO", vec![Field::seo("seo")])]`.
+	pub fn entry_tabs<'a>(
+		mut self,
+		handle: &str,
+		name: &str,
+		tabs: impl IntoIterator<Item = (&'a str, Vec<Field>)>,
+	) -> Self {
+		let mut fields = vec![];
+		let mut layout = vec![];
+		for (tab, tab_fields) in tabs {
+			layout.push(Tab {
+				name: tab.into(),
+				fields: tab_fields.iter().map(|f| f.handle.clone()).collect(),
+			});
+			fields.extend(tab_fields);
+		}
+		self = self.component(handle, name, true, fields);
+		self.components.last_mut().unwrap().tabs = layout;
+		self
+	}
+
 	pub fn block(
 		self,
 		handle: &str,
@@ -315,6 +349,7 @@ impl Schema {
 			name: name.into(),
 			entry,
 			fields: fields.into_iter().collect(),
+			tabs: vec![],
 		});
 		self
 	}

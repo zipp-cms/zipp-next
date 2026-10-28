@@ -31,6 +31,18 @@ impl Schema {
 			if self.components[..i].iter().any(|c| c.handle == comp.handle) {
 				return Err(format!("component {} exists twice", comp.handle));
 			}
+			for (j, tab) in comp.tabs.iter().enumerate() {
+				let at = format!("{}: tab {}", comp.handle, tab.name);
+				if tab.name.trim().is_empty() {
+					return Err(format!("{}: a tab needs a name", comp.handle));
+				}
+				if comp.tabs[..j].iter().any(|t| t.name == tab.name) {
+					return Err(format!("{at} exists twice"));
+				}
+				if tab.fields.is_empty() {
+					return Err(format!("{at} has no fields"));
+				}
+			}
 
 			for (j, field) in comp.fields.iter().enumerate() {
 				let at = format!("{}.{}", comp.handle, field.handle);

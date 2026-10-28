@@ -67,7 +67,12 @@ export type Component = {
 	name: string;
 	entry: boolean;
 	fields: Field[];
+	/** the tabs of the editor, none is one tab */
+	tabs?: Tab[];
 };
+
+/** A tab of the editor with the handles of its fields. */
+export type Tab = { name: string; fields: string[] };
 
 export type Site = { handle: string; name: string; language: string };
 

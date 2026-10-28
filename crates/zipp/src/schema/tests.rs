@@ -133,3 +133,28 @@ fn serializes_flat() {
 	let back: Field = serde_json::from_value(v).unwrap();
 	assert_eq!(back, f);
 }
+
+#[test]
+fn tabs_keep_the_fields_in_order() {
+	let news = || {
+		site().section(Section::channel("news", ["news"]).uri("news/{slug}"))
+	};
+	let s = news().entry_tabs(
+		"news",
+		"News",
+		[
+			(
+				"Content",
+				vec![Field::text("lead"), Field::markdown("text")],
+			),
+			("SEO", vec![Field::text("keywords")]),
+		],
+	);
+	s.check().unwrap();
+	let c = s.get("news").unwrap();
+	let handles: Vec<_> = c.fields.iter().map(|f| f.handle.as_str()).collect();
+	assert_eq!(handles, ["lead", "text", "keywords"]);
+	assert_eq!(c.tabs[1].fields, ["keywords"]);
+	let empty = news().entry_tabs("news", "News", [("Content", vec![])]);
+	assert!(empty.check().unwrap_err().contains("no fields"));
+}

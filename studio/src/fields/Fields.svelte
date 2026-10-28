@@ -24,6 +24,7 @@
 		refs,
 		prefix = '',
 		changed = new Set(),
+		only = null,
 	}: {
 		schema: Schema;
 		component: Component;
@@ -33,7 +34,15 @@
 		prefix?: string;
 		/** fields to mark as changed */
 		changed?: Set<string>;
+		/** the handles of the fields to show, those of a tab */
+		only?: string[] | null;
 	} = $props();
+
+	const shown = $derived(
+		only
+			? component.fields.filter(f => only.includes(f.handle))
+			: component.fields,
+	);
 
 	/** Entry fields that are the same in all sites, so editors know. */
 	function shared(field: Field) {
@@ -45,7 +54,7 @@
 
 <!-- the old Zipp grid: labels on the left, fields on the right -->
 <div class="fields" class:nested={prefix !== ''}>
-	{#each component.fields as field (field.handle)}
+	{#each shown as field (field.handle)}
 		{@const path = prefix + field.handle}
 		<label for={path}>
 			{#if changed.has(path)}<span

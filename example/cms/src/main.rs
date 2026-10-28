@@ -98,24 +98,42 @@ fn schema() -> Schema {
 		.transform(Transform::new("small").width(600))
 		.transform(Transform::new("medium").width(1200))
 		.transform(Transform::new("thumb").width(160).height(120).crop())
-		.entry(
+		// tabs in the editor, like Craft's field layout
+		.entry_tabs(
 			"home",
 			"Home",
 			[
-				Field::images("hero").max(1),
-				Field::text("intro").multiline().max(300).translatable(),
-				body(),
-				Field::seo("seo"),
+				(
+					"Content",
+					vec![
+						Field::images("hero").max(1),
+						Field::text("intro")
+							.multiline()
+							.max(300)
+							.translatable(),
+						body(),
+					],
+				),
+				("SEO", vec![Field::seo("seo")]),
 			],
 		)
-		.entry(
+		// tabs in the editor, like Craft's field layout
+		.entry_tabs(
 			"page",
 			"Page",
 			[
-				Field::images("hero").max(1),
-				Field::text("intro").multiline().max(300).translatable(),
-				body(),
-				Field::seo("seo"),
+				(
+					"Content",
+					vec![
+						Field::images("hero").max(1),
+						Field::text("intro")
+							.multiline()
+							.max(300)
+							.translatable(),
+						body(),
+					],
+				),
+				("SEO", vec![Field::seo("seo")]),
 			],
 		)
 		.entry(

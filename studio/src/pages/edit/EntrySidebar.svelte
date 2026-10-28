@@ -75,8 +75,9 @@
 				/>
 				<span>
 					{#if changed.has('published')}<span class="dot"></span>{/if}
-					Published in {schema.sites.find(s => s.handle === site.current)
-						?.name}
+					Published in {schema.sites.find(
+						s => s.handle === site.current,
+					)?.name}
 				</span>
 			</label>
 			{#if multiSite && !isNew}
@@ -101,11 +102,15 @@
 			{#if !single}
 				<label>
 					<span>
-						{#if changed.has('slug')}<span class="dot"></span>{/if}Slug
+						{#if changed.has('slug')}<span
+								class="dot"
+							></span>{/if}Slug
 					</span>
 					<input placeholder="from the title" bind:value={slug} />
 					{#if uri !== null}<span class="muted">/{uri}</span>{/if}
-					{#if errors.slug}<span class="error">{errors.slug}</span>{/if}
+					{#if errors.slug}<span class="error">
+							{errors.slug}
+						</span>{/if}
 				</label>
 			{/if}
 
@@ -115,7 +120,8 @@
 					<select bind:value={ty}>
 						{#each secDef.types as t (t)}
 							<option value={t}>
-								{schema.components.find(c => c.handle === t)?.name}
+								{schema.components.find(c => c.handle === t)
+									?.name}
 							</option>
 						{/each}
 					</select>

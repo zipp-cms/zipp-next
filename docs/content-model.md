@@ -19,6 +19,12 @@ Both are components made of fields: text,
 number, boolean, relation (ids of entries) and blocks (a list of
 blocks, nested as deep as needed).
 
+`entry_tabs("page", "Page", [("Content", vec![...]), ("SEO",
+vec![Field::seo("seo")])])` puts the fields of an entry type in tabs of
+the editor, like Craft's field layout; the title is in the first tab. Tabs
+are only looks: the fields are one list, moving a field to another tab
+needs no migration. Setup shows each type's editor as editors see it.
+
 ## Content is JSON
 
 An entry's fields are stored as one JSON document,
