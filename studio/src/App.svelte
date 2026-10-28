@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { getSchema, logout, token, type Schema } from './api';
-	import { canAi, canAssets, isAdmin, visibleNav } from './lib/access';
+	import {
+		canAi,
+		canAssets,
+		isAdmin,
+		roleName,
+		visibleNav,
+	} from './lib/access';
 	import { go, route, setSite, shown, site, toLogin } from './route.svelte';
 	import Login from './pages/Login.svelte';
 	import List from './pages/List.svelte';
@@ -110,10 +116,9 @@
 				{#if schema.aiModels.length && canAi(schema)}
 					<a href="/admin/ai" class:active={ai}>AI</a>
 				{/if}
+				<!-- read only for everyone, a role sees its part -->
+				<a href="/admin/model/sections" class:active={model}>Model</a>
 				{#if isAdmin(schema)}
-					<a href="/admin/model/sections" class:active={model}>
-						Model
-					</a>
 					<a href="/admin/users" class:active={users}>Users</a>
 				{/if}
 			</nav>
@@ -129,6 +134,13 @@
 						{/each}
 					</select>
 				{/if}
+				<a
+					class="me"
+					href="/admin/model/sites#roles"
+					title="What you may do"
+				>
+					{schema.me.email} · {roleName(schema)}
+				</a>
 				<button class="link" onclick={onLogout}>Log out</button>
 			</div>
 		</header>
@@ -258,6 +270,12 @@
 
 		.link {
 			color: white;
+		}
+
+		.me {
+			color: rgba(255, 255, 255, 0.7);
+			font-size: 14px;
+			text-decoration: none;
 		}
 	}
 

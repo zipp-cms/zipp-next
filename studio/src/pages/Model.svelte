@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { listEntries, type Component, type Schema } from '../api';
+	import { accessOf, can, isAdmin, roleName } from '../lib/access';
 	import { describeField } from '../lib/fieldKind';
 	import { shown } from '../route.svelte';
 
@@ -14,13 +15,27 @@
 		shown.section = '';
 	});
 
-	const entryTypes = $derived(schema.components.filter(c => c.entry));
+	// a role sees its sections and itself, so editors see what they may do
+	const admin = $derived(isAdmin(schema));
+	const sections = $derived(
+		schema.sections.filter(s => can(schema, s.handle, 'view')),
+	);
+	const entryTypes = $derived(
+		schema.components.filter(
+			c => c.entry && sections.some(s => s.types.includes(c.handle)),
+		),
+	);
+	const roles = $derived(
+		admin
+			? schema.roles
+			: schema.roles.filter(r => r.handle === schema.me.role),
+	);
 	const blocks = $derived(schema.components.filter(c => !c.entry));
 
 	// the number of entries of each section, in the primary site
 	let counts = $state<Record<string, number>>({});
 	$effect(() => {
-		for (const s of schema.sections) {
+		for (const s of sections) {
 			listEntries({ section: s.handle, limit: '1' })
 				.then(r => (counts[s.handle] = r.total))
 				.catch(() => {});
@@ -29,7 +44,7 @@
 
 	/** Where a component is used: sections and fields. */
 	function usedIn(c: Component): string[] {
-		const out = schema.sections
+		const out = sections
 			.filter(s => s.types.includes(c.handle))
 			.map(s => `section ${s.name}`);
 		for (const other of schema.components) {
@@ -74,10 +89,11 @@
 					<th>Entry types</th>
 					<th>URI</th>
 					<th>Entries</th>
+					<th>You may</th>
 				</tr>
 			</thead>
 			<tbody>
-				{#each schema.sections as s (s.handle)}
+				{#each sections as s (s.handle)}
 					<tr>
 						<td>
 							<a href="/admin/entries/{s.handle}">{s.name}</a>
@@ -101,6 +117,7 @@
 							{/each}
 						</td>
 						<td>{counts[s.handle] ?? ''}</td>
+						<td>{access(accessOf(schema, s.handle))}</td>
 					</tr>
 				{/each}
 			</tbody>
@@ -195,16 +212,20 @@
 		</table>
 	</div>
 
-	<div class="card">
+	<div class="card" id="roles">
 		<h2>Roles</h2>
 		<p class="muted">
-			Users without a role are admins and can do everything.
+			You are {admin
+				? 'an admin and can do everything'
+				: roleName(schema)}. View sees entries, Edit changes them as
+			drafts and creates new ones, Publish makes drafts live and moves
+			entries, Delete deletes them. Users without a role are admins.
 		</p>
 		<table>
 			<thead>
 				<tr>
 					<th>Role</th>
-					{#each schema.sections as s (s.handle)}<th>
+					{#each sections as s (s.handle)}<th>
 							{s.name}
 						</th>{/each}
 					<th>Assets</th>
@@ -212,13 +233,13 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each schema.roles as r (r.handle)}
+				{#each roles as r (r.handle)}
 					<tr>
 						<td>
 							{r.name}
 							<code>{r.handle}</code>
 						</td>
-						{#each schema.sections as s (s.handle)}
+						{#each sections as s (s.handle)}
 							<td>{access(r.sections[s.handle])}</td>
 						{/each}
 						<td>{access(r.assets)}</td>

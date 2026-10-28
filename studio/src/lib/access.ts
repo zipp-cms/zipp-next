@@ -14,6 +14,17 @@ function enough(has: Access | null | undefined, need: Access) {
 	return !!has && LEVELS.indexOf(has) >= LEVELS.indexOf(need);
 }
 
+/** The name of the user's role, `Admin` without one. */
+export function roleName(schema: Schema): string {
+	return isAdmin(schema) ? 'Admin' : (role(schema)?.name ?? schema.me.role!);
+}
+
+/** What the user may do in a section, for showing it. */
+export function accessOf(schema: Schema, section: string): Access | null {
+	if (isAdmin(schema)) return 'delete';
+	return role(schema)?.sections[section] ?? null;
+}
+
 export function isAdmin(schema: Schema): boolean {
 	return schema.me.role === null;
 }
