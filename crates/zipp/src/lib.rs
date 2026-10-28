@@ -159,7 +159,7 @@ pub struct Cms {
 impl Cms {
 	pub fn new(schema: Schema, migrations: Migrations) -> Self {
 		Self {
-			schema,
+			schema: schema.finish(),
 			migrations,
 			routes: Router::new(),
 			hooks: vec![],

@@ -11,8 +11,14 @@ works unchanged.
 .description_from("intro").image_from("hero")))` adds the single
 `seoSettings` (site name, title pattern, description, image, robots,
 robots.txt, structured data of the organization) and `Field::seo` for
-single entries. Every value comes from the entry's SEO field, its entry
-type, its section or the settings. GraphQL has `seoJson` on every entry
+single entries. Under "Per section and entry type" in the settings
+editors override title pattern, description, image, robots and the
+sitemap of a section or an entry type, per site (other sites inherit all
+but the description from the primary site). Every value comes from the
+entry's SEO field, its entry type (settings, then code), its section
+(settings, then code) or the global settings. Which fields the description
+and image come from stays code, it depends on the content model; such a
+field's text comes before the descriptions of the settings. GraphQL has `seoJson` on every entry
 and the root `seoJson(siteId:)` in the plugin's shape (title, meta, links,
 JSON-LD with Organization, WebSite, WebPage and breadcrumbs, hreflang
 alternates, a 1200×630 social image), so the npm package `meierlabs-seo`
@@ -22,9 +28,10 @@ noindex and robots.txt disallow everything.
 
 ## Differences from the plugin
 
-- Defaults of sections and entry types are code, not settings of the
-  control panel; they have no image of their own, an entry type takes it
-  from one of its fields (`image_from`).
+- Defaults of sections and entry types are code, the settings override
+  them (half code, half database, operator 2026-10-28); the fields the
+  description and image come from are only code. `Cms` calls
+  `Schema::finish`, which fills the choice of sections and types.
 - Title patterns know `{title}`, `{siteName}` and `{sectionName}`, not
   Craft's object templates.
 - `postDate` is when the entry was created; zipp has no scheduled posts.

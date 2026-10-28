@@ -89,7 +89,7 @@
 - [x] Options tab replaced by a sidebar like Craft (status per site, slug, type,
   parent, copy from site, revisions), globals only copy and revisions; post date
   comes with the textrem port
-- SEO half code, half database: field mappings and the sitemap in code,
-  title pattern, description, image and robots per section and entry type
-  editable in `seoSettings` (proposal, waiting for the operator)
+- [x] SEO half code, half database: field mappings in code, title pattern,
+  description, image, robots and sitemap per section and entry type
+  editable in `seoSettings` over the code's defaults
 

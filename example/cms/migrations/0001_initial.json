@@ -9,7 +9,7 @@
         "fields": [
           {
             "handle": "siteName",
-            "label": "Site name, empty: the name of the site",
+            "label": "Site name, set it: else the name of the site (Deutsch)",
             "required": false,
             "indexed": false,
             "translatable": true,
@@ -101,6 +101,19 @@
             "translatable": false,
             "kind": "group",
             "component": "seoOrganization"
+          },
+          {
+            "handle": "overrides",
+            "label": "Per section and entry type",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "seoOverride"
+            ],
+            "min": null,
+            "max": null
           }
         ]
       }
@@ -424,6 +437,120 @@
             "kind": "text",
             "max": null,
             "multiline": false
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "seoOverride",
+        "name": "Section or entry type",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "appliesTo",
+            "label": "For",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "section:pages",
+                "label": "Section Pages"
+              },
+              {
+                "value": "section:events",
+                "label": "Section Events"
+              },
+              {
+                "value": "type:home",
+                "label": "Entry type Home"
+              },
+              {
+                "value": "type:page",
+                "label": "Entry type Page"
+              },
+              {
+                "value": "type:event",
+                "label": "Entry type Event"
+              }
+            ]
+          },
+          {
+            "handle": "titlePattern",
+            "label": "Title pattern, like {title} – Events | {siteName}",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "image",
+            "label": "Image for sharing",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "robots",
+            "label": "Robots",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "index, follow",
+                "label": "Index, follow links"
+              },
+              {
+                "value": "noindex, follow",
+                "label": "No index, follow links"
+              },
+              {
+                "value": "index, nofollow",
+                "label": "Index, don't follow links"
+              },
+              {
+                "value": "noindex, nofollow",
+                "label": "No index, don't follow links"
+              }
+            ]
+          },
+          {
+            "handle": "sitemap",
+            "label": "Sitemap",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "yes",
+                "label": "In the sitemap"
+              },
+              {
+                "value": "no",
+                "label": "Not in the sitemap"
+              }
+            ]
           }
         ]
       }
@@ -1181,7 +1308,7 @@
         "fields": [
           {
             "handle": "siteName",
-            "label": "Site name, empty: the name of the site",
+            "label": "Site name, set it: else the name of the site (Deutsch)",
             "required": false,
             "indexed": false,
             "translatable": true,
@@ -1273,6 +1400,19 @@
             "translatable": false,
             "kind": "group",
             "component": "seoOrganization"
+          },
+          {
+            "handle": "overrides",
+            "label": "Per section and entry type",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "seoOverride"
+            ],
+            "min": null,
+            "max": null
           }
         ]
       },
@@ -1593,6 +1733,117 @@
             "kind": "text",
             "max": null,
             "multiline": false
+          }
+        ]
+      },
+      {
+        "handle": "seoOverride",
+        "name": "Section or entry type",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "appliesTo",
+            "label": "For",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "section:pages",
+                "label": "Section Pages"
+              },
+              {
+                "value": "section:events",
+                "label": "Section Events"
+              },
+              {
+                "value": "type:home",
+                "label": "Entry type Home"
+              },
+              {
+                "value": "type:page",
+                "label": "Entry type Page"
+              },
+              {
+                "value": "type:event",
+                "label": "Entry type Event"
+              }
+            ]
+          },
+          {
+            "handle": "titlePattern",
+            "label": "Title pattern, like {title} – Events | {siteName}",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "image",
+            "label": "Image for sharing",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "robots",
+            "label": "Robots",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "index, follow",
+                "label": "Index, follow links"
+              },
+              {
+                "value": "noindex, follow",
+                "label": "No index, follow links"
+              },
+              {
+                "value": "index, nofollow",
+                "label": "Index, don't follow links"
+              },
+              {
+                "value": "noindex, nofollow",
+                "label": "No index, don't follow links"
+              }
+            ]
+          },
+          {
+            "handle": "sitemap",
+            "label": "Sitemap",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "yes",
+                "label": "In the sitemap"
+              },
+              {
+                "value": "no",
+                "label": "Not in the sitemap"
+              }
+            ]
           }
         ]
       },

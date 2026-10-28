@@ -269,8 +269,11 @@
 						</tbody>
 					</table>
 					<p class="muted">
-						Empty values come from the SEO settings, an entry's SEO
-						field overrides them.
+						The defaults of the code. Editors override them per site
+						in the
+						<a href="/admin/entries/seoSettings">SEO settings</a>
+						(Per section and entry type), an entry's SEO field
+						overrides both; empty values come from the SEO settings.
 					</p>
 				</div>
 			{/if}

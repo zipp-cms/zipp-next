@@ -11,7 +11,7 @@ use axum::routing::get;
 use rusqlite::Connection;
 use serde::Deserialize;
 
-use super::{Globals, globals, in_sitemap};
+use super::{Globals, globals, in_sitemap, section_in_sitemap};
 use crate::AppState;
 use crate::db::iso;
 use crate::entries::{Entry, list};
@@ -85,17 +85,13 @@ fn sites_for<'a>(state: &'a AppState, origin_: &str) -> Vec<&'a Site> {
 	}
 }
 
-/// Sections with urls and the sitemap on.
-fn sections(schema: &Schema) -> Vec<&str> {
-	let seo = schema.seo.as_ref();
+/// Sections with urls and the sitemap on in a site.
+fn sections<'a>(schema: &'a Schema, globals: &Globals) -> Vec<&'a str> {
 	schema
 		.sections
 		.iter()
 		.filter(|s| s.uri.is_some() || !s.type_uris.is_empty())
-		.filter(|s| {
-			seo.and_then(|seo| seo.sections.get(&s.handle))
-				.is_none_or(|d| d.sitemap)
-		})
+		.filter(|s| section_in_sitemap(schema, globals, &s.handle))
 		.map(|s| s.handle.as_str())
 		.collect()
 }
@@ -157,7 +153,8 @@ async fn index(
 		<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
 	);
 	for site in sites_for(&state, &origin_) {
-		for section in sections(&state.schema) {
+		let globals = load_globals(&conn, &state.schema, site)?;
+		for section in sections(&state.schema, &globals) {
 			// the last changed one and how many there are
 			let (last, count) = entries(
 				&conn,
@@ -205,10 +202,11 @@ async fn page(
 	else {
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	};
-	if p.page < 1 || !sections(schema).contains(&p.section.as_str()) {
+	let conn = state.db.conn();
+	let globals = load_globals(&conn, schema, site)?;
+	if p.page < 1 || !sections(schema, &globals).contains(&p.section.as_str()) {
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	}
-	let conn = state.db.conn();
 	let size = page_size(schema);
 	let section = [("section", p.section.clone()), ("order", "created".into())];
 	let page = (size, (p.page - 1) * size, true);
@@ -217,7 +215,6 @@ async fn page(
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	}
 
-	let globals = load_globals(&conn, schema, site)?;
 	// the urls of the entries in every site, for hreflang
 	let ids = found
 		.iter()

@@ -1,9 +1,11 @@
 //! Resolves the SEO of a page like the Craft plugin meierlabs-seo: the
 //! title, meta tags, links and JSON-LD a crelte frontend renders with the
 //! npm package `meierlabs-seo`. Every value is taken from the first place
-//! that has one: the entry's SEO field, its entry type, its section, the
-//! global settings. The data is loaded by the caller (GraphQL, with the
+//! that has one: the entry's SEO field, its entry type (the settings, then
+//! the code), its section (the same), the global settings. The data is loaded by the caller (GraphQL, with the
 //! drafts of a preview), this only computes.
+
+use std::collections::BTreeMap;
 
 use serde_json::{Map, Value, json};
 
@@ -40,6 +42,76 @@ pub struct Globals {
 	pub robots_txt: Option<String>,
 	/// the fields of the organization, for JSON-LD
 	pub organization: Value,
+	/// by `section:<handle>` and `type:<handle>`, what editors set
+	pub overrides: BTreeMap<String, Level>,
+}
+
+/// SEO values of a section or an entry type: the editors' in the settings
+/// or the code's [`SeoDefaults`].
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Level {
+	pub title_pattern: Option<String>,
+	pub description: Option<String>,
+	pub robots: Option<String>,
+	pub image: Option<i64>,
+	/// code only: the fields description and image come from
+	pub description_from: Option<String>,
+	pub image_from: Option<String>,
+	pub sitemap: Option<bool>,
+}
+
+impl From<&SeoDefaults> for Level {
+	fn from(d: &SeoDefaults) -> Self {
+		Self {
+			title_pattern: d.title_pattern.clone(),
+			description: d.description.clone(),
+			robots: d.robots.clone(),
+			image: None,
+			description_from: d.description_from.clone(),
+			image_from: d.image_from.clone(),
+			// only leaving out counts, so settings of a section win over
+			// an entry type that sets something else in code
+			sitemap: (!d.sitemap).then_some(false),
+		}
+	}
+}
+
+/// The blocks of the overrides by target.
+fn by_target(v: &Value) -> BTreeMap<String, &Value> {
+	let blocks = v["overrides"].as_array().map_or(&[][..], |a| a);
+	blocks
+		.iter()
+		.filter_map(|b| {
+			let f = &b["fields"];
+			Some((text(&f["appliesTo"])?, f))
+		})
+		.collect()
+}
+
+/// The overrides of the settings by target, the site's with the primary
+/// site's where the site has none (but not the description).
+fn overrides(own: &Value, primary: &Value) -> BTreeMap<String, Level> {
+	let (own, primary) = (by_target(own), by_target(primary));
+	let none = Value::Null;
+	let mut out = BTreeMap::new();
+	for target in own.keys().chain(primary.keys()) {
+		let o = own.get(target).copied().unwrap_or(&none);
+		let p = primary.get(target).copied().unwrap_or(&none);
+		let inherited = |k: &str| text(&o[k]).or_else(|| text(&p[k]));
+		let sitemap = inherited("sitemap").map(|s| s == "yes");
+		out.insert(
+			target.clone(),
+			Level {
+				title_pattern: inherited("titlePattern"),
+				description: text(&o["description"]),
+				robots: inherited("robots"),
+				image: first_id(&o["image"]).or_else(|| first_id(&p["image"])),
+				sitemap,
+				..Default::default()
+			},
+		);
+	}
+	out
 }
 
 fn text(v: &Value) -> Option<String> {
@@ -71,25 +143,63 @@ pub fn globals(site: &Site, own: &Value, primary: &Value) -> Globals {
 		} else {
 			primary["organization"].clone()
 		},
+		overrides: overrides(own, primary),
 	}
 }
 
-/// The defaults of an entry, the entry type first.
-pub fn defaults<'a>(schema: &'a Schema, entry: &Entry) -> Vec<&'a SeoDefaults> {
+/// The levels of an entry, most specific first: its entry type in the
+/// settings and in code, then its section.
+pub fn defaults(
+	schema: &Schema,
+	globals: &Globals,
+	entry: &Entry,
+) -> Vec<Level> {
+	levels(schema, globals, Some(&entry.ty), &entry.section)
+}
+
+fn levels(
+	schema: &Schema,
+	globals: &Globals,
+	ty: Option<&str>,
+	section: &str,
+) -> Vec<Level> {
 	let Some(seo) = &schema.seo else {
 		return vec![];
 	};
-	[seo.types.get(&entry.ty), seo.sections.get(&entry.section)]
-		.into_iter()
-		.flatten()
-		.collect()
+	let set = |k: String| globals.overrides.get(&k).cloned();
+	let code = |d: Option<&SeoDefaults>| d.map(Level::from);
+	let mut out = vec![];
+	if let Some(ty) = ty {
+		out.extend(set(format!("type:{ty}")));
+		out.extend(code(seo.types.get(ty)));
+	}
+	out.extend(set(format!("section:{section}")));
+	out.extend(code(seo.sections.get(section)));
+	out
 }
 
-fn first<'a>(
-	defaults: &[&'a SeoDefaults],
-	f: impl Fn(&'a SeoDefaults) -> Option<&'a String>,
+fn first(
+	defaults: &[Level],
+	f: impl Fn(&Level) -> Option<&String>,
 ) -> Option<String> {
 	defaults.iter().find_map(|d| f(d)).cloned()
+}
+
+/// Whether a section belongs into the sitemap: not left out, or one of
+/// its entry types is put in.
+pub fn section_in_sitemap(
+	schema: &Schema,
+	globals: &Globals,
+	section: &str,
+) -> bool {
+	let of = |l: Vec<Level>| l.iter().find_map(|l| l.sitemap);
+	let types = schema
+		.get_section(section)
+		.map_or(vec![], |s| s.types.clone());
+	of(levels(schema, globals, None, section)) != Some(false)
+		|| types.iter().any(|t| {
+			of(levels(schema, globals, Some(t), section)) == Some(true)
+		})
 }
 
 /// The value of the entry's SEO field, if its type has one.
@@ -208,7 +318,9 @@ pub fn robots(
 	}
 	let field = field_data(schema, entry);
 	text(&field["robots"])
-		.or_else(|| first(&defaults(schema, entry), |d| d.robots.as_ref()))
+		.or_else(|| {
+			first(&defaults(schema, globals, entry), |d| d.robots.as_ref())
+		})
 		.unwrap_or_else(|| globals.robots.clone())
 }
 
@@ -224,7 +336,9 @@ pub fn in_sitemap(
 	if canonical.is_some_and(|c| c != url) {
 		return false;
 	}
-	!robots(schema, entry, globals, true).contains("noindex")
+	let levels = defaults(schema, globals, entry);
+	levels.iter().find_map(|l| l.sitemap) != Some(false)
+		&& !robots(schema, entry, globals, true).contains("noindex")
 }
 
 /// An entry's page: what only an entry has.
@@ -256,7 +370,7 @@ pub struct Page<'a> {
 pub fn defaults_for_entry(page: &Page) -> Option<Value> {
 	let e = page.entry.as_ref()?;
 	let entry = e.entry;
-	let defaults = defaults(page.schema, entry);
+	let defaults = defaults(page.schema, &page.globals, entry);
 	let pattern = first(&defaults, |d| d.title_pattern.as_ref())
 		.unwrap_or_else(|| page.globals.title_pattern.clone());
 	let section = section_name(page.schema, entry);
@@ -264,7 +378,8 @@ pub fn defaults_for_entry(page: &Page) -> Option<Value> {
 	let rendered =
 		render_title(&pattern, marker, &page.globals.site_name, &section);
 	let (prefix, suffix) = rendered.split_once(marker).unwrap_or(("", ""));
-	let image = mapped_image(page.schema, entry)
+	let image = mapped_image(&defaults, entry)
+		.or_else(|| defaults.iter().find_map(|d| d.image))
 		.or(page.globals.image)
 		.and_then(|id| (page.asset)(id));
 
@@ -272,7 +387,7 @@ pub fn defaults_for_entry(page: &Page) -> Option<Value> {
 		"title": entry.title,
 		"titlePrefix": prefix,
 		"titleSuffix": suffix,
-		"description": mapped_description(page.schema, entry)
+		"description": mapped_description(page.schema, &defaults, entry)
 			.or_else(|| first(&defaults, |d| d.description.as_ref()))
 			.or(page.globals.description.clone()),
 		"image": image.map(|a| image_data(page, &a, true)),
@@ -291,9 +406,12 @@ fn section_name(schema: &Schema, entry: &Entry) -> String {
 		.unwrap_or_default()
 }
 
-fn mapped_description(schema: &Schema, entry: &Entry) -> Option<String> {
-	let path =
-		first(&defaults(schema, entry), |d| d.description_from.as_ref())?;
+fn mapped_description(
+	schema: &Schema,
+	defaults: &[Level],
+	entry: &Entry,
+) -> Option<String> {
+	let path = first(defaults, |d| d.description_from.as_ref())?;
 	let value = at(&entry.fields, &path);
 	// markdown as its text, not its marks
 	let markdown = schema
@@ -311,8 +429,8 @@ fn mapped_description(schema: &Schema, entry: &Entry) -> Option<String> {
 	(!text.is_empty()).then(|| truncate(&text, DESCRIPTION_LENGTH))
 }
 
-fn mapped_image(schema: &Schema, entry: &Entry) -> Option<i64> {
-	let path = first(&defaults(schema, entry), |d| d.image_from.as_ref())?;
+fn mapped_image(defaults: &[Level], entry: &Entry) -> Option<i64> {
+	let path = first(defaults, |d| d.image_from.as_ref())?;
 	first_id(at(&entry.fields, &path))
 }
 
@@ -326,7 +444,7 @@ pub fn resolve(page: &Page) -> Value {
 			Some(e) => {
 				let entry = e.entry;
 				let field = field_data(page.schema, entry);
-				let defaults = defaults(page.schema, entry);
+				let defaults = defaults(page.schema, g, entry);
 				let pattern = first(&defaults, |d| d.title_pattern.as_ref())
 					.unwrap_or_else(|| g.title_pattern.clone());
 				let title = render_title(
@@ -337,12 +455,15 @@ pub fn resolve(page: &Page) -> Value {
 					&section_name(page.schema, entry),
 				);
 				let description = text(&field["description"])
-					.or_else(|| mapped_description(page.schema, entry))
+					.or_else(|| {
+						mapped_description(page.schema, &defaults, entry)
+					})
 					.or_else(|| first(&defaults, |d| d.description.as_ref()))
 					.or(g.description.clone());
 				let image = asset(
 					first_id(&field["image"])
-						.or_else(|| mapped_image(page.schema, entry))
+						.or_else(|| mapped_image(&defaults, entry))
+						.or_else(|| defaults.iter().find_map(|d| d.image))
 						.or(g.image),
 				);
 				let social = (

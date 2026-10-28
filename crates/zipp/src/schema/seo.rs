@@ -1,15 +1,19 @@
 //! What the SEO of a site is made of, like the Craft plugin meierlabs-seo.
 //! The global settings (site name, title pattern, description, image,
 //! robots, structured data) are the single `seoSettings`, so editors
-//! change them with drafts; defaults per section and entry type are code.
-//! Every value comes from the first place that has one: the entry's SEO
-//! field, its entry type, its section, the global settings.
+//! change them with drafts. Defaults per section and entry type are code:
+//! which fields the description and image come from, the sitemap, and
+//! values editors override per section and entry type in `seoSettings`
+//! (title pattern, description, image, robots, sitemap). Every value comes
+//! from the first place that has one: the entry's SEO field, its entry
+//! type (settings, then code), its section (settings, then code), the
+//! global settings.
 
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::{Field, Schema, Section};
+use super::{Choice, Field, FieldKind, Schema, Section};
 
 /// The single of the global SEO settings.
 pub const SEO_SETTINGS: &str = "seoSettings";
@@ -17,6 +21,8 @@ pub const SEO_SETTINGS: &str = "seoSettings";
 pub const SEO_ORGANIZATION: &str = "seoOrganization";
 /// The block of a day's opening hours.
 pub const SEO_OPENING_HOURS: &str = "seoOpeningHours";
+/// The block of the settings of a section or an entry type.
+pub const SEO_OVERRIDE: &str = "seoOverride";
 
 pub const ROBOTS: &[(&str, &str)] = &[
 	("index, follow", "Index, follow links"),
@@ -187,6 +193,9 @@ impl Schema {
 						.label("robots.txt, empty: allow everything"),
 					Field::group("organization", SEO_ORGANIZATION)
 						.label("Structured data"),
+					Field::blocks("overrides", [SEO_OVERRIDE])
+						.translatable()
+						.label("Per section and entry type"),
 				],
 			)
 			.block(
@@ -227,6 +236,27 @@ impl Schema {
 				],
 			)
 			.block(
+				SEO_OVERRIDE,
+				"Section or entry type",
+				[
+					// the options come from the sections, see `finish`
+					Field::dropdown("appliesTo", []).required().label("For"),
+					Field::text("titlePattern").label(
+						"Title pattern, like {title} – Events | {siteName}",
+					),
+					Field::text("description").multiline().max(300),
+					Field::images("image").max(1).label("Image for sharing"),
+					robots(),
+					Field::dropdown(
+						"sitemap",
+						[
+							("yes", "In the sitemap"),
+							("no", "Not in the sitemap"),
+						],
+					),
+				],
+			)
+			.block(
 				SEO_OPENING_HOURS,
 				"Opening hours",
 				[
@@ -237,6 +267,53 @@ impl Schema {
 				],
 			);
 		self.seo = Some(seo);
+		self.seo_targets()
+	}
+
+	/// Fills the choice of sections and entry types of the SEO settings,
+	/// once the schema has them all. [`Cms`](crate::Cms) calls it.
+	pub fn finish(self) -> Self {
+		match self.seo {
+			Some(_) => self.seo_targets(),
+			None => self,
+		}
+	}
+
+	/// The sections with pages and their entry types, for `appliesTo`.
+	fn seo_targets(mut self) -> Self {
+		let mut options = vec![];
+		let mut types = vec![];
+		for s in &self.sections {
+			if s.uri.is_none() && s.type_uris.is_empty() {
+				continue;
+			}
+			options.push(Choice {
+				value: format!("section:{}", s.handle),
+				label: format!("Section {}", s.name),
+			});
+			for t in &s.types {
+				if !types.contains(t) {
+					types.push(t.clone());
+				}
+			}
+		}
+		for t in types {
+			let name = self.get(&t).map_or(t.clone(), |c| c.name.clone());
+			options.push(Choice {
+				value: format!("type:{t}"),
+				label: format!("Entry type {name}"),
+			});
+		}
+		let field = self
+			.components
+			.iter_mut()
+			.find(|c| c.handle == SEO_OVERRIDE)
+			.and_then(|c| {
+				c.fields.iter_mut().find(|f| f.handle == "appliesTo")
+			});
+		if let Some(field) = field {
+			field.kind = FieldKind::Dropdown { options };
+		}
 		self
 	}
 }

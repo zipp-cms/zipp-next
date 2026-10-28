@@ -55,3 +55,52 @@ fn globals_inherit_but_not_the_description() {
 	assert_eq!(g.robots_txt, None);
 	assert_eq!(g.robots, "index, follow");
 }
+
+#[test]
+fn settings_override_the_code_per_section_and_type() {
+	use crate::schema::{Section, Seo};
+	let seo = Seo::new()
+		.section(
+			"events",
+			SeoDefaults::new().title_pattern("code").no_sitemap(),
+		)
+		.entry_type("event", SeoDefaults::new().description("code type"));
+	// the SEO before the sections: `finish` fills the choice afterwards
+	let early = Schema::new().site("de", "Deutsch", "de-CH").seo(seo);
+	let schema = early
+		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
+		.entry("event", "Event", []);
+	assert!(schema.check().is_err());
+	let schema = schema.finish();
+	schema.check().unwrap();
+
+	let primary = json!({ "overrides": [
+		{ "type": "seoOverride", "fields": {
+			"appliesTo": "section:events", "titlePattern": "settings",
+			"description": "only de", "sitemap": "yes" } },
+	]});
+	let de = schema.sites[0].clone();
+	let g = globals(&de, &primary, &primary);
+	let l = levels(&schema, &g, Some("event"), "events");
+	// the code's entry type, the settings' section, the code's section
+	assert_eq!(l.len(), 3);
+	assert_eq!(first(&l, |d| d.title_pattern.as_ref()).unwrap(), "settings");
+	assert_eq!(first(&l, |d| d.description.as_ref()).unwrap(), "code type");
+	// put back into the sitemap by the settings
+	assert!(section_in_sitemap(&schema, &g, "events"));
+
+	// another site inherits the pattern, not the description
+	let en = Site {
+		handle: "en".into(),
+		name: "English".into(),
+		language: "en".into(),
+	};
+	let g = globals(&en, &json!({}), &primary);
+	let set = &g.overrides["section:events"];
+	assert_eq!(set.title_pattern.as_deref(), Some("settings"));
+	assert_eq!(set.description, None);
+
+	// without settings the code leaves the section out
+	let g = globals(&de, &json!({}), &json!({}));
+	assert!(!section_in_sitemap(&schema, &g, "events"));
+}
