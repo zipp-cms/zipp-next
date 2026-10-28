@@ -45,6 +45,8 @@ fn main() {
   crate and served on `/`
 - `example/cms`: the cms crate of an example site, with its migrations
 - `example/frontend`: a small Svelte frontend for it
+- `example/crelte`: the same site as a crelte project, with crelte's
+  default template and no Craft
 
 ## Concepts
 
@@ -92,6 +94,12 @@ fn main() {
   alt }`. Only named transforms exist, so nobody can make the server
   render arbitrary sizes. `--public-url` makes the urls absolute for
   frontends on other domains.
+- **crelte.** zipp answers crelte like Craft: `crelteSites`, site ids
+  (the position of a site, from 1), `entry(uri: $uri, siteId: $siteId)`
+  with Craft's argument types, `__home__`, `url` on entries and
+  templates by `<sectionHandle>-<typeHandle>`. The base url of each site
+  is `--site-url de=https://example.ch`. crelte reads its settings from
+  `../craft/.env`, see `example/crelte/craft/.env.example`.
 - **Types for the rest api.** `types` prints TypeScript types of all
   entries and blocks.
 

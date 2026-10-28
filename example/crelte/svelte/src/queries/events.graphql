@@ -1,0 +1,19 @@
+query ($siteId: [QueryArgument], $where: [Where!]) {
+	events: entries(
+		type: "event"
+		siteId: $siteId
+		where: $where
+		order: "date"
+	) {
+		title
+		url
+		... on event_Entry {
+			date
+			city
+			image {
+				url(transform: "thumb")
+				alt
+			}
+		}
+	}
+}

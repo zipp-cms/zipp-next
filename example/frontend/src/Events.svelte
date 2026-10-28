@@ -6,7 +6,7 @@
 	// upcoming events, filtered and sorted by their indexed fields; like
 	// crelte's loadData of a block
 	const EVENTS = `
-		query ($site: String, $where: [Where!]) {
+		query ($site: [String], $where: [Where!]) {
 			entries(type: "event", site: $site, where: $where, order: "date") {
 				title uri
 				... on event_Entry { date city image { url(transform: "thumb") alt } }

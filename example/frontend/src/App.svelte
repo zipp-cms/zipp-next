@@ -32,7 +32,7 @@
 			... on events_Block { city }
 		}
 
-		query ($uri: String, $site: String) {
+		query ($uri: [String], $site: [String]) {
 			entry(uri: $uri, site: $site) {
 				id
 				typeHandle

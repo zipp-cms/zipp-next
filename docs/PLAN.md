@@ -18,9 +18,14 @@
       `sites`; relations resolve with their fields in the same query
 - [x] Assets: uploads, images and assets fields, focal point, named transforms in code,
       generated on first request and cached, url/width/height/srcset in GraphQL
-- [ ] A crelte project on zipp as the real test
+- [x] A crelte project on zipp: Craft compatible GraphQL (crelteSites, siteId, __home__,
+      url), example/crelte with crelte's default template, blocks with loadData
 
 ## Next
+
+- [ ] `localized` on entries (the same entry in the other sites) for language switches
+- [ ] Preview: crelte's preview tokens and drafts
+- [ ] Globals (crelte's global sets), today a single section does it
 
 - [ ] Drafts and revisions: a row per saved version, publish a version
 - [ ] Live preview: preview tokens, frontend renders unsaved content

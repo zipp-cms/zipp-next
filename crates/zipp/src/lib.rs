@@ -84,6 +84,10 @@ enum Cmd {
 		/// when the frontend runs on another domain
 		#[arg(long, default_value = "")]
 		public_url: String,
+		/// The url of a site for crelte and `url` in GraphQL:
+		/// `--site-url de=https://example.ch`, repeat for each site
+		#[arg(long)]
+		site_url: Vec<String>,
 	},
 	/// Write a migration from the schema in code to `migrations/`.
 	Makemigration {
@@ -120,13 +124,14 @@ pub fn run(schema: Schema, migrations: Migrations) {
 			listen,
 			files,
 			public_url,
+			site_url,
 		} => tokio::runtime::Runtime::new().unwrap().block_on(serve(
 			schema,
 			&opts.db,
 			&migrations,
 			&listen,
 			files,
-			public_url,
+			(public_url, site_url),
 		)),
 		Cmd::Makemigration { rename, name } => {
 			makemigration(&schema, &migrations, &rename, name.as_deref())
@@ -150,8 +155,17 @@ async fn serve(
 	migrations: &Migrations,
 	listen: &str,
 	files: PathBuf,
-	public_url: String,
+	(public_url, site_urls): (String, Vec<String>),
 ) -> Result<(), String> {
+	let site_urls = site_urls
+		.iter()
+		.map(|s| match s.split_once('=') {
+			Some((site, url)) if schema.get_site(site).is_some() => {
+				Ok((site.to_string(), url.to_string()))
+			}
+			_ => Err(format!("--site-url {s:?} needs <site>=<url>")),
+		})
+		.collect::<Result<graphql::SiteUrls, _>>()?;
 	let files = assets::files_dir(files).map_err(|e| e.to_string())?;
 	let db = Db::open(db_path).map_err(|e| e.to_string())?;
 
@@ -172,7 +186,8 @@ async fn serve(
 	}
 
 	let schema = Arc::new(schema);
-	let gql = graphql::build(schema.clone(), db.clone(), public_url)?;
+	let gql =
+		graphql::build(schema.clone(), db.clone(), public_url, site_urls)?;
 	let state = AppState {
 		db,
 		schema,

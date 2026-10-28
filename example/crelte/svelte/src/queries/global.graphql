@@ -1,0 +1,10 @@
+# the navigation: all pages, the header shows the top ones
+query ($siteId: [QueryArgument]) {
+	pages: entries(section: "pages", siteId: $siteId, order: "structure") {
+		title
+		url
+		parent {
+			id
+		}
+	}
+}

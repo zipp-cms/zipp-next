@@ -27,8 +27,8 @@ use std::sync::Arc;
 
 use async_graphql::dynamic::{
 	Field as GqlField, FieldFuture, FieldValue, InputObject, InputValue,
-	Interface, InterfaceField, Object, ResolverContext, Schema as GqlSchema,
-	TypeRef,
+	Interface, InterfaceField, Object, ResolverContext, Scalar,
+	Schema as GqlSchema, TypeRef,
 };
 use async_graphql::http::GraphiQLSource;
 use async_graphql::{Error as GqlError, Value as GqlValue};
@@ -55,6 +55,8 @@ pub const ENTRY_FIELDS: &[&str] = &[
 	"sectionHandle",
 	"typeHandle",
 	"site",
+	"siteId",
+	"url",
 	"title",
 	"slug",
 	"uri",
@@ -70,6 +72,9 @@ pub const BLOCK_FIELDS: &[&str] = &["id", "typeHandle"];
 
 /// Put before asset urls.
 struct PublicUrl(String);
+
+/// The url of each site, by handle, like Craft's base urls.
+pub type SiteUrls = std::collections::HashMap<String, String>;
 
 /// Who asks, set per request.
 struct Viewer {
@@ -88,6 +93,7 @@ pub fn build(
 	schema: Arc<Schema>,
 	db: Db,
 	public_url: String,
+	site_urls: SiteUrls,
 ) -> std::result::Result<GqlSchema, String> {
 	let mut entry_iface = Interface::new("Entry");
 	for (name, ty) in entry_common() {
@@ -108,7 +114,11 @@ pub fn build(
 		.register(block_iface)
 		.register(where_input())
 		.register(site_object())
-		.register(asset_object());
+		.register(asset_object())
+		.register(
+			Scalar::new("QueryArgument")
+				.description("An id or a handle, like Craft's QueryArgument"),
+		);
 
 	for comp in &schema.components {
 		let mut obj = if comp.entry {
@@ -177,34 +187,16 @@ pub fn build(
 				})
 			},
 		)))
-		.field(GqlField::new(
-			"sites",
-			TypeRef::named_nn_list_nn("Site"),
-			|ctx| {
-				FieldFuture::new(async move {
-					let schema = ctx.data::<Arc<Schema>>()?;
-					let sites =
-						schema.sites.iter().enumerate().map(|(i, s)| {
-							FieldValue::value(
-								GqlValue::from_json(serde_json::json!({
-									"handle": s.handle,
-									"name": s.name,
-									"language": s.language,
-									"primary": i == 0,
-								}))
-								.unwrap(),
-							)
-						});
-					Ok(Some(FieldValue::list(sites)))
-				})
-			},
-		));
+		.field(sites_field("sites"))
+		// what crelte asks for on start
+		.field(sites_field("crelteSites"));
 
 	builder
 		.register(query)
 		.data(schema)
 		.data(db)
 		.data(PublicUrl(public_url))
+		.data(site_urls)
 		.finish()
 		.map_err(|e| e.to_string())
 }
@@ -216,6 +208,9 @@ fn entry_common() -> Vec<(&'static str, TypeRef)> {
 		("sectionHandle", s()),
 		("typeHandle", s()),
 		("site", s()),
+		// the position of the site, crelte knows sites by number
+		("siteId", TypeRef::named_nn(TypeRef::INT)),
+		("url", TypeRef::named(TypeRef::STRING)),
 		("title", s()),
 		("slug", s()),
 		("uri", TypeRef::named(TypeRef::STRING)),
@@ -242,6 +237,11 @@ fn entry_common_field(name: &'static str) -> GqlField {
 				"sectionHandle" => GqlValue::from(e.section.clone()),
 				"typeHandle" => GqlValue::from(e.ty.clone()),
 				"site" => GqlValue::from(e.site.clone()),
+				"siteId" => GqlValue::from(site_id(&ctx, &e.site)?),
+				"url" => match &e.uri {
+					Some(uri) => GqlValue::from(entry_url(&ctx, &e.site, uri)?),
+					None => GqlValue::Null,
+				},
 				"title" => GqlValue::from(e.title.clone()),
 				"slug" => GqlValue::from(e.slug.clone()),
 				"uri" => e.uri.clone().map(GqlValue::from).unwrap_or_default(),
@@ -516,13 +516,19 @@ fn entry_value(e: Entry) -> FieldValue<'static> {
 /// rest api (see query.rs).
 fn entries_args(field: GqlField) -> GqlField {
 	let s = || TypeRef::named(TypeRef::STRING);
+	// lists like in Craft, so crelte's queries fit; one value is used
+	let l = || TypeRef::named_list(TypeRef::STRING);
 	let i = || TypeRef::named(TypeRef::INT);
 	field
-		.argument(InputValue::new("site", s()))
-		.argument(InputValue::new("section", s()))
-		.argument(InputValue::new("type", s()))
-		.argument(InputValue::new("uri", s()))
-		.argument(InputValue::new("slug", s()))
+		.argument(InputValue::new("site", l()))
+		.argument(InputValue::new(
+			"siteId",
+			TypeRef::named_list("QueryArgument"),
+		))
+		.argument(InputValue::new("section", l()))
+		.argument(InputValue::new("type", l()))
+		.argument(InputValue::new("uri", l()))
+		.argument(InputValue::new("slug", l()))
 		.argument(InputValue::new("id", i()))
 		.argument(InputValue::new("ids", TypeRef::named_nn_list(TypeRef::INT)))
 		.argument(InputValue::new("parent", i()))
@@ -543,6 +549,27 @@ fn where_input() -> InputObject {
 		.field(InputValue::new("value", TypeRef::named_nn(TypeRef::STRING)))
 }
 
+fn sites_field(name: &str) -> GqlField {
+	GqlField::new(name, TypeRef::named_nn_list_nn("Site"), |ctx| {
+		FieldFuture::new(async move {
+			let schema = ctx.data::<Arc<Schema>>()?;
+			let urls = ctx.data::<SiteUrls>()?;
+			let sites = schema.sites.iter().enumerate().map(|(i, s)| {
+				let site = serde_json::json!({
+					"id": i + 1,
+					"handle": s.handle,
+					"name": s.name,
+					"language": s.language,
+					"primary": i == 0,
+					"baseUrl": urls.get(&s.handle).cloned().unwrap_or_default(),
+				});
+				FieldValue::value(GqlValue::from_json(site).unwrap())
+			});
+			Ok(Some(FieldValue::list(sites)))
+		})
+	})
+}
+
 fn site_object() -> Object {
 	let field = |name: &'static str, ty: &'static str| {
 		GqlField::new(name, TypeRef::named_nn(ty), move |ctx| {
@@ -556,6 +583,8 @@ fn site_object() -> Object {
 		})
 	};
 	Object::new("Site")
+		.field(field("id", TypeRef::INT))
+		.field(field("baseUrl", TypeRef::STRING))
 		.field(field("handle", TypeRef::STRING))
 		.field(field("name", TypeRef::STRING))
 		.field(field("language", TypeRef::STRING))
@@ -596,10 +625,72 @@ fn params_from_args(
 			"parent" | "related" | "limit" | "offset" => {
 				params.push((name.into(), value.i64()?.to_string()))
 			}
+			"site" | "section" | "type" | "uri" | "slug" => {
+				let Some(v) = first(&value)? else { continue };
+				let v = match v.as_str() {
+					// Craft's name of the home page
+					"__home__" if name == "uri" => String::new(),
+					_ => v,
+				};
+				params.push((name.into(), v));
+			}
+			// the position of a site, or its handle
+			"siteId" => {
+				let Some(v) = first(&value)? else { continue };
+				let schema = ctx.data::<Arc<Schema>>()?;
+				let site = match v.parse::<usize>() {
+					Ok(n) => schema.sites.get(n.wrapping_sub(1)),
+					Err(_) => schema.get_site(&v),
+				};
+				let site = site.ok_or_else(|| {
+					GqlError::new(format!("unknown site {v}"))
+				})?;
+				params.push(("site".into(), site.handle.clone()));
+			}
 			_ => params.push((name.into(), value.string()?.into())),
 		}
 	}
 	Ok(params)
+}
+
+/// The first value of a list argument, as text. A single value counts
+/// as a list.
+fn first(
+	value: &async_graphql::dynamic::ValueAccessor,
+) -> async_graphql::Result<Option<String>> {
+	let v = match value.as_value() {
+		GqlValue::List(l) => l.first().cloned(),
+		v => Some(v.clone()),
+	};
+	Ok(match v {
+		Some(GqlValue::String(s)) => Some(s),
+		Some(GqlValue::Number(n)) => Some(n.to_string()),
+		_ => None,
+	})
+}
+
+/// The position of a site, from 1, like Craft's site ids.
+fn site_id(ctx: &ResolverContext, site: &str) -> async_graphql::Result<i64> {
+	let schema = ctx.data::<Arc<Schema>>()?;
+	let i = schema
+		.sites
+		.iter()
+		.position(|s| s.handle == site)
+		.unwrap_or(0);
+	Ok(i as i64 + 1)
+}
+
+fn entry_url(
+	ctx: &ResolverContext,
+	site: &str,
+	uri: &str,
+) -> async_graphql::Result<String> {
+	let base = ctx
+		.data::<SiteUrls>()?
+		.get(site)
+		.cloned()
+		.unwrap_or_default();
+	Ok(format!("{}/{uri}", base.trim_end_matches('/')))
 }
 
 fn site_params<const N: usize>(
@@ -671,7 +762,8 @@ mod tests {
 	async fn loads_a_page_with_its_relations() {
 		let db = Db::memory().unwrap();
 		let s = Arc::new(site());
-		let gql = build(s.clone(), db.clone(), String::new()).unwrap();
+		let gql = build(s.clone(), db.clone(), String::new(), SiteUrls::new())
+			.unwrap();
 
 		let (about, event) = {
 			let conn = db.conn();
@@ -763,8 +855,13 @@ mod tests {
 	async fn assets_with_transforms() {
 		let db = Db::memory().unwrap();
 		let s = Arc::new(site());
-		let gql =
-			build(s.clone(), db.clone(), "https://cms.test".into()).unwrap();
+		let gql = build(
+			s.clone(),
+			db.clone(),
+			"https://cms.test".into(),
+			SiteUrls::new(),
+		)
+		.unwrap();
 		let dir = std::env::temp_dir()
 			.join(format!("zipp-gql-{}", rand::random::<u32>()));
 
@@ -814,10 +911,63 @@ mod tests {
 	}
 
 	#[tokio::test]
+	async fn answers_crelte_like_craft() {
+		let db = Db::memory().unwrap();
+		let s = Arc::new(site());
+		let urls = SiteUrls::from([
+			("de".to_string(), "https://x.ch".to_string()),
+			("en".to_string(), "https://x.ch/en/".to_string()),
+		]);
+		let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
+		let first = crate::migrate::Migration {
+			name: "0001".into(),
+			ops: crate::migrate::diff(&Schema::new(), &s, &[]).unwrap(),
+			schema: (*s).clone(),
+		};
+		crate::apply::apply_migrations(&db.conn(), &[first]).unwrap();
+
+		let data = run(
+			&gql,
+			r#"{ crelteSites { id baseUrl language name handle primary } }"#,
+			true,
+		)
+		.await;
+		assert_eq!(
+			data["crelteSites"][1],
+			json!({ "id": 2, "baseUrl": "https://x.ch/en/", "language": "en",
+				"name": "English", "handle": "en", "primary": false })
+		);
+
+		// crelte's entry.graphql with its variables
+		let req = async_graphql::Request::new(
+			r#"query ($uri: [String], $siteId: [QueryArgument]) {
+				entry(uri: $uri, siteId: $siteId) {
+					id siteId url sectionHandle typeHandle title
+				}
+			}"#,
+		)
+		.variables(async_graphql::Variables::from_json(
+			json!({ "uri": "__home__", "siteId": 2 }),
+		))
+		.data(Viewer {
+			published_only: true,
+		});
+		let resp = gql.execute(req).await;
+		assert!(resp.errors.is_empty(), "{:?}", resp.errors);
+		let data = resp.data.into_json().unwrap();
+		assert_eq!(
+			data["entry"],
+			json!({ "id": 1, "siteId": 2, "url": "https://x.ch/en/",
+				"sectionHandle": "home", "typeHandle": "page", "title": "Home" })
+		);
+	}
+
+	#[tokio::test]
 	async fn hides_drafts_without_a_session() {
 		let db = Db::memory().unwrap();
 		let s = Arc::new(site());
-		let gql = build(s.clone(), db.clone(), String::new()).unwrap();
+		let gql = build(s.clone(), db.clone(), String::new(), SiteUrls::new())
+			.unwrap();
 		let mut draft = input("pages", "page", "Draft", json!({}));
 		draft.published = false;
 		save(&db.conn(), &s, None, draft).unwrap();

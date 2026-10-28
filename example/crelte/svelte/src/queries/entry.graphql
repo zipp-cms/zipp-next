@@ -1,0 +1,88 @@
+# the same query crelte runs against Craft: zipp answers it in Craft's shape
+fragment Image on Asset {
+	url(transform: "medium")
+	srcset(transforms: ["small", "medium"])
+	width(transform: "medium")
+	height(transform: "medium")
+	alt
+}
+
+fragment Hero on Asset {
+	url(transform: "hero")
+	srcset(transforms: ["small", "hero"])
+	width(transform: "hero")
+	height(transform: "hero")
+	alt
+}
+
+fragment Body on Block {
+	typeHandle
+	... on heading_Block {
+		text
+	}
+	... on text_Block {
+		content
+	}
+	... on image_Block {
+		caption
+		image {
+			...Image
+		}
+	}
+	... on button_Block {
+		label
+		link {
+			title
+			url
+		}
+	}
+	... on events_Block {
+		city
+	}
+}
+
+query ($uri: [String], $siteId: [QueryArgument]) {
+	entry(uri: $uri, siteId: $siteId) {
+		id
+		siteId
+		url
+		sectionHandle
+		typeHandle
+		title
+		... on home_Entry {
+			intro
+			hero {
+				...Hero
+			}
+			body {
+				...Body
+			}
+		}
+		... on page_Entry {
+			intro
+			hero {
+				...Hero
+			}
+			body {
+				...Body
+			}
+			children {
+				title
+				url
+			}
+		}
+		... on event_Entry {
+			date
+			city
+			price
+			description
+			image {
+				...Hero
+			}
+			page {
+				title
+				url
+			}
+		}
+	}
+}
