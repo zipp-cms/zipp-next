@@ -36,6 +36,7 @@ use crate::db::Db;
 use crate::migrate::{Migration, Migrations, Rename};
 
 pub use crate::schema::{Field, LinkKind, Schema, Section, Transform};
+pub use axum;
 
 #[doc(hidden)]
 pub use rust_embed;
@@ -66,6 +67,139 @@ pub struct AppState {
 	pub files: PathBuf,
 	/// the url of each site, for previews
 	pub site_urls: Arc<graphql::SiteUrls>,
+	hooks: Arc<Vec<Hook>>,
+}
+
+/// What happened to an entry, for `Cms::on_change`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Change {
+	pub entry_id: i64,
+	pub section: String,
+	pub kind: ChangeKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ChangeKind {
+	/// created or saved directly, without a draft
+	Saved,
+	/// a draft was published
+	Published,
+	Moved,
+	Deleted,
+}
+
+type Hook = Arc<dyn Fn(&Change) + Send + Sync>;
+
+impl AppState {
+	/// Tells the hooks of the site, after the change is written.
+	pub fn changed(&self, entry_id: i64, section: &str, kind: ChangeKind) {
+		let change = Change {
+			entry_id,
+			section: section.into(),
+			kind,
+		};
+		for hook in self.hooks.iter() {
+			hook(&change);
+		}
+	}
+}
+
+/// The cms of a site, for what `run` can't do:
+///
+/// ```no_run
+/// # use zipp::{axum::{Router, routing::get}, Cms, Schema};
+/// # fn schema() -> Schema { Schema::new().site("de", "Deutsch", "de") }
+/// Cms::new(schema(), zipp::migrations!())
+///     // routes of the site, they get zipp's AppState
+///     .routes(Router::new().route("/hello", get(|| async { "hi" })))
+///     // after every save, publish, move and delete, e.g. to clear a cache
+///     .on_change(|c| println!("{} changed", c.entry_id))
+///     .run();
+/// ```
+pub struct Cms {
+	schema: Schema,
+	migrations: Migrations,
+	routes: Router<AppState>,
+	hooks: Vec<Hook>,
+}
+
+impl Cms {
+	pub fn new(schema: Schema, migrations: Migrations) -> Self {
+		Self {
+			schema,
+			migrations,
+			routes: Router::new(),
+			hooks: vec![],
+		}
+	}
+
+	/// Routes of the site next to zipp's, with `State<AppState>`.
+	pub fn routes(mut self, routes: Router<AppState>) -> Self {
+		self.routes = self.routes.merge(routes);
+		self
+	}
+
+	/// Called after an entry changed. It runs in the request, so spawn
+	/// anything slow.
+	pub fn on_change(
+		mut self,
+		hook: impl Fn(&Change) + Send + Sync + 'static,
+	) -> Self {
+		self.hooks.push(Arc::new(hook));
+		self
+	}
+
+	/// The main of the cms crate: the commands and the server.
+	pub fn run(self) {
+		tracing_subscriber::fmt()
+			.with_env_filter(
+				tracing_subscriber::EnvFilter::try_from_default_env()
+					.unwrap_or_else(|_| "zipp=info,tower_http=info".into()),
+			)
+			.init();
+
+		let Self {
+			schema,
+			migrations,
+			routes,
+			hooks,
+		} = self;
+		if let Err(e) = schema.check() {
+			eprintln!("The schema has a mistake: {e}");
+			std::process::exit(1);
+		}
+
+		let opts = Opts::parse();
+		let res = match opts.cmd {
+			Cmd::Serve {
+				listen,
+				files,
+				public_url,
+				site_url,
+			} => tokio::runtime::Runtime::new().unwrap().block_on(serve(
+				schema,
+				&opts.db,
+				&migrations,
+				&listen,
+				files,
+				(public_url, site_url),
+				(routes, hooks),
+			)),
+			Cmd::Makemigration { rename, name } => {
+				makemigration(&schema, &migrations, &rename, name.as_deref())
+			}
+			Cmd::Types => {
+				print!("{}", typescript::generate(&schema));
+				Ok(())
+			}
+			Cmd::User { email } => add_user(&opts.db, &email),
+		};
+
+		if let Err(e) = res {
+			eprintln!("{e}");
+			std::process::exit(1);
+		}
+	}
 }
 
 #[derive(Debug, Parser)]
@@ -109,49 +243,10 @@ enum Cmd {
 	User { email: String },
 }
 
-/// The main of a site's cms crate: `zipp::run(schema(), zipp::migrations!())`.
+/// The main of a site's cms crate: `zipp::run(schema(), zipp::migrations!())`,
+/// `Cms` for routes and hooks of the site.
 pub fn run(schema: Schema, migrations: Migrations) {
-	tracing_subscriber::fmt()
-		.with_env_filter(
-			tracing_subscriber::EnvFilter::try_from_default_env()
-				.unwrap_or_else(|_| "zipp=info,tower_http=info".into()),
-		)
-		.init();
-
-	if let Err(e) = schema.check() {
-		eprintln!("The schema has a mistake: {e}");
-		std::process::exit(1);
-	}
-
-	let opts = Opts::parse();
-	let res = match opts.cmd {
-		Cmd::Serve {
-			listen,
-			files,
-			public_url,
-			site_url,
-		} => tokio::runtime::Runtime::new().unwrap().block_on(serve(
-			schema,
-			&opts.db,
-			&migrations,
-			&listen,
-			files,
-			(public_url, site_url),
-		)),
-		Cmd::Makemigration { rename, name } => {
-			makemigration(&schema, &migrations, &rename, name.as_deref())
-		}
-		Cmd::Types => {
-			print!("{}", typescript::generate(&schema));
-			Ok(())
-		}
-		Cmd::User { email } => add_user(&opts.db, &email),
-	};
-
-	if let Err(e) = res {
-		eprintln!("{e}");
-		std::process::exit(1);
-	}
+	Cms::new(schema, migrations).run();
 }
 
 async fn serve(
@@ -161,6 +256,7 @@ async fn serve(
 	listen: &str,
 	files: PathBuf,
 	(public_url, site_urls): (String, Vec<String>),
+	(routes, hooks): (Router<AppState>, Vec<Hook>),
 ) -> Result<(), String> {
 	let site_urls = site_urls
 		.iter()
@@ -203,6 +299,7 @@ async fn serve(
 		gql,
 		files,
 		site_urls: Arc::new(site_urls),
+		hooks: Arc::new(hooks),
 	};
 	let api = Router::new()
 		.nest("/auth", auth::routes())
@@ -214,6 +311,7 @@ async fn serve(
 	let app = Router::new()
 		.nest("/api", api)
 		.merge(assets::file_routes())
+		.merge(routes)
 		.merge(studio::routes());
 
 	// frontends on other domains read the content, graphql is a POST

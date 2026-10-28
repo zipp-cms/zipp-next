@@ -44,6 +44,16 @@
       SQL in entries.rs, auth.rs and query.rs; the index tables stay the
       same in both
 
+## Slice 3: what real sites need
+
+- [x] Navigation groups, globals as singles, preview button, status per site
+- [x] Drafts, revisions with what changed, preview tokens, conflicts between editors
+- [x] Link field, rich text (TipTap) with button rows and embedded blocks
+- [x] Translations defined in code
+- [x] Cms builder: routes and on_change hooks of the site
+- [ ] Group field (zandi's ContentBlock), `localized` for language switches
+- [ ] Port textrem or zandi to zipp
+
 ## Ideas of the operator (2026-10-28)
 
 - Globals as singles; the studio navigation configurable in the schema, so settings

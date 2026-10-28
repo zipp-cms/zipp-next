@@ -38,6 +38,17 @@ fn main() {
 }
 ```
 
+A site can extend its cms in Rust, the project owns the code:
+
+```rust
+Cms::new(schema(), zipp::migrations!())
+	// routes of the site next to zipp's, with State<AppState>
+	.routes(Router::new().route("/sitemap.xml", get(sitemap)))
+	// after every save, publish, move and delete, e.g. to clear a cache
+	.on_change(|c| println!("{:?} {}", c.kind, c.entry_id))
+	.run();
+```
+
 ## Layout
 
 - `crates/zipp`: the cms, a library the site crate calls

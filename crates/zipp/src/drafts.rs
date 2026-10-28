@@ -464,7 +464,13 @@ async fn publish_route(
 	auth: Authed,
 	Path(id): Path<i64>,
 ) -> Result<()> {
-	publish(&state.db.conn(), &state.schema, id, Some(auth.user_id))
+	let section = {
+		let conn = state.db.conn();
+		publish(&conn, &state.schema, id, Some(auth.user_id))?;
+		crate::entries::section_of(&conn, id)?
+	};
+	state.changed(id, &section, crate::ChangeKind::Published);
+	Ok(())
 }
 
 async fn revisions_route(

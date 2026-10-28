@@ -13,7 +13,6 @@ use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::AppState;
 use crate::auth::{Authed, session};
 use crate::content::{
 	FieldError, Target, index_values, relations, share, validate,
@@ -23,6 +22,7 @@ use crate::drafts::record_revision;
 use crate::error::{Error, Result};
 use crate::query::Query;
 use crate::schema::{Schema, Section, SectionKind};
+use crate::{AppState, ChangeKind};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -707,6 +707,14 @@ pub fn published_per_site(
 	Ok(out)
 }
 
+pub fn section_of(conn: &Connection, id: i64) -> Result<String> {
+	Ok(conn.query_row(
+		"SELECT section FROM entries WHERE id = ?1",
+		[id],
+		|r| r.get(0),
+	)?)
+}
+
 /// `Über uns!` becomes `über-uns`.
 pub fn slugify(s: &str) -> String {
 	let mut out = String::new();
@@ -788,9 +796,13 @@ async fn create_route(
 	auth: Authed,
 	Json(input): Json<EntryInput>,
 ) -> Result<Json<Entry>> {
-	let conn = state.db.conn();
-	let entry = save(&conn, &state.schema, None, input)?;
-	record_revision(&conn, entry.id, Some(auth.user_id))?;
+	let entry = {
+		let conn = state.db.conn();
+		let entry = save(&conn, &state.schema, None, input)?;
+		record_revision(&conn, entry.id, Some(auth.user_id))?;
+		entry
+	};
+	state.changed(entry.id, &entry.section, ChangeKind::Saved);
 	Ok(Json(entry))
 }
 
@@ -801,9 +813,13 @@ async fn update_route(
 	Path(id): Path<i64>,
 	Json(input): Json<EntryInput>,
 ) -> Result<Json<Entry>> {
-	let conn = state.db.conn();
-	let entry = save(&conn, &state.schema, Some(id), input)?;
-	record_revision(&conn, id, Some(auth.user_id))?;
+	let entry = {
+		let conn = state.db.conn();
+		let entry = save(&conn, &state.schema, Some(id), input)?;
+		record_revision(&conn, id, Some(auth.user_id))?;
+		entry
+	};
+	state.changed(id, &entry.section, ChangeKind::Saved);
 	Ok(Json(entry))
 }
 
@@ -820,8 +836,13 @@ async fn move_route(
 	Path(id): Path<i64>,
 	Json(req): Json<MoveReq>,
 ) -> Result<()> {
-	let conn = state.db.conn();
-	move_entry(&conn, &state.schema, id, req.parent_id, req.index)
+	let section = {
+		let conn = state.db.conn();
+		move_entry(&conn, &state.schema, id, req.parent_id, req.index)?;
+		section_of(&conn, id)?
+	};
+	state.changed(id, &section, ChangeKind::Moved);
+	Ok(())
 }
 
 async fn delete_route(
@@ -829,7 +850,14 @@ async fn delete_route(
 	_auth: Authed,
 	Path(id): Path<i64>,
 ) -> Result<()> {
-	delete(&state.db.conn(), &state.schema, id)
+	let section = {
+		let conn = state.db.conn();
+		let section = section_of(&conn, id)?;
+		delete(&conn, &state.schema, id)?;
+		section
+	};
+	state.changed(id, &section, ChangeKind::Deleted);
+	Ok(())
 }
 
 #[derive(Debug, Serialize)]

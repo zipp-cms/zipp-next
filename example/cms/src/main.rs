@@ -1,6 +1,13 @@
 //! The cms of the example site: its content model and nothing else.
 
-use zipp::{Field, LinkKind, Schema, Section, Transform};
+use zipp::axum::Router;
+use zipp::axum::extract::State;
+use zipp::axum::http::header;
+use zipp::axum::response::IntoResponse;
+use zipp::axum::routing::get;
+use zipp::error::Result;
+use zipp::query::Query;
+use zipp::{AppState, Cms, Field, LinkKind, Schema, Section, Transform};
 
 fn schema() -> Schema {
 	let body = || {
@@ -129,6 +136,35 @@ fn schema() -> Schema {
 		)
 }
 
+/// A route of the site next to zipp's: every published entry with a url,
+/// in every site that has a url.
+async fn sitemap(State(state): State<AppState>) -> Result<impl IntoResponse> {
+	let conn = state.db.conn();
+	let mut xml = String::from(
+		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+		<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
+	);
+	for site in &state.schema.sites {
+		let Some(base) = state.site_urls.get(&site.handle) else {
+			continue;
+		};
+		let params = [("site", site.handle.as_str()), ("limit", "1000")]
+			.map(|(k, v)| (k.to_string(), v.to_string()));
+		let mut q = Query::parse(&state.schema, &params).unwrap();
+		q.published_only = true;
+		let (entries, _) = zipp::entries::list(&conn, &q)?;
+		for uri in entries.iter().filter_map(|e| e.uri.as_ref()) {
+			let base = base.trim_end_matches('/');
+			xml += &format!("<url><loc>{base}/{uri}</loc></url>\n");
+		}
+	}
+	xml += "</urlset>\n";
+	Ok(([(header::CONTENT_TYPE, "application/xml")], xml))
+}
+
 fn main() {
-	zipp::run(schema(), zipp::migrations!());
+	Cms::new(schema(), zipp::migrations!())
+		.routes(Router::new().route("/sitemap.xml", get(sitemap)))
+		.on_change(|c| println!("{:?} {} in {}", c.kind, c.entry_id, c.section))
+		.run();
 }
