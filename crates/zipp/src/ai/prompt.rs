@@ -1,6 +1,11 @@
 use super::*;
 
-pub(super) fn system_prompt(schema: &Schema, view: &str) -> String {
+/// `asked` is the editor's last message, its language is the answer's.
+pub(super) fn system_prompt(
+	schema: &Schema,
+	view: &str,
+	asked: &str,
+) -> String {
 	// the content model, so the model knows sections, types and fields
 	let model = json!({
 		"sites": schema.sites,
@@ -33,9 +38,11 @@ pub(super) fn system_prompt(schema: &Schema, view: &str) -> String {
 		Write your answers in the language the editor's last message is written \
 		in, not in the language of the content: an English message gets an English \
 		answer, even if it names a German page. Content you write into entries is \
-		in the language of its site.",
+		in the language of its site. The editor's last message, answer in its \
+		language: «{}»",
 		serde_json::to_string(&model).unwrap(),
-		today()
+		today(),
+		asked.chars().take(500).collect::<String>()
 	)
 }
 

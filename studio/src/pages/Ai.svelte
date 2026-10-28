@@ -125,6 +125,7 @@
 		if (!text || busy) return;
 		input = '';
 		error = '';
+		const from = lines.length;
 		lines.push({ who: 'user', text });
 		scroll();
 		busy = true;
@@ -132,21 +133,32 @@
 			...$state.snapshot(messages),
 			{ kind: 'user', text } as AiMessage,
 		];
+		const actions: AiAction[] = [];
 		try {
-			const r = await aiChat(model, sent, view || null);
-			messages = [...sent, ...r.messages];
-			for (const action of r.actions)
-				if (!action.navigate) lines.push({ who: 'action', action });
-			if (r.text) lines.push({ who: 'ai', text: r.text });
+			const added = await aiChat(model, sent, view || null, {
+				// the answer as it comes, a new bubble after an action
+				delta: t => {
+					const last = lines[lines.length - 1];
+					if (last?.who === 'ai') last.text += t;
+					else lines.push({ who: 'ai', text: t });
+					scroll();
+				},
+				action: a => {
+					actions.push(a);
+					if (!a.navigate) lines.push({ who: 'action', action: a });
+					scroll();
+				},
+			});
+			messages = [...sent, ...added];
 			// the AI opens a page where the change shows, else this one
 			// reloads
-			const nav = r.actions.findLast(a => a.navigate && a.url);
+			const nav = actions.findLast(a => a.navigate && a.url);
 			if (nav?.url) open(nav.url);
-			else if (r.actions.length) refresh();
+			else if (actions.length) refresh();
 		} catch (e: any) {
 			error = e.message;
 			// the message was not answered, it can be sent again
-			lines.pop();
+			lines.splice(from);
 			input = text;
 		} finally {
 			busy = false;
@@ -219,7 +231,9 @@
 					<div class="msg user">{line.text}</div>
 				{/if}
 			{/each}
-			{#if busy}<div class="msg ai busy">…</div>{/if}
+			{#if busy && lines[lines.length - 1]?.who !== 'ai'}
+				<div class="msg ai busy">…</div>
+			{/if}
 			{#if error}<p class="error">{error}</p>{/if}
 		</div>
 

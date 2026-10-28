@@ -3374,6 +3374,7 @@ dependencies = [
  "soe-llms",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tower-http",
  "tracing",
  "tracing-subscriber",
