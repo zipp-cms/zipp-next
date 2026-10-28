@@ -27,6 +27,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Links | a Button block | entry, URL, email, phone or file; external ones open in a new tab |
 | Group | a page → SEO | fields of another component under one name |
 | Markdown | Events → Description | written as markdown, the website gets it as html |
+| A field type of another crate | Events → Genre | `example/button-group`: Craft's button group with a color per option, its own editor and GraphQL type |
 | Boolean, number, indexed fields | Events | *sold out*, price; the website filters and sorts by them |
 | Relations | Events → More info, Header → navigation | the website gets the linked entries with their fields |
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |

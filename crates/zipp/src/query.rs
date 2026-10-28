@@ -15,6 +15,7 @@
 
 use rusqlite::types::Value;
 
+use crate::field_type::{GraphqlType, Scalar};
 use crate::schema::{FieldKind, Schema};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -173,7 +174,16 @@ impl Query {
 			.iter()
 			.find(|f| f.handle == field && f.indexed)
 			.ok_or_else(|| format!("{ty}.{field} is not indexed"))?;
-		Ok(!matches!(f.kind, FieldKind::Text { .. }))
+		Ok(match &f.kind {
+			FieldKind::Text { .. } => false,
+			// a custom type is compared like the scalar GraphQL shows
+			FieldKind::Custom { ty, .. } => {
+				schema.field_types.get(ty).is_none_or(|t| {
+					t.graphql() != GraphqlType::Scalar(Scalar::String)
+				})
+			}
+			_ => true,
+		})
 	}
 
 	fn filter(

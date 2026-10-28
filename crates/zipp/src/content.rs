@@ -159,6 +159,13 @@ fn validate_value(
 				.collect();
 			return Some(Value::Array(blocks));
 		}
+		(FieldKind::Custom { ty, options }, value) => {
+			let t = schema.field_types.get(ty).unwrap();
+			match t.validate(options, value) {
+				Ok(v) => return Some(v),
+				Err(e) => error(errors, path, &e),
+			}
+		}
 		_ => error(errors, path, "wrong type"),
 	}
 

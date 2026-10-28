@@ -31,7 +31,9 @@ export type FieldKind =
 			types: string[];
 			min: number | null;
 			max: number | null;
-	  };
+	  }
+	/** a field type of another crate, its editor is a module */
+	| { kind: 'custom'; type: string; options: unknown };
 
 export type Field = FieldKind & {
 	handle: string;

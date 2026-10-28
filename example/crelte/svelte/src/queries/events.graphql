@@ -11,6 +11,11 @@ query ($siteId: [QueryArgument], $where: [Where!]) {
 			date
 			city
 			soldOut
+			genre {
+				value
+				label
+				color
+			}
 			image {
 				url(transform: "thumb")
 				alt

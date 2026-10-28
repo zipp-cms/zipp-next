@@ -105,6 +105,11 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 			city
 			price
 			soldOut
+			genre {
+				value
+				label
+				color
+			}
 			description {
 				html
 			}

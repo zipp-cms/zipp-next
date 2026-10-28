@@ -7,6 +7,7 @@
 	import GroupField from './GroupField.svelte';
 	import MarkdownField from './MarkdownField.svelte';
 	import RichTextField from './RichTextField.svelte';
+	import CustomField from './CustomField.svelte';
 
 	let {
 		schema,
@@ -93,6 +94,8 @@
 				<RichTextField {schema} {field} {values} {refs} />
 			{:else if field.kind === 'link'}
 				<LinkField {schema} {field} {values} {refs} />
+			{:else if field.kind === 'custom'}
+				<CustomField {field} {values} />
 			{:else if field.kind === 'assets'}
 				<AssetField {field} {values} />
 			{:else if field.kind === 'blocks'}

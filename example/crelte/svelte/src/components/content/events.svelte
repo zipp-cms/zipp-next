@@ -16,6 +16,7 @@
 
 <script>
 	import { getTranslations } from 'crelte/translations';
+	import Genre from '@/components/Genre.svelte';
 
 	const t = getTranslations();
 	let { events } = $props();
@@ -26,6 +27,7 @@
 		<li>
 			{#each e.image as img (img.url)}<img src={img.url} alt={img.alt} />{/each}
 			<a href={e.url}>{e.title}</a>
+			<Genre genre={e.genre} />
 			<span>{e.date}, {e.city}</span>
 			{#if e.soldOut}<strong>{$t('events.soldOut')}</strong>{/if}
 		</li>

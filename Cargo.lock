@@ -798,6 +798,7 @@ name = "example-cms"
 version = "0.1.0"
 dependencies = [
  "zipp",
+ "zipp-button-group",
 ]
 
 [[package]]
@@ -3376,6 +3377,14 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "zipp-button-group"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "zipp",
 ]
 
 [[package]]

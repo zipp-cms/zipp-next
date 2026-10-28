@@ -36,7 +36,10 @@ pub fn generate(schema: &Schema) -> String {
 
 	for comp in &schema.components {
 		let name = pascal(&comp.handle);
-		out += &format!("\nexport type {name}Fields = {};\n", fields(comp));
+		out += &format!(
+			"\nexport type {name}Fields = {};\n",
+			fields(schema, comp)
+		);
 		out += &if comp.entry {
 			format!(
 				"export type {name} = Entry<'{}', {name}Fields>;\n",
@@ -63,7 +66,7 @@ pub fn generate(schema: &Schema) -> String {
 	out
 }
 
-fn fields(comp: &Component) -> String {
+fn fields(schema: &Schema, comp: &Component) -> String {
 	if comp.fields.is_empty() {
 		return "Record<string, never>".into();
 	}
@@ -96,6 +99,11 @@ fn fields(comp: &Component) -> String {
 					.collect();
 				format!("({})[]", blocks.join(" | "))
 			}
+			FieldKind::Custom { ty, .. } => schema
+				.field_types
+				.get(ty)
+				.map(|t| t.typescript())
+				.unwrap_or_else(|| "unknown".into()),
 		};
 		let opt = if f.required { "" } else { "?" };
 		out += &format!("\t{}{opt}: {ty};\n", f.handle);

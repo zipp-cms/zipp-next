@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 zipp = { path = "../../crates/zipp" }
+zipp-button-group = { path = "../button-group" }

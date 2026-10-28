@@ -11,6 +11,7 @@ pub mod db;
 pub mod drafts;
 pub mod entries;
 pub mod error;
+pub mod field_type;
 pub mod graphql;
 pub mod migrate;
 pub mod query;
@@ -36,6 +37,7 @@ use tracing::info;
 use crate::db::Db;
 use crate::migrate::{Migration, Migrations, Rename};
 
+pub use crate::field_type::{FieldType, GraphqlType, Scalar, StudioModule};
 pub use crate::schema::{Field, LinkKind, Schema, Section, Transform};
 pub use axum;
 

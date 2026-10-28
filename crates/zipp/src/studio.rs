@@ -2,8 +2,10 @@
 //! `crates/zipp/studio` (`npm run build`), so a site needs no npm.
 
 use axum::Router;
+use axum::extract::{Path, State};
 use axum::http::{StatusCode, Uri, header};
 use axum::response::{IntoResponse, Redirect, Response};
+use axum::routing::get;
 
 use crate::AppState;
 
@@ -47,6 +49,28 @@ async fn file(uri: Uri) -> Response {
 		.into_response()
 }
 
+/// The editor of a field type of another crate, see
+/// [`StudioModule`](crate::field_type::StudioModule).
+async fn field_module(
+	State(state): State<AppState>,
+	Path(file): Path<String>,
+) -> Response {
+	let name = file.strip_suffix(".js").unwrap_or(&file);
+	match state.schema.field_types.get(name) {
+		Some(t) => (
+			[
+				(header::CONTENT_TYPE, "text/javascript"),
+				(header::CACHE_CONTROL, "no-cache"),
+			],
+			t.studio().js,
+		)
+			.into_response(),
+		None => StatusCode::NOT_FOUND.into_response(),
+	}
+}
+
 pub fn routes() -> Router<AppState> {
-	Router::new().fallback(file)
+	Router::new()
+		.route("/_fields/{file}", get(field_module))
+		.fallback(file)
 }

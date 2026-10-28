@@ -48,6 +48,7 @@ use crate::db::Db;
 use crate::drafts::{Doc, preview};
 use crate::entries::{Entry, list};
 use crate::error::Result;
+use crate::field_type::{GraphqlType, Scalar as FieldScalar};
 use crate::query::Query;
 use crate::richtext::{self, Chunk};
 use crate::schema::{FieldKind, Schema};
@@ -294,6 +295,21 @@ pub fn build(
 				.description("An id or a handle, like Craft's QueryArgument"),
 		);
 
+	// the object types of field types of other crates
+	for t in &schema.field_types.0 {
+		if let GraphqlType::Object { name, fields } = t.graphql() {
+			let mut obj = Object::new(name);
+			for (field, scalar) in fields {
+				obj = obj.field(GqlField::new(
+					field,
+					TypeRef::named(scalar_name(scalar)),
+					move |ctx| value_field(ctx, field),
+				));
+			}
+			builder = builder.register(obj);
+		}
+	}
+
 	// the components used by group fields, their fields without id or type
 	let grouped: std::collections::BTreeSet<&String> = schema
 		.components
@@ -308,7 +324,7 @@ pub fn build(
 		let comp = schema.get(handle).unwrap();
 		let mut obj = Object::new(format!("{handle}_Fields"));
 		for field in &comp.fields {
-			obj = obj.field(content_field(field));
+			obj = obj.field(content_field(&schema, field));
 		}
 		builder = builder.register(obj);
 	}
@@ -336,7 +352,7 @@ pub fn build(
 				))
 		};
 		for field in &comp.fields {
-			obj = obj.field(content_field(field));
+			obj = obj.field(content_field(&schema, field));
 		}
 		builder = builder.register(obj);
 	}
@@ -566,9 +582,33 @@ fn entry_common_field(name: &'static str) -> GqlField {
 	})
 }
 
+fn scalar_name(s: FieldScalar) -> &'static str {
+	match s {
+		FieldScalar::String => TypeRef::STRING,
+		FieldScalar::Int => TypeRef::INT,
+		FieldScalar::Float => TypeRef::FLOAT,
+		FieldScalar::Boolean => TypeRef::BOOLEAN,
+	}
+}
+
 /// A field of the content model, read from the JSON of its entry or block.
-fn content_field(field: &crate::schema::Field) -> GqlField {
+fn content_field(schema: &Schema, field: &crate::schema::Field) -> GqlField {
+	// a custom type turns the stored value into its output
+	let custom = match &field.kind {
+		FieldKind::Custom { ty, options } => schema
+			.field_types
+			.get(ty)
+			.map(|t| (t.clone(), options.clone())),
+		_ => None,
+	};
 	let ty = match &field.kind {
+		FieldKind::Custom { .. } => {
+			match custom.as_ref().map(|(t, _)| t.graphql()) {
+				Some(GraphqlType::Object { name, .. }) => TypeRef::named(name),
+				Some(GraphqlType::Scalar(s)) => TypeRef::named(scalar_name(s)),
+				None => TypeRef::named(TypeRef::STRING),
+			}
+		}
 		FieldKind::Text { .. } => TypeRef::named(TypeRef::STRING),
 		FieldKind::Number { .. } => TypeRef::named(TypeRef::FLOAT),
 		FieldKind::Boolean => TypeRef::named(TypeRef::BOOLEAN),
@@ -588,6 +628,7 @@ fn content_field(field: &crate::schema::Field) -> GqlField {
 	GqlField::new(field.handle.clone(), ty, move |ctx| {
 		let handle = handle.clone();
 		let kind = kind.clone();
+		let custom = custom.clone();
 		FieldFuture::new(async move {
 			let (fields, site) = match ctx.parent_value.downcast_ref::<Entry>()
 			{
@@ -670,6 +711,13 @@ fn content_field(field: &crate::schema::Field) -> GqlField {
 				FieldKind::Link { new_tab, .. } if !value.is_null() => {
 					let link = resolve_link(&ctx, &value, &site, new_tab)?;
 					Ok(link.map(FieldValue::value))
+				}
+				FieldKind::Custom { .. } if !value.is_null() => {
+					let Some((t, options)) = custom else {
+						return Ok(None);
+					};
+					let out = t.output(&options, &value);
+					Ok(Some(FieldValue::value(GqlValue::from_json(out)?)))
 				}
 				_ if value.is_null() => Ok(None),
 				_ => Ok(Some(FieldValue::value(GqlValue::from_json(value)?))),

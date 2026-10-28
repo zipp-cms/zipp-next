@@ -20,6 +20,9 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+use crate::field_type::{FieldType, FieldTypes, GraphqlType};
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Schema {
@@ -43,6 +46,9 @@ pub struct Schema {
 	/// Not part of the content model, so not in migrations.
 	#[serde(skip)]
 	pub docs: Vec<Doc>,
+	/// Field types of other crates, see [`FieldType`].
+	#[serde(skip)]
+	pub field_types: FieldTypes,
 }
 
 /// A markdown file of the project shown in the studio, like a readme.
@@ -210,6 +216,14 @@ pub enum FieldKind {
 		min: Option<u32>,
 		max: Option<u32>,
 	},
+	/// A field type of another crate, registered in the schema; the
+	/// options are its own.
+	Custom {
+		#[serde(rename = "type")]
+		ty: String,
+		#[serde(default)]
+		options: Value,
+	},
 }
 
 impl Schema {
@@ -242,6 +256,13 @@ impl Schema {
 			name: name.into(),
 			sections: sections.into_iter().map(Into::into).collect(),
 		});
+		self
+	}
+
+	/// Registers a field type of another crate, fields use it with
+	/// [`Field::custom`].
+	pub fn field_type(mut self, ty: impl FieldType) -> Self {
+		self.field_types.0.push(std::sync::Arc::new(ty));
 		self
 	}
 
@@ -551,6 +572,12 @@ impl Schema {
 		{
 			return Err("a link needs something to point to".into());
 		}
+		if let FieldKind::Custom { ty, options } = &field.kind {
+			let Some(t) = self.field_types.get(ty) else {
+				return Err(format!("unknown field type {ty}, register it"));
+			};
+			t.check(options)?;
+		}
 		if let FieldKind::Group { component } = &field.kind {
 			if component == &comp.handle {
 				return Err("a group can't hold its own component".into());
@@ -583,7 +610,8 @@ impl Schema {
 				FieldKind::Text { .. }
 					| FieldKind::Number { .. }
 					| FieldKind::Boolean
-			) {
+			) && !self.custom_scalar(&field.kind)
+			{
 				return Err(
 					"only text, number and boolean can be indexed".into()
 				);
@@ -591,6 +619,18 @@ impl Schema {
 		}
 
 		Ok(())
+	}
+}
+
+impl Schema {
+	/// Whether a field is of a custom type GraphQL shows as a scalar.
+	pub(crate) fn custom_scalar(&self, kind: &FieldKind) -> bool {
+		let FieldKind::Custom { ty, .. } = kind else {
+			return false;
+		};
+		self.field_types
+			.get(ty)
+			.is_some_and(|t| matches!(t.graphql(), GraphqlType::Scalar(_)))
 	}
 }
 
@@ -763,6 +803,19 @@ impl Field {
 
 	pub fn markdown(handle: &str) -> Self {
 		Self::new(handle, FieldKind::Markdown)
+	}
+
+	/// A field of a type of another crate, it has to be registered with
+	/// [`Schema::field_type`]. Such crates usually have a builder of their
+	/// own that calls this.
+	pub fn custom(handle: &str, ty: &str, options: Value) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Custom {
+				ty: ty.into(),
+				options,
+			},
+		)
 	}
 
 	/// Any files.

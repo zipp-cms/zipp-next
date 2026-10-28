@@ -8,6 +8,7 @@ use zipp::axum::routing::get;
 use zipp::error::Result;
 use zipp::query::Query;
 use zipp::{AppState, Cms, Field, LinkKind, Schema, Section, Transform};
+use zipp_button_group::{ButtonGroup, button_group};
 
 fn schema() -> Schema {
 	let body = || {
@@ -16,6 +17,8 @@ fn schema() -> Schema {
 	};
 
 	Schema::new()
+		// a field type of another crate, see example/button-group
+		.field_type(ButtonGroup)
 		.site("de", "Deutsch", "de-CH")
 		.site("en", "English", "en")
 		// the home page is the page of type home in the structure
@@ -78,6 +81,15 @@ fn schema() -> Schema {
 					.indexed()
 					.label("Date (YYYY-MM-DD)"),
 				Field::text("city").required().indexed(),
+				button_group(
+					"genre",
+					[
+						("concert", "Konzert", "#2b6cb0"),
+						("reading", "Lesung", "#2f855a"),
+						("theatre", "Theater", "#c05621"),
+					],
+				)
+				.required(),
 				Field::number("price").range(0.0, 1000.0).indexed(),
 				Field::boolean("soldOut").indexed(),
 				Field::images("image").max(1),

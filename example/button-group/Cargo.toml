@@ -1,0 +1,9 @@
+[package]
+name = "zipp-button-group"
+version = "0.1.0"
+edition = "2024"
+description = "A field of buttons in colors for zipp, like Craft's button group"
+
+[dependencies]
+serde_json = "1.0"
+zipp = { path = "../../crates/zipp" }

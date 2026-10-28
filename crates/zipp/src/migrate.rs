@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::content::walk_mut;
-use crate::schema::{Component, Field, Schema, Section, Site};
+use crate::schema::{Component, Field, FieldKind, Schema, Section, Site};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "camelCase")]
@@ -400,10 +400,17 @@ impl Op {
 				let old = schema.get(component).and_then(|c| {
 					c.fields.iter().find(|f| f.handle == field.handle)
 				});
-				let same_kind = old.is_some_and(|o| {
-					std::mem::discriminant(&o.kind)
-						== std::mem::discriminant(&field.kind)
-				});
+				let same_kind =
+					old.is_some_and(|o| match (&o.kind, &field.kind) {
+						(
+							FieldKind::Custom { ty: a, .. },
+							FieldKind::Custom { ty: b, .. },
+						) => a == b,
+						(a, b) => {
+							std::mem::discriminant(a)
+								== std::mem::discriminant(b)
+						}
+					});
 				if !same_kind {
 					walk_mut(schema, comp, fields, &mut |c, obj| {
 						if &c.handle == component {

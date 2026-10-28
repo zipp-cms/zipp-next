@@ -108,6 +108,14 @@ Cms::new(schema(), zipp::migrations!())
   of another component together under one name (an object, not a list
   like blocks). `Field::markdown("text")` is shown rendered in the studio
   and comes as `markdown` and `html` from GraphQL.
+- **Field types of other crates.** A crate implements `FieldType`:
+  it checks its options and values, says how GraphQL shows them and
+  brings the editor of the studio as an ES module with
+  `mount(target, { field, value, onchange })`, built with its own
+  framework and compiled into the crate. The site registers it with
+  `Schema::field_type(...)`, the studio loads the module from
+  `/_fields/<type>.js` when a field needs it. `example/button-group` is
+  such a crate: Craft's button group, options in colors.
 - **Docs.** `.doc("readme", "Readme", include_str!("../readme.md"))`
   shows a markdown file of the repository as a read-only page of the
   studio; put its handle into a nav group like a section.

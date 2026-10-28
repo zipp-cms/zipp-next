@@ -1,6 +1,7 @@
 <script>
 	import { getTranslations } from 'crelte/translations';
 	import Img from '@/components/Img.svelte';
+	import Genre from '@/components/Genre.svelte';
 
 	const t = getTranslations();
 
@@ -11,6 +12,7 @@
 	<Img {img} />
 {/each}
 <h1>{entry.title}</h1>
+<Genre genre={entry.genre} />
 <p class="meta">
 	{entry.date} in {entry.city}{entry.price ? ` · CHF ${entry.price}` : ''}{entry.soldOut
 		? ` · ${$t('events.soldOut')}`
