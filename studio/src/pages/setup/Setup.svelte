@@ -65,7 +65,7 @@
 				if (uses)
 					out.push({
 						text: `${other.handle}.${f.handle}`,
-						href: `/admin/setup/${other.entry ? 'types' : 'blocks'}#${other.handle}`,
+						href: `/admin/setup/${other.entry ? 'types' : 'blocks'}/${other.handle}#${f.handle}`,
 					});
 			}
 		}
@@ -83,6 +83,12 @@
 			<a class="up" href="/admin/setup/sections">Sections</a>
 			›
 			{schema.sections.find(s => s.handle === handle)?.name ?? handle}
+		{:else if (tab === 'types' || tab === 'blocks') && handle}
+			<a class="up" href="/admin/setup/{tab}">
+				{tab === 'types' ? 'Entry types' : 'Blocks'}
+			</a>
+			›
+			{schema.components.find(c => c.handle === handle)?.name ?? handle}
 		{:else}
 			{tab === 'types'
 				? 'Entry types'
@@ -125,7 +131,7 @@
 						<td>
 							{#each s.types as t, i (t)}
 								{i ? ', ' : ''}
-								<a href="/admin/setup/types#{t}">{t}</a>
+								<a href="/admin/setup/types/{t}">{t}</a>
 							{/each}
 						</td>
 						<td>
@@ -145,9 +151,10 @@
 			</tbody>
 		</table>
 	</div>
-{:else if tab === 'types' || tab === 'blocks'}
-	{#each tab === 'types' ? entryTypes : blocks as c (c.handle)}
-		<div class="card" id={c.handle}>
+{:else if (tab === 'types' || tab === 'blocks') && handle}
+	{@const c = schema.components.find(c => c.handle === handle)}
+	{#if c}
+		<div class="card">
 			<h2>
 				{c.name}
 				<code>{c.handle}</code>
@@ -177,7 +184,7 @@
 					</thead>
 					<tbody>
 						{#each c.fields as f (f.handle)}
-							<tr>
+							<tr id={f.handle}>
 								<td>{f.label}</td>
 								<td><code>{f.handle}</code></td>
 								<td>{describeField(f)}</td>
@@ -200,7 +207,50 @@
 				<p class="muted">No fields, only a title.</p>
 			{/if}
 		</div>
-	{/each}
+	{:else}
+		<p class="error">
+			No {tab === 'types' ? 'entry type' : 'block'}
+			{handle}
+		</p>
+	{/if}
+{:else if tab === 'types' || tab === 'blocks'}
+	<div class="card">
+		<table>
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>Handle</th>
+					<th>Fields</th>
+					<th>Used in</th>
+					<th>GraphQL</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each tab === 'types' ? entryTypes : blocks as c (c.handle)}
+					<tr>
+						<td>
+							<a href="/admin/setup/{tab}/{c.handle}">{c.name}</a>
+						</td>
+						<td><code>{c.handle}</code></td>
+						<td>{c.fields.length}</td>
+						<td>
+							{#each usedIn(c) as u, i (u.text)}
+								{i ? ', ' : ''}
+								<a href={u.href}>{u.text}</a>
+							{:else}
+								–
+							{/each}
+						</td>
+						<td>
+							<code>
+								{c.handle}_{c.entry ? 'Entry' : 'Block'}
+							</code>
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
 {:else}
 	<div class="card">
 		<h2>Sites</h2>
@@ -288,6 +338,11 @@
 {/if}
 
 <style>
+	tr:global(.target) td {
+		background: var(--hover);
+		transition: background 0.3s;
+	}
+
 	.up {
 		color: inherit;
 	}

@@ -7,7 +7,16 @@
 		roleName,
 		visibleNav,
 	} from './lib/access';
-	import { go, route, setSite, shown, site, toLogin } from './route.svelte';
+	import {
+		go,
+		prefs,
+		route,
+		setHandles,
+		setSite,
+		shown,
+		site,
+		toLogin,
+	} from './route.svelte';
 	import Login from './pages/Login.svelte';
 	import List from './pages/List.svelte';
 	import Edit from './pages/edit/Edit.svelte';
@@ -138,6 +147,14 @@
 						{/each}
 					</select>
 				{/if}
+				<label class="pref" title="Show the handle of every field">
+					<input
+						type="checkbox"
+						checked={prefs.handles}
+						onchange={e => setHandles(e.currentTarget.checked)}
+					/>
+					Handles
+				</label>
 				<a
 					class="me"
 					href="/admin/setup/sites#roles"
@@ -278,6 +295,19 @@
 
 		.link {
 			color: white;
+		}
+
+		.pref {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			color: rgba(255, 255, 255, 0.7);
+			font-size: 14px;
+
+			input {
+				width: auto;
+				accent-color: white;
+			}
 		}
 
 		.me {

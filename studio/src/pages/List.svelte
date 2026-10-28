@@ -9,8 +9,11 @@
 	const sec = $derived(schema.sections.find(s => s.handle === section)!);
 	const tree = $derived(sec.kind === 'structure');
 	// moving changes the website at once, like publishing
-	const canMove = $derived(tree && can(schema, section, 'publish'));
 	let search = $state('');
+	// not while searching, the results are no tree
+	const canMove = $derived(
+		tree && !search && can(schema, section, 'publish'),
+	);
 	let entries = $state<Entry[]>([]);
 	let published = $state<Record<number, Record<string, boolean>>>({});
 
@@ -125,13 +128,10 @@
 {#if error}<p class="error">{error}</p>{/if}
 
 <div class="card list">
-	{#if !tree}
-		<div class="search">
-			<input placeholder="Search entries" bind:value={search} />
-			<Icon name="search" />
-		</div>
-	{/if}
-
+	<div class="search">
+		<input placeholder="Search entries" bind:value={search} />
+		<Icon name="search" />
+	</div>
 	{#each entries as e (e.id)}
 		{@const on = published[e.id]?.[site.current]}
 		<div

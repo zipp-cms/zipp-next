@@ -89,7 +89,13 @@ document.addEventListener('click', e => {
 	// an anchor on the new page, once it is there
 	const id = decodeURIComponent(a.hash.slice(1));
 	if (id)
-		setTimeout(() => document.getElementById(id)?.scrollIntoView(), 200);
+		setTimeout(() => {
+			const el = document.getElementById(id);
+			el?.scrollIntoView({ block: 'center' });
+			// marked for a moment, also when the page doesn't scroll
+			el?.classList.add('target');
+			setTimeout(() => el?.classList.remove('target'), 2000);
+		}, 200);
 });
 
 /** The site the studio edits, the same in all pages. */
@@ -104,3 +110,16 @@ export function setSite(handle: string) {
 
 /** The section the page shows, so the navigation knows its group. */
 export const shown = $state({ section: '' });
+
+/**
+ * Preferences of the user in this browser: `handles` shows the handle of
+ * every field next to its label, like Craft's "show field handles".
+ */
+export const prefs = $state({
+	handles: localStorage.getItem('zipp-handles') === '1',
+});
+
+export function setHandles(on: boolean) {
+	prefs.handles = on;
+	localStorage.setItem('zipp-handles', on ? '1' : '0');
+}

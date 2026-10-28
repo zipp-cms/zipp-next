@@ -19,7 +19,16 @@ role; the header shows who is logged in with which role), like Craft's settings 
 entry types, uri, and each section's entries with whether they are live
 per site and have unpublished changes), entry types and blocks with
 their fields (handle, kind and settings, per site or shared, where
-they are used, the GraphQL type), sites, transforms and roles.
+they are used, the GraphQL type), sites, transforms and roles. Entry
+types and blocks are tables that link to a page per type.
+
+"Handles" in the header (saved in the browser) shows each field's handle
+next to its label, like Craft's "show field handles"; the handle links
+to the field in Setup.
+
+Lists of structures (Pages) have a search too; while searching, entries
+can't be moved. Globals (singles without a url) have no title field, their
+name is the section's.
 
 ## AI chat
 

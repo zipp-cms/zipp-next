@@ -75,3 +75,19 @@
   inside the text (like Craft's nested entries in CKEditor, but nicer)
 - Port textrem (crelte frontend of the Craft port) to zipp as the first real site
 - Dashboard with visitor statistics like the old Zipp (later)
+
+## Open questions and later (operator 2026-10-28)
+
+- Users read only too: roles are code already; a read-only view of who has
+  which role for non-admins (question to the operator)
+- "Request a change" on read-only Setup pages: the editor writes what they
+  want, it becomes an issue for the developers (later)
+- AI that changes the content model and Rust code, only in dev mode and for
+  admins: it edits the schema code, the dev server rebuilds, the migration
+  check shows the ops (later)
+- Options tab: rethink; a sidebar like Craft (status per site, slug, post
+  date, revisions, copy from site) instead of a tab, none for globals
+- SEO half code, half database: field mappings and the sitemap in code,
+  title pattern, description, image and robots per section and entry type
+  editable in `seoSettings` (proposal, waiting for the operator)
+

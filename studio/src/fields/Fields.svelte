@@ -14,6 +14,7 @@
 	import CheckboxesField from './CheckboxesField.svelte';
 	import TableField from './TableField.svelte';
 	import NavigationField from './NavigationField.svelte';
+	import { prefs } from '../route.svelte';
 
 	let {
 		schema,
@@ -54,6 +55,17 @@
 					*
 				</span>{/if}
 			{#if shared(field)}<span class="shared">all sites</span>{/if}
+			{#if prefs.handles}
+				<a
+					class="handle"
+					href="/admin/setup/{component.entry
+						? 'types'
+						: 'blocks'}/{component.handle}#{field.handle}"
+					title="The field in Setup"
+				>
+					{field.handle}
+				</a>
+			{/if}
 		</label>
 		<div class="value">
 			{#if field.kind === 'boolean'}
@@ -182,6 +194,20 @@
 
 		.value {
 			margin-bottom: 10px;
+		}
+	}
+
+	/* the handle for developers, links to the field in Setup */
+	.handle {
+		display: block;
+		margin-top: 2px;
+		font-family: monospace;
+		font-size: 12px;
+		color: var(--muted);
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
 		}
 	}
 </style>

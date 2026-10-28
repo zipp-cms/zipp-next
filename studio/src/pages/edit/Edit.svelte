@@ -74,6 +74,12 @@
 	const secDef = $derived(schema.sections.find(s => s.handle === sec));
 	const comp = $derived(schema.components.find(c => c.handle === ty));
 	const single = $derived(secDef?.kind === 'single');
+	// a global: a single without a page, its title is the section's name
+	const global = $derived(
+		single &&
+			secDef?.uri === null &&
+			!Object.keys(secDef?.type_uris ?? {}).length,
+	);
 	// what the role may do here, the server checks it too
 	const canEdit = $derived(can(schema, sec, 'edit'));
 	const canPublish = $derived(can(schema, sec, 'publish'));
@@ -389,14 +395,16 @@
 			{:else}
 				<!-- read only for a role that may only look -->
 				<fieldset disabled={!canEdit}>
-					<EntryHead
-						bind:title
-						bind:slug
-						{single}
-						{changed}
-						{uri}
-						{errors}
-					/>
+					{#if !global}
+						<EntryHead
+							bind:title
+							bind:slug
+							{single}
+							{changed}
+							{uri}
+							{errors}
+						/>
+					{/if}
 					<Fields
 						{schema}
 						component={comp}

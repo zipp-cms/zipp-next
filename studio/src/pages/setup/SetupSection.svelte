@@ -61,7 +61,7 @@
 			<dd>
 				{#each section.types as t, i (t)}
 					{i ? ', ' : ''}
-					<a href="/admin/setup/types#{t}">{t}</a>
+					<a href="/admin/setup/types/{t}">{t}</a>
 				{/each}
 			</dd>
 			<dt>URI</dt>
