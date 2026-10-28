@@ -34,6 +34,14 @@ export function url(e: { uri: string | null }, siteHandle = site): string {
 
 export type Link = { title: string; uri: string | null };
 
+/** A link field, like Craft's LinkData. */
+export type LinkData = {
+	url: string;
+	label: string | null;
+	defaultLabel: string;
+	target: string | null;
+};
+
 /** An image with the url of one transform and a srcset of several. */
 export type Image = {
 	url: string;
@@ -52,7 +60,7 @@ export type Block =
 			image: Image[];
 			caption: string | null;
 	  }
-	| { id: string; typeHandle: 'button'; label: string; link: Link[] }
+	| { id: string; typeHandle: 'button'; link: LinkData | null }
 	| { id: string; typeHandle: 'events'; city: string | null };
 
 export type Entry = {

@@ -1,9 +1,19 @@
+export type LinkKind = 'entry' | 'url' | 'email' | 'phone' | 'asset';
+
+export type Link = {
+	type: LinkKind;
+	value: string | number | null;
+	label?: string;
+	newTab?: boolean;
+};
+
 export type FieldKind =
 	| { kind: 'text'; max: number | null; multiline: boolean }
 	| { kind: 'number'; min: number | null; max: number | null }
 	| { kind: 'boolean' }
 	| { kind: 'relation'; types: string[]; max: number | null }
 	| { kind: 'assets'; images: boolean; max: number | null }
+	| { kind: 'link'; to: LinkKind[]; labels: boolean; newTab: boolean }
 	| {
 			kind: 'blocks';
 			types: string[];

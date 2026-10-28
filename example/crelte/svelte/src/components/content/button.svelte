@@ -1,8 +1,13 @@
 <script>
-	let { label, link } = $props();
+	// a link like Craft's LinkData, external ones open in a new tab
+	let { link } = $props();
 </script>
 
-<a class="button" href={link[0]?.url ?? '#'}>{label}</a>
+{#if link}
+	<a class="button" href={link.url} target={link.target}>
+		{link.label ?? link.defaultLabel}
+	</a>
+{/if}
 
 <style>
 	.button {

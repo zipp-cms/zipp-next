@@ -84,6 +84,17 @@ pub struct Section {
 	pub type_uris: BTreeMap<String, String>,
 }
 
+/// What a link field can point to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum LinkKind {
+	Entry,
+	Url,
+	Email,
+	Phone,
+	Asset,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SectionKind {
@@ -141,6 +152,16 @@ pub enum FieldKind {
 	Assets {
 		images: bool,
 		max: Option<u32>,
+	},
+	/// One link to an entry, a url, an email, a phone number or an asset,
+	/// with an optional label. External urls and files open in a new tab
+	/// unless `new_tab` is off; a link can override it.
+	Link {
+		to: Vec<LinkKind>,
+		/// whether a link can have its own label
+		labels: bool,
+		#[serde(rename = "newTab")]
+		new_tab: bool,
 	},
 	/// A list of blocks of the given types.
 	Blocks {
@@ -415,6 +436,11 @@ impl Schema {
 		{
 			return Err("needs at least one type".into());
 		}
+		if let FieldKind::Link { to, .. } = &field.kind
+			&& to.is_empty()
+		{
+			return Err("a link needs something to point to".into());
+		}
 		for t in types {
 			match self.get(t) {
 				Some(c) if c.entry == entry => {}
@@ -508,6 +534,36 @@ impl Field {
 				max: None,
 			},
 		)
+	}
+
+	/// A link to one of `to`, with a label, external ones in a new tab.
+	pub fn link(handle: &str, to: impl IntoIterator<Item = LinkKind>) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Link {
+				to: to.into_iter().collect(),
+				labels: true,
+				new_tab: true,
+			},
+		)
+	}
+
+	/// A link without its own label, the frontend shows its default.
+	pub fn without_label(mut self) -> Self {
+		match &mut self.kind {
+			FieldKind::Link { labels, .. } => *labels = false,
+			_ => panic!("{}: without_label is only for links", self.handle),
+		}
+		self
+	}
+
+	/// External links open in the same tab too.
+	pub fn same_tab(mut self) -> Self {
+		match &mut self.kind {
+			FieldKind::Link { new_tab, .. } => *new_tab = false,
+			_ => panic!("{}: same_tab is only for links", self.handle),
+		}
+		self
 	}
 
 	/// Any files.
@@ -750,6 +806,10 @@ pub(crate) mod tests {
 					Field::number("price").indexed(),
 					Field::relation("page", ["page"]).max(1),
 					Field::images("image").max(1),
+					Field::link(
+						"ticket",
+						[LinkKind::Url, LinkKind::Entry, LinkKind::Email],
+					),
 				],
 			)
 			.transform(Transform::new("small").width(100))

@@ -119,6 +119,7 @@ pub fn build(
 		.register(where_input())
 		.register(site_object())
 		.register(asset_object())
+		.register(link_object())
 		.register(
 			Scalar::new("QueryArgument")
 				.description("An id or a handle, like Craft's QueryArgument"),
@@ -316,6 +317,7 @@ fn content_field(field: &crate::schema::Field) -> GqlField {
 		FieldKind::Boolean => TypeRef::named(TypeRef::BOOLEAN),
 		FieldKind::Relation { .. } => TypeRef::named_nn_list_nn("Entry"),
 		FieldKind::Assets { .. } => TypeRef::named_nn_list_nn("Asset"),
+		FieldKind::Link { .. } => TypeRef::named("Link"),
 		FieldKind::Blocks { .. } => TypeRef::named_nn_list_nn("Block"),
 	};
 	let handle = field.handle.clone();
@@ -382,6 +384,10 @@ fn content_field(field: &crate::schema::Field) -> GqlField {
 						.with_type(format!("{ty}_Block"))
 					});
 					Ok(Some(FieldValue::list(blocks)))
+				}
+				FieldKind::Link { new_tab, .. } if !value.is_null() => {
+					let link = resolve_link(&ctx, &value, &site, new_tab)?;
+					Ok(link.map(FieldValue::value))
 				}
 				_ if value.is_null() => Ok(None),
 				_ => Ok(Some(FieldValue::value(GqlValue::from_json(value)?))),
@@ -710,6 +716,89 @@ fn site_id(ctx: &ResolverContext, site: &str) -> async_graphql::Result<i64> {
 		.position(|s| s.handle == site)
 		.unwrap_or(0);
 	Ok(i as i64 + 1)
+}
+
+/// A link like Craft's LinkData: `url label defaultLabel target`. `None`
+/// if it points to an entry that isn't there (or not published).
+fn resolve_link(
+	ctx: &ResolverContext,
+	link: &Value,
+	site: &str,
+	new_tab: bool,
+) -> async_graphql::Result<Option<GqlValue>> {
+	let value = &link["value"];
+	let text = value.as_str().unwrap_or_default().to_string();
+	let id = value.as_i64().unwrap_or_default();
+	let ty = link["type"].as_str().unwrap_or_default();
+
+	let (url, default_label, external) = match ty {
+		"entry" => {
+			let params = site_params(site, [("ids", id.to_string())]);
+			let Some(e) = load(ctx, &params)?.into_iter().next() else {
+				return Ok(None);
+			};
+			let url = match &e.uri {
+				Some(uri) => entry_url(ctx, site, uri)?,
+				None => return Ok(None),
+			};
+			(url, e.title, false)
+		}
+		"asset" => {
+			let db = ctx.data::<Db>()?;
+			let Some(a) = get_many(&db.conn(), &[id])?.pop() else {
+				return Ok(None);
+			};
+			(asset_url(ctx, &a, None)?, a.filename, true)
+		}
+		"email" => (format!("mailto:{text}"), text, false),
+		"phone" => {
+			let digits: String = text
+				.chars()
+				.filter(|c| c.is_ascii_digit() || *c == '+')
+				.collect();
+			(format!("tel:{digits}"), text, false)
+		}
+		_ => {
+			// our own sites aren't external
+			let urls = ctx.data::<SiteUrls>()?;
+			let own = urls
+				.values()
+				.any(|b| !b.is_empty() && text.starts_with(b.as_str()));
+			let external = text.starts_with("http") && !own;
+			(text.clone(), text, external)
+		}
+	};
+
+	let new_tab = link["newTab"].as_bool().unwrap_or(new_tab && external);
+	Ok(Some(GqlValue::from_json(serde_json::json!({
+		"type": ty,
+		"url": url,
+		"label": link["label"].as_str().filter(|l| !l.is_empty()),
+		"defaultLabel": default_label,
+		"target": if new_tab { Some("_blank") } else { None },
+	}))?))
+}
+
+fn link_object() -> Object {
+	let field = |name: &'static str, ty: TypeRef| {
+		GqlField::new(name, ty, move |ctx| {
+			FieldFuture::new(async move {
+				let GqlValue::Object(o) = ctx.parent_value.try_to_value()?
+				else {
+					return Ok(None);
+				};
+				Ok(o.get(name).cloned().map(FieldValue::value))
+			})
+		})
+	};
+	let s = || TypeRef::named(TypeRef::STRING);
+	Object::new("Link")
+		.description("A link like Craft's LinkData, use label ?? defaultLabel")
+		.field(field("type", TypeRef::named_nn(TypeRef::STRING)))
+		.field(field("url", TypeRef::named_nn(TypeRef::STRING)))
+		.field(field("label", s()))
+		.field(field("defaultLabel", TypeRef::named_nn(TypeRef::STRING)))
+		.field(field("target", s()))
 }
 
 fn entry_url(
@@ -1066,6 +1155,70 @@ mod tests {
 		});
 		let data = gql.execute(req).await.data.into_json().unwrap();
 		assert_eq!(data["entry"], json!({ "title": "Draft", "intro": "new" }));
+	}
+
+	#[tokio::test]
+	async fn resolves_links() {
+		let db = Db::memory().unwrap();
+		let s = Arc::new(site());
+		let urls =
+			SiteUrls::from([("de".to_string(), "https://x.ch".to_string())]);
+		let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
+		{
+			let conn = db.conn();
+			let about = save(
+				&conn,
+				&s,
+				None,
+				input("pages", "page", "About", json!({})),
+			)
+			.unwrap();
+			for (title, link) in [
+				(
+					"a",
+					json!({ "type": "url", "value": "https://tickets.ch", "label": "Tickets" }),
+				),
+				("b", json!({ "type": "url", "value": "https://x.ch/about" })),
+				(
+					"c",
+					json!({ "type": "entry", "value": about.id, "newTab": true }),
+				),
+				("d", json!({ "type": "email", "value": "hi@x.ch" })),
+			] {
+				let fields = json!({ "ticket": link });
+				save(&conn, &s, None, input("events", "event", title, fields))
+					.unwrap();
+			}
+		}
+
+		let data = run(
+			&gql,
+			r#"{ entries(type: "event", order: "title") {
+				... on event_Entry { ticket { type url label defaultLabel target } }
+			} }"#,
+			true,
+		)
+		.await;
+		let links: Vec<_> = data["entries"]
+			.as_array()
+			.unwrap()
+			.iter()
+			.map(|e| e["ticket"].clone())
+			.collect();
+		assert_eq!(
+			links,
+			[
+				json!({ "type": "url", "url": "https://tickets.ch", "label": "Tickets",
+					"defaultLabel": "https://tickets.ch", "target": "_blank" }),
+				// the own site isn't external
+				json!({ "type": "url", "url": "https://x.ch/about", "label": null,
+					"defaultLabel": "https://x.ch/about", "target": null }),
+				json!({ "type": "entry", "url": "https://x.ch/about", "label": null,
+					"defaultLabel": "About", "target": "_blank" }),
+				json!({ "type": "email", "url": "mailto:hi@x.ch", "label": null,
+					"defaultLabel": "hi@x.ch", "target": null }),
+			]
+		);
 	}
 
 	#[tokio::test]

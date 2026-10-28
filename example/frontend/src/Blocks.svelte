@@ -18,9 +18,9 @@
 			{/each}
 			{#if block.caption}<figcaption>{block.caption}</figcaption>{/if}
 		</figure>
-	{:else if block.typeHandle === 'button'}
-		<a class="button" href={block.link[0] ? url(block.link[0]) : '#'}>
-			{block.label}
+	{:else if block.typeHandle === 'button' && block.link}
+		<a class="button" href={block.link.url} target={block.link.target}>
+			{block.link.label ?? block.link.defaultLabel}
 		</a>
 	{:else if block.typeHandle === 'events'}
 		<Events city={block.city} />

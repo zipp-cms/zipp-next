@@ -1,6 +1,6 @@
 //! The cms of the example site: its content model and nothing else.
 
-use zipp::{Field, Schema, Section, Transform};
+use zipp::{Field, LinkKind, Schema, Section, Transform};
 
 fn schema() -> Schema {
 	let body = || {
@@ -92,10 +92,17 @@ fn schema() -> Schema {
 		.block(
 			"button",
 			"Button",
-			[
-				Field::text("label").required().max(30),
-				Field::relation("link", ["home", "page", "event"]).max(1),
-			],
+			[Field::link(
+				"link",
+				[
+					LinkKind::Entry,
+					LinkKind::Url,
+					LinkKind::Email,
+					LinkKind::Phone,
+					LinkKind::Asset,
+				],
+			)
+			.required()],
 		)
 		.block(
 			"events",

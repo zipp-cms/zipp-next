@@ -5,7 +5,7 @@ use rand::Rng;
 use serde::Serialize;
 use serde_json::{Map, Value};
 
-use crate::schema::{Component, Field, FieldKind, Schema};
+use crate::schema::{Component, Field, FieldKind, LinkKind, Schema};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct FieldError {
@@ -76,6 +76,10 @@ fn validate_value(
 		Value::Null => true,
 		Value::String(s) => s.is_empty(),
 		Value::Array(a) => a.is_empty(),
+		// a link without a target
+		Value::Object(o) if matches!(field.kind, FieldKind::Link { .. }) => {
+			o.get("value").is_none_or(|v| v.is_null() || v == "")
+		}
 		_ => false,
 	};
 	if empty {
@@ -101,6 +105,11 @@ fn validate_value(
 			}
 		}
 		(FieldKind::Boolean, Value::Bool(_)) => {}
+		(FieldKind::Link { to, labels, .. }, Value::Object(link)) => {
+			if let Err(e) = check_link(to, *labels, link) {
+				error(errors, path, &e);
+			}
+		}
 		(FieldKind::Relation { max, .. }, Value::Array(ids))
 		| (FieldKind::Assets { max, .. }, Value::Array(ids)) => {
 			if ids.iter().any(|id| !id.is_i64()) {
@@ -160,6 +169,65 @@ fn validate_block(
 	);
 
 	serde_json::json!({ "id": id, "type": ty, "fields": fields })
+}
+
+/// `{ "type": "url", "value": "https://…", "label": "…", "newTab": true }`,
+/// value is the id for an entry or an asset.
+fn check_link(
+	to: &[LinkKind],
+	label: bool,
+	link: &Map<String, Value>,
+) -> Result<(), String> {
+	let ty = link.get("type").and_then(Value::as_str).unwrap_or_default();
+	let kind = match ty {
+		"entry" => LinkKind::Entry,
+		"url" => LinkKind::Url,
+		"email" => LinkKind::Email,
+		"phone" => LinkKind::Phone,
+		"asset" => LinkKind::Asset,
+		_ => return Err(format!("unknown link type {ty:?}")),
+	};
+	if !to.contains(&kind) {
+		return Err(format!("can't link to {ty}"));
+	}
+
+	let value = link.get("value").unwrap_or(&Value::Null);
+	let ok = match kind {
+		LinkKind::Entry | LinkKind::Asset => value.is_i64(),
+		LinkKind::Url => value.as_str().is_some_and(|u| {
+			u.starts_with("https://")
+				|| u.starts_with("http://")
+				|| u.starts_with('/')
+				|| u.starts_with('#')
+		}),
+		LinkKind::Email => value.as_str().is_some_and(|e| e.contains('@')),
+		LinkKind::Phone => value.as_str().is_some_and(|p| {
+			!p.is_empty()
+				&& p.chars()
+					.all(|c| c.is_ascii_digit() || " +()-/".contains(c))
+		}),
+	};
+	if !ok {
+		return Err(format!("not a valid {ty}"));
+	}
+
+	for key in link.keys() {
+		let known = match key.as_str() {
+			"type" | "value" | "newTab" => true,
+			"label" => label,
+			_ => false,
+		};
+		if !known {
+			return Err(format!("unknown key {key} in the link"));
+		}
+	}
+	if link.get("label").is_some_and(|l| !l.is_string()) {
+		return Err("the label must be text".into());
+	}
+	if link.get("newTab").is_some_and(|t| !t.is_boolean()) {
+		return Err("newTab must be true or false".into());
+	}
+	Ok(())
 }
 
 fn check_count(
@@ -253,6 +321,32 @@ fn collect_relations(
 ) {
 	for field in &comp.fields {
 		let path = format!("{prefix}{}", field.handle);
+
+		// a link to an entry or an asset is a relation too
+		if let FieldKind::Link { .. } = field.kind {
+			let link = &fields[&field.handle];
+			let target = match link["type"].as_str() {
+				Some("entry") => Target::Entries(
+					schema
+						.components
+						.iter()
+						.filter(|c| c.entry)
+						.map(|c| c.handle.clone())
+						.collect(),
+				),
+				Some("asset") => Target::Assets(false),
+				_ => continue,
+			};
+			if let Some(id) = link["value"].as_i64() {
+				out.push(RelationRef {
+					path,
+					target,
+					ids: vec![id],
+				});
+			}
+			continue;
+		}
+
 		let Some(Value::Array(items)) = fields.get(&field.handle) else {
 			continue;
 		};
@@ -383,6 +477,24 @@ mod tests {
 
 		let out = validate(&s, s.get("page").unwrap(), &json!({ "intro": "" }));
 		assert_eq!(out.unwrap(), json!({}));
+	}
+
+	#[test]
+	fn checks_links() {
+		let to = [LinkKind::Entry, LinkKind::Url];
+		let link = |v: Value| v.as_object().unwrap().clone();
+		let ok = link(
+			json!({ "type": "url", "value": "https://x.ch", "label": "X" }),
+		);
+		assert!(check_link(&to, true, &ok).is_ok());
+		let bad = link(json!({ "type": "url", "value": "x.ch" }));
+		assert_eq!(check_link(&to, true, &bad).unwrap_err(), "not a valid url");
+		let mail = link(json!({ "type": "email", "value": "a@b.ch" }));
+		assert_eq!(
+			check_link(&to, true, &mail).unwrap_err(),
+			"can't link to email"
+		);
+		assert!(check_link(&to, false, &ok).unwrap_err().contains("label"));
 	}
 
 	#[test]

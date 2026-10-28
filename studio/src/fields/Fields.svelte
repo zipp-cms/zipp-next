@@ -3,6 +3,7 @@
 	import BlocksField from './BlocksField.svelte';
 	import RelationField from './RelationField.svelte';
 	import AssetField from './AssetField.svelte';
+	import LinkField from './LinkField.svelte';
 
 	let {
 		schema,
@@ -65,6 +66,8 @@
 				/>
 			{:else if field.kind === 'relation'}
 				<RelationField {schema} {field} {values} {refs} />
+			{:else if field.kind === 'link'}
+				<LinkField {schema} {field} {values} {refs} />
 			{:else if field.kind === 'assets'}
 				<AssetField {field} {values} />
 			{:else if field.kind === 'blocks'}

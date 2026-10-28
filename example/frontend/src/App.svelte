@@ -28,7 +28,7 @@
 					alt
 				}
 			}
-			... on button_Block { label link { title uri } }
+			... on button_Block { link { url label defaultLabel target } }
 			... on events_Block { city }
 		}
 

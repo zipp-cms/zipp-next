@@ -287,28 +287,21 @@
         "entry": false,
         "fields": [
           {
-            "handle": "label",
-            "label": "Label",
+            "handle": "link",
+            "label": "Link",
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": 30,
-            "multiline": false
-          },
-          {
-            "handle": "link",
-            "label": "Link",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "kind": "relation",
-            "types": [
-              "home",
-              "page",
-              "event"
+            "kind": "link",
+            "to": [
+              "entry",
+              "url",
+              "email",
+              "phone",
+              "asset"
             ],
-            "max": 1
+            "labels": true,
+            "newTab": true
           }
         ]
       }
@@ -719,28 +712,21 @@
         "entry": false,
         "fields": [
           {
-            "handle": "label",
-            "label": "Label",
+            "handle": "link",
+            "label": "Link",
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": 30,
-            "multiline": false
-          },
-          {
-            "handle": "link",
-            "label": "Link",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "kind": "relation",
-            "types": [
-              "home",
-              "page",
-              "event"
+            "kind": "link",
+            "to": [
+              "entry",
+              "url",
+              "email",
+              "phone",
+              "asset"
             ],
-            "max": 1
+            "labels": true,
+            "newTab": true
           }
         ]
       },

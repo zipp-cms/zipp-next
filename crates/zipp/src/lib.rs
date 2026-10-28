@@ -33,7 +33,7 @@ use tracing::info;
 use crate::db::Db;
 use crate::migrate::{Migration, Migrations, Rename};
 
-pub use crate::schema::{Field, Schema, Section, Transform};
+pub use crate::schema::{Field, LinkKind, Schema, Section, Transform};
 
 #[doc(hidden)]
 pub use rust_embed;

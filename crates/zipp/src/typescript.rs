@@ -77,6 +77,11 @@ fn fields(comp: &Component) -> String {
 			FieldKind::Relation { .. } | FieldKind::Assets { .. } => {
 				"number[]".into()
 			}
+			FieldKind::Link { .. } => {
+				"{ type: 'entry' | 'url' | 'email' | 'phone' | 'asset'; \
+				value: string | number; label?: string; newTab?: boolean }"
+					.into()
+			}
 			FieldKind::Blocks { types, .. } => {
 				let blocks: Vec<_> = types
 					.iter()
