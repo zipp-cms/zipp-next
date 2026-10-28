@@ -37,8 +37,6 @@ export function describeField(f: Field): string {
 			return `Group of ${f.component}`;
 		case 'markdown':
 			return 'Markdown';
-		case 'seo':
-			return 'SEO';
 		case 'checkboxes':
 			return `Checkboxes: ${list(f.options.map(o => o.value))}`;
 		case 'table':

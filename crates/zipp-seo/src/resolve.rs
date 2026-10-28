@@ -9,18 +9,15 @@ use std::collections::BTreeMap;
 
 use serde_json::{Map, Value, json};
 
-use crate::assets::{Asset, transform_size};
-use crate::entries::Entry;
-use crate::schema::seo::{ORGANIZATION_TYPES, SEO_SETTINGS, SeoDefaults};
-use crate::schema::{FieldKind, Schema, Site, Transform};
-
-pub mod routes;
-pub mod sitemap;
+use crate::{ORGANIZATION_TYPES, Seo, SeoDefaults};
+use zipp::assets::{Asset, transform_size};
+use zipp::entries::Entry;
+use zipp::schema::{FieldKind, Schema, Site, Transform};
 
 pub const DEFAULT_TITLE_PATTERN: &str = "{title} | {siteName}";
 pub const DESCRIPTION_LENGTH: usize = 160;
 /// The social image (og:image), cropped around the focal point.
-pub const SOCIAL_TRANSFORM: &str = "_social";
+pub const SOCIAL_TRANSFORM: &str = "seoSocial";
 
 pub fn social_transform() -> Transform {
 	Transform::new(SOCIAL_TRANSFORM)
@@ -157,13 +154,13 @@ pub fn defaults(
 	levels(schema, globals, Some(&entry.ty), &entry.section)
 }
 
-fn levels(
+pub(crate) fn levels(
 	schema: &Schema,
 	globals: &Globals,
 	ty: Option<&str>,
 	section: &str,
 ) -> Vec<Level> {
-	let Some(seo) = &schema.seo else {
+	let Some(seo) = schema.plugin_of::<Seo>() else {
 		return vec![];
 	};
 	let set = |k: String| globals.overrides.get(&k).cloned();
@@ -178,7 +175,7 @@ fn levels(
 	out
 }
 
-fn first(
+pub(crate) fn first(
 	defaults: &[Level],
 	f: impl Fn(&Level) -> Option<&String>,
 ) -> Option<String> {
@@ -205,8 +202,7 @@ pub fn section_in_sitemap(
 /// The value of the entry's SEO field, if its type has one.
 pub fn field_data(schema: &Schema, entry: &Entry) -> Value {
 	let comp = schema.get(&entry.ty);
-	let field =
-		comp.and_then(|c| c.fields.iter().find(|f| f.kind == FieldKind::Seo));
+	let field = comp.and_then(|c| c.fields.iter().find(|f| crate::is_seo(f)));
 	field.map_or(Value::Null, |f| entry.fields[&f.handle].clone())
 }
 
@@ -420,7 +416,7 @@ fn mapped_description(
 		.is_some_and(|f| f.kind == FieldKind::Markdown);
 	let text = match (markdown, value.as_str()) {
 		(true, Some(md)) => {
-			plain_text(&Value::from(crate::graphql::markdown_html(md)))
+			plain_text(&Value::from(zipp::graphql::markdown_html(md)))
 		}
 		// plain text has no tags to take out
 		(false, Some(t)) => t.split_whitespace().collect::<Vec<_>>().join(" "),
@@ -796,12 +792,4 @@ fn json_ld(
 	json!({ "@context": "https://schema.org", "@graph": graph })
 }
 
-pub use crate::db::iso;
-
-/// Whether the schema has SEO, then [`SEO_SETTINGS`] exists.
-pub fn enabled(schema: &Schema) -> bool {
-	schema.seo.is_some() && schema.get(SEO_SETTINGS).is_some()
-}
-
-#[cfg(test)]
-mod tests;
+pub use zipp::db::iso;

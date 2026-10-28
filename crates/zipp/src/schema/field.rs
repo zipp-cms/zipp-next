@@ -156,10 +156,6 @@ pub enum FieldKind {
 		to: Vec<LinkKind>,
 		depth: u32,
 	},
-	/// The SEO of a single entry: title, description, image, social
-	/// title, description and image, robots and canonical url, each
-	/// optional, see [`Schema::seo`](crate::Schema::seo).
-	Seo,
 	/// Texts of the frontend by key, `{ "nav.home": "Home" }`; the keys
 	/// and the texts of the primary site come from the code, see
 	/// [`Schema::translations`](crate::Schema::translations).
@@ -345,13 +341,6 @@ impl Field {
 
 	pub fn markdown(handle: &str) -> Self {
 		Self::new(handle, FieldKind::Markdown)
-	}
-
-	/// The SEO of single entries, with the defaults as placeholders.
-	pub fn seo(handle: &str) -> Self {
-		Self::new(handle, FieldKind::Seo)
-			.label("SEO")
-			.translatable()
 	}
 
 	pub(crate) fn texts<'a>(

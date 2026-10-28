@@ -54,8 +54,12 @@ What the owner decided, so it doesn't get asked again:
   changes of a project's queries are fine.
 - GraphQL is private like Craft's: frontends send a token, the studio a
   session. The rest api is the studio's.
-- SEO is part of zipp and does what the Craft plugin meierlabs-seo does,
-  so its npm package works unchanged.
+- SEO is the plugin `crates/zipp-seo` (one line turns it on) and does
+  what the Craft plugin meierlabs-seo does, so its npm package works
+  unchanged. It is also the test of the plugin system: what it needs from
+  zipp belongs into the `Plugin`/`FieldType` api, not into zipp's core.
+- Admins see field handles; entry types can have tabs, Setup shows each
+  type's editor as editors see it.
 - The studio looks like the old Zipp (dark top bar, white side nav, grey
   page, white cards), its pages are paths under `/admin`.
 - AI models run through soe-llms on OpenRouter, never a provider's api

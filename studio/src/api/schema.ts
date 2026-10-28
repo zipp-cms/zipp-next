@@ -29,8 +29,6 @@ export type FieldKind =
 	| { kind: 'link'; to: LinkKind[]; labels: boolean; newTab: boolean }
 	| { kind: 'group'; component: string }
 	| { kind: 'markdown' }
-	/** the SEO of single entries, see zipp's seo */
-	| { kind: 'seo' }
 	/** texts of the frontend by key, [key, text of the code] */
 	| { kind: 'texts'; keys: [string, string][] }
 	| { kind: 'dropdown'; options: { value: string; label: string }[] }
@@ -107,8 +105,8 @@ export type Schema = {
 	/** sites not on the website yet */
 	offline: string[];
 	roles: Role[];
-	/** SEO defaults of sections and entry types, null without SEO */
-	seo: Seo | null;
+	/** the plugins with a studio module, `/_plugins/<name>.js` */
+	plugins: { name: string; data: unknown }[];
 	me: Me;
 	/** the models of the AI chat, empty if it is off */
 	aiModels: { id: string; name: string }[];
@@ -154,19 +152,3 @@ export type Role = {
 
 /** The logged in user, `role: null` is an admin. */
 export type Me = { id: number; email: string; role: string | null };
-
-/** SEO defaults of a section or an entry type, from the code. */
-export type SeoCodeDefaults = {
-	titlePattern: string | null;
-	description: string | null;
-	robots: string | null;
-	descriptionFrom: string | null;
-	imageFrom: string | null;
-	sitemap: boolean;
-};
-
-export type Seo = {
-	sections: Record<string, SeoCodeDefaults>;
-	types: Record<string, SeoCodeDefaults>;
-	sitemap_page_size: number;
-};

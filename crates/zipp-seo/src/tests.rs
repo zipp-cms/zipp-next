@@ -1,6 +1,10 @@
 use serde_json::json;
 
-use super::*;
+use zipp::Schema;
+use zipp::schema::Site;
+
+use crate::resolve::*;
+use crate::{Seo, SeoDefaults};
 
 #[test]
 fn texts_for_descriptions() {
@@ -58,7 +62,7 @@ fn globals_inherit_but_not_the_description() {
 
 #[test]
 fn settings_override_the_code_per_section_and_type() {
-	use crate::schema::{Section, Seo};
+	use zipp::Section;
 	let seo = Seo::new()
 		.section(
 			"events",
@@ -66,7 +70,7 @@ fn settings_override_the_code_per_section_and_type() {
 		)
 		.entry_type("event", SeoDefaults::new().description("code type"));
 	// the SEO before the sections: `finish` fills the choice afterwards
-	let early = Schema::new().site("de", "Deutsch", "de-CH").seo(seo);
+	let early = Schema::new().site("de", "Deutsch", "de-CH").plugin(seo);
 	let schema = early
 		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
 		.entry("event", "Event", []);

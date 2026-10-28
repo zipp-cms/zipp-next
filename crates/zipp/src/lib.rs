@@ -14,8 +14,8 @@ pub mod entries;
 pub mod error;
 pub mod graphql;
 pub mod migrate;
+pub mod plugin;
 pub mod schema;
-pub mod seo;
 mod server;
 mod studio;
 pub mod typescript;
@@ -44,11 +44,15 @@ use crate::migrate::{Migration, Migrations, Rename};
 use cli::*;
 use server::*;
 
-pub use crate::field_type::{FieldType, GraphqlType, Scalar, StudioModule};
+pub use crate::field_type::{
+	FieldRelation, FieldType, GraphqlType, Scalar, StudioModule, Target,
+};
+pub use crate::plugin::{EntryField, GraphqlExt, Plugin, PluginStudio};
 pub use crate::schema::{
-	Access, Column, Field, LinkKind, Role, Schema, Section, Seo, SeoDefaults,
+	Access, Choice, Column, Field, FieldKind, LinkKind, Role, Schema, Section,
 	Transform,
 };
+pub use async_graphql;
 pub use axum;
 
 #[doc(hidden)]

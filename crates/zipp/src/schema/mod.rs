@@ -24,14 +24,12 @@ use serde_json::Value;
 
 use crate::field_type::{FieldType, FieldTypes, GraphqlType};
 pub use role::{Access, Role};
-pub use seo::{Seo, SeoDefaults};
 
 mod builders;
 mod check;
 mod field;
 pub mod field_type;
 pub mod role;
-pub mod seo;
 #[cfg(test)]
 pub(crate) mod tests;
 
@@ -70,9 +68,9 @@ pub struct Schema {
 	/// Roles of studio users, not part of the content model.
 	#[serde(skip)]
 	pub roles: Vec<Role>,
-	/// SEO defaults of sections and entry types, see [`Schema::seo`].
+	/// Plugins, see [`Schema::plugin`].
 	#[serde(skip)]
-	pub seo: Option<Seo>,
+	pub plugins: crate::plugin::Plugins,
 	/// Sites not on the website yet, see [`Schema::offline`].
 	#[serde(skip)]
 	pub offline: Vec<String>,
@@ -307,7 +305,7 @@ impl Schema {
 	}
 
 	/// An entry type with its fields in tabs, like Craft's field layout:
-	/// `[("Content", vec![...]), ("SEO", vec![Field::seo("seo")])]`.
+	/// `[("Content", vec![...]), ("SEO", vec![...])]`.
 	pub fn entry_tabs<'a>(
 		mut self,
 		handle: &str,

@@ -125,6 +125,7 @@ pub(super) fn content_field(
 			match custom.as_ref().map(|(t, _)| t.graphql()) {
 				Some(GraphqlType::Object { name, .. }) => TypeRef::named(name),
 				Some(GraphqlType::Scalar(s)) => TypeRef::named(scalar_name(s)),
+				Some(GraphqlType::Named(name)) => TypeRef::named(name),
 				None => TypeRef::named(TypeRef::STRING),
 			}
 		}
@@ -145,8 +146,6 @@ pub(super) fn content_field(
 			TypeRef::named_nn_list_nn(table_row(comp, &field.handle))
 		}
 		FieldKind::Navigation { .. } => TypeRef::named_nn_list_nn("NavItem"),
-		// the resolved SEO, like the plugin's `seo`
-		FieldKind::Seo => TypeRef::named("Seo"),
 		// the value, like Craft's dropdown
 		FieldKind::Dropdown { .. } => TypeRef::named(TypeRef::STRING),
 		FieldKind::Group { component } => {
@@ -244,13 +243,10 @@ pub(super) fn content_field(
 					let link = resolve_link(&ctx, &value, &site, new_tab)?;
 					Ok(link.map(FieldValue::value))
 				}
-				FieldKind::Custom { .. } if !value.is_null() => {
-					let Some((t, options)) = custom else {
-						return Ok(None);
-					};
-					let out = t.output(&options, &value);
-					Ok(Some(FieldValue::value(GqlValue::from_json(out)?)))
-				}
+				FieldKind::Custom { .. } => match custom {
+					Some((t, options)) => t.resolve(&ctx, &options, &value),
+					None => Ok(None),
+				},
 				FieldKind::Checkboxes { .. } | FieldKind::Table { .. } => {
 					let items = value.as_array().cloned().unwrap_or_default();
 					Ok(Some(FieldValue::list(
@@ -268,7 +264,6 @@ pub(super) fn content_field(
 						items.into_iter().map(FieldValue::value),
 					)))
 				}
-				FieldKind::Seo => entry_seo(&ctx),
 				FieldKind::Texts { keys } => {
 					let texts = crate::content::texts_of(&keys, &value);
 					let json = serde_json::to_string(&texts)?;
@@ -298,7 +293,10 @@ pub(super) fn entry_value(e: Entry) -> FieldValue<'static> {
 
 /// The object types of the content model: of field types of other crates,
 /// of components used by group fields and of every entry type and block.
-pub(super) fn content_objects(schema: &Schema) -> Vec<Object> {
+pub(super) fn content_objects(
+	schema: &Schema,
+	entry_fields: &[crate::plugin::EntryField],
+) -> Vec<Object> {
 	let mut objects = vec![];
 	// the object types of field types of other crates
 	for t in &schema.field_types.0 {
@@ -371,11 +369,10 @@ pub(super) fn content_objects(schema: &Schema) -> Vec<Object> {
 			for (name, _) in entry_common() {
 				obj = obj.field(entry_common_field(name));
 			}
-			if crate::seo::enabled(schema) {
-				obj = obj.field(entry_seo_field("seoJson", SEO_JSON));
-				// `seo` like the plugin's, unless a field has the name
-				if !comp.fields.iter().any(|f| f.handle == "seo") {
-					obj = obj.field(entry_seo_field("seo", "Seo"));
+			// the plugins', unless a field has the name
+			for f in entry_fields {
+				if !comp.fields.iter().any(|x| x.handle == f.name) {
+					obj = obj.field((f.field)());
 				}
 			}
 			obj

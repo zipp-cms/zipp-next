@@ -5,13 +5,13 @@
 		navGroups,
 		type Entry,
 		type Schema,
-		type SeoCodeDefaults,
 	} from '../../api';
 	import { accessOf, isAdmin } from '../../lib/access';
+	import PluginCards from './PluginCards.svelte';
 
 	/**
 	 * A section in the setup, read only: its settings in the main column
-	 * (entry types, urls per site, who may do what, SEO), its entries as a
+	 * (entry types, urls per site, who may do what, cards of plugins), its entries as a
 	 * short list on the side, linking to the editor.
 	 */
 	let { schema, handle }: { schema: Schema; handle: string } = $props();
@@ -37,17 +37,6 @@
 			? schema.roles
 			: schema.roles.filter(r => r.handle === schema.me.role),
 	);
-	const seoRows = $derived.by(() => {
-		const seo = schema.seo;
-		if (!seo || !section) return [];
-		const rows: { name: string; d: SeoCodeDefaults | undefined }[] = [
-			{ name: 'Section', d: seo.sections[handle] },
-		];
-		for (const t of types)
-			if (seo.types[t.handle])
-				rows.push({ name: t.name, d: seo.types[t.handle] });
-		return rows;
-	});
 
 	let entries = $state<Entry[]>([]);
 	let published = $state<Record<number, Record<string, boolean>>>({});
@@ -97,7 +86,6 @@
 	};
 	const cap = (s: string | null | undefined) =>
 		s ? s[0].toUpperCase() + s.slice(1) : '–';
-	const val = (s: string | null | undefined) => s ?? '–';
 </script>
 
 {#if section}
@@ -235,48 +223,7 @@
 				</p>
 			</div>
 
-			{#if seoRows.length}
-				<div class="card">
-					<h2>SEO</h2>
-					<table>
-						<thead>
-							<tr>
-								<th></th>
-								<th>Title</th>
-								<th>Description</th>
-								<th>Image from</th>
-								<th>Robots</th>
-								<th>Sitemap</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each seoRows as r (r.name)}
-								<tr>
-									<td>{r.name}</td>
-									<td><code>{val(r.d?.titlePattern)}</code></td>
-									<td>
-										{#if r.d?.descriptionFrom}
-											from <code>{r.d.descriptionFrom}</code>
-										{:else}
-											{val(r.d?.description)}
-										{/if}
-									</td>
-									<td><code>{val(r.d?.imageFrom)}</code></td>
-									<td>{val(r.d?.robots)}</td>
-									<td>{r.d?.sitemap === false ? 'No' : 'Yes'}</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-					<p class="muted">
-						The defaults of the code. Editors override them per site
-						in the
-						<a href="/admin/entries/seoSettings">SEO settings</a>
-						(Per section and entry type), an entry's SEO field
-						overrides both; empty values come from the SEO settings.
-					</p>
-				</div>
-			{/if}
+			<PluginCards {schema} {section} />
 		</div>
 
 		<aside class="card">

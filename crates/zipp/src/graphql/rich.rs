@@ -2,7 +2,7 @@ use super::*;
 
 /// Markdown to html, raw html in it is dropped (editors write text) and
 /// links and images only point to the web or the site.
-pub(crate) fn markdown_html(md: &str) -> String {
+pub fn markdown_html(md: &str) -> String {
 	use pulldown_cmark::{Event, Options, Parser, Tag, html};
 	let safe =
 		|url: &str| crate::content::safe_url(url) || url.starts_with("mailto:");

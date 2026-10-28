@@ -8,10 +8,11 @@ use zipp::axum::routing::get;
 use zipp::error::Result;
 use zipp::query::Query;
 use zipp::{
-	Access, AppState, Cms, Column, Field, LinkKind, Role, Schema, Section, Seo,
-	SeoDefaults, Transform,
+	Access, AppState, Cms, Column, Field, LinkKind, Role, Schema, Section,
+	Transform,
 };
 use zipp_button_group::{ButtonGroup, button_group};
+use zipp_seo::{Seo, SeoDefaults, seo_field};
 
 fn schema() -> Schema {
 	let body = || {
@@ -41,9 +42,10 @@ fn schema() -> Schema {
 			"Settings",
 			["header", "footer", "translations", "seoSettings"],
 		)
-		// SEO like the Craft plugin meierlabs-seo: the global settings are
-		// the single seoSettings, defaults per section and entry type here
-		.seo(
+		// the SEO plugin, like the Craft plugin meierlabs-seo: the global
+		// settings are the single seoSettings, defaults per section and
+		// entry type here
+		.plugin(
 			Seo::new()
 				.section(
 					"events",
@@ -114,7 +116,7 @@ fn schema() -> Schema {
 						body(),
 					],
 				),
-				("SEO", vec![Field::seo("seo")]),
+				("SEO", vec![seo_field("seo")]),
 			],
 		)
 		// tabs in the editor, like Craft's field layout
@@ -133,7 +135,7 @@ fn schema() -> Schema {
 						body(),
 					],
 				),
-				("SEO", vec![Field::seo("seo")]),
+				("SEO", vec![seo_field("seo")]),
 			],
 		)
 		.entry(
@@ -268,7 +270,7 @@ fn schema() -> Schema {
 /// widget on another site.
 async fn events(State(state): State<AppState>) -> Result<impl IntoResponse> {
 	let conn = state.db.conn();
-	let today = zipp::seo::iso(zipp::db::now())[..10].to_string();
+	let today = zipp::db::iso(zipp::db::now())[..10].to_string();
 	let params = [("site", "de"), ("type", "event"), ("order", "date")]
 		.map(|(k, v)| (k.to_string(), v.to_string()));
 	let mut q = Query::parse(&state.schema, &params).unwrap();

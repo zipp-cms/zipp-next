@@ -55,10 +55,10 @@ use crate::schema::{FieldKind, Schema};
 
 mod asset;
 mod entry;
+pub mod ext;
 mod link;
 mod query;
 mod rich;
-mod seo;
 #[cfg(test)]
 pub(crate) mod tests;
 mod texts;
@@ -67,9 +67,8 @@ use asset::*;
 use entry::*;
 use link::*;
 use query::*;
-pub(crate) use rich::markdown_html;
+pub use rich::markdown_html;
 use rich::*;
-use seo::*;
 use texts::*;
 
 /// Fields every entry has, field handles can't use them.
@@ -88,7 +87,6 @@ pub const ENTRY_FIELDS: &[&str] = &[
 	"children",
 	"createdAt",
 	"updatedAt",
-	"seoJson",
 	"postDate",
 	"dateCreated",
 	"dateUpdated",
@@ -122,7 +120,7 @@ struct RichText {
 }
 
 /// A part of an object value, for objects built as values.
-fn value_field<'a>(
+pub fn value_field<'a>(
 	ctx: ResolverContext<'a>,
 	name: &'static str,
 ) -> FieldFuture<'a> {
@@ -174,21 +172,30 @@ pub fn build(
 	public_url: String,
 	site_urls: SiteUrls,
 ) -> std::result::Result<GqlSchema, String> {
+	// what the plugins add
+	let mut plugin_types = vec![];
+	let mut entry_fields = vec![];
+	let mut root_fields = vec![];
+	for p in &schema.plugins.0 {
+		let ext = p.graphql(&schema);
+		plugin_types.extend(ext.types);
+		entry_fields.extend(ext.entry_fields);
+		root_fields.extend(ext.root_fields);
+	}
+
 	let mut entry_iface = Interface::new("Entry");
 	for (name, ty) in entry_common() {
 		entry_iface = entry_iface.field(InterfaceField::new(name, ty));
 	}
-	if crate::seo::enabled(&schema) {
-		entry_iface = entry_iface
-			.field(InterfaceField::new("seoJson", TypeRef::named(SEO_JSON)));
-		// `seo` too, unless an entry type has a field of its own named so
+	for f in &entry_fields {
+		// unless an entry type has a field of its own named so
 		let own = schema
 			.components
 			.iter()
-			.any(|c| c.entry && c.fields.iter().any(|f| f.handle == "seo"));
+			.any(|c| c.entry && c.fields.iter().any(|x| x.handle == f.name));
 		if !own {
 			entry_iface = entry_iface
-				.field(InterfaceField::new("seo", TypeRef::named("Seo")));
+				.field(InterfaceField::new(f.name.clone(), f.ty.clone()));
 		}
 	}
 	let block_iface = Interface::new("Block")
@@ -239,24 +246,15 @@ pub fn build(
 				.description("An id or a handle, like Craft's QueryArgument"),
 		);
 
-	// SEO like the Craft plugin meierlabs-seo
-	if crate::seo::enabled(&schema) {
-		builder = builder.register(Scalar::new(SEO_JSON).description(
-			"The resolved SEO as one JSON object, what the npm package \
-			meierlabs-seo reads",
-		));
-		for obj in seo_types() {
-			builder = builder.register(obj);
-		}
+	for ty in plugin_types {
+		builder = builder.register(ty);
 	}
-	for obj in content_objects(&schema) {
+	for obj in content_objects(&schema, &entry_fields) {
 		builder = builder.register(obj);
 	}
 	let mut query = query_object();
-	if crate::seo::enabled(&schema) {
-		for field in root_fields() {
-			query = query.field(field);
-		}
+	for field in root_fields {
+		query = query.field(field);
 	}
 	if let Some((obj, field)) = translations_field(&schema) {
 		builder = builder.register(obj);

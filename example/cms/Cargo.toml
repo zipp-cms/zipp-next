@@ -7,3 +7,4 @@ edition = "2024"
 serde_json = "1.0"
 zipp = { path = "../../crates/zipp" }
 zipp-button-group = { path = "../../crates/zipp-button-group" }
+zipp-seo = { path = "../../crates/zipp-seo" }

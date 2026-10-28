@@ -80,21 +80,22 @@ pub(super) async fn serve(
 		.merge(studio::api_routes())
 		.merge(entries::routes())
 		.merge(users::routes())
-		.merge(seo::routes::routes())
 		.merge(drafts::routes())
 		.merge(ai::routes())
 		.merge(assets::api_routes())
 		.merge(graphql::routes());
 	let app = Router::new()
-		.nest("/api", api)
 		.merge(assets::file_routes())
 		.merge(routes)
 		.merge(studio::routes());
-	// the sitemaps and robots.txt of the SEO, proxied by the frontend
-	let app = match crate::seo::enabled(&state.schema) {
-		true => app.merge(seo::sitemap::routes()),
-		false => app,
-	};
+	// the plugins': under /api for the studio, others for the website
+	let mut api = api;
+	let mut app = app;
+	for p in &state.schema.plugins.0 {
+		api = api.merge(p.api_routes());
+		app = app.merge(p.routes(&state.schema));
+	}
+	let app = app.nest("/api", api);
 
 	// frontends on other domains read the content, graphql is a POST
 	let app = app

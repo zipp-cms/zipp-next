@@ -3,22 +3,23 @@
 //! the frontend unchanged: `/sitemap.xml`, `/sitemap-<site>-<section>-
 //! <page>.xml` and `/robots.txt` of the frontend's domain.
 
-use axum::Router;
-use axum::extract::{Query as Params, State};
-use axum::http::{StatusCode, header};
-use axum::response::{IntoResponse, Response};
-use axum::routing::get;
 use rusqlite::Connection;
 use serde::Deserialize;
+use zipp::axum::Router;
+use zipp::axum::extract::{Query as Params, State};
+use zipp::axum::http::{StatusCode, header};
+use zipp::axum::response::{IntoResponse, Response};
+use zipp::axum::routing::get;
 
-use super::{Globals, globals, in_sitemap, section_in_sitemap};
-use crate::AppState;
-use crate::db::iso;
-use crate::entries::{Entry, list};
-use crate::error::{Error, Result};
-use crate::query::Query;
-use crate::schema::seo::SEO_SETTINGS;
-use crate::schema::{Schema, Site};
+use zipp::AppState;
+use zipp::db::iso;
+use zipp::entries::{Entry, list};
+use zipp::error::{Error, Result};
+use zipp::query::Query;
+use zipp::schema::{Schema, Site};
+
+use crate::resolve::{Globals, globals, in_sitemap, section_in_sitemap};
+use crate::{SEO_SETTINGS, Seo};
 
 /// Published entries of a site and how many there are in all, with
 /// `with_uri` only the ones with a page.
@@ -97,7 +98,9 @@ fn sections<'a>(schema: &'a Schema, globals: &Globals) -> Vec<&'a str> {
 }
 
 fn page_size(schema: &Schema) -> i64 {
-	schema.seo.as_ref().map_or(2000, |s| s.sitemap_page_size) as i64
+	schema
+		.plugin_of::<Seo>()
+		.map_or(2000, |s| s.sitemap_page_size) as i64
 }
 
 fn escape(s: &str) -> String {
@@ -247,7 +250,7 @@ async fn page(
 	);
 	let primary = &schema.primary_site().handle;
 	for e in &found {
-		let Some(url) = crate::page_url(
+		let Some(url) = zipp::page_url(
 			&state.site_urls,
 			&site.handle,
 			e.uri.as_deref().unwrap(),
@@ -262,7 +265,7 @@ async fn page(
 		let mut alts = vec![];
 		for (s, other) in others.iter().filter(|(_, o)| o.id == e.id) {
 			let Some(u) = other.uri.as_deref().and_then(|uri| {
-				crate::page_url(&state.site_urls, &s.handle, uri)
+				zipp::page_url(&state.site_urls, &s.handle, uri)
 			}) else {
 				continue;
 			};

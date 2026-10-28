@@ -101,41 +101,8 @@ impl Schema {
 			return Err("the primary site can't be offline".into());
 		}
 
-		if let Some(seo) = &self.seo {
-			for s in seo.sections.keys() {
-				if self.get_section(s).is_none() {
-					return Err(format!("seo: unknown section {s}"));
-				}
-			}
-			// the fields defaults come from, in every entry type they apply to
-			let mut uses = vec![];
-			for (ty, d) in &seo.types {
-				if self.entry_type(ty).is_none() {
-					return Err(format!("seo: unknown entry type {ty}"));
-				}
-				uses.push((ty.as_str(), d));
-			}
-			for (s, d) in &seo.sections {
-				let types = self.get_section(s).map(|s| &s.types);
-				uses.extend(
-					types.into_iter().flatten().map(|t| (t.as_str(), d)),
-				);
-			}
-			for (ty, d) in uses {
-				let comp = self.entry_type(ty).unwrap();
-				for path in d.description_from.iter().chain(&d.image_from) {
-					if self.field_at(comp, path).is_none() {
-						return Err(format!("seo: {ty} has no field {path}"));
-					}
-				}
-				if let Some(path) = &d.image_from
-					&& !matches!(
-						self.field_at(comp, path).map(|f| &f.kind),
-						Some(FieldKind::Assets { .. })
-					) {
-					return Err(format!("seo: {ty}.{path} is no images field"));
-				}
-			}
+		for p in &self.plugins.0 {
+			p.check(self).map_err(|e| format!("{}: {e}", p.name()))?;
 		}
 
 		for (i, r) in self.roles.iter().enumerate() {
@@ -261,9 +228,6 @@ impl Schema {
 		{
 			return Err("a link needs something to point to".into());
 		}
-		if field.kind == FieldKind::Seo && !comp.entry {
-			return Err("an seo field belongs to an entry type".into());
-		}
 		if let FieldKind::Texts { keys } = &field.kind {
 			for (i, (key, _)) in keys.iter().enumerate() {
 				if keys[..i].iter().any(|(k, _)| k == key) {
@@ -356,7 +320,7 @@ impl Schema {
 
 impl Schema {
 	/// The field at a path like `pageIntro.text`, through group fields.
-	pub(crate) fn field_at<'a>(
+	pub fn field_at<'a>(
 		&'a self,
 		comp: &'a Component,
 		path: &str,

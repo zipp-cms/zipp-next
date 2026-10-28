@@ -108,11 +108,6 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 					.join("; ")
 			),
 			FieldKind::Navigation { .. } => "NavItem[]".into(),
-			FieldKind::Seo => "{ title?: string; description?: string; \
-				image?: number[]; socialTitle?: string; \
-				socialDescription?: string; socialImage?: number[]; \
-				robots?: string; canonicalUrl?: string }"
-				.into(),
 			FieldKind::Dropdown { options } => options
 				.iter()
 				.map(|o| format!("{:?}", o.value))

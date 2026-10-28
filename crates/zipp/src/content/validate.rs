@@ -1,7 +1,5 @@
 use super::*;
 
-use serde_json::json;
-
 /// Checks the fields of a component and returns them cleaned up: nulls are
 /// dropped and new blocks get an id.
 pub fn validate(
@@ -148,41 +146,6 @@ pub(super) fn validate_value(
 			let out = validate_navigation(to, *depth, items, path, errors);
 			return (!out.is_empty()).then_some(Value::Array(out));
 		}
-		(FieldKind::Seo, Value::Object(seo)) => {
-			let mut out = Map::new();
-			for (key, v) in seo {
-				let p = format!("{path}.{key}");
-				let empty = v.is_null() || v == "" || v == &json!([]);
-				match key.as_str() {
-					_ if empty => {}
-					"title" | "description" | "socialTitle"
-					| "socialDescription"
-						if v.is_string() => {}
-					"image" | "socialImage"
-						if v.as_array().is_some_and(|a| {
-							a.len() <= 1 && a.iter().all(Value::is_i64)
-						}) => {}
-					"robots"
-						if crate::schema::seo::ROBOTS
-							.iter()
-							.any(|(r, _)| v == *r) => {}
-					// absolute, it is what search engines index
-					"canonicalUrl"
-						if v.as_str().is_some_and(|u| {
-							u.starts_with("https://")
-								|| u.starts_with("http://")
-						}) => {}
-					_ => {
-						error(errors, &p, "not a valid value");
-						continue;
-					}
-				}
-				if !empty {
-					out.insert(key.clone(), v.clone());
-				}
-			}
-			return (!out.is_empty()).then_some(Value::Object(out));
-		}
 		(FieldKind::Texts { keys }, Value::Object(texts)) => {
 			// only the keys of the code, empty ones fall back to its text
 			let mut out = Map::new();
@@ -260,7 +223,8 @@ pub(super) fn validate_value(
 		(FieldKind::Custom { ty, options }, value) => {
 			let t = schema.field_types.get(ty).unwrap();
 			match t.validate(options, value) {
-				Ok(v) => return Some(v),
+				// null: nothing left, like an empty text
+				Ok(v) => return (!v.is_null()).then_some(v),
 				Err(e) => error(errors, path, &e),
 			}
 		}

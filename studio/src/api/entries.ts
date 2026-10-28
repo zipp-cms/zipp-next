@@ -75,18 +75,3 @@ export function deleteEntry(id: number): Promise<void> {
 }
 
 /** What an entry's SEO is without its own values, the field's placeholders. */
-export type SeoDefaults = {
-	title: string;
-	titlePrefix: string;
-	titleSuffix: string;
-	description: string | null;
-	image: { url: string } | null;
-	robots: string;
-	canonicalUrl: string | null;
-	url: string | null;
-	siteName: string;
-};
-
-export function seoDefaults(id: number, site: string): Promise<SeoDefaults> {
-	return request('GET', `/entries/${id}/seo?site=${site}`);
-}

@@ -101,22 +101,19 @@ pub(super) fn collect_relations(
 			out.extend(link_relation(schema, &fields[&field.handle], &path));
 			continue;
 		}
-		// the images of an seo field are images like an images field's
-		if let FieldKind::Seo = field.kind {
-			for key in ["image", "socialImage"] {
-				let ids = fields[&field.handle][key].as_array();
-				let ids: Vec<i64> = ids
-					.into_iter()
-					.flatten()
-					.filter_map(Value::as_i64)
-					.collect();
-				if !ids.is_empty() {
-					out.push(RelationRef {
-						path: format!("{path}.{key}"),
-						target: Target::Assets(true),
-						ids,
-					});
-				}
+		// a field type of another crate says what it relates to
+		if let FieldKind::Custom { ty, options } = &field.kind {
+			let value = &fields[&field.handle];
+			let ty = schema.field_types.get(ty);
+			for r in ty.map_or(vec![], |t| t.relations(options, value)) {
+				out.push(RelationRef {
+					path: match r.path.is_empty() {
+						true => path.clone(),
+						false => format!("{path}.{}", r.path),
+					},
+					target: r.target,
+					ids: r.ids,
+				});
 			}
 			continue;
 		}

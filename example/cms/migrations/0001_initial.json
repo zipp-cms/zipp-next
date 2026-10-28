@@ -709,7 +709,9 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "seo"
+            "kind": "custom",
+            "type": "seo",
+            "options": null
           }
         ],
         "tabs": [
@@ -780,7 +782,9 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "seo"
+            "kind": "custom",
+            "type": "seo",
+            "options": null
           }
         ],
         "tabs": [
@@ -2025,7 +2029,9 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "seo"
+            "kind": "custom",
+            "type": "seo",
+            "options": null
           }
         ],
         "tabs": [
@@ -2093,7 +2099,9 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "seo"
+            "kind": "custom",
+            "type": "seo",
+            "options": null
           }
         ],
         "tabs": [
@@ -2456,6 +2464,12 @@
       }
     ],
     "transforms": [
+      {
+        "handle": "seoSocial",
+        "width": 1200,
+        "height": 630,
+        "crop": true
+      },
       {
         "handle": "hero",
         "width": 1600,

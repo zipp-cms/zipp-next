@@ -80,10 +80,38 @@ async fn field_module(
 	}
 }
 
+/// The studio module of a plugin, see [`PluginStudio`](crate::PluginStudio).
+async fn plugin_module(
+	State(state): State<AppState>,
+	Path(file): Path<String>,
+) -> Response {
+	let name = file.strip_suffix(".js").unwrap_or(&file);
+	let studio = state.schema.plugins.get(name).and_then(|p| p.studio());
+	match studio {
+		Some(s) => (
+			[
+				(header::CONTENT_TYPE, "text/javascript"),
+				(header::CACHE_CONTROL, "no-cache"),
+			],
+			s.js,
+		)
+			.into_response(),
+		None => StatusCode::NOT_FOUND.into_response(),
+	}
+}
+
 pub fn routes() -> Router<AppState> {
 	Router::new()
 		.route("/_fields/{file}", get(field_module))
+		.route("/_plugins/{file}", get(plugin_module))
 		.fallback(file)
+}
+
+/// A plugin of the studio, its module is `/_plugins/<name>.js`.
+#[derive(Debug, Serialize)]
+struct PluginResp {
+	name: String,
+	data: serde_json::Value,
 }
 
 /// A doc of the code, as html.
@@ -114,8 +142,8 @@ struct SchemaResp {
 	roles: Vec<crate::schema::Role>,
 	/// sites not on the website yet
 	offline: Vec<String>,
-	/// SEO defaults of sections and entry types, shown in the setup
-	seo: Option<crate::schema::seo::Seo>,
+	/// the plugins with a studio module and its data
+	plugins: Vec<PluginResp>,
 	me: Me,
 }
 
@@ -139,7 +167,19 @@ async fn schema_route(
 	Ok(Json(SchemaResp {
 		roles: state.schema.roles.clone(),
 		offline: state.schema.offline.clone(),
-		seo: state.schema.seo.clone(),
+		plugins: state
+			.schema
+			.plugins
+			.0
+			.iter()
+			.filter_map(|p| {
+				let s = p.studio()?;
+				Some(PluginResp {
+					name: p.name().into(),
+					data: s.data,
+				})
+			})
+			.collect(),
 		me: Me {
 			id: auth.user_id,
 			email,

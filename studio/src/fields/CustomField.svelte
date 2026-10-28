@@ -17,11 +17,14 @@
 
 <script lang="ts">
 	import type { Field, Values } from '../api';
+	import { host } from '../lib/host.svelte';
+	import { route, site } from '../route.svelte';
 
 	/**
 	 * A field of a type of another crate: zipp serves its module, which
-	 * brings its own framework; the studio only mounts it and passes the
-	 * value in and out.
+	 * brings its own framework; the studio mounts it, passes the value in
+	 * and out, the entry it belongs to (`entryId` null for a new one, the
+	 * site) and the `host` api.
 	 */
 	let { field, values }: { field: Field; values: Values } = $props();
 
@@ -30,10 +33,14 @@
 	let error = $state('');
 
 	function current() {
+		const r = route.current;
 		return {
 			field: $state.snapshot(field),
 			value: $state.snapshot(values[field.handle]) ?? null,
 			onchange: (v: unknown) => (values[field.handle] = v),
+			entryId: r.page === 'entry' ? r.id : null,
+			site: site.current,
+			host,
 		};
 	}
 

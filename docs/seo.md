@@ -5,13 +5,14 @@ works unchanged.
 
 ## SEO
 
-`.seo(Seo::new()
+SEO is a plugin, the crate `zipp-seo`. `.plugin(Seo::new()
 .section("events", SeoDefaults::new().title_pattern("{title} – Events |
 {siteName}")).entry_type("page", SeoDefaults::new()
 .description_from("intro").image_from("hero")))` adds the single
 `seoSettings` (site name, title pattern, description, image, robots,
-robots.txt, structured data of the organization) and `Field::seo` for
-single entries. Under "Per section and entry type" in the settings
+robots.txt, structured data of the organization), the field type for
+`seo_field("seo")` of single entries and the 1200×630 transform
+`seoSocial`; a section's setup page shows its defaults. Under "Per section and entry type" in the settings
 editors override title pattern, description, image, robots and the
 sitemap of a section or an entry type, per site (other sites inherit all
 but the description from the primary site). Every value comes from the

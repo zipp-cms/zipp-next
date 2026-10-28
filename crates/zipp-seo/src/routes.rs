@@ -1,20 +1,21 @@
 //! What the studio's SEO field shows as placeholders.
 
-use axum::extract::{Path, Query as Params, State};
-use axum::routing::get;
-use axum::{Json, Router};
 use serde::Deserialize;
 use serde_json::Value;
+use zipp::axum::extract::{Path, Query as Params, State};
+use zipp::axum::routing::get;
+use zipp::axum::{Json, Router};
 
-use super::sitemap::load_globals;
-use super::{EntryPage, Page, defaults_for_entry};
-use crate::AppState;
-use crate::assets::get_asset;
-use crate::auth::Authed;
-use crate::drafts::draft_or_live;
-use crate::entries::get_entry;
-use crate::error::{Error, Result};
-use crate::schema::Access;
+use zipp::AppState;
+use zipp::assets::get_asset;
+use zipp::auth::Authed;
+use zipp::drafts::draft_or_live;
+use zipp::entries::get_entry;
+use zipp::error::{Error, Result};
+use zipp::schema::Access;
+
+use crate::resolve::{EntryPage, Page, defaults_for_entry};
+use crate::sitemap::load_globals;
 
 #[derive(Debug, Deserialize)]
 struct SiteParam {
@@ -49,7 +50,7 @@ async fn defaults_route(
 	let url = entry
 		.uri
 		.as_deref()
-		.and_then(|u| crate::page_url(&state.site_urls, &site, u));
+		.and_then(|u| zipp::page_url(&state.site_urls, &site, u));
 	let e = EntryPage {
 		entry: &entry,
 		url,

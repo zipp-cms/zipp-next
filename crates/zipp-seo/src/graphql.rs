@@ -1,42 +1,45 @@
-use super::*;
+use serde_json::Value;
+use zipp::assets::get_asset;
+use zipp::async_graphql::dynamic::{
+	Field as GqlField, FieldFuture, FieldValue, InputValue, Object,
+	ResolverContext, TypeRef,
+};
+use zipp::async_graphql::{Error as GqlError, Value as GqlValue};
+use zipp::entries::Entry;
+use zipp::graphql::ext;
 
-use crate::assets::get_asset;
-use crate::schema::seo::SEO_SETTINGS;
-use crate::seo::{self, EntryPage, Page};
+use crate::SEO_SETTINGS;
+use crate::resolve::{self as seo, EntryPage, Page};
 
 /// The scalar of `seoJson`, named like the Craft plugin's.
-pub(super) const SEO_JSON: &str = "MeierLabsSeoJson";
+pub(crate) const SEO_JSON: &str = "MeierLabsSeoJson";
 
 /// The SEO of an entry, or of the site without one, as `seoJson`. Loads
 /// what it needs with the viewer's rights, so a preview shows drafts.
-pub(super) fn resolve_seo(
+pub(crate) fn resolve_seo(
 	ctx: &ResolverContext,
 	site: &str,
 	entry: Option<&Entry>,
-) -> async_graphql::Result<Value> {
-	let schema = ctx.data::<Arc<Schema>>()?;
-	if !seo::enabled(schema) {
-		return Ok(Value::Null);
-	}
-	let urls = ctx.data::<SiteUrls>()?;
-	let db = ctx.data::<Db>()?;
+) -> zipp::async_graphql::Result<Value> {
+	let schema = ext::schema(ctx)?;
+	let urls = ext::site_urls(ctx)?;
+	let db = ext::db(ctx)?;
 	let primary = schema.primary_site().handle.clone();
 	let site_def = schema
 		.get_site(site)
 		.ok_or_else(|| GqlError::new(format!("unknown site {site}")))?;
 
 	let one = |s: &str, params: [(&str, String); 1]| {
-		let params = site_params(s, params);
-		load(ctx, &params).map(|l| l.into_iter().next())
+		ext::entries(ctx, s, params).map(|l| l.into_iter().next())
 	};
-	let settings = |s: &str| -> async_graphql::Result<Value> {
+	let settings = |s: &str| -> zipp::async_graphql::Result<Value> {
 		let e = one(s, [("section", SEO_SETTINGS.into())])?;
 		Ok(e.map(|e| e.fields).unwrap_or_default())
 	};
 	let globals =
 		seo::globals(site_def, &settings(site)?, &settings(&primary)?);
 	let url_of = |s: &str, e: &Entry| {
-		e.uri.as_deref().and_then(|u| crate::page_url(urls, s, u))
+		e.uri.as_deref().and_then(|u| zipp::page_url(urls, s, u))
 	};
 
 	let entry_page = match entry {
@@ -71,7 +74,7 @@ pub(super) fn resolve_seo(
 				let mut parent = e.parent_id;
 				// a parent the viewer doesn't see is left out, not its parents
 				while let Some(id) = parent {
-					let raw = crate::entries::get_entry(&db.conn(), id, site);
+					let raw = zipp::entries::get_entry(&db.conn(), id, site);
 					parent = raw.ok().and_then(|p| p.parent_id);
 					parents.extend(one(site, [("ids", id.to_string())])?);
 				}
@@ -102,19 +105,19 @@ pub(super) fn resolve_seo(
 		schema,
 		site: site_def,
 		site_url: urls.get(site).cloned().unwrap_or_default(),
-		public_url: &ctx.data::<PublicUrl>()?.0,
+		public_url: ext::public_url(ctx)?,
 		globals,
 		entry: entry_page,
 		asset: &asset,
-		indexing: ctx.data::<Viewer>()?.indexing,
+		indexing: ext::indexing(ctx)?,
 	};
 	Ok(seo::resolve(&page))
 }
 
 /// The SEO of the entry that is the parent.
-pub(super) fn entry_seo(
+pub(crate) fn entry_seo(
 	ctx: &ResolverContext,
-) -> async_graphql::Result<Option<FieldValue<'static>>> {
+) -> zipp::async_graphql::Result<Option<FieldValue<'static>>> {
 	let e = ctx.parent_value.try_downcast_ref::<Entry>()?;
 	let v = resolve_seo(ctx, &e.site, Some(e))?;
 	Ok(Some(FieldValue::value(GqlValue::from_json(v)?)))
@@ -123,7 +126,7 @@ pub(super) fn entry_seo(
 /// `seoJson` of an entry, everything as one JSON object so the npm
 /// package gets new values without a new query, or `seo { ... }`, the same
 /// as a type.
-pub(super) fn entry_seo_field(name: &str, ty: &str) -> GqlField {
+pub(crate) fn entry_seo_field(name: &str, ty: &str) -> GqlField {
 	GqlField::new(name, TypeRef::named(ty), |ctx| {
 		FieldFuture::new(async move { entry_seo(&ctx) })
 	})
@@ -131,11 +134,11 @@ pub(super) fn entry_seo_field(name: &str, ty: &str) -> GqlField {
 
 /// The root `seo(siteId: Int, site: String)` and `seoJson(...)` for pages
 /// without an entry.
-pub(super) fn root_fields() -> [GqlField; 2] {
+pub(crate) fn root_fields() -> [GqlField; 2] {
 	let field = |name: &'static str, ty: TypeRef| {
 		GqlField::new(name, ty, |ctx| {
 			FieldFuture::new(async move {
-				let schema = ctx.data::<Arc<Schema>>()?;
+				let schema = ext::schema(&ctx)?;
 				let by_id = ctx
 					.args
 					.get("siteId")
@@ -163,13 +166,13 @@ pub(super) fn root_fields() -> [GqlField; 2] {
 }
 
 /// The types: `Seo` and its parts, like the plugin's.
-pub(super) fn seo_types() -> Vec<Object> {
+pub(crate) fn seo_types() -> Vec<Object> {
 	let obj = |name: &str, fields: &[(&'static str, TypeRef)]| {
 		let mut o = Object::new(name);
 		for (f, ty) in fields {
 			let f: &'static str = f;
 			o = o.field(GqlField::new(f, ty.clone(), move |ctx| {
-				value_field(ctx, f)
+				ext::value_field(ctx, f)
 			}));
 		}
 		o
