@@ -37,12 +37,14 @@ fn site() -> Schema {
 		)
 		.entry("page", "Page", [Field::text("intro"), seo_field("seo")])
 		.plugin(
-			Seo::new().section(
-				"events",
-				SeoDefaults::new()
-					.title_pattern("{title} – {sectionName} | {siteName}")
-					.description_from("notes"),
-			),
+			Seo::new()
+				.section(
+					"events",
+					SeoDefaults::new()
+						.title_pattern("{title} – {sectionName} | {siteName}")
+						.description_from("notes"),
+				)
+				.entry_type("page", SeoDefaults::new().title_from("intro")),
 		)
 		.finish()
 }
@@ -97,6 +99,9 @@ async fn seo_like_the_craft_plugin() {
 		// a page with its own SEO in the field
 		let seo = json!({ "seo": { "title": "Über uns", "robots": "noindex, follow" } });
 		save(&conn, &s, None, input("pages", "page", "About", seo)).unwrap();
+		// the title from a field, like SEOmatic's
+		let intro = json!({ "intro": "Unser Team" });
+		save(&conn, &s, None, input("pages", "page", "Team", intro)).unwrap();
 		// a value the field doesn't know is refused
 		let bad = json!({ "seo": { "robots": "maybe" } });
 		assert!(
@@ -146,6 +151,12 @@ async fn seo_like_the_craft_plugin() {
 	.await;
 	assert_eq!(data["entry"]["seo"]["title"], "Über uns | Zandi");
 	assert_eq!(data["entry"]["seo"]["robots"], "noindex, follow");
+	let data = seo(
+		r#"{ entry(section: "pages", slug: "team") { seoJson } }"#,
+		true,
+	)
+	.await;
+	assert_eq!(data["entry"]["seoJson"]["title"], "Unser Team | Zandi");
 
 	// outside production nothing is indexed
 	let data = seo(

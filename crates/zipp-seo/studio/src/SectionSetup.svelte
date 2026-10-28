@@ -38,7 +38,12 @@
 				{#each rows as r (r.name)}
 					<tr>
 						<td>{r.name}</td>
-						<td><code>{val(r.d?.titlePattern)}</code></td>
+						<td>
+							<code>{val(r.d?.titlePattern)}</code>
+							{#if r.d?.titleFrom}
+								<br />from <code>{r.d.titleFrom}</code>
+							{/if}
+						</td>
 						<td>
 							{#if r.d?.descriptionFrom}
 								from <code>{r.d.descriptionFrom}</code>

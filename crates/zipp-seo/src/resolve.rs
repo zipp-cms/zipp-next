@@ -51,7 +51,8 @@ pub struct Level {
 	pub description: Option<String>,
 	pub robots: Option<String>,
 	pub image: Option<i64>,
-	/// code only: the fields description and image come from
+	/// code only: the fields title, description and image come from
+	pub title_from: Option<String>,
 	pub description_from: Option<String>,
 	pub image_from: Option<String>,
 	pub sitemap: Option<bool>,
@@ -64,6 +65,7 @@ impl From<&SeoDefaults> for Level {
 			description: d.description.clone(),
 			robots: d.robots.clone(),
 			image: None,
+			title_from: d.title_from.clone(),
 			description_from: d.description_from.clone(),
 			image_from: d.image_from.clone(),
 			// only leaving out counts, so settings of a section win over
@@ -380,7 +382,7 @@ pub fn defaults_for_entry(page: &Page) -> Option<Value> {
 		.and_then(|id| (page.asset)(id));
 
 	Some(json!({
-		"title": entry.title,
+		"title": mapped_title(&defaults, entry),
 		"titlePrefix": prefix,
 		"titleSuffix": suffix,
 		"description": mapped_description(page.schema, &defaults, entry)
@@ -425,6 +427,13 @@ fn mapped_description(
 	(!text.is_empty()).then(|| truncate(&text, DESCRIPTION_LENGTH))
 }
 
+/// The text of the field the title comes from, else the entry's title.
+fn mapped_title(defaults: &[Level], entry: &Entry) -> String {
+	first(defaults, |d| d.title_from.as_ref())
+		.and_then(|path| text(at(&entry.fields, &path)))
+		.unwrap_or_else(|| entry.title.clone())
+}
+
 fn mapped_image(defaults: &[Level], entry: &Entry) -> Option<i64> {
 	let path = first(defaults, |d| d.image_from.as_ref())?;
 	first_id(at(&entry.fields, &path))
@@ -446,7 +455,7 @@ pub fn resolve(page: &Page) -> Value {
 				let title = render_title(
 					&pattern,
 					&text(&field["title"])
-						.unwrap_or_else(|| entry.title.clone()),
+						.unwrap_or_else(|| mapped_title(&defaults, entry)),
 					&g.site_name,
 					&section_name(page.schema, entry),
 				);

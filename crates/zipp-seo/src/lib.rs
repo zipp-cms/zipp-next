@@ -111,6 +111,9 @@ pub struct SeoDefaults {
 	pub title_pattern: Option<String>,
 	pub description: Option<String>,
 	pub robots: Option<String>,
+	/// a text field the title comes from instead of the entry's title,
+	/// like SEOmatic's "from field"
+	pub title_from: Option<String>,
 	/// a field the description comes from, `pageIntro.text` inside a group
 	pub description_from: Option<String>,
 	/// an images field the image comes from
@@ -125,6 +128,7 @@ impl Default for SeoDefaults {
 			title_pattern: None,
 			description: None,
 			robots: None,
+			title_from: None,
 			description_from: None,
 			image_from: None,
 			sitemap: true,
@@ -168,6 +172,11 @@ impl SeoDefaults {
 
 	pub fn robots(mut self, robots: &str) -> Self {
 		self.robots = Some(robots.into());
+		self
+	}
+
+	pub fn title_from(mut self, path: &str) -> Self {
+		self.title_from = Some(path.into());
 		self
 	}
 

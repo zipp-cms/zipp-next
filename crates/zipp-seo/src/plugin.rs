@@ -74,7 +74,12 @@ impl Plugin for Seo {
 		}
 		for (ty, d) in uses {
 			let comp = schema.entry_type(ty).unwrap();
-			for path in d.description_from.iter().chain(&d.image_from) {
+			let paths = d
+				.title_from
+				.iter()
+				.chain(&d.description_from)
+				.chain(&d.image_from);
+			for path in paths {
 				if schema.field_at(comp, path).is_none() {
 					return Err(format!("{ty} has no field {path}"));
 				}
