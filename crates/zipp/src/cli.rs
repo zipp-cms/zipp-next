@@ -55,6 +55,13 @@ pub(super) enum Cmd {
 	},
 	/// Print the TypeScript types of the content.
 	Types,
+	/// What CI runs before a deploy: the schema, whether the migrations
+	/// are up to date, and the GraphQL queries of frontends against the
+	/// schema (`--queries ../frontend/src/queries`, `.graphql` files).
+	Check {
+		#[arg(long)]
+		queries: Vec<PathBuf>,
+	},
 	/// Add a studio user or set a new password and role, reads the
 	/// password from stdin. Without a role the user is an admin.
 	User {
@@ -136,5 +143,75 @@ pub(super) fn add_user(
 	auth::add_user(&db.conn(), email, password, role)
 		.map_err(|e| e.to_string())?;
 	println!("Saved {email} as {}", role.unwrap_or("admin"));
+	Ok(())
+}
+
+/// See [`Cmd::Check`]; the schema itself is checked before every command.
+pub(super) fn check(
+	schema: Schema,
+	migrations: &Migrations,
+	queries: &[PathBuf],
+) -> Result<(), String> {
+	let mut mistakes = 0;
+
+	let changes = migrate::unmigrated(&migrations.load()?, &schema)?;
+	if changes.is_empty() {
+		println!("ok   migrations are up to date");
+	} else {
+		mistakes += 1;
+		println!("FAIL the schema changed since the last migration:");
+		for op in &changes {
+			println!("       {}", op.describe());
+		}
+	}
+
+	let db = Db::memory().map_err(|e| e.to_string())?;
+	let gql = graphql::build(
+		Arc::new(schema),
+		db,
+		String::new(),
+		Default::default(),
+	)?;
+	let runtime = tokio::runtime::Runtime::new().unwrap();
+	let mut files = vec![];
+	for dir in queries {
+		graphql_files(dir, &mut files)
+			.map_err(|e| format!("{}: {e}", dir.display()))?;
+	}
+	for file in files {
+		let query = fs::read_to_string(&file).map_err(|e| e.to_string())?;
+		let errors = runtime.block_on(graphql::check_query(&gql, &query));
+		if errors.is_empty() {
+			println!("ok   {}", file.display());
+			continue;
+		}
+		mistakes += 1;
+		println!("FAIL {}", file.display());
+		for e in errors {
+			println!("       {e}");
+		}
+	}
+
+	match mistakes {
+		0 => Ok(()),
+		n => Err(format!("{n} mistakes")),
+	}
+}
+
+fn graphql_files(path: &Path, out: &mut Vec<PathBuf>) -> io::Result<()> {
+	if path.is_file() {
+		out.push(path.to_path_buf());
+		return Ok(());
+	}
+	let mut entries: Vec<_> = fs::read_dir(path)?.collect::<io::Result<_>>()?;
+	entries.sort_by_key(|e| e.path());
+	for e in entries {
+		let p = e.path();
+		if p.is_dir() {
+			graphql_files(&p, out)?;
+		} else if p.extension().is_some_and(|x| x == "graphql") {
+			out.push(p);
+		}
+	}
 	Ok(())
 }

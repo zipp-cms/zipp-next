@@ -40,11 +40,7 @@ pub(super) async fn serve(
 	for name in applied {
 		info!("applied migration {name}");
 	}
-	let last = migrations
-		.last()
-		.map(|m| m.schema.clone())
-		.unwrap_or_default();
-	if !migrate::diff(&last, &schema, &[])?.is_empty() {
+	if !migrate::unmigrated(&migrations, &schema)?.is_empty() {
 		return Err("The schema changed since the last migration, run \
 			`makemigration` first"
 			.into());

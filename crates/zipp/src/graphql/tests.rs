@@ -600,3 +600,15 @@ async fn hides_drafts_without_a_session() {
 	assert_eq!(run(&gql, q, true).await["entry"], Value::Null);
 	assert_eq!(run(&gql, q, false).await["entry"]["title"], "Draft");
 }
+
+#[tokio::test]
+async fn checks_queries_of_frontends() {
+	let s = Arc::new(site());
+	let gql = build(s, Db::memory().unwrap(), String::new(), SiteUrls::new())
+		.unwrap();
+	let ok = "query ($uri: String!) { entry(uri: $uri) { title } }";
+	assert!(check_query(&gql, ok).await.is_empty());
+	let bad = "{ entries { ... on event_Entry { town } } }";
+	let errors = check_query(&gql, bad).await;
+	assert!(errors[0].contains("Unknown field \"town\""), "{errors:?}");
+}

@@ -291,6 +291,27 @@ async fn graphql(
 	Ok(state.gql.execute(req).await.into())
 }
 
+/// The mistakes of a query of a frontend against the schema: unknown
+/// fields and types, wrong arguments. It runs on an empty database, so
+/// only the shape is checked; variables it needs are no mistake.
+pub async fn check_query(gql: &GqlSchema, query: &str) -> Vec<String> {
+	let req = async_graphql::Request::new(query).data(Viewer {
+		published_only: true,
+		preview: None,
+		token: None,
+	});
+	gql.execute(req)
+		.await
+		.errors
+		.into_iter()
+		.filter(|e| !e.message.contains("not provided"))
+		.map(|e| match e.locations.first() {
+			Some(l) => format!("{}:{}: {}", l.line, l.column, e.message),
+			None => e.message,
+		})
+		.collect()
+}
+
 /// Whether the request has the endpoint token.
 fn has_token(state: &AppState, headers: &HeaderMap) -> bool {
 	let Some(token) = &state.graphql_token else {

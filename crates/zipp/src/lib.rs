@@ -210,6 +210,7 @@ impl Cms {
 			Cmd::Makemigration { rename, name } => {
 				makemigration(&schema, &migrations, &rename, name.as_deref())
 			}
+			Cmd::Check { queries } => check(schema, &migrations, &queries),
 			Cmd::Types => {
 				print!("{}", typescript::generate(&schema));
 				Ok(())

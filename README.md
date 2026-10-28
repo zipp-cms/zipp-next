@@ -182,6 +182,13 @@ Cms::new(schema(), zipp::migrations!())
   and opens another page when not. A site tells the studio its page with
   a small bridge (`example/crelte/svelte/src/components/PreviewBridge.svelte`),
   crelte's live preview mode keeps the scroll position on reloads.
+- **Check before a deploy.** Every command checks the schema first (the
+  handles it names: types of sections, relations, groups, blocks, nav,
+  roles). `serve` applies new migrations and refuses to start when the
+  code changed since the last one. `check --queries <dir>` does both
+  without a server and also checks the `.graphql` files of frontends
+  against the schema (unknown fields, wrong arguments), for CI:
+  `cargo run -- check --queries ../crelte/svelte/src/queries`.
 - **Types for the rest api.** `types` prints TypeScript types of all
   entries and blocks.
 

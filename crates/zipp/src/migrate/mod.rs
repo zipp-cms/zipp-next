@@ -159,6 +159,19 @@ impl Migrations {
 }
 
 /// `0003` or `0003_name` after two existing migrations.
+/// What changed in the code since the last migration, nothing when the
+/// migrations are up to date.
+pub fn unmigrated(
+	migrations: &[Migration],
+	schema: &Schema,
+) -> Result<Vec<Op>, String> {
+	let last = migrations
+		.last()
+		.map(|m| m.schema.clone())
+		.unwrap_or_default();
+	diff(&last, schema, &[])
+}
+
 pub fn next_name(existing: &[Migration], name: Option<&str>) -> String {
 	let n = format!("{:04}", existing.len() + 1);
 	match name {
