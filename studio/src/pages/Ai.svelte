@@ -6,13 +6,21 @@
 </script>
 
 <script lang="ts">
-	import { aiChat, type AiAction, type AiMessage, type Schema } from '../api';
+	import {
+		aiChat,
+		sitePreviewToken,
+		type AiAction,
+		type AiMessage,
+		type Schema,
+	} from '../api';
 	import { untrack } from 'svelte';
 	import { entryPath, shown, site } from '../route.svelte';
 
 	/**
-	 * The AI chat on the left, the website on the right. The AI only writes
-	 * drafts, the website shows them with a preview token.
+	 * The AI chat on the left, the website on the right with every draft.
+	 * A site with zipp's preview bridge (see the crelte example) tells
+	 * which page it shows and opens pages without a reload. Changes reload
+	 * the page, crelte's live preview mode keeps the scroll position.
 	 */
 	let { schema }: { schema: Schema } = $props();
 
@@ -26,15 +34,20 @@
 	let messages = $state<AiMessage[]>(saved?.messages ?? []);
 	let lines = $state<Line[]>(saved?.lines ?? []);
 	// the schema does not change while the page is open
-	const first = untrack(() => schema.siteUrls[site.current] ?? '');
+	const home = untrack(() => schema.siteUrls[site.current] ?? '');
 	const models = untrack(() => schema.aiModels.map(m => m.id));
 	const stored = localStorage.getItem('zipp-ai-model') ?? '';
 	let model = $state(models.includes(stored) ? stored : models[0]);
 	let input = $state('');
 	let busy = $state(false);
 	let error = $state('');
-	let url = $state<string>(saved?.url ?? first);
-	let frame = $state(0);
+	// the page the website shows, without the token
+	let view = $state<string>(saved?.view ?? home);
+	let token = $state('');
+	// the src of the iframe, only set to open the site or without bridge
+	let src = $state('');
+	let bridge = $state(false);
+	let frame: HTMLIFrameElement;
 	let log: HTMLElement;
 
 	$effect(() => {
@@ -44,9 +57,52 @@
 	$effect(() => {
 		sessionStorage.setItem(
 			KEY,
-			JSON.stringify({ messages, lines, url: $state.snapshot(url) }),
+			JSON.stringify({ messages, lines, view: $state.snapshot(view) }),
 		);
 	});
+
+	sitePreviewToken()
+		.then(t => {
+			token = t;
+			src = withToken(untrack(() => view));
+		})
+		.catch(e => (error = e.message));
+
+	$effect(() => {
+		const onMessage = (e: MessageEvent) => {
+			if (e.source !== frame?.contentWindow) return;
+			if (e.data?.type === 'zipp:location') {
+				bridge = true;
+				view = e.data.url;
+			}
+		};
+		window.addEventListener('message', onMessage);
+		return () => window.removeEventListener('message', onMessage);
+	});
+
+	function withToken(url: string) {
+		if (!url) return '';
+		const u = new URL(url);
+		u.searchParams.set('token', token);
+		u.searchParams.set('x-craft-live-preview', '1');
+		return u.href;
+	}
+
+	function post(msg: object) {
+		frame?.contentWindow?.postMessage(msg, '*');
+	}
+
+	/** Opens a page in the preview. */
+	function open(url: string) {
+		view = url;
+		if (bridge) post({ type: 'zipp:open', url: withToken(url) });
+		else src = withToken(url);
+	}
+
+	/** Shows the changes: setting src loads the page again. */
+	function refresh() {
+		if (frame) frame.src = withToken(view);
+	}
 
 	function scroll() {
 		queueMicrotask(() => log?.scrollTo({ top: log.scrollHeight }));
@@ -66,15 +122,16 @@
 			{ kind: 'user', text } as AiMessage,
 		];
 		try {
-			const r = await aiChat(model, sent);
+			const r = await aiChat(model, sent, view || null);
 			messages = [...sent, ...r.messages];
 			for (const action of r.actions)
-				lines.push({ who: 'action', action });
+				if (!action.navigate) lines.push({ who: 'action', action });
 			if (r.text) lines.push({ who: 'ai', text: r.text });
-			// the website shows the last draft that changed
-			const last = r.actions.findLast(a => a.preview);
-			if (last?.preview) url = last.preview;
-			frame++;
+			// the AI opens a page where the change shows, else this one
+			// reloads
+			const nav = r.actions.findLast(a => a.navigate && a.url);
+			if (nav?.url) open(nav.url);
+			else if (r.actions.length) refresh();
 		} catch (e: any) {
 			error = e.message;
 			// the message was not answered, it can be sent again
@@ -93,7 +150,6 @@
 	function clear() {
 		messages = [];
 		lines = [];
-		url = schema.siteUrls[site.current] ?? '';
 	}
 
 	function setModel(m: string) {
@@ -123,27 +179,16 @@
 		<div class="log" bind:this={log}>
 			{#if !lines.length}
 				<p class="hint">
-					Ask for a change of the content, e.g. “Write a better intro
-					for Über uns” or “Translate the events into English”. The
-					changes are drafts: you see them on the right and publish
-					them in the editor.
+					Ask for anything on the website, e.g. “Write a better intro
+					for Über uns”, “Add an event in Basel” or “Translate the
+					footer into English”. Changes are drafts: you see them on
+					the right and publish them in the editor.
 				</p>
 			{/if}
 			{#each lines as line, i (i)}
 				{#if line.who === 'action'}
 					<div class="action">
 						<span>{line.action.text}</span>
-						{#if line.action.preview}
-							<button
-								class="link"
-								onclick={() => {
-									url = line.action.preview!;
-									frame++;
-								}}
-							>
-								Show
-							</button>
-						{/if}
 						{#if line.action.entryId && line.action.section}
 							<a
 								href="/admin{entryPath(
@@ -183,13 +228,11 @@
 
 	<section class="site">
 		<div class="bar">
-			<span class="url">{url}</span>
-			<button class="link" onclick={() => frame++}>Reload</button>
-			<a href={url} target="_blank" rel="noreferrer">Open</a>
+			<span class="url">{decodeURI(view)}</span>
+			<button class="link" onclick={refresh}>Reload</button>
+			<a href={withToken(view)} target="_blank" rel="noreferrer">Open</a>
 		</div>
-		{#key frame}
-			<iframe src={url} title="Website"></iframe>
-		{/key}
+		<iframe bind:this={frame} {src} title="Website"></iframe>
 	</section>
 </div>
 

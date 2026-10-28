@@ -9,14 +9,15 @@
 use axum::extract::State;
 use axum::routing::post;
 use axum::{Json, Router};
+use rusqlite::{Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use soe_llms::{Input, Llms, LlmsConfig, Model, Output, Request, Role, Tool};
 
 use crate::AppState;
 use crate::auth::Authed;
-use crate::drafts::{SiteDoc, create_token, get_draft, live_doc, put_draft};
-use crate::entries::{get_entry, list};
+use crate::drafts::{SiteDoc, get_draft, live_doc, put_draft};
+use crate::entries::{EntryInput, get_entry, list, save};
 use crate::error::{Error, Result};
 use crate::query::Query;
 use crate::schema::Schema;
@@ -49,7 +50,8 @@ fn tools() -> Vec<Tool> {
 	let tools = json!([
 		{
 			"name": "list_entries",
-			"description": "Lists entries of the site with id, section, type, title and uri. \
+			"description": "Lists entries with id, section, type, title, uri, whether they are \
+				published and whether they have a draft, as the editor would see them. \
 				Filter by section, type or a part of the title.",
 			"input_schema": {
 				"type": "object",
@@ -78,19 +80,96 @@ fn tools() -> Vec<Tool> {
 		},
 		{
 			"name": "update_entry",
-			"description": "Changes an entry in one site as a draft, the website stays as it is \
-				until an editor publishes. Give only what changes: the title and/or fields \
-				(top level field handles, each with its whole new value in the same JSON shape \
-				get_entry returned). Fields that are the same in all sites change everywhere.",
+			"description": "Changes an entry in one site as a draft. Give only what changes: \
+				title, slug, published and/or fields (top level field handles, each with its \
+				whole new value in the shape get_entry returned). Fields that are the same in \
+				all sites change everywhere.",
 			"input_schema": {
 				"type": "object",
 				"properties": {
 					"id": { "type": "integer" },
 					"site": { "type": "string" },
 					"title": { "type": "string" },
+					"slug": { "type": "string" },
+					"published": { "type": "boolean" },
 					"fields": { "type": "object" }
 				},
 				"required": ["id", "site"],
+				"additionalProperties": false
+			}
+		},
+		{
+			"name": "create_entry",
+			"description": "Creates an entry in a section (not a single) in every site. It \
+				stays off the website until an editor publishes it; the preview already \
+				shows it. Give title and fields for one site, then translate the other \
+				sites with update_entry. In a structure, parent_id puts it under a page.",
+			"input_schema": {
+				"type": "object",
+				"properties": {
+					"section": { "type": "string" },
+					"type": { "type": "string" },
+					"site": { "type": "string" },
+					"title": { "type": "string" },
+					"slug": { "type": "string" },
+					"parent_id": { "type": "integer" },
+					"fields": { "type": "object" }
+				},
+				"required": ["section", "type", "title"],
+				"additionalProperties": false
+			}
+		},
+		{
+			"name": "list_assets",
+			"description": "Images and files with id, filename, kind and alt text, for \
+				image and asset fields (they hold a list of asset ids).",
+			"input_schema": {
+				"type": "object",
+				"properties": {
+					"search": { "type": "string", "description": "part of the filename" }
+				},
+				"additionalProperties": false
+			}
+		},
+		{
+			"name": "get_translations",
+			"description": "The texts of the website's code in a site (menu labels, \
+				messages), by namespace and key.",
+			"input_schema": {
+				"type": "object",
+				"properties": { "site": { "type": "string" } },
+				"required": ["site"],
+				"additionalProperties": false
+			}
+		},
+		{
+			"name": "set_translation",
+			"description": "Sets one text of the website's code in a site. Unlike entries \
+				this is live at once, there are no drafts of texts. An empty value goes \
+				back to the default.",
+			"input_schema": {
+				"type": "object",
+				"properties": {
+					"site": { "type": "string" },
+					"namespace": { "type": "string" },
+					"key": { "type": "string" },
+					"value": { "type": "string" }
+				},
+				"required": ["site", "namespace", "key", "value"],
+				"additionalProperties": false
+			}
+		},
+		{
+			"name": "show_page",
+			"description": "Opens a page of the website in the preview next to the chat: \
+				the page of an entry, or a path of the site like `events`.",
+			"input_schema": {
+				"type": "object",
+				"properties": {
+					"entry_id": { "type": "integer" },
+					"path": { "type": "string" },
+					"site": { "type": "string" }
+				},
 				"additionalProperties": false
 			}
 		}
@@ -107,38 +186,97 @@ fn tools() -> Vec<Tool> {
 		.collect()
 }
 
-fn system_prompt(schema: &Schema) -> String {
+fn system_prompt(schema: &Schema, view: &str) -> String {
 	// the content model, so the model knows sections, types and fields
 	let model = json!({
 		"sites": schema.sites,
 		"sections": schema.sections,
 		"components": schema.components,
+		"translations": schema.translations,
 	});
 	format!(
-		"You help the editors of a website that runs on the headless CMS zipp. \
-		You read and change its content with tools.\n\n\
-		- Changes are drafts: the editor sees them in the preview next to this chat \
-		and publishes them. Say what you changed in a sentence or two, nothing more.\n\
+		"You help the editors of a website that runs on the headless CMS zipp. You \
+		see and change everything an editor can: entries of every section (pages, \
+		globals like header and footer), images and the texts of the website's code. \
+		Next to the chat the editor sees the website as a preview with every draft.\n\n\
+		- Changes of entries are drafts, the website stays as it is until the editor \
+		publishes them in the editor. Say what you changed in a sentence or two.\n\
 		- Before changing an entry, read it with get_entry and keep the JSON shape of \
 		its fields exactly (blocks keep their id and type, rich text is a TipTap \
 		document, links are {{\"type\", \"value\", \"label\"}}).\n\
 		- Fields marked translatable have a value per site, the others are the same \
 		in every site.\n\
-		- Answer in the language the editor writes in.\n\n\
-		The content model:\n{}",
-		serde_json::to_string(&model).unwrap()
+		- After a change, look at the page the editor sees (its fields are below). If \
+		the change shows there, stay: the preview reloads and keeps its scroll \
+		position. It shows there if it is the page itself, a global like the header \
+		or footer, or an entry a block of the page lists: a block that lists entries \
+		of a section (like upcoming events) also shows new ones. Only if it doesn't \
+		show there, open a page where it does with show_page. Also use show_page \
+		when the editor wants to see something.\n\n\
+		The content model:\n{}\n\n\
+		{view}\n\n\
+		Today is {}.\n\n\
+		Write your answers in the language the editor's last message is written \
+		in, not in the language of the content: an English message gets an English \
+		answer, even if it names a German page. Content you write into entries is \
+		in the language of its site.",
+		serde_json::to_string(&model).unwrap(),
+		today()
 	)
 }
 
-/// What the studio shows of a tool call, and where the preview goes.
+fn today() -> String {
+	date(crate::db::now())
+}
+
+/// The date in UTC of milliseconds since 1970, `2026-10-28`.
+fn date(ms: i64) -> String {
+	let days = ms.div_euclid(86_400_000);
+	// civil from days, Howard Hinnant's algorithm
+	let z = days + 719_468;
+	let era = z.div_euclid(146_097);
+	let doe = z - era * 146_097;
+	let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+	let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+	let mp = (5 * doy + 2) / 153;
+	let d = doy - (153 * mp + 2) / 5 + 1;
+	let m = if mp < 10 { mp + 3 } else { mp - 9 };
+	let y = yoe + era * 400 + i64::from(m <= 2);
+	format!("{y:04}-{m:02}-{d:02}")
+}
+
+/// What the studio shows of a tool call, and what the preview does.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Action {
 	pub text: String,
 	pub entry_id: Option<i64>,
 	pub section: Option<String>,
-	/// the draft on the website, with a preview token
-	pub preview: Option<String>,
+	/// a page of the website, without a token
+	pub url: Option<String>,
+	/// whether the preview opens `url`, else it reloads the page it shows
+	pub navigate: bool,
+}
+
+/// The url of an entry on the website.
+fn page_url(state: &AppState, site: &str, uri: Option<&str>) -> Option<String> {
+	let base = state.site_urls.get(site)?;
+	Some(format!("{}/{}", base.trim_end_matches('/'), uri?))
+}
+
+/// The content of an entry in a site as the editor sees it, draft first.
+fn current(conn: &Connection, id: i64, site: &str) -> Result<(SiteDoc, bool)> {
+	let draft = get_draft(conn, id)?;
+	let has_draft = draft.is_some();
+	let doc = match draft {
+		Some(d) => d.doc,
+		None => live_doc(conn, id)?,
+	};
+	let content = doc
+		.get(site)
+		.cloned()
+		.ok_or_else(|| Error::Request(format!("unknown site {site}")))?;
+	Ok((content, has_draft))
 }
 
 /// Runs one tool, returns its result for the model and what the studio
@@ -167,48 +305,44 @@ fn run_tool(
 			}
 			let q = Query::parse(schema, &params).map_err(Error::Request)?;
 			let (entries, _) = list(&conn, &q)?;
-			let out: Vec<Value> = entries
-				.iter()
-				.map(|e| {
+			let mut out = vec![];
+			for e in &entries {
+				let (content, draft) = current(&conn, e.id, &site)?;
+				out.push(
 					json!({ "id": e.id, "section": e.section, "type": e.ty,
-						"title": e.title, "uri": e.uri, "published": e.published })
-				})
-				.collect();
+					"title": content.title, "uri": e.uri,
+					"published": content.published, "draft": draft,
+					"parentId": e.parent_id }),
+				);
+			}
 			Ok((json!(out), None))
 		}
 		"get_entry" => {
 			let id = input["id"].as_i64().unwrap_or_default();
 			let e = get_entry(&conn, id, &site)?;
-			let doc = match get_draft(&conn, id)? {
-				Some(d) => d.doc,
-				None => live_doc(&conn, id)?,
-			};
-			let content = doc.get(&site).cloned();
+			let (content, draft) = current(&conn, id, &site)?;
 			Ok((
 				json!({ "id": id, "section": e.section, "type": e.ty, "site": site,
-					"uri": e.uri, "content": content }),
+					"uri": e.uri, "draft": draft, "content": content }),
 				None,
 			))
 		}
 		"update_entry" => {
 			let id = input["id"].as_i64().unwrap_or_default();
 			let entry = get_entry(&conn, id, &site)?;
-			let draft = get_draft(&conn, id)?;
-			let base = draft.as_ref().map(|d| d.updated_at);
-			let doc = match draft {
-				Some(d) => d.doc,
-				None => live_doc(&conn, id)?,
-			};
-			let mut content: SiteDoc =
-				doc.get(&site).cloned().ok_or_else(|| {
-					Error::Request(format!("unknown site {site}"))
-				})?;
+			let base = get_draft(&conn, id)?.map(|d| d.updated_at);
+			let (mut content, _) = current(&conn, id, &site)?;
 			if let Some(t) = input["title"].as_str() {
 				content.title = t.into();
 			}
+			if let Some(t) = input["slug"].as_str() {
+				content.slug = t.into();
+			}
+			if let Some(p) = input["published"].as_bool() {
+				content.published = p;
+			}
 			if let Some(Value::Object(changes)) = input.get("fields") {
-				let fields = content.fields.as_object_mut();
-				let Some(fields) = fields else {
+				let Some(fields) = content.fields.as_object_mut() else {
 					return Err(Error::Request(
 						"the entry has no fields".into(),
 					));
@@ -217,26 +351,202 @@ fn run_tool(
 					fields.insert(k.clone(), v.clone());
 				}
 			}
+			let title = content.title.clone();
 			put_draft(&conn, schema, id, &site, content, base, Some(user_id))?;
 
-			let token = create_token(&conn, id)?;
-			let preview = match (&entry.uri, state.site_urls.get(&site)) {
-				(Some(uri), Some(base)) => Some(format!(
-					"{}/{uri}?token={token}",
-					base.trim_end_matches('/')
-				)),
-				_ => None,
-			};
 			let action = Action {
-				text: format!("Changed the draft of {} ({site})", entry.title),
+				text: format!("Changed {title} ({site})"),
 				entry_id: Some(id),
 				section: Some(entry.section.clone()),
-				preview,
+				url: page_url(state, &site, entry.uri.as_deref()),
+				navigate: false,
 			};
 			Ok((json!({ "ok": true, "draft": true }), Some(action)))
 		}
+		"create_entry" => {
+			let req =
+				|k: &str| input[k].as_str().unwrap_or_default().to_string();
+			// live it is off, the draft publishes it in every site
+			let entry = save(
+				&conn,
+				schema,
+				None,
+				EntryInput {
+					section: req("section"),
+					ty: req("type"),
+					site: Some(site.clone()),
+					title: req("title"),
+					slug: req("slug"),
+					published: false,
+					parent_id: input["parent_id"].as_i64(),
+					fields: input.get("fields").cloned().unwrap_or(json!({})),
+				},
+			)?;
+			for s in &schema.sites {
+				let base = get_draft(&conn, entry.id)?.map(|d| d.updated_at);
+				let (mut content, _) = current(&conn, entry.id, &s.handle)?;
+				content.published = true;
+				put_draft(
+					&conn,
+					schema,
+					entry.id,
+					&s.handle,
+					content,
+					base,
+					Some(user_id),
+				)?;
+			}
+			let action = Action {
+				text: format!("Created {} ({})", entry.title, entry.section),
+				entry_id: Some(entry.id),
+				section: Some(entry.section.clone()),
+				url: page_url(state, &site, entry.uri.as_deref()),
+				navigate: false,
+			};
+			Ok((
+				json!({ "ok": true, "id": entry.id, "uri": entry.uri }),
+				Some(action),
+			))
+		}
+		"list_assets" => {
+			let search =
+				format!("%{}%", input["search"].as_str().unwrap_or_default());
+			let mut stmt = conn.prepare(
+				"SELECT id, filename, kind, alt FROM assets
+				WHERE filename LIKE ?1 ORDER BY id DESC LIMIT 200",
+			)?;
+			let rows = stmt.query_map([search], |r| {
+				Ok(
+					json!({ "id": r.get::<_, i64>(0)?, "filename": r.get::<_, String>(1)?,
+					"kind": r.get::<_, String>(2)?, "alt": r.get::<_, String>(3)? }),
+				)
+			})?;
+			let out: Vec<Value> = rows.collect::<rusqlite::Result<_>>()?;
+			Ok((json!(out), None))
+		}
+		"get_translations" => {
+			let texts = crate::translations::texts(&conn, schema, &site)?;
+			Ok((json!(texts), None))
+		}
+		"set_translation" => {
+			let ns = input["namespace"].as_str().unwrap_or_default();
+			let key = input["key"].as_str().unwrap_or_default();
+			let value = input["value"].as_str().unwrap_or_default();
+			crate::translations::set(&conn, schema, &site, ns, key, value)?;
+			let action = Action {
+				text: format!("Set the text {ns}.{key} ({site}), live at once"),
+				entry_id: None,
+				section: None,
+				url: None,
+				navigate: false,
+			};
+			Ok((json!({ "ok": true }), Some(action)))
+		}
+		"show_page" => {
+			let url = match (input["entry_id"].as_i64(), input["path"].as_str())
+			{
+				(Some(id), _) => {
+					let e = get_entry(&conn, id, &site)?;
+					let Some(url) = page_url(state, &site, e.uri.as_deref())
+					else {
+						return Err(Error::Request(format!(
+							"{} has no page, it shows where it is used",
+							e.title
+						)));
+					};
+					url
+				}
+				(None, Some(path)) => {
+					page_url(state, &site, Some(path.trim_start_matches('/')))
+						.ok_or_else(|| {
+						Error::Request(format!("site {site} has no url"))
+					})?
+				}
+				(None, None) => {
+					return Err(Error::Request("give entry_id or path".into()));
+				}
+			};
+			let action = Action {
+				text: format!("Opened {url}"),
+				entry_id: None,
+				section: None,
+				url: Some(url),
+				navigate: true,
+			};
+			Ok((json!({ "ok": true }), Some(action)))
+		}
 		_ => Err(Error::Request(format!("unknown tool {name}"))),
 	}
+}
+
+/// What the editor sees, from the url of the preview: the site and entry
+/// of the page, for the system prompt.
+fn describe_view(state: &AppState, url: Option<&str>) -> String {
+	let Some(url) = url else {
+		return "The preview shows no page yet.".into();
+	};
+	// the longest base first, `/en` is longer than the site without it
+	let mut sites: Vec<_> = state.site_urls.iter().collect();
+	sites.sort_by_key(|(_, base)| std::cmp::Reverse(base.len()));
+	let path = url.split(['?', '#']).next().unwrap_or(url);
+	let found = sites.into_iter().find_map(|(site, base)| {
+		let base = base.trim_end_matches('/');
+		let rest = path.strip_prefix(base)?;
+		if !(rest.is_empty() || rest.starts_with('/')) {
+			return None;
+		}
+		Some((site.clone(), rest.trim_matches('/').to_string()))
+	});
+	let Some((site, uri)) = found else {
+		return format!("The preview shows {url}.");
+	};
+	let conn = state.db.conn();
+	let uri = percent_decode(&uri);
+	let entry: Option<(i64, String, String)> = conn
+		.query_row(
+			"SELECT e.id, e.section, s.title FROM entries e
+			JOIN entry_sites s ON s.entry_id = e.id
+			WHERE s.site = ?1 AND s.uri = ?2",
+			rusqlite::params![site, uri],
+			|r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+		)
+		.optional()
+		.ok()
+		.flatten();
+	let Some((id, section, title)) = entry else {
+		return format!("The editor sees the page {url} in site {site}.");
+	};
+	// what is on the page, as the preview shows it
+	let content = current(&conn, id, &site)
+		.ok()
+		.and_then(|(c, _)| serde_json::to_string(&c.fields).ok())
+		.unwrap_or_default();
+	let content: String = content.chars().take(20_000).collect();
+	format!(
+		"The editor sees the page {url} in site {site}: entry {id} \"{title}\" \
+		of section {section}, plus the globals (header, footer). Its fields:\n{content}"
+	)
+}
+
+/// `%C3%BC` in a path to `ü`.
+fn percent_decode(s: &str) -> String {
+	let bytes = s.as_bytes();
+	let mut out = Vec::with_capacity(bytes.len());
+	let mut i = 0;
+	while i < bytes.len() {
+		if bytes[i] == b'%'
+			&& let Some(b) = s
+				.get(i + 1..i + 3)
+				.and_then(|h| u8::from_str_radix(h, 16).ok())
+		{
+			out.push(b);
+			i += 3;
+			continue;
+		}
+		out.push(bytes[i]);
+		i += 1;
+	}
+	String::from_utf8_lossy(&out).into_owned()
 }
 
 /// A message of the conversation as the studio keeps it.
@@ -295,6 +605,8 @@ impl From<Message> for Input {
 struct ChatReq {
 	/// one of [`MODELS`], default the first
 	model: Option<String>,
+	/// the page the preview shows
+	view: Option<String>,
 	/// the conversation so far, the new user message last
 	messages: Vec<Message>,
 }
@@ -322,6 +634,7 @@ async fn chat(
 		None => MODELS[0].0.into(),
 	};
 
+	let view = describe_view(&state, req.view.as_deref());
 	let mut messages = req.messages;
 	let start = messages.len();
 	let mut actions = vec![];
@@ -330,7 +643,7 @@ async fn chat(
 	for _ in 0..MAX_TURNS {
 		let request = Request {
 			input: messages.iter().cloned().map(Into::into).collect(),
-			instructions: system_prompt(&state.schema),
+			instructions: system_prompt(&state.schema, &view),
 			model: Model::OpenRouter(Some(model.clone())),
 			user_id: auth.user_id.to_string(),
 			tools: tools(),
@@ -393,4 +706,21 @@ async fn chat(
 
 pub fn routes() -> Router<AppState> {
 	Router::new().route("/ai/chat", post(chat))
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn dates() {
+		assert_eq!(date(0), "1970-01-01");
+		assert_eq!(date(951_782_400_000), "2000-02-29");
+		assert_eq!(date(1_793_145_600_000), "2026-10-28");
+	}
+
+	#[test]
+	fn decodes_paths() {
+		assert_eq!(percent_decode("%C3%BCber-uns/team"), "über-uns/team");
+	}
 }

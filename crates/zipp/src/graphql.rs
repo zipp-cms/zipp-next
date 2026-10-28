@@ -45,7 +45,7 @@ use crate::AppState;
 use crate::assets::{Asset, get_many};
 use crate::auth::session;
 use crate::db::Db;
-use crate::drafts::{Doc, preview};
+use crate::drafts::{Preview, get_draft, preview};
 use crate::entries::{Entry, list};
 use crate::error::Result;
 use crate::field_type::{GraphqlType, Scalar as FieldScalar};
@@ -84,8 +84,8 @@ pub type SiteUrls = std::collections::HashMap<String, String>;
 /// Who asks, set per request.
 struct Viewer {
 	published_only: bool,
-	/// the entry of a preview token and its draft
-	preview: Option<(i64, Doc)>,
+	/// what a preview token shows
+	preview: Option<Preview>,
 }
 
 /// Markdown to html, raw html in it is dropped (editors write text).
@@ -1163,7 +1163,11 @@ fn query(
 	let viewer = ctx.data::<Viewer>()?;
 	let mut q = Query::parse(schema, params).map_err(GqlError::new)?;
 	q.published_only = viewer.published_only;
-	q.preview_id = viewer.preview.as_ref().map(|(id, _)| *id);
+	match &viewer.preview {
+		Some(Preview::Entry(id, _)) => q.preview_id = Some(*id),
+		Some(Preview::All) => q.preview_all = true,
+		None => {}
+	}
 	Ok(q)
 }
 
@@ -1175,14 +1179,29 @@ fn load(
 	let db = ctx.data::<Db>()?;
 	let (mut entries, _) = list(&db.conn(), &q)?;
 
-	// the entry of a preview shows its draft
-	if let Some((id, doc)) = &ctx.data::<Viewer>()?.preview {
-		for e in entries.iter_mut().filter(|e| e.id == *id) {
-			if let Some(sd) = doc.get(&e.site) {
-				e.title = sd.title.clone();
-				e.fields = sd.fields.clone();
+	// the entry of a preview shows its draft, or every entry its own
+	match &ctx.data::<Viewer>()?.preview {
+		Some(Preview::Entry(id, doc)) => {
+			for e in entries.iter_mut().filter(|e| e.id == *id) {
+				if let Some(sd) = doc.get(&e.site) {
+					e.title = sd.title.clone();
+					e.fields = sd.fields.clone();
+				}
 			}
 		}
+		Some(Preview::All) => {
+			let conn = db.conn();
+			for e in entries.iter_mut() {
+				let draft = get_draft(&conn, e.id)?;
+				if let Some(sd) =
+					draft.as_ref().and_then(|d| d.doc.get(&e.site))
+				{
+					e.title = sd.title.clone();
+					e.fields = sd.fields.clone();
+				}
+			}
+		}
+		None => {}
 	}
 	Ok(entries)
 }
@@ -1487,6 +1506,75 @@ mod tests {
 		});
 		let data = gql.execute(req).await.data.into_json().unwrap();
 		assert_eq!(data["entry"], json!({ "title": "Draft", "intro": "new" }));
+	}
+
+	#[tokio::test]
+	async fn site_preview_shows_every_draft() {
+		let db = Db::memory().unwrap();
+		let s = Arc::new(site());
+		let gql = build(s.clone(), db.clone(), String::new(), SiteUrls::new())
+			.unwrap();
+		let preview = {
+			let conn = db.conn();
+			let draft = |title: &str, published: bool| crate::drafts::SiteDoc {
+				title: title.into(),
+				slug: title.to_lowercase(),
+				published,
+				fields: json!({}),
+			};
+			// new, only its draft publishes it
+			let mut e = input("pages", "page", "New", json!({}));
+			e.published = false;
+			let new = save(&conn, &s, None, e).unwrap();
+			crate::drafts::put_draft(
+				&conn,
+				&s,
+				new.id,
+				"de",
+				draft("New", true),
+				None,
+				None,
+			)
+			.unwrap();
+			// live, its draft takes it down
+			let old =
+				save(&conn, &s, None, input("pages", "page", "Old", json!({})))
+					.unwrap();
+			crate::drafts::put_draft(
+				&conn,
+				&s,
+				old.id,
+				"de",
+				draft("Old", false),
+				None,
+				None,
+			)
+			.unwrap();
+			save(&conn, &s, None, input("pages", "page", "Same", json!({})))
+				.unwrap();
+			let token = crate::drafts::create_site_token(&conn).unwrap();
+			crate::drafts::preview(&conn, &token).unwrap()
+		};
+
+		let titles = |preview| {
+			let req = async_graphql::Request::new(
+				r#"{ entries(section: "pages", order: "title") { title } }"#,
+			)
+			.data(Viewer {
+				published_only: true,
+				preview,
+			});
+			let gql = gql.clone();
+			async move { gql.execute(req).await.data.into_json().unwrap() }
+		};
+		assert_eq!(
+			titles(None).await["entries"],
+			json!([{ "title": "Old" }, { "title": "Same" }])
+		);
+		assert_eq!(
+			titles(preview).await["entries"],
+			json!([{ "title": "New" }, { "title": "Same" }])
+		);
 	}
 
 	#[tokio::test]

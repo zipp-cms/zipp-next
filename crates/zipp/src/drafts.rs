@@ -8,7 +8,9 @@
 //! only publishes more drafts in the same transaction.
 //!
 //! A preview token shows the draft of one entry on the website: crelte
-//! passes `?token=` on to GraphQL, which then answers with the draft.
+//! passes `?token=` on to GraphQL, which then answers with the draft. A
+//! token of the whole site shows every draft, also of entries that only
+//! a draft publishes.
 
 use std::collections::BTreeMap;
 
@@ -374,6 +376,15 @@ pub fn restore(
 
 pub fn create_token(conn: &Connection, id: i64) -> Result<String> {
 	get_entry_exists(conn, id)?;
+	insert_token(conn, Some(id))
+}
+
+/// A token that shows every draft.
+pub fn create_site_token(conn: &Connection) -> Result<String> {
+	insert_token(conn, None)
+}
+
+fn insert_token(conn: &Connection, id: Option<i64>) -> Result<String> {
 	let n: u128 = rand::rng().random();
 	let token = format!("{n:032x}");
 	conn.execute(
@@ -390,10 +401,18 @@ fn get_entry_exists(conn: &Connection, id: i64) -> Result<()> {
 	Ok(())
 }
 
-/// The entry a valid token shows and its draft, the live content if
-/// there is none.
-pub fn preview(conn: &Connection, token: &str) -> Result<Option<(i64, Doc)>> {
-	let id: Option<i64> = conn
+/// What a preview token shows.
+#[derive(Debug, Clone)]
+pub enum Preview {
+	/// one entry and its draft, the live content if there is none
+	Entry(i64, Doc),
+	/// every draft
+	All,
+}
+
+/// What a valid token shows.
+pub fn preview(conn: &Connection, token: &str) -> Result<Option<Preview>> {
+	let id: Option<Option<i64>> = conn
 		.query_row(
 			"SELECT entry_id FROM preview_tokens
 			WHERE token = ?1 AND expires_at > ?2",
@@ -401,12 +420,16 @@ pub fn preview(conn: &Connection, token: &str) -> Result<Option<(i64, Doc)>> {
 			|r| r.get(0),
 		)
 		.optional()?;
-	let Some(id) = id else { return Ok(None) };
+	let id = match id {
+		None => return Ok(None),
+		Some(None) => return Ok(Some(Preview::All)),
+		Some(Some(id)) => id,
+	};
 	let doc = match get_draft(conn, id)? {
 		Some(d) => d.doc,
 		None => live_doc(conn, id)?,
 	};
-	Ok(Some((id, doc)))
+	Ok(Some(Preview::Entry(id, doc)))
 }
 
 #[derive(Debug, Serialize)]
@@ -503,6 +526,14 @@ struct TokenResp {
 	token: String,
 }
 
+async fn site_preview_route(
+	State(state): State<AppState>,
+	_auth: Authed,
+) -> Result<Json<TokenResp>> {
+	let token = create_site_token(&state.db.conn())?;
+	Ok(Json(TokenResp { token }))
+}
+
 async fn preview_route(
 	State(state): State<AppState>,
 	_auth: Authed,
@@ -523,6 +554,7 @@ pub fn routes() -> Router<AppState> {
 		.route("/entries/{id}/revisions/{rev}", get(revision_route))
 		.route("/entries/{id}/revisions/{rev}/restore", post(restore_route))
 		.route("/entries/{id}/preview", post(preview_route))
+		.route("/preview", post(site_preview_route))
 }
 
 #[cfg(test)]
@@ -732,6 +764,13 @@ mod tests {
 		assert_eq!(d.doc["de"].title, "One");
 	}
 
+	fn entry_doc(p: Option<Preview>) -> Doc {
+		match p {
+			Some(Preview::Entry(_, doc)) => doc,
+			_ => panic!("not the preview of an entry"),
+		}
+	}
+
 	#[test]
 	fn tokens_show_the_draft() {
 		let db = Db::memory().unwrap();
@@ -742,7 +781,7 @@ mod tests {
 				.unwrap();
 		let token = create_token(&conn, e.id).unwrap();
 		assert_eq!(
-			preview(&conn, &token).unwrap().unwrap().1["de"].title,
+			entry_doc(preview(&conn, &token).unwrap())["de"].title,
 			"Live"
 		);
 
@@ -757,7 +796,7 @@ mod tests {
 		)
 		.unwrap();
 		assert_eq!(
-			preview(&conn, &token).unwrap().unwrap().1["de"].title,
+			entry_doc(preview(&conn, &token).unwrap())["de"].title,
 			"Draft"
 		);
 		assert!(preview(&conn, "nope").unwrap().is_none());

@@ -377,12 +377,22 @@ export type AiAction = {
 	text: string;
 	entryId: number | null;
 	section: string | null;
-	preview: string | null;
+	/** a page of the website, without a token */
+	url: string | null;
+	/** whether the preview opens `url`, else it reloads its page */
+	navigate: boolean;
 };
 
+/** `view` is the page the preview shows. */
 export function aiChat(
 	model: string,
 	messages: AiMessage[],
+	view: string | null,
 ): Promise<{ messages: AiMessage[]; text: string; actions: AiAction[] }> {
-	return request('POST', '/ai/chat', { model, messages });
+	return request('POST', '/ai/chat', { model, messages, view });
+}
+
+/** A token that shows every draft on the website, for a day. */
+export async function sitePreviewToken(): Promise<string> {
+	return (await request('POST', '/preview')).token;
 }

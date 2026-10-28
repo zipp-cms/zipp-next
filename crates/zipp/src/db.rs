@@ -79,7 +79,8 @@ const MIGRATIONS: &[&str] = &[r#"
 	-- short lived tokens that show the draft of an entry on the website
 	CREATE TABLE preview_tokens (
 		token TEXT PRIMARY KEY,
-		entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+		-- NULL: every draft, like the AI chat of the studio shows them
+		entry_id INTEGER REFERENCES entries(id) ON DELETE CASCADE,
 		expires_at INTEGER NOT NULL
 	);
 

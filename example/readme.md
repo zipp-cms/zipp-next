@@ -34,7 +34,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |
 | Globals | Settings → Header, Footer | singles without a url, crelte reads them like Craft's globals |
 | Translations | Settings → Translations | the keys come from the code, editors only translate |
-| AI chat | AI in the top bar | ask for a change; the AI writes a draft, the website on the right shows it |
+| AI chat | AI in the top bar | ask for anything, also a new event; it writes drafts, stays on your page when the change shows there and opens another page when not |
 
 ## On the website
 

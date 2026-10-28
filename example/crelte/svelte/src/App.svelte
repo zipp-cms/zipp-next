@@ -18,6 +18,7 @@
 <script>
 	import Footer from './components/Footer.svelte';
 	import Header from './components/Header.svelte';
+	import PreviewBridge from './components/PreviewBridge.svelte';
 
 	/** @type {import('crelte').AppProps} */
 	let { route } = $props();
@@ -35,6 +36,7 @@
 	{/if}
 </svelte:head>
 
+<PreviewBridge />
 <Header />
 
 <!-- update entire component if page changes -->

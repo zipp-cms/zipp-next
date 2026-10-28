@@ -38,6 +38,8 @@ pub struct Query {
 	pub published_only: bool,
 	/// shown even if not published, the entry of a preview token
 	pub preview_id: Option<i64>,
+	/// every draft is shown, see [`Preview::All`](crate::drafts::Preview)
+	pub preview_all: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -87,6 +89,7 @@ impl Query {
 			offset: 0,
 			published_only: false,
 			preview_id: None,
+			preview_all: false,
 		};
 		let int = |k: &str, v: &str| {
 			v.parse::<i64>()
@@ -270,7 +273,12 @@ impl Query {
 				WHERE target_id = ? AND site = s.site)";
 			cond(sql.into(), vec![Value::Integer(id)]);
 		}
-		if self.published_only {
+		if self.published_only && self.preview_all {
+			// published as the draft has it, or live without a draft
+			let sql = "COALESCE((SELECT json_extract(d.doc, '$.' || s.site || '.published') \
+				FROM drafts d WHERE d.entry_id = e.id), s.published) = 1";
+			cond(sql.into(), vec![]);
+		} else if self.published_only {
 			let preview = Value::Integer(self.preview_id.unwrap_or(0));
 			cond("(s.published = 1 OR e.id = ?)".into(), vec![preview]);
 		}

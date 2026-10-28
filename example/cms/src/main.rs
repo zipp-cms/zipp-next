@@ -156,7 +156,11 @@ fn schema() -> Schema {
 				// three options: buttons in the studio
 				Field::dropdown(
 					"width",
-					[("small", "Small"), ("wide", "Wide"), ("full", "Full width")],
+					[
+						("small", "Small"),
+						("wide", "Wide"),
+						("full", "Full width"),
+					],
 				),
 			],
 		)

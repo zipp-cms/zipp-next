@@ -154,9 +154,15 @@ Cms::new(schema(), zipp::migrations!())
   `../craft/.env`, see `example/crelte/craft/.env.example`.
 - **AI chat.** `--openrouter-key-file <file>` adds *AI* to the studio:
   a chat on the left, the website on the right. The model (Claude
-  Sonnet, GPT Sol or Gemini over OpenRouter, through soe-llms) lists,
-  reads and changes entries with tools, but only as drafts: the website
-  on the right shows them with a preview token, an editor publishes.
+  Sonnet, GPT Sol or Gemini over OpenRouter, through soe-llms) sees and
+  changes what an editor can: entries of every section, new entries,
+  images, the texts of the code. Entries change as drafts, the website on
+  the right shows every draft with a token of the whole site
+  (`POST /api/preview`), an editor publishes. The model knows the page on
+  the right and its content; it stays there when the change shows on it
+  and opens another page when not. A site tells the studio its page with
+  a small bridge (`example/crelte/svelte/src/components/PreviewBridge.svelte`),
+  crelte's live preview mode keeps the scroll position on reloads.
 - **Types for the rest api.** `types` prints TypeScript types of all
   entries and blocks.
 
