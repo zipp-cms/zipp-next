@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getSchema, logout, navGroups, token, type Schema } from './api';
-	import { go, route, setSite, shown, site } from './route.svelte';
+	import { go, route, setSite, shown, site, toLogin } from './route.svelte';
 	import Login from './pages/Login.svelte';
 	import List from './pages/List.svelte';
 	import Edit from './pages/Edit.svelte';
@@ -29,7 +29,20 @@
 			return { handle: h, name: 'Translations', icon: 'translate' };
 		}),
 	);
-	const doc = $derived(schema?.docs.find(d => d.handle === current));
+	const doc = $derived.by(() => {
+		const r = route.current;
+		return r.page === 'doc'
+			? schema?.docs.find(d => d.handle === r.handle)
+			: (schema?.docs.find(d => d.handle === current) ?? null);
+	});
+
+	/** The page of a section, doc or the translations in the nav. */
+	function navHref(handle: string) {
+		if (handle === 'translations') return '/admin/translations';
+		if (schema?.docs.some(d => d.handle === handle))
+			return '/admin/docs/' + handle;
+		return '/admin/entries/' + handle;
+	}
 	const current = $derived.by(() => {
 		const r = route.current;
 		if (r.page === 'list') return r.section ?? groups[0]?.sections[0];
@@ -41,7 +54,7 @@
 		if (!loggedIn) {
 			// an old session failed, the next login starts over
 			error = '';
-			if (route.current.page !== 'login') go('#/login');
+			toLogin();
 			return;
 		}
 		if (schema) return;
@@ -58,7 +71,7 @@
 	async function onLogout() {
 		await logout();
 		schema = null;
-		go('#/login');
+		go('/login');
 	}
 </script>
 
@@ -75,15 +88,15 @@
 			<nav class="top">
 				{#each groups as g (g.name)}
 					<a
-						href="#/list/{g.sections[0]}"
+						href={navHref(g.sections[0])}
 						class:active={!assets && !ai && g === group}
 					>
 						{g.name}
 					</a>
 				{/each}
-				<a href="#/assets" class:active={assets}>Assets</a>
+				<a href="/admin/assets" class:active={assets}>Assets</a>
 				{#if schema.aiModels.length}
-					<a href="#/ai" class:active={ai}>AI</a>
+					<a href="/admin/ai" class:active={ai}>AI</a>
 				{/if}
 			</nav>
 			<div class="right">
@@ -103,14 +116,14 @@
 		</header>
 		<nav class="side">
 			{#if assets}
-				<a href="#/assets" class="active">
+				<a href="/admin/assets" class="active">
 					<Icon name="dashboard" />
 					Assets
 				</a>
 			{:else}
 				{#each groupItems as item (item.handle)}
 					<a
-						href="#/list/{item.handle}"
+						href={navHref(item.handle)}
 						class:active={shown.section === item.handle}
 					>
 						<Icon name={item.icon} />

@@ -1,47 +1,88 @@
 /**
- * Hash routes: `#/login`, `#/assets`, `#/ai`, `#/list/<section>`, `#/new/<section>`,
- * `#/entry/<id>`.
+ * The pages of the studio are paths under `/admin`, like Craft:
+ * `/admin/login`, `/admin/assets`, `/admin/ai`, `/admin/translations`,
+ * `/admin/docs/<doc>`, `/admin/entries/<section>`,
+ * `/admin/entries/<section>/new`, `/admin/entries/<section>/<id>`.
  */
 export type Route =
 	| { page: 'login' }
 	| { page: 'assets' }
 	| { page: 'ai' }
 	| { page: 'translations' }
+	| { page: 'doc'; handle: string }
 	| { page: 'list'; section: string | null }
 	| { page: 'new'; section: string }
-	| { page: 'entry'; id: number };
+	| { page: 'entry'; section: string; id: number };
 
-function parse(hash: string): Route {
-	const [page, arg] = hash.replace(/^#\/?/, '').split('/');
+export const BASE = '/admin';
+
+function parse(path: string): Route {
+	const [page, a, b] = path
+		.slice(BASE.length)
+		.split('/')
+		.filter(p => p)
+		.map(decodeURIComponent);
 	switch (page) {
 		case 'login':
-			return { page: 'login' };
 		case 'assets':
-			return { page: 'assets' };
 		case 'ai':
-			return { page: 'ai' };
 		case 'translations':
-			return { page: 'translations' };
-		case 'new':
-			return { page: 'new', section: arg };
-		case 'entry':
-			return { page: 'entry', id: Number(arg) };
-		case 'list':
-			return { page: 'list', section: arg ?? null };
+			return { page };
+		case 'docs':
+			return { page: 'doc', handle: a };
+		case 'entries':
+			if (b === 'new') return { page: 'new', section: a };
+			if (b) return { page: 'entry', section: a, id: Number(b) };
+			return { page: 'list', section: a ?? null };
 		default:
 			return { page: 'list', section: null };
 	}
 }
 
-export const route = $state({ current: parse(location.hash) });
+export const route = $state({ current: parse(location.pathname) });
 
-window.addEventListener('hashchange', () => {
-	route.current = parse(location.hash);
+window.addEventListener('popstate', () => {
+	route.current = parse(location.pathname);
 });
 
-export function go(hash: string) {
-	location.hash = hash;
+/** Opens a page of the studio, `path` without `/admin`. */
+export function go(path: string, replace = false) {
+	const url = BASE + path;
+	if (replace) history.replaceState(null, '', url);
+	else if (url !== location.pathname) history.pushState(null, '', url);
+	route.current = parse(url);
+	if (!replace) window.scrollTo(0, 0);
 }
+
+/** Opens the login, which comes back to this page. */
+export function toLogin() {
+	if (route.current.page === 'login') return;
+	sessionStorage.setItem('zipp-back', location.pathname.slice(BASE.length));
+	go('/login', true);
+}
+
+/** After the login: the page that was wanted. */
+export function back() {
+	const path = sessionStorage.getItem('zipp-back');
+	sessionStorage.removeItem('zipp-back');
+	go(path && path !== '/login' ? path : '/', true);
+}
+
+/** The path of an entry in the studio. */
+export function entryPath(section: string, id: number) {
+	return `/entries/${section}/${id}`;
+}
+
+// links to pages of the studio open without a reload
+document.addEventListener('click', e => {
+	if (e.defaultPrevented || e.button !== 0) return;
+	if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+	const a = (e.target as Element).closest?.('a');
+	if (!a || a.target || a.origin !== location.origin) return;
+	if (!a.pathname.startsWith(BASE + '/') && a.pathname !== BASE) return;
+	e.preventDefault();
+	go(a.pathname.slice(BASE.length));
+});
 
 /** The site the studio edits, the same in all pages. */
 export const site = $state({

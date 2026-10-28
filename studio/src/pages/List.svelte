@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { listEntries, moveEntry, type Entry, type Schema } from '../api';
-	import { go, shown, site } from '../route.svelte';
+	import { entryPath, go, shown, site } from '../route.svelte';
 	import Icon from '../lib/Icon.svelte';
 
 	let { schema, section }: { schema: Schema; section: string } = $props();
@@ -29,7 +29,7 @@
 			.then(r => {
 				// a single has no list, it opens its entry
 				if (sec.kind === 'single' && r.entries[0]) {
-					location.replace('#/entry/' + r.entries[0].id);
+					go(entryPath(section, r.entries[0].id), true);
 					return;
 				}
 				entries = r.entries;
@@ -112,7 +112,7 @@
 <div class="page-top">
 	<h1>{sec.name}</h1>
 	{#if sec.kind !== 'single'}
-		<button class="dark" onclick={() => go('#/new/' + section)}>
+		<button class="dark" onclick={() => go(`/entries/${section}/new`)}>
 			<Icon name="add" />
 			New entry
 		</button>
@@ -165,7 +165,9 @@
 						<Icon name="move" />
 					</span>
 				{/if}
-				<a class="title" href="#/entry/{e.id}">{e.title}</a>
+				<a class="title" href="/admin{entryPath(section, e.id)}">
+					{e.title}
+				</a>
 			</span>
 			<span class="status">
 				<span

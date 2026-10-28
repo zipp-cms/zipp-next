@@ -3,7 +3,7 @@
 
 use axum::Router;
 use axum::http::{StatusCode, Uri, header};
-use axum::response::{IntoResponse, Response};
+use axum::response::{IntoResponse, Redirect, Response};
 
 use crate::AppState;
 
@@ -14,10 +14,13 @@ struct Files;
 async fn file(uri: Uri) -> Response {
 	let path = uri.path().trim_start_matches('/');
 
-	// the studio routes with the hash, any other path is a missing file
+	// the pages of the studio are under /admin, any other path is a file
 	let (path, file) = match Files::get(path) {
 		Some(f) => (path, f),
 		None if path.is_empty() => {
+			return Redirect::to("/admin").into_response();
+		}
+		None if path == "admin" || path.starts_with("admin/") => {
 			("index.html", Files::get("index.html").unwrap())
 		}
 		None => return StatusCode::NOT_FOUND.into_response(),

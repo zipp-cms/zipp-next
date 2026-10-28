@@ -23,7 +23,7 @@
 		type Values,
 	} from '../api';
 	import { untrack } from 'svelte';
-	import { go, shown, site } from '../route.svelte';
+	import { entryPath, go, shown, site } from '../route.svelte';
 	import Fields from '../fields/Fields.svelte';
 	import Icon from '../lib/Icon.svelte';
 	import { changedPaths } from '../lib/diff';
@@ -196,7 +196,7 @@
 					published,
 					fields: $state.snapshot(fields),
 				});
-				return go('#/entry/' + entry.id);
+				return go(entryPath(sec, entry.id), true);
 			}
 			// the last keys first
 			clearTimeout(timer);
@@ -318,7 +318,7 @@
 	async function remove() {
 		if (id === null || !confirm(`Delete ${title} in all sites?`)) return;
 		await deleteEntry(id);
-		go('#/list/' + sec);
+		go('/entries/' + sec);
 	}
 
 	function onkeydown(e: KeyboardEvent) {

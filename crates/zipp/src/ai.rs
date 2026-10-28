@@ -136,6 +136,7 @@ fn system_prompt(schema: &Schema) -> String {
 pub struct Action {
 	pub text: String,
 	pub entry_id: Option<i64>,
+	pub section: Option<String>,
 	/// the draft on the website, with a preview token
 	pub preview: Option<String>,
 }
@@ -229,6 +230,7 @@ fn run_tool(
 			let action = Action {
 				text: format!("Changed the draft of {} ({site})", entry.title),
 				entry_id: Some(id),
+				section: Some(entry.section.clone()),
 				preview,
 			};
 			Ok((json!({ "ok": true, "draft": true }), Some(action)))

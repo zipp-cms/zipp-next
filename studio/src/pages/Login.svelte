@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { login } from '../api';
-	import { go } from '../route.svelte';
+	import { back } from '../route.svelte';
 
 	let email = $state('');
 	let password = $state('');
@@ -11,7 +11,7 @@
 		error = '';
 		try {
 			await login(email, password);
-			go('#/');
+			back();
 		} catch (e: any) {
 			error = e.message;
 		}

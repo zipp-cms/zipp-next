@@ -1,3 +1,5 @@
+import { toLogin } from './route.svelte';
+
 export type LinkKind = 'entry' | 'url' | 'email' | 'phone' | 'asset';
 
 export type Link = {
@@ -144,7 +146,7 @@ async function request(method: string, path: string, body?: unknown) {
 	if (!resp.ok) {
 		if (resp.status === 401 || resp.status === 403) {
 			setToken(null);
-			location.hash = '#/login';
+			toLogin();
 		}
 		const fields = data?.error?.type === 'INVALID' ? data.error.detail : [];
 		throw new ApiError(
@@ -371,6 +373,7 @@ export type AiMessage =
 export type AiAction = {
 	text: string;
 	entryId: number | null;
+	section: string | null;
 	preview: string | null;
 };
 

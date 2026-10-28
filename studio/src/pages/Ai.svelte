@@ -6,14 +6,9 @@
 </script>
 
 <script lang="ts">
-	import {
-		aiChat,
-		type AiAction,
-		type AiMessage,
-		type Schema,
-	} from '../api';
+	import { aiChat, type AiAction, type AiMessage, type Schema } from '../api';
 	import { untrack } from 'svelte';
-	import { shown, site } from '../route.svelte';
+	import { entryPath, shown, site } from '../route.svelte';
 
 	/**
 	 * The AI chat on the left, the website on the right. The AI only writes
@@ -73,7 +68,8 @@
 		try {
 			const r = await aiChat(model, sent);
 			messages = [...sent, ...r.messages];
-			for (const action of r.actions) lines.push({ who: 'action', action });
+			for (const action of r.actions)
+				lines.push({ who: 'action', action });
 			if (r.text) lines.push({ who: 'ai', text: r.text });
 			// the website shows the last draft that changed
 			const last = r.actions.findLast(a => a.preview);
@@ -119,7 +115,9 @@
 					<option value={m.id}>{m.name}</option>
 				{/each}
 			</select>
-			<button onclick={clear} disabled={busy || !lines.length}>New</button>
+			<button onclick={clear} disabled={busy || !lines.length}>
+				New
+			</button>
 		</div>
 
 		<div class="log" bind:this={log}>
@@ -141,11 +139,20 @@
 								onclick={() => {
 									url = line.action.preview!;
 									frame++;
-								}}>Show</button
+								}}
 							>
+								Show
+							</button>
 						{/if}
-						{#if line.action.entryId}
-							<a href="#/entry/{line.action.entryId}">Open</a>
+						{#if line.action.entryId && line.action.section}
+							<a
+								href="/admin{entryPath(
+									line.action.section,
+									line.action.entryId,
+								)}"
+							>
+								Open
+							</a>
 						{/if}
 					</div>
 				{:else if line.who === 'ai'}
