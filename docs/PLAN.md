@@ -41,3 +41,17 @@
       Postgres for bigger sites. Needs a small store interface around the
       SQL in entries.rs, auth.rs and query.rs; the index tables stay the
       same in both
+
+## Ideas of the operator (2026-10-28)
+
+- Globals as singles; the studio navigation configurable in the schema, so settings
+  (header, footer, translations) have their own place in the top bar
+- Preview button, later live preview like Craft (drafts + preview tokens)
+- Status per site in the lists (DE, EN)
+- AI mode: chat with the whole website in the studio ("fix the translation on this
+  page"), split view like noah: chat on the left, the live site on the right, changes as
+  drafts the editor publishes
+- Rich text in Svelte instead of CKEditor, a mix of Notion style typing and blocks
+  inside the text (like Craft's nested entries in CKEditor, but nicer)
+- Port textrem (crelte frontend of the Craft port) to zipp as the first real site
+- Dashboard with visitor statistics like the old Zipp (later)
