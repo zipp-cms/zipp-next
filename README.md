@@ -9,13 +9,18 @@ migrations and TypeScript types. The frontend (crelte or anything else)
 is a separate project that reads the api.
 
 ```rust
-use zipp::{Field, Schema};
+use zipp::{Field, Schema, Section};
 
 fn schema() -> Schema {
 	Schema::new()
+		.site("de", "Deutsch", "de-CH")
+		.site("en", "English", "en")
+		.section(Section::single("home", "page").uri(""))
+		.section(Section::structure("pages", ["page"]).uri("{parent.uri}/{slug}"))
+		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
 		.entry("page", "Page", [
-			Field::text("intro").multiline().max(300),
-			Field::blocks("body", ["heading", "button"]),
+			Field::text("intro").multiline().translatable(),
+			Field::blocks("body", ["heading", "button"]).translatable(),
 		])
 		.entry("event", "Event", [
 			Field::text("date").required().indexed(),
@@ -43,10 +48,15 @@ fn main() {
 
 ## Concepts
 
-- **Entries and blocks.** Both are components made of fields: text,
+- **Sections, entry types and sites, like in Craft.** A single has
+  exactly one entry (created on start), a channel a list and a structure
+  a tree. A section allows one or more entry types and has a uri format
+  (`events/{slug}`, `{parent.uri}/{slug}`). Every entry has a row per
+  site with its own title, slug, uri, published flag and translatable
+  fields; the other fields are shared by all sites.
+- **Entry types and blocks.** Both are components made of fields: text,
   number, boolean, relation (ids of entries) and blocks (a list of
-  blocks, nested as deep as needed). Every entry has a title, a slug and
-  a published flag.
+  blocks, nested as deep as needed).
 - **Content is JSON.** An entry's fields are stored as one JSON document,
   a block is `{ "id", "type", "fields" }`.
 - **Queries go through index tables.** Fields marked `indexed()` are
@@ -54,7 +64,9 @@ fn main() {
   blocks) to `entry_relations`. So entries can be filtered and sorted by
   them and you can ask what links to an entry:
   `/api/entries?type=event&f.city=Bern&f.date.gte=2026-11-01&order=date`,
-  `/api/entries?related=5`. See `crates/zipp/src/query.rs`.
+  `/api/entries?related=5`, `/api/entries?site=en&uri=about/team`,
+  `/api/entries?section=pages&order=structure`. See
+  `crates/zipp/src/query.rs`.
 - **Migrations from the code.** `makemigration` compares the schema in
   code with the last file in `migrations/` and writes the difference as
   ops. Renames are hints (`--rename event.city=town`), otherwise a rename

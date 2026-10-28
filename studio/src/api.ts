@@ -15,6 +15,7 @@ export type Field = FieldKind & {
 	label: string;
 	required: boolean;
 	indexed: boolean;
+	translatable: boolean;
 };
 
 export type Component = {
@@ -24,17 +25,35 @@ export type Component = {
 	fields: Field[];
 };
 
-export type Schema = { components: Component[] };
+export type Site = { handle: string; name: string; language: string };
+
+export type Section = {
+	handle: string;
+	name: string;
+	kind: 'single' | 'channel' | 'structure';
+	types: string[];
+	uri: string | null;
+};
+
+export type Schema = {
+	sites: Site[];
+	sections: Section[];
+	components: Component[];
+};
 
 export type Block = { id?: string; type: string; fields: Values };
 export type Values = Record<string, any>;
 
 export type Entry = {
 	id: number;
+	section: string;
 	type: string;
+	site: string;
 	title: string;
 	slug: string;
+	uri: string | null;
 	published: boolean;
+	parentId: number | null;
 	fields: Values;
 	createdAt: number;
 	updatedAt: number;
@@ -121,12 +140,24 @@ export function listEntries(
 
 export function getEntry(
 	id: number,
+	site: string,
 ): Promise<{ entry: Entry; relations: Refs }> {
-	return request('GET', '/entries/' + id);
+	return request('GET', `/entries/${id}?site=${site}`);
+}
+
+export function moveEntry(
+	id: number,
+	parentId: number | null,
+	index: number,
+): Promise<void> {
+	return request('POST', `/entries/${id}/move`, { parentId, index });
 }
 
 export type EntryInput = {
+	section: string;
 	type: string;
+	site: string;
+	parentId: number | null;
 	title: string;
 	slug: string;
 	published: boolean;

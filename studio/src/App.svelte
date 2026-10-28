@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getSchema, logout, token, type Schema } from './api';
-	import { go, route } from './route.svelte';
+	import { go, route, setSite, site } from './route.svelte';
 	import Login from './pages/Login.svelte';
 	import List from './pages/List.svelte';
 	import Edit from './pages/Edit.svelte';
@@ -9,11 +9,10 @@
 	let error = $state('');
 
 	const loggedIn = $derived(route.current.page !== 'login' && !!token());
-	const entryTypes = $derived(schema?.components.filter(c => c.entry) ?? []);
 	const current = $derived.by(() => {
 		const r = route.current;
-		if (r.page === 'list') return r.type ?? entryTypes[0]?.handle;
-		if (r.page === 'new') return r.type;
+		if (r.page === 'list') return r.section ?? schema?.sections[0]?.handle;
+		if (r.page === 'new') return r.section;
 		return null;
 	});
 
@@ -24,7 +23,12 @@
 		}
 		if (schema) return;
 		getSchema()
-			.then(s => (schema = s))
+			.then(s => {
+				if (!s.sites.some(x => x.handle === site.current)) {
+					setSite(s.sites[0].handle);
+				}
+				schema = s;
+			})
 			.catch(e => (error = e.message));
 	});
 
@@ -43,27 +47,46 @@
 	<div class="layout">
 		<nav>
 			<h1>zipp</h1>
-			{#each entryTypes as t (t.handle)}
-				<a href="#/list/{t.handle}" class:active={current === t.handle}>
-					{t.name}
+			{#each schema.sections as s (s.handle)}
+				<a href="#/list/{s.handle}" class:active={current === s.handle}>
+					{s.name}
 				</a>
 			{/each}
-			<button class="link" onclick={onLogout}>Log out</button>
+			<div class="bottom">
+				{#if schema.sites.length > 1}
+					<select
+						value={site.current}
+						onchange={e => setSite(e.currentTarget.value)}
+						title="Site"
+					>
+						{#each schema.sites as s (s.handle)}
+							<option value={s.handle}>{s.name}</option>
+						{/each}
+					</select>
+				{/if}
+				<button class="link" onclick={onLogout}>Log out</button>
+			</div>
 		</nav>
 		<main>
-			{#if route.current.page === 'list' && current}
-				{#key current}
-					<List {schema} type={current} />
-				{/key}
-			{:else if route.current.page === 'new'}
-				{#key route.current.type}
-					<Edit {schema} id={null} type={route.current.type} />
-				{/key}
-			{:else if route.current.page === 'entry'}
-				{#key route.current.id}
-					<Edit {schema} id={route.current.id} type={null} />
-				{/key}
-			{/if}
+			{#key site.current}
+				{#if route.current.page === 'list' && current}
+					{#key current}
+						<List {schema} section={current} />
+					{/key}
+				{:else if route.current.page === 'new'}
+					{#key route.current.section}
+						<Edit
+							{schema}
+							id={null}
+							section={route.current.section}
+						/>
+					{/key}
+				{:else if route.current.page === 'entry'}
+					{#key route.current.id}
+						<Edit {schema} id={route.current.id} section={null} />
+					{/key}
+				{/if}
+			{/key}
 		</main>
 	</div>
 {/if}
@@ -99,8 +122,14 @@
 			}
 		}
 
-		.link {
+		.bottom {
 			margin-top: auto;
+			display: flex;
+			flex-direction: column;
+			gap: 0.5rem;
+		}
+
+		.link {
 			text-align: left;
 		}
 	}
@@ -127,8 +156,10 @@
 				margin: 0 0.75rem 0 0.25rem;
 			}
 
-			.link {
+			.bottom {
 				margin: 0 0 0 auto;
+				flex-direction: row;
+				align-items: center;
 			}
 		}
 

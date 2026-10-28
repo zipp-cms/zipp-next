@@ -1,13 +1,16 @@
-//! Listing entries: `?type=event&f.city=Bern&f.price.lt=20&order=-price`.
+//! Listing entries: `?section=events&f.city=Bern&f.price.lt=20&order=-price`.
 //!
-//! - `type`, `slug`: exact match
+//! - `site`: whose titles, uris and fields, default the primary site
+//! - `section`, `type`, `slug`, `uri`: exact match
 //! - `ids=1,2,3`: only these entries
+//! - `parent=5`: the children of entry 5 in a structure
 //! - `search`: part of the title
 //! - `related=5`: entries that link to entry 5, also from inside blocks
 //! - `f.<field>[.<op>]=value`: an indexed field, op is one of eq (default),
 //!   ne, lt, lte, gt, gte; needs `type`
-//! - `order`: `title`, `created`, `updated` or an indexed field, `-` for
-//!   descending, default `-updated`
+//! - `order`: `title`, `created`, `updated`, `structure` (the tree of a
+//!   structure, depth first) or an indexed field, `-` for descending,
+//!   default `-updated`
 //! - `limit` (default 100), `offset`
 
 use rusqlite::types::Value;
@@ -16,9 +19,13 @@ use crate::schema::{FieldKind, Schema};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Query {
+	pub site: String,
+	pub section: Option<String>,
 	pub ty: Option<String>,
 	pub slug: Option<String>,
+	pub uri: Option<String>,
 	pub ids: Option<Vec<i64>>,
+	pub parent: Option<i64>,
 	pub search: Option<String>,
 	pub related: Option<i64>,
 	pub filters: Vec<Filter>,
@@ -41,9 +48,19 @@ pub struct Filter {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Order {
 	Column(&'static str),
+	Structure,
 	/// indexed field, true when it is stored in `num`
 	Field(String, bool),
 }
+
+/// The order of the entries of all structures, depth first. Positions are
+/// padded so the path sorts as text.
+const TREE: &str = "WITH RECURSIVE tree(id, sort) AS (
+	SELECT id, printf('%010d', position) FROM entries WHERE parent_id IS NULL
+	UNION ALL
+	SELECT e.id, t.sort || printf('%010d', e.position)
+	FROM entries e JOIN tree t ON e.parent_id = t.id
+) ";
 
 impl Query {
 	pub fn parse(
@@ -51,9 +68,13 @@ impl Query {
 		params: &[(String, String)],
 	) -> Result<Self, String> {
 		let mut q = Query {
+			site: schema.primary_site().handle.clone(),
+			section: None,
 			ty: None,
 			slug: None,
+			uri: None,
 			ids: None,
+			parent: None,
 			search: None,
 			related: None,
 			filters: vec![],
@@ -79,8 +100,22 @@ impl Query {
 		for (key, value) in params {
 			match key.as_str() {
 				"type" => {}
+				"site" => {
+					if schema.get_site(value).is_none() {
+						return Err(format!("unknown site {value}"));
+					}
+					q.site = value.clone();
+				}
+				"section" => {
+					if schema.get_section(value).is_none() {
+						return Err(format!("unknown section {value}"));
+					}
+					q.section = Some(value.clone());
+				}
 				"slug" => q.slug = Some(value.clone()),
+				"uri" => q.uri = Some(value.trim_matches('/').into()),
 				"search" => q.search = Some(value.clone()),
+				"parent" => q.parent = Some(int(key, value)?),
 				"related" => q.related = Some(int(key, value)?),
 				"limit" => q.limit = int(key, value)?.clamp(1, 1000),
 				"offset" => q.offset = int(key, value)?.max(0),
@@ -102,6 +137,7 @@ impl Query {
 						"title" => Order::Column("title"),
 						"created" => Order::Column("created_at"),
 						"updated" => Order::Column("updated_at"),
+						"structure" => Order::Structure,
 						_ => {
 							let num = q.indexed_kind(schema, name)?;
 							Order::Field(name.into(), num)
@@ -172,44 +208,63 @@ impl Query {
 		})
 	}
 
-	/// `FROM ... WHERE ...` and its params, without order and limit.
+	/// The `WITH` clause that goes before `SELECT`, for the tree.
+	pub fn with(&self) -> &'static str {
+		match self.order {
+			Order::Structure => TREE,
+			_ => "",
+		}
+	}
+
+	/// `FROM ... WHERE ...` and its params, without order and limit. `e`
+	/// are the entries, `s` their row of the site.
 	pub fn from_where(&self) -> (String, Vec<Value>) {
 		let mut joins = String::new();
 		let mut conds = vec!["1 = 1".to_string()];
-		let mut join_params = vec![];
+		let mut join_params = vec![Value::Text(self.site.clone())];
 		let mut params = vec![];
 
 		let mut cond = |sql: String, values: Vec<Value>| {
 			conds.push(sql);
 			params.extend(values);
 		};
-		if let Some(ty) = &self.ty {
-			cond("e.type = ?".into(), vec![ty.clone().into()]);
+		let text = |s: &Option<String>| Value::Text(s.clone().unwrap());
+		if self.section.is_some() {
+			cond("e.section = ?".into(), vec![text(&self.section)]);
 		}
-		if let Some(slug) = &self.slug {
-			cond("e.slug = ?".into(), vec![slug.clone().into()]);
+		if self.ty.is_some() {
+			cond("e.type = ?".into(), vec![text(&self.ty)]);
+		}
+		if self.slug.is_some() {
+			cond("s.slug = ?".into(), vec![text(&self.slug)]);
+		}
+		if self.uri.is_some() {
+			cond("s.uri = ?".into(), vec![text(&self.uri)]);
 		}
 		if let Some(ids) = &self.ids {
 			let marks = vec!["?"; ids.len()].join(", ");
 			let values = ids.iter().map(|i| Value::Integer(*i)).collect();
 			cond(format!("e.id IN ({marks})"), values);
 		}
+		if let Some(parent) = self.parent {
+			cond("e.parent_id = ?".into(), vec![Value::Integer(parent)]);
+		}
 		if let Some(search) = &self.search {
-			cond("e.title LIKE ?".into(), vec![format!("%{search}%").into()]);
+			cond("s.title LIKE ?".into(), vec![format!("%{search}%").into()]);
 		}
 		if let Some(id) = self.related {
 			let sql = "e.id IN (SELECT entry_id FROM entry_relations \
-				WHERE target_id = ?)";
+				WHERE target_id = ? AND site = s.site)";
 			cond(sql.into(), vec![Value::Integer(id)]);
 		}
 		if self.published_only {
-			cond("e.published = 1".into(), vec![]);
+			cond("s.published = 1".into(), vec![]);
 		}
 
 		for (i, f) in self.filters.iter().enumerate() {
 			joins += &format!(
 				" JOIN entry_values f{i} ON f{i}.entry_id = e.id \
-				AND f{i}.field = ?"
+				AND f{i}.site = s.site AND f{i}.field = ?"
 			);
 			join_params.push(Value::Text(f.field.clone()));
 
@@ -220,21 +275,31 @@ impl Query {
 			cond(format!("f{i}.{col} {} ?", f.op), vec![f.value.clone()]);
 		}
 
-		if let Order::Field(field, _) = &self.order {
-			joins += " LEFT JOIN entry_values o ON o.entry_id = e.id \
-				AND o.field = ?";
-			join_params.push(Value::Text(field.clone()));
+		match &self.order {
+			Order::Field(field, _) => {
+				joins += " LEFT JOIN entry_values o ON o.entry_id = e.id \
+					AND o.site = s.site AND o.field = ?";
+				join_params.push(Value::Text(field.clone()));
+			}
+			Order::Structure => joins += " JOIN tree t ON t.id = e.id",
+			Order::Column(_) => {}
 		}
 
-		let sql =
-			format!("FROM entries e{joins} WHERE {}", conds.join(" AND "));
+		let sql = format!(
+			"FROM entries e \
+			JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?{joins} \
+			WHERE {}",
+			conds.join(" AND ")
+		);
 		join_params.extend(params);
 		(sql, join_params)
 	}
 
 	pub fn order_by(&self) -> String {
 		let col = match &self.order {
+			Order::Column("title") => "s.title".into(),
 			Order::Column(c) => format!("e.{c}"),
+			Order::Structure => "t.sort".into(),
 			Order::Field(_, true) => "o.num".into(),
 			Order::Field(_, false) => "o.text".into(),
 		};
@@ -261,6 +326,7 @@ mod tests {
 	fn parses_filters() {
 		let q =
 			parse("f.price.lt=20&type=event&f.city=Bern&order=-price").unwrap();
+		assert_eq!(q.site, "de");
 		assert_eq!(q.filters[0].op, "<");
 		assert_eq!(q.filters[0].value, Value::Real(20.0));
 		assert_eq!(q.filters[1].value, Value::Text("Bern".into()));
@@ -282,16 +348,18 @@ mod tests {
 				.unwrap_err()
 				.contains("unknown entry type")
 		);
+		assert!(parse("site=fr").unwrap_err().contains("unknown site"));
 		assert!(parse("color=red").is_err());
 	}
 
 	#[test]
 	fn builds_sql_in_param_order() {
-		let q = parse("type=event&f.city=Bern&order=price").unwrap();
+		let q = parse("type=event&f.city=Bern&order=price&site=en").unwrap();
 		let (sql, params) = q.from_where();
 		assert_eq!(
 			params,
 			[
+				Value::Text("en".into()),
 				Value::Text("city".into()),
 				Value::Text("price".into()),
 				Value::Text("event".into()),
@@ -300,5 +368,15 @@ mod tests {
 		);
 		assert!(sql.contains("f0.text = ?"));
 		assert_eq!(q.order_by(), "ORDER BY o.num ASC, e.id ASC");
+	}
+
+	#[test]
+	fn structure_order_uses_the_tree() {
+		let q = parse("section=pages&order=structure&uri=/about/").unwrap();
+		let (sql, _) = q.from_where();
+		assert!(q.with().starts_with("WITH RECURSIVE tree"));
+		assert!(sql.contains("JOIN tree t"));
+		assert_eq!(q.uri.as_deref(), Some("about"));
+		assert_eq!(q.order_by(), "ORDER BY t.sort ASC, e.id ASC");
 	}
 }

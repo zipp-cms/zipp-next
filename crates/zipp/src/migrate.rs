@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::content::walk_mut;
-use crate::schema::{Component, Field, Schema};
+use crate::schema::{Component, Field, Schema, Section, Site};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "camelCase")]
@@ -43,10 +43,30 @@ pub enum Op {
 		from: String,
 		to: String,
 	},
-	/// A new kind or new settings. Values are dropped if the kind changed.
+	/// A new kind or new settings. Values are dropped if the kind changed,
+	/// a field that is no longer translatable gets the value of the
+	/// primary site everywhere.
 	ChangeField {
 		component: String,
 		field: Field,
+	},
+	/// The new site starts with a copy of the primary site.
+	AddSite {
+		site: Site,
+	},
+	RemoveSite {
+		site: String,
+	},
+	AddSection {
+		section: Section,
+	},
+	/// Deletes the entries of the section.
+	RemoveSection {
+		section: String,
+	},
+	/// Deletes the entries whose type the section no longer has.
+	ChangeSection {
+		section: Section,
 	},
 }
 
@@ -169,7 +189,11 @@ pub fn diff(
 					component: component.clone(),
 					field: f.clone(),
 				},
-				Some(o) if o.kind != f.kind || o.indexed != f.indexed => {
+				Some(o)
+					if o.kind != f.kind
+						|| o.indexed != f.indexed
+						|| o.translatable != f.translatable =>
+				{
 					Op::ChangeField {
 						component: component.clone(),
 						field: f.clone(),
@@ -179,6 +203,50 @@ pub fn diff(
 			};
 			push(op, &mut cur);
 		}
+	}
+
+	// add sites first, they copy the primary site of before
+	for site in &new.sites {
+		if cur.get_site(&site.handle).is_none() {
+			push(Op::AddSite { site: site.clone() }, &mut cur);
+		}
+	}
+	let gone: Vec<String> = cur
+		.sites
+		.iter()
+		.filter(|s| new.get_site(&s.handle).is_none())
+		.map(|s| s.handle.clone())
+		.collect();
+	for site in gone {
+		push(Op::RemoveSite { site }, &mut cur);
+	}
+
+	let gone: Vec<String> = cur
+		.sections
+		.iter()
+		.filter(|s| new.get_section(&s.handle).is_none())
+		.map(|s| s.handle.clone())
+		.collect();
+	for section in gone {
+		push(Op::RemoveSection { section }, &mut cur);
+	}
+	for section in &new.sections {
+		let op = match cur.get_section(&section.handle) {
+			None => Op::AddSection {
+				section: section.clone(),
+			},
+			Some(o)
+				if o.kind != section.kind
+					|| o.types != section.types
+					|| o.uri != section.uri =>
+			{
+				Op::ChangeSection {
+					section: section.clone(),
+				}
+			}
+			Some(_) => continue,
+		};
+		push(op, &mut cur);
 	}
 
 	Ok(ops)
@@ -230,6 +298,25 @@ impl Op {
 					*f = field.clone();
 				}
 			}
+			Self::AddSite { site } => schema.sites.push(site.clone()),
+			Self::RemoveSite { site } => {
+				schema.sites.retain(|s| &s.handle != site)
+			}
+			Self::AddSection { section } => {
+				schema.sections.push(section.clone())
+			}
+			Self::RemoveSection { section } => {
+				schema.sections.retain(|s| &s.handle != section)
+			}
+			Self::ChangeSection { section } => {
+				let s = schema
+					.sections
+					.iter_mut()
+					.find(|s| s.handle == section.handle);
+				if let Some(s) = s {
+					*s = section.clone();
+				}
+			}
 		}
 	}
 
@@ -246,7 +333,14 @@ impl Op {
 		};
 
 		match self {
-			Self::AddComponent { .. } | Self::AddField { .. } => {}
+			// sites and sections change rows, see entries::apply_migrations
+			Self::AddComponent { .. }
+			| Self::AddField { .. }
+			| Self::AddSite { .. }
+			| Self::RemoveSite { .. }
+			| Self::AddSection { .. }
+			| Self::RemoveSection { .. }
+			| Self::ChangeSection { .. } => {}
 			Self::RemoveComponent { component } => {
 				if ty == component {
 					return false;
@@ -347,6 +441,23 @@ impl Op {
 				"  change field {component}.{} (content is dropped if the kind changed)",
 				field.handle
 			),
+			Self::AddSite { site } => format!(
+				"  add site {}, it starts as a copy of the primary site",
+				site.handle
+			),
+			Self::RemoveSite { site } => {
+				format!("! remove site {site}, its content is deleted")
+			}
+			Self::AddSection { section } => {
+				format!("  add section {}", section.handle)
+			}
+			Self::RemoveSection { section } => {
+				format!("! remove section {section}, its entries are deleted")
+			}
+			Self::ChangeSection { section } => format!(
+				"  change section {} (entries of types it no longer has are deleted)",
+				section.handle
+			),
 		}
 	}
 }
@@ -437,7 +548,7 @@ mod tests {
 	#[test]
 	fn initial_migration_adds_everything() {
 		let ops = diff(&Schema::new(), &site(), &[]).unwrap();
-		assert_eq!(ops.len(), 4);
+		assert_eq!(ops.len(), 9);
 		assert!(
 			diff(&apply_all(&Schema::new(), &ops), &site(), &[])
 				.unwrap()
@@ -559,6 +670,32 @@ mod tests {
 		};
 		let mut ty = "event".to_string();
 		assert!(!op.apply_entry(&site(), &mut ty, &mut json!({})));
+	}
+
+	#[test]
+	fn diff_sites_and_sections() {
+		let mut new = site().site("fr", "Français", "fr");
+		new.sites.retain(|s| s.handle != "en");
+		new.sections[2].uri = Some("agenda/{slug}".into());
+		new.sections.remove(1);
+
+		let ops = diff(&site(), &new, &[]).unwrap();
+		let lines: Vec<_> = ops.iter().map(|o| o.describe()).collect();
+		assert_eq!(
+			lines,
+			[
+				"  add site fr, it starts as a copy of the primary site",
+				"! remove site en, its content is deleted",
+				"! remove section pages, its entries are deleted",
+				"  change section events (entries of types it no longer has \
+				 are deleted)",
+			]
+		);
+		assert!(
+			diff(&apply_all(&site(), &ops), &new, &[])
+				.unwrap()
+				.is_empty()
+		);
 	}
 
 	#[test]

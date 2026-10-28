@@ -1,10 +1,11 @@
 /**
- * Hash routes: `#/login`, `#/list/<type>`, `#/new/<type>`, `#/entry/<id>`.
+ * Hash routes: `#/login`, `#/list/<section>`, `#/new/<section>`,
+ * `#/entry/<id>`.
  */
 export type Route =
 	| { page: 'login' }
-	| { page: 'list'; type: string | null }
-	| { page: 'new'; type: string }
+	| { page: 'list'; section: string | null }
+	| { page: 'new'; section: string }
 	| { page: 'entry'; id: number };
 
 function parse(hash: string): Route {
@@ -13,13 +14,13 @@ function parse(hash: string): Route {
 		case 'login':
 			return { page: 'login' };
 		case 'new':
-			return { page: 'new', type: arg };
+			return { page: 'new', section: arg };
 		case 'entry':
 			return { page: 'entry', id: Number(arg) };
 		case 'list':
-			return { page: 'list', type: arg ?? null };
+			return { page: 'list', section: arg ?? null };
 		default:
-			return { page: 'list', type: null };
+			return { page: 'list', section: null };
 	}
 }
 
@@ -31,4 +32,14 @@ window.addEventListener('hashchange', () => {
 
 export function go(hash: string) {
 	location.hash = hash;
+}
+
+/** The site the studio edits, the same in all pages. */
+export const site = $state({
+	current: localStorage.getItem('zipp-site') ?? '',
+});
+
+export function setSite(handle: string) {
+	site.current = handle;
+	localStorage.setItem('zipp-site', handle);
 }

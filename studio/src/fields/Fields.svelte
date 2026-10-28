@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Component, Refs, Schema, Values } from '../api';
+	import type { Component, Field, Refs, Schema, Values } from '../api';
 	import BlocksField from './BlocksField.svelte';
 	import RelationField from './RelationField.svelte';
 
@@ -18,6 +18,13 @@
 		refs: Refs;
 		prefix?: string;
 	} = $props();
+
+	/** Entry fields that are the same in all sites, so editors know. */
+	function shared(field: Field) {
+		return (
+			component.entry && !field.translatable && schema.sites.length > 1
+		);
+	}
 </script>
 
 <div class="fields">
@@ -36,6 +43,9 @@
 				<label for={path}>
 					{field.label}{#if field.required}<span class="req">
 							*
+						</span>{/if}
+					{#if shared(field)}<span class="shared">
+							all sites
 						</span>{/if}
 				</label>
 			{/if}
@@ -92,6 +102,13 @@
 		input {
 			width: auto;
 		}
+	}
+
+	.shared {
+		margin-left: 0.4rem;
+		font-size: 0.75rem;
+		font-weight: normal;
+		color: var(--muted);
 	}
 
 	.req {

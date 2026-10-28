@@ -9,6 +9,17 @@
 - [x] Studio: entry lists, editing with nested blocks, relation picker, field errors
 - [x] TypeScript types and an example frontend
 
+## Slice 2: the Craft model, GraphQL, images
+
+- [x] Sections (single, channel, structure) with several entry types and uri formats
+- [x] Sites: a row per site, translatable and shared fields, migrations for sites and sections
+- [x] Studio: sections, site switcher, tree of a structure
+- [ ] GraphQL generated from the schema, `entry(uri, site)` in the shape crelte expects,
+      relations resolved with their fields in the same query
+- [ ] Assets: uploads, image field with focal point, named transforms in code,
+      generated on first request and cached
+- [ ] A crelte project on zipp as the real test
+
 ## Next
 
 - [ ] Drafts and revisions: a row per saved version, publish a version
@@ -17,7 +28,6 @@
 - [ ] Rich text field
 - [ ] Field kinds as plugins: a crate with the Rust side and a studio
       package with its Svelte field
-- [ ] Sites and languages
 - [ ] Data migrations in code, for changes the ops can't express
 - [ ] crelte adapter, so a crelte project can use zipp instead of Craft
 - [ ] Full text search

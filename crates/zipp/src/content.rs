@@ -274,6 +274,19 @@ fn collect_relations(
 	}
 }
 
+/// The fields of `into` with the shared (not translatable) ones taken
+/// from `from`, so every site has the same shared values.
+pub fn share(comp: &Component, from: &Value, into: &Value) -> Value {
+	let mut out = into.as_object().cloned().unwrap_or_default();
+	for f in comp.fields.iter().filter(|f| !f.translatable) {
+		match from.get(&f.handle) {
+			Some(v) => out.insert(f.handle.clone(), v.clone()),
+			None => out.remove(&f.handle),
+		};
+	}
+	Value::Object(out)
+}
+
 /// A row of `entry_values`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct IndexValue {
@@ -376,6 +389,20 @@ mod tests {
 			seen.push(c.handle.clone())
 		});
 		assert_eq!(seen, ["page", "text", "button"]);
+	}
+
+	#[test]
+	fn shares_fields_that_are_not_translatable() {
+		let s = site();
+		let de = json!({ "city": "Bern", "price": 10 });
+		let en = json!({ "city": "Berne", "price": 8, "page": [1] });
+		let out = share(s.get("event").unwrap(), &de, &en);
+		assert_eq!(out, json!({ "city": "Bern", "price": 10 }));
+
+		let de = json!({ "intro": "Hallo" });
+		let en = json!({ "intro": "Hello" });
+		let out = share(s.get("page").unwrap(), &de, &en);
+		assert_eq!(out, json!({ "intro": "Hello" }));
 	}
 
 	#[test]

@@ -7,6 +7,7 @@
 		type Schema,
 		type Values,
 	} from '../api';
+	import { site } from '../route.svelte';
 
 	let {
 		schema,
@@ -26,7 +27,7 @@
 	$effect(() => {
 		if (!search) return void (found = []);
 		const q = search;
-		listEntries({ search: q, limit: '20' }).then(r => {
+		listEntries({ search: q, limit: '20', site: site.current }).then(r => {
 			if (q !== search) return;
 			found = r.entries.filter(
 				e => types.includes(e.type) && !ids.includes(e.id),

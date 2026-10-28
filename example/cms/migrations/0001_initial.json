@@ -3,8 +3,8 @@
     {
       "op": "addComponent",
       "component": {
-        "handle": "page",
-        "name": "Page",
+        "handle": "home",
+        "name": "Home",
         "entry": true,
         "fields": [
           {
@@ -12,6 +12,7 @@
             "label": "Intro",
             "required": false,
             "indexed": false,
+            "translatable": true,
             "kind": "text",
             "max": 300,
             "multiline": true
@@ -21,6 +22,43 @@
             "label": "Body",
             "required": false,
             "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "heading",
+              "text",
+              "button",
+              "events"
+            ],
+            "min": null,
+            "max": null
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "page",
+        "name": "Page",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "body",
+            "label": "Body",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
             "kind": "blocks",
             "types": [
               "heading",
@@ -46,6 +84,7 @@
             "label": "Date (YYYY-MM-DD)",
             "required": true,
             "indexed": true,
+            "translatable": false,
             "kind": "text",
             "max": null,
             "multiline": false
@@ -55,6 +94,7 @@
             "label": "City",
             "required": true,
             "indexed": true,
+            "translatable": false,
             "kind": "text",
             "max": null,
             "multiline": false
@@ -64,6 +104,7 @@
             "label": "Price",
             "required": false,
             "indexed": true,
+            "translatable": false,
             "kind": "number",
             "min": 0.0,
             "max": 1000.0
@@ -73,6 +114,7 @@
             "label": "Description",
             "required": false,
             "indexed": false,
+            "translatable": true,
             "kind": "text",
             "max": null,
             "multiline": true
@@ -82,6 +124,7 @@
             "label": "More info",
             "required": false,
             "indexed": false,
+            "translatable": false,
             "kind": "relation",
             "types": [
               "page"
@@ -103,6 +146,7 @@
             "label": "Text",
             "required": true,
             "indexed": false,
+            "translatable": false,
             "kind": "text",
             "max": 80,
             "multiline": false
@@ -122,6 +166,7 @@
             "label": "Content",
             "required": true,
             "indexed": false,
+            "translatable": false,
             "kind": "text",
             "max": null,
             "multiline": true
@@ -141,6 +186,7 @@
             "label": "Label",
             "required": true,
             "indexed": false,
+            "translatable": false,
             "kind": "text",
             "max": 30,
             "multiline": false
@@ -150,8 +196,10 @@
             "label": "Link",
             "required": false,
             "indexed": false,
+            "translatable": false,
             "kind": "relation",
             "types": [
+              "home",
               "page",
               "event"
             ],
@@ -172,16 +220,143 @@
             "label": "Only in city",
             "required": false,
             "indexed": false,
+            "translatable": false,
             "kind": "text",
             "max": null,
             "multiline": false
           }
         ]
+      }
+    },
+    {
+      "op": "addSite",
+      "site": {
+        "handle": "de",
+        "name": "Deutsch",
+        "language": "de-CH"
+      }
+    },
+    {
+      "op": "addSite",
+      "site": {
+        "handle": "en",
+        "name": "English",
+        "language": "en"
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "home",
+        "name": "Home",
+        "kind": "single",
+        "types": [
+          "home"
+        ],
+        "uri": ""
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "pages",
+        "name": "Pages",
+        "kind": "structure",
+        "types": [
+          "page"
+        ],
+        "uri": "{parent.uri}/{slug}"
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "events",
+        "name": "Events",
+        "kind": "channel",
+        "types": [
+          "event"
+        ],
+        "uri": "events/{slug}"
       }
     }
   ],
   "schema": {
+    "sites": [
+      {
+        "handle": "de",
+        "name": "Deutsch",
+        "language": "de-CH"
+      },
+      {
+        "handle": "en",
+        "name": "English",
+        "language": "en"
+      }
+    ],
+    "sections": [
+      {
+        "handle": "home",
+        "name": "Home",
+        "kind": "single",
+        "types": [
+          "home"
+        ],
+        "uri": ""
+      },
+      {
+        "handle": "pages",
+        "name": "Pages",
+        "kind": "structure",
+        "types": [
+          "page"
+        ],
+        "uri": "{parent.uri}/{slug}"
+      },
+      {
+        "handle": "events",
+        "name": "Events",
+        "kind": "channel",
+        "types": [
+          "event"
+        ],
+        "uri": "events/{slug}"
+      }
+    ],
     "components": [
+      {
+        "handle": "home",
+        "name": "Home",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "body",
+            "label": "Body",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "heading",
+              "text",
+              "button",
+              "events"
+            ],
+            "min": null,
+            "max": null
+          }
+        ]
+      },
       {
         "handle": "page",
         "name": "Page",
@@ -192,6 +367,7 @@
             "label": "Intro",
             "required": false,
             "indexed": false,
+            "translatable": true,
             "kind": "text",
             "max": 300,
             "multiline": true
@@ -201,6 +377,7 @@
             "label": "Body",
             "required": false,
             "indexed": false,
+            "translatable": true,
             "kind": "blocks",
             "types": [
               "heading",
@@ -223,6 +400,7 @@
             "label": "Date (YYYY-MM-DD)",
             "required": true,
             "indexed": true,
+            "translatable": false,
             "kind": "text",
             "max": null,
             "multiline": false
@@ -232,6 +410,7 @@
             "label": "City",
             "required": true,
             "indexed": true,
+            "translatable": false,
             "kind": "text",
             "max": null,
             "multiline": false
@@ -241,6 +420,7 @@
             "label": "Price",
             "required": false,
             "indexed": true,
+            "translatable": false,
             "kind": "number",
             "min": 0.0,
             "max": 1000.0
@@ -250,6 +430,7 @@
             "label": "Description",
             "required": false,
             "indexed": false,
+            "translatable": true,
             "kind": "text",
             "max": null,
             "multiline": true
@@ -259,6 +440,7 @@
             "label": "More info",
             "required": false,
             "indexed": false,
+            "translatable": false,
             "kind": "relation",
             "types": [
               "page"
@@ -277,6 +459,7 @@
             "label": "Text",
             "required": true,
             "indexed": false,
+            "translatable": false,
             "kind": "text",
             "max": 80,
             "multiline": false
@@ -293,6 +476,7 @@
             "label": "Content",
             "required": true,
             "indexed": false,
+            "translatable": false,
             "kind": "text",
             "max": null,
             "multiline": true
@@ -309,6 +493,7 @@
             "label": "Label",
             "required": true,
             "indexed": false,
+            "translatable": false,
             "kind": "text",
             "max": 30,
             "multiline": false
@@ -318,8 +503,10 @@
             "label": "Link",
             "required": false,
             "indexed": false,
+            "translatable": false,
             "kind": "relation",
             "types": [
+              "home",
               "page",
               "event"
             ],
@@ -337,6 +524,7 @@
             "label": "Only in city",
             "required": false,
             "indexed": false,
+            "translatable": false,
             "kind": "text",
             "max": null,
             "multiline": false

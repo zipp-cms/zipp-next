@@ -10,30 +10,47 @@ use rusqlite::Connection;
 const MIGRATIONS: &[&str] = &[r#"
 	CREATE TABLE entries (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		section TEXT NOT NULL,
 		type TEXT NOT NULL,
+		-- the tree of a structure, deleting a parent deletes its children
+		parent_id INTEGER REFERENCES entries(id) ON DELETE CASCADE,
+		position INTEGER NOT NULL DEFAULT 0,
+		created_at INTEGER NOT NULL,
+		updated_at INTEGER NOT NULL
+	);
+	CREATE INDEX entries_section ON entries(section);
+	CREATE INDEX entries_parent ON entries(parent_id);
+
+	-- every entry has a row per site
+	CREATE TABLE entry_sites (
+		entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+		site TEXT NOT NULL,
 		title TEXT NOT NULL,
 		slug TEXT NOT NULL,
+		uri TEXT,
 		published INTEGER NOT NULL DEFAULT 0,
 		fields TEXT NOT NULL,
-		created_at INTEGER NOT NULL,
 		updated_at INTEGER NOT NULL,
-		UNIQUE (type, slug)
+		PRIMARY KEY (entry_id, site)
 	);
+	CREATE UNIQUE INDEX entry_sites_uri ON entry_sites(site, uri);
 
 	-- indexed fields, to filter and sort entries by them
 	CREATE TABLE entry_values (
 		entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+		site TEXT NOT NULL,
 		field TEXT NOT NULL,
 		text TEXT,
 		num REAL
 	);
 	CREATE INDEX entry_values_entry ON entry_values(entry_id);
-	CREATE INDEX entry_values_text ON entry_values(field, text);
-	CREATE INDEX entry_values_num ON entry_values(field, num);
+	CREATE INDEX entry_values_text ON entry_values(site, field, text);
+	CREATE INDEX entry_values_num ON entry_values(site, field, num);
 
 	-- every relation, also inside blocks, to find what links to an entry
 	CREATE TABLE entry_relations (
 		entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+		site TEXT NOT NULL,
 		path TEXT NOT NULL,
 		target_id INTEGER NOT NULL,
 		position INTEGER NOT NULL

@@ -2,6 +2,7 @@
 //! crate that builds its [`Schema`] and calls [`run`]. The content is
 //! edited in the studio and read by any frontend over the api.
 
+pub mod apply;
 pub mod auth;
 pub mod content;
 pub mod db;
@@ -29,7 +30,7 @@ use tracing::info;
 use crate::db::Db;
 use crate::migrate::{Migration, Migrations, Rename};
 
-pub use crate::schema::{Field, Schema};
+pub use crate::schema::{Field, Schema, Section};
 
 #[doc(hidden)]
 pub use rust_embed;
@@ -131,7 +132,7 @@ async fn serve(
 	let db = Db::open(db_path).map_err(|e| e.to_string())?;
 
 	let migrations = migrations.load()?;
-	let applied = entries::apply_migrations(&db.conn(), &migrations)
+	let applied = apply::apply_migrations(&db.conn(), &migrations)
 		.map_err(|e| e.to_string())?;
 	for name in applied {
 		info!("applied migration {name}");
