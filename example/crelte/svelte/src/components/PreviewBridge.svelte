@@ -1,38 +1,29 @@
 <script>
 	/**
-	 * Talks with zipp's studio when the site is its preview (an iframe
-	 * with a preview token): keeps the token and crelte's live preview
-	 * mode on every page, tells the studio which page is shown and opens
-	 * pages when it asks. The studio reloads the iframe for changes, live
-	 * preview mode restores the scroll position.
+	 * Tells zipp's studio which page its preview shows and opens pages
+	 * when it asks, for the AI chat. The links keep the preview token by
+	 * themselves: zipp adds it to every url of a preview, like Craft.
 	 */
 	import { onMount } from 'svelte';
-	import { getRouter, onRequest, onRoute } from 'crelte';
+	import { getRouter, onRoute } from 'crelte';
 
 	const router = getRouter();
-	const inStudio = typeof window !== 'undefined' && window.parent !== window;
-	const token = inStudio
-		? new URL(window.location.href).searchParams.get('token')
-		: null;
-	const PARAMS = { token, 'x-craft-live-preview': '1' };
+	const inPreview =
+		typeof window !== 'undefined' &&
+		window.parent !== window &&
+		new URL(window.location.href).searchParams.has('token');
 
 	function tell(url) {
 		const u = new URL(url);
-		for (const p of Object.keys(PARAMS)) u.searchParams.delete(p);
+		u.searchParams.delete('token');
+		u.searchParams.delete('x-craft-live-preview');
 		window.parent.postMessage({ type: 'zipp:location', url: u.href }, '*');
 	}
 
-	if (token) {
-		// links of the site don't have them
-		onRequest(cr => {
-			for (const [k, v] of Object.entries(PARAMS))
-				if (!cr.req.getSearchParam(k)) cr.req.setSearchParam(k, v);
-		});
-		onRoute(route => tell(route.url.href));
-	}
+	if (inPreview) onRoute(route => tell(route.url.href));
 
 	onMount(() => {
-		if (!token) return;
+		if (!inPreview) return;
 		tell(window.location.href);
 		const onMessage = e => {
 			if (e.source !== window.parent) return;

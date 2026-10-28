@@ -86,6 +86,8 @@ struct Viewer {
 	published_only: bool,
 	/// what a preview token shows
 	preview: Option<Preview>,
+	/// the valid preview token, urls of entries keep it like Craft's do
+	token: Option<String>,
 }
 
 /// Markdown to html, raw html in it is dropped (editors write text).
@@ -1143,7 +1145,18 @@ fn entry_url(
 		.get(site)
 		.cloned()
 		.unwrap_or_default();
-	Ok(format!("{}/{uri}", base.trim_end_matches('/')))
+	let url = format!("{}/{uri}", base.trim_end_matches('/'));
+	let viewer = ctx.data::<Viewer>()?;
+	let Some(token) = &viewer.token else {
+		return Ok(url);
+	};
+	// links of a preview stay in it; a preview of the whole site is crelte's
+	// live preview, which keeps the scroll position on reloads
+	let mut url = format!("{url}?token={token}");
+	if matches!(viewer.preview, Some(Preview::All)) {
+		url += "&x-craft-live-preview=1";
+	}
+	Ok(url)
 }
 
 fn site_params<const N: usize>(
@@ -1226,9 +1239,11 @@ async fn graphql(
 		};
 		(session(&conn, &headers)?.is_none(), preview)
 	};
+	let token = preview.as_ref().and(p.token);
 	let req = req.into_inner().data(Viewer {
 		published_only,
 		preview,
+		token,
 	});
 	Ok(state.gql.execute(req).await.into())
 }
@@ -1254,6 +1269,7 @@ mod tests {
 		let req = async_graphql::Request::new(query).data(Viewer {
 			published_only,
 			preview: None,
+			token: None,
 		});
 		let resp = gql.execute(req).await;
 		assert!(resp.errors.is_empty(), "{:?}", resp.errors);
@@ -1462,6 +1478,7 @@ mod tests {
 		.data(Viewer {
 			published_only: true,
 			preview: None,
+			token: None,
 		});
 		let resp = gql.execute(req).await;
 		assert!(resp.errors.is_empty(), "{:?}", resp.errors);
@@ -1503,6 +1520,7 @@ mod tests {
 		.data(Viewer {
 			published_only: true,
 			preview: doc,
+			token: None,
 		});
 		let data = gql.execute(req).await.data.into_json().unwrap();
 		assert_eq!(data["entry"], json!({ "title": "Draft", "intro": "new" }));
@@ -1563,6 +1581,7 @@ mod tests {
 			.data(Viewer {
 				published_only: true,
 				preview,
+				token: None,
 			});
 			let gql = gql.clone();
 			async move { gql.execute(req).await.data.into_json().unwrap() }
@@ -1574,6 +1593,43 @@ mod tests {
 		assert_eq!(
 			titles(preview).await["entries"],
 			json!([{ "title": "New" }, { "title": "Same" }])
+		);
+	}
+
+	#[tokio::test]
+	async fn urls_of_a_preview_keep_the_token() {
+		let db = Db::memory().unwrap();
+		let s = Arc::new(site());
+		let urls =
+			SiteUrls::from([("de".to_string(), "https://x.ch".to_string())]);
+		let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
+		save(
+			&db.conn(),
+			&s,
+			None,
+			input("pages", "page", "Team", json!({})),
+		)
+		.unwrap();
+
+		let url = |preview, token: Option<&str>| {
+			let req = async_graphql::Request::new(
+				r#"{ entry(uri: "team") { url } }"#,
+			)
+			.data(Viewer {
+				published_only: true,
+				preview,
+				token: token.map(Into::into),
+			});
+			let gql = gql.clone();
+			async move {
+				gql.execute(req).await.data.into_json().unwrap()["entry"]["url"]
+					.clone()
+			}
+		};
+		assert_eq!(url(None, None).await, "https://x.ch/team");
+		assert_eq!(
+			url(Some(Preview::All), Some("t")).await,
+			"https://x.ch/team?token=t&x-craft-live-preview=1"
 		);
 	}
 
