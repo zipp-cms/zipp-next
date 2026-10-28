@@ -84,7 +84,8 @@
   want, it becomes an issue for the developers (later)
 - AI that changes the content model and Rust code, only in dev mode and for
   admins: it edits the schema code, the dev server rebuilds, the migration
-  check shows the ops (later)
+  check shows the ops. In dev mode it gets merge rights too, otherwise its
+  changes wouldn't land (operator 2026-10-28); other rights still open (later)
 - Options tab: rethink; a sidebar like Craft (status per site, slug, post
   date, revisions, copy from site) instead of a tab, none for globals
 - SEO half code, half database: field mappings and the sitemap in code,
