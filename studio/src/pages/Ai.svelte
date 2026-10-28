@@ -7,6 +7,7 @@
 		aiChat,
 		sitePreviewToken,
 		type AiAction,
+		type AgentEvent,
 		type AiMessage,
 		type Schema,
 	} from '../api';
@@ -124,65 +125,30 @@
 		queueMicrotask(() => log?.scrollTo({ top: log.scrollHeight }));
 	}
 
-	/** A step of the agent as a line, short. */
-	function step(tool: { name: string; input: any }): string {
-		const file = (p: string) =>
-			String(p ?? '')
-				.split('/')
-				.slice(-3)
-				.join('/');
-		const i = tool.input ?? {};
-		switch (tool.name) {
-			case 'Edit':
-			case 'MultiEdit':
-				return `Edits ${file(i.file_path)}`;
-			case 'Write':
-				return `Writes ${file(i.file_path)}`;
-			case 'Read':
-				return `Reads ${file(i.file_path)}`;
-			case 'Bash':
-				return (
-					i.description || `Runs ${String(i.command).slice(0, 80)}`
-				);
-			case 'Grep':
-			case 'Glob':
-				return `Searches ${i.pattern ?? ''}`;
-			default:
-				return tool.name;
-		}
-	}
-
 	/** Development: the agent works, its text and steps come as lines. */
 	async function sendAgent(text: string) {
 		const id = await agentStart(text, view || null);
 		let next = 0;
 		let changed = false;
 		let failures = 0;
-		const onLine = (n: number, ev: any) => {
+		const onLine = (n: number, ev: AgentEvent) => {
 			next = n + 1;
-			if (ev.type === 'assistant') {
-				for (const c of ev.message?.content ?? []) {
-					if (c.type === 'text' && c.text.trim()) {
-						lines.push({ who: 'ai', text: c.text });
-					} else if (
-						c.type === 'tool_use' &&
-						c.name !== 'TodoWrite'
-					) {
-						if (/Edit|Write|Bash/.test(c.name)) changed = true;
-						const a = {
-							text: step(c),
-							entryId: null,
-							section: null,
-							url: null,
-							navigate: false,
-						};
-						lines.push({ who: 'action', action: a });
-					}
-				}
-				scroll();
-			} else if (ev.type === 'result' && ev.is_error) {
-				error = ev.result || 'The agent stopped with an error';
+			if (ev.kind === 'text') {
+				lines.push({ who: 'ai', text: ev.text });
+			} else if (ev.kind === 'step') {
+				changed = true;
+				const a = {
+					text: ev.text,
+					entryId: null,
+					section: null,
+					url: null,
+					navigate: false,
+				};
+				lines.push({ who: 'action', action: a });
+			} else {
+				error = ev.text;
 			}
+			scroll();
 		};
 		// a restart of the cms ends the stream, read on after it
 		for (;;) {

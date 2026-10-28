@@ -24,12 +24,13 @@
 use std::convert::Infallible;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
+use std::sync::Arc;
 use std::time::Duration;
 
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::json;
 use zipp::auth::Authed;
 use zipp::axum::extract::{Path as UrlPath, Query, State};
 use zipp::axum::response::IntoResponse;
@@ -40,13 +41,32 @@ use zipp::db::{now, random_token};
 use zipp::error::{Error, Result};
 use zipp::{AppState, Plugin, PluginStudio};
 
+mod harness;
+
+pub use harness::{ChatEvent, ClaudeCode, Harness};
+
 /// The plugin, see the crate's docs.
-#[derive(Debug, Clone, Default)]
-pub struct Agent;
+pub struct Agent {
+	harness: Arc<dyn Harness>,
+}
 
 impl Agent {
+	/// With Claude Code.
 	pub fn new() -> Self {
-		Self
+		Self::with(ClaudeCode::new())
+	}
+
+	/// With another coding agent.
+	pub fn with(harness: impl Harness) -> Self {
+		Self {
+			harness: Arc::new(harness),
+		}
+	}
+}
+
+impl Default for Agent {
+	fn default() -> Self {
+		Self::new()
 	}
 }
 
@@ -69,10 +89,9 @@ impl Plugin for Agent {
 }
 
 /// Where the agent runs, from the environment.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct AgentConfig {
-	/// the command, like `claude`
-	pub command: String,
+	harness: Arc<dyn Harness>,
 	/// the project, the agent works there
 	pub dir: PathBuf,
 	/// where the runs and sessions are written
@@ -91,11 +110,14 @@ fn agent(state: &AppState, auth: &Authed) -> Result<AgentConfig> {
 	if !auth.admin() {
 		return Err(Error::Forbidden);
 	}
+	let Some(plugin) = state.schema.plugin_of::<Agent>() else {
+		return Err(Error::NotFound);
+	};
 	let env = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
 	let dir = PathBuf::from(env("ZIPP_AGENT_DIR").unwrap_or("..".into()));
 	check_dir(&dir).map_err(Error::Internal)?;
 	Ok(AgentConfig {
-		command: env("ZIPP_AGENT_COMMAND").unwrap_or("claude".into()),
+		harness: plugin.harness.clone(),
 		dir: fs::canonicalize(&dir)
 			.map_err(|e| Error::Internal(e.to_string()))?,
 		runs: state.files.join("../agent-runs"),
@@ -182,19 +204,13 @@ async fn start(
 	let id = random_token();
 	let out = fs::File::create(run_file(&agent, &id, "jsonl")?).map_err(io)?;
 	let err = fs::File::create(run_file(&agent, &id, "err")?).map_err(io)?;
-	let mut cmd = Command::new(&agent.command);
-	cmd.args(["-p", &req.message])
-		.args(["--output-format", "stream-json", "--verbose"])
-		// the project is a sandbox VM in development
-		.arg("--dangerously-skip-permissions")
-		.args([
-			"--append-system-prompt",
-			&system_prompt(&agent, req.view.as_deref()),
-		]);
-	let session = fs::read_to_string(session_file(&agent, auth.user_id));
-	if let Ok(session) = session {
-		cmd.args(["--resume", session.trim()]);
-	}
+	let session = fs::read_to_string(session_file(&agent, auth.user_id)).ok();
+	let system = system_prompt(&agent, req.view.as_deref());
+	let mut cmd = agent.harness.command(
+		&req.message,
+		&system,
+		session.as_deref().map(str::trim),
+	);
 	cmd.current_dir(&agent.dir)
 		.env("ZIPP_API", &agent.api)
 		.env("ZIPP_TOKEN", &token)
@@ -203,9 +219,10 @@ async fn start(
 		.stderr(err);
 	// its own process group, a restart of the cms doesn't stop it
 	std::os::unix::process::CommandExt::process_group(&mut cmd, 0);
+	let program = cmd.get_program().to_string_lossy().to_string();
 	let mut child = cmd
 		.spawn()
-		.map_err(|e| Error::Request(format!("{}: {e}", agent.command)))?;
+		.map_err(|e| Error::Request(format!("{program}: {e}")))?;
 
 	let (db, user, run) = (state.db.clone(), auth.user_id, id.clone());
 	tokio::task::spawn_blocking(move || {
@@ -225,12 +242,7 @@ fn finish(agent: &AgentConfig, id: &str, user: i64) {
 		return;
 	};
 	let out = fs::read_to_string(&path).unwrap_or_default();
-	let session = out
-		.lines()
-		.filter_map(|l| serde_json::from_str::<Value>(l).ok())
-		.filter_map(|v| v["session_id"].as_str().map(String::from))
-		.last();
-	if let Some(s) = session {
+	if let Some(s) = agent.harness.session(&out) {
 		let _ = fs::write(session_file(agent, user), s);
 	}
 	let _ = fs::write(path.with_extension("done"), "");
@@ -243,8 +255,8 @@ struct EventsParams {
 	from: usize,
 }
 
-/// The lines of a run as events (`data` is a JSON line of the agent, `id`
-/// its number), then `done`.
+/// The lines of a run as events of the chat (`data` is a [`ChatEvent`],
+/// `id` the number of its line), then `done`.
 async fn events(
 	State(state): State<AppState>,
 	auth: Authed,
@@ -271,9 +283,12 @@ async fn events(
 				None => "",
 			};
 			for (i, line) in complete.lines().enumerate().skip(sent) {
-				let event = Event::default().id(i.to_string()).data(line);
-				if tx.send(Ok(event)).await.is_err() {
-					return;
+				for e in agent.harness.events(line, &agent.dir) {
+					let data = serde_json::to_string(&e).unwrap_or_default();
+					let event = Event::default().id(i.to_string()).data(data);
+					if tx.send(Ok(event)).await.is_err() {
+						return;
+					}
 				}
 				sent = i + 1;
 			}

@@ -66,6 +66,10 @@ environment says where: `ZIPP_AGENT_COMMAND` (`claude`), `ZIPP_AGENT_DIR`
 (the project, `..`), `ZIPP_AGENT_RESTART` (rebuilds and restarts the
 cms; its unit needs `KillMode=process`, the agent outlives the restart),
 `ZIPP_AGENT_API`. Meant for a sandbox VM: the agent runs without asking.
+The agent is a `Harness`: it builds the command for a message and turns
+the lines of its output into the chat's events (text, step, error), so
+`Agent::with(...)` can run another coding agent than Claude Code
+(`Agent::new()`).
 
 ## Types for the rest api
 
