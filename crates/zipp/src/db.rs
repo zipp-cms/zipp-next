@@ -100,6 +100,16 @@ const MIGRATIONS: &[&str] = &[r#"
 		created_at INTEGER NOT NULL
 	);
 
+	-- the texts of the schema's translations per site, missing ones are
+	-- the default of the schema
+	CREATE TABLE translations (
+		namespace TEXT NOT NULL,
+		key TEXT NOT NULL,
+		site TEXT NOT NULL,
+		value TEXT NOT NULL,
+		PRIMARY KEY (namespace, key, site)
+	);
+
 	CREATE TABLE users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		email TEXT NOT NULL UNIQUE,

@@ -51,6 +51,7 @@ use crate::error::Result;
 use crate::query::Query;
 use crate::richtext::{self, Chunk};
 use crate::schema::{FieldKind, Schema};
+use crate::translations;
 
 /// Fields every entry has, field handles can't use them.
 pub const ENTRY_FIELDS: &[&str] = &[
@@ -295,7 +296,7 @@ pub fn build(
 		builder = builder.register(obj);
 	}
 
-	let query = Object::new("Query")
+	let mut query = Object::new("Query")
 		.field(entries_args(GqlField::new(
 			"entry",
 			TypeRef::named("Entry"),
@@ -365,6 +366,75 @@ pub fn build(
 		.field(sites_field("sites"))
 		// what crelte asks for on start
 		.field(sites_field("crelteSites"));
+
+	// the texts of the frontend, for crelte's translations plugin:
+	// `translations: translations(siteId: $siteId) { common }` in global.graphql
+	if !schema.translations.is_empty() {
+		let mut obj = Object::new("Translations");
+		for g in &schema.translations {
+			obj = obj.field(GqlField::new(
+				g.namespace.clone(),
+				TypeRef::named_nn(TypeRef::STRING),
+				{
+					let ns = g.namespace.clone();
+					move |ctx| {
+						let ns = ns.clone();
+						FieldFuture::new(async move {
+							let GqlValue::Object(o) =
+								ctx.parent_value.try_to_value()?
+							else {
+								return Ok(None);
+							};
+							Ok(o.get(ns.as_str())
+								.cloned()
+								.map(FieldValue::value))
+						})
+					}
+				},
+			));
+		}
+		builder = builder.register(obj);
+		query = query.field(
+			GqlField::new(
+				"translations",
+				TypeRef::named_nn("Translations"),
+				|ctx| {
+					FieldFuture::new(async move {
+						let params = params_from_args(&ctx)?;
+						let schema = ctx.data::<Arc<Schema>>()?;
+						let site = params
+							.iter()
+							.find(|(k, _)| k == "site")
+							.map(|(_, v)| v.clone())
+							.unwrap_or_else(|| {
+								schema.primary_site().handle.clone()
+							});
+						let db = ctx.data::<Db>()?;
+						let texts =
+							translations::texts(&db.conn(), schema, &site)?;
+						// each namespace as a JSON string, crelte parses it
+						let mut o = async_graphql::indexmap::IndexMap::new();
+						for (ns, keys) in texts {
+							let json = serde_json::to_string(&keys)?;
+							o.insert(
+								async_graphql::Name::new(ns),
+								GqlValue::from(json),
+							);
+						}
+						Ok(Some(FieldValue::value(GqlValue::Object(o))))
+					})
+				},
+			)
+			.argument(InputValue::new(
+				"site",
+				TypeRef::named_list(TypeRef::STRING),
+			))
+			.argument(InputValue::new(
+				"siteId",
+				TypeRef::named_list("QueryArgument"),
+			)),
+		);
+	}
 
 	builder
 		.register(query)
@@ -1440,6 +1510,33 @@ mod tests {
 				.unwrap()
 				.contains("<p class=\"buttons\">")
 		);
+	}
+
+	#[tokio::test]
+	async fn translations_for_crelte() {
+		let db = Db::memory().unwrap();
+		let s = Arc::new(
+			site().translations("common", [("menu.open", "Menü öffnen")]),
+		);
+		let gql = build(s.clone(), db.clone(), String::new(), SiteUrls::new())
+			.unwrap();
+		translations::set(
+			&db.conn(),
+			&s,
+			"en",
+			"common",
+			"menu.open",
+			"Open menu",
+		)
+		.unwrap();
+
+		let data =
+			run(&gql, r#"{ translations(siteId: 2) { common } }"#, true).await;
+		let common: Value = serde_json::from_str(
+			data["translations"]["common"].as_str().unwrap(),
+		)
+		.unwrap();
+		assert_eq!(common, json!({ "menu.open": "Open menu" }));
 	}
 
 	#[tokio::test]

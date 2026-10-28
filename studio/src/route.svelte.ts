@@ -5,6 +5,7 @@
 export type Route =
 	| { page: 'login' }
 	| { page: 'assets' }
+	| { page: 'translations' }
 	| { page: 'list'; section: string | null }
 	| { page: 'new'; section: string }
 	| { page: 'entry'; id: number };
@@ -16,6 +17,8 @@ function parse(hash: string): Route {
 			return { page: 'login' };
 		case 'assets':
 			return { page: 'assets' };
+		case 'translations':
+			return { page: 'translations' };
 		case 'new':
 			return { page: 'new', section: arg };
 		case 'entry':

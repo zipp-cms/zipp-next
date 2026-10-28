@@ -22,7 +22,19 @@ fn schema() -> Schema {
 		.section(Section::single("header", "header"))
 		.section(Section::single("footer", "footer"))
 		.nav("Content", ["pages", "events"])
-		.nav("Settings", ["header", "footer"])
+		.nav("Settings", ["header", "footer", "translations"])
+		// texts of the frontend, editors translate them
+		.translations(
+			"common",
+			[
+				("nav.home", "Startseite"),
+				(
+					"footer.made",
+					"Ein crelte-Frontend, die Inhalte kommen von zipp.",
+				),
+				("events.none", "Keine Veranstaltungen"),
+			],
+		)
 		.transform(Transform::new("hero").width(1600).height(700).crop())
 		.transform(Transform::new("small").width(600))
 		.transform(Transform::new("medium").width(1200))

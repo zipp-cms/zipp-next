@@ -1,5 +1,13 @@
 <script module>
+	import {
+		createGlobalLoader,
+		createTranslations,
+	} from 'crelte/translations';
+
 	export const templates = import.meta.glob('@/templates/*.svelte');
+
+	// the texts come from zipp's translations, see global.graphql
+	export const plugins = [createTranslations({ loader: createGlobalLoader() })];
 
 	/** @type {import('crelte').Config} */
 	export const config = {

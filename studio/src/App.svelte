@@ -5,6 +5,7 @@
 	import List from './pages/List.svelte';
 	import Edit from './pages/Edit.svelte';
 	import Assets from './pages/Assets.svelte';
+	import Translations from './pages/Translations.svelte';
 	import Icon from './lib/Icon.svelte';
 
 	let schema = $state<Schema | null>(null);
@@ -99,12 +100,23 @@
 						{s.name}
 					</a>
 				{/each}
+				{#if group?.sections.includes('translations')}
+					<a
+						href="#/translations"
+						class:active={shown.section === 'translations'}
+					>
+						<Icon name="default" />
+						Translations
+					</a>
+				{/if}
 			{/if}
 		</nav>
 		<main>
 			{#key site.current}
 				{#if assets}
 					<Assets />
+				{:else if route.current.page === 'translations'}
+					<Translations {schema} />
 				{:else if route.current.page === 'list' && current}
 					{#key current}
 						<List {schema} section={current} />

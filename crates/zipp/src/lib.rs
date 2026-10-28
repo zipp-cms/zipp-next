@@ -16,6 +16,7 @@ pub mod query;
 pub mod richtext;
 pub mod schema;
 mod studio;
+pub mod translations;
 pub mod typescript;
 
 use std::fs;
@@ -207,6 +208,7 @@ async fn serve(
 		.nest("/auth", auth::routes())
 		.merge(entries::routes())
 		.merge(drafts::routes())
+		.merge(translations::routes())
 		.merge(assets::api_routes())
 		.merge(graphql::routes());
 	let app = Router::new()

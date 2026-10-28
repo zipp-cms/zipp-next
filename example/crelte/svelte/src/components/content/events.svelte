@@ -15,6 +15,9 @@
 </script>
 
 <script>
+	import { getTranslations } from 'crelte/translations';
+
+	const t = getTranslations();
 	let { events } = $props();
 </script>
 
@@ -26,7 +29,7 @@
 			<span>{e.date}, {e.city}</span>
 		</li>
 	{:else}
-		<li>No upcoming events</li>
+		<li>{$t('events.none')}</li>
 	{/each}
 </ul>
 

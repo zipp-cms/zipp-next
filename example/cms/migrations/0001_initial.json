@@ -800,7 +800,27 @@
         "name": "Settings",
         "sections": [
           "header",
-          "footer"
+          "footer",
+          "translations"
+        ]
+      }
+    ],
+    "translations": [
+      {
+        "namespace": "common",
+        "keys": [
+          [
+            "nav.home",
+            "Startseite"
+          ],
+          [
+            "footer.made",
+            "Ein crelte-Frontend, die Inhalte kommen von zipp."
+          ],
+          [
+            "events.none",
+            "Keine Veranstaltungen"
+          ]
         ]
       }
     ]

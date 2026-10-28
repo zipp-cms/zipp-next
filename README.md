@@ -99,6 +99,12 @@ fn main() {
   breaks, so frontends need no margin hacks. GraphQL has `html` and
   `chunks` (`Html`, `Buttons` with a row of links, the blocks), so a row
   of buttons arrives grouped. Links in the text point to entries by id.
+- **Translations.** The texts of the frontend are keys in the code with
+  the text of the primary site: `.translations("common", [("menu.open",
+  "Menü öffnen")])`. Editors translate them per site on the studio page
+  `translations` (put it into a nav group); an empty text is the default.
+  crelte's translations plugin gets them with `translations:
+  translations(siteId: $siteId) { common }` in `global.graphql`.
 - **Assets and transforms.** Uploads live in `--files`, `Field::images`
   and `Field::assets` link them. Transforms are named in code
   (`Transform::new("hero").width(1600).height(700).crop()`), generated

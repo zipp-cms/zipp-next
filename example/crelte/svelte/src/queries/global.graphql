@@ -8,6 +8,10 @@ query ($siteId: [QueryArgument]) {
 			}
 		}
 	}
+	# the texts for crelte's translations plugin
+	translations: translations(siteId: $siteId) {
+		common
+	}
 	footer: globalSet(handle: "footer", siteId: $siteId) {
 		... on footer_Entry {
 			text

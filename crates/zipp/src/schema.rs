@@ -36,6 +36,17 @@ pub struct Schema {
 	/// sections in one group. Only looks, like labels.
 	#[serde(default)]
 	pub nav: Vec<NavGroup>,
+	/// Texts of the frontend (`menu.open`), editors only translate them.
+	#[serde(default)]
+	pub translations: Vec<TranslationGroup>,
+}
+
+/// A namespace of texts, crelte loads `common` always.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TranslationGroup {
+	pub namespace: String,
+	/// the key and its text in the primary site
+	pub keys: Vec<(String, String)>,
 }
 
 /// A group of sections in the studio, like Content or Settings.
@@ -214,6 +225,24 @@ impl Schema {
 		self
 	}
 
+	/// Texts of the frontend in a namespace, the key and its text in the
+	/// primary site; editors translate them in the studio. To show them
+	/// in the studio, put `translations` into a nav group.
+	pub fn translations<'a>(
+		mut self,
+		namespace: &str,
+		keys: impl IntoIterator<Item = (&'a str, &'a str)>,
+	) -> Self {
+		self.translations.push(TranslationGroup {
+			namespace: namespace.into(),
+			keys: keys
+				.into_iter()
+				.map(|(k, d)| (k.to_string(), d.to_string()))
+				.collect(),
+		});
+		self
+	}
+
 	pub fn transform(mut self, transform: Transform) -> Self {
 		self.transforms.push(transform);
 		self
@@ -349,10 +378,32 @@ impl Schema {
 				}
 			}
 			for g in &self.nav {
-				let unknown =
-					g.sections.iter().find(|s| self.get_section(s).is_none());
+				// translations is a page of the studio, not a section
+				let unknown = g.sections.iter().find(|s| {
+					self.get_section(s).is_none()
+						&& !(*s == "translations"
+							&& !self.translations.is_empty())
+				});
 				if let Some(s) = unknown {
 					return Err(format!("nav {}: unknown section {s}", g.name));
+				}
+			}
+		}
+
+		for (i, g) in self.translations.iter().enumerate() {
+			check_handle(&g.namespace)?;
+			if self.translations[..i]
+				.iter()
+				.any(|x| x.namespace == g.namespace)
+			{
+				return Err(format!(
+					"translations {} exist twice",
+					g.namespace
+				));
+			}
+			for (j, (key, _)) in g.keys.iter().enumerate() {
+				if g.keys[..j].iter().any(|(k, _)| k == key) {
+					return Err(format!("translation {} exists twice", key));
 				}
 			}
 		}

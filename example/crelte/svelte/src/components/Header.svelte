@@ -1,5 +1,8 @@
 <script>
 	import { getGlobal, getRouter, getSite } from 'crelte';
+	import { getTranslations } from 'crelte/translations';
+
+	const t = getTranslations();
 
 	// the navigation of the header single, from global.graphql
 	const header = getGlobal('header');
@@ -9,7 +12,7 @@
 
 <header>
 	<nav>
-		<a href={$site.url.href}>Home</a>
+		<a href={$site.url.href}>{$t('nav.home')}</a>
 		{#each $header?.navigation ?? [] as page (page.url)}
 			<a href={page.url}>{page.title}</a>
 		{/each}

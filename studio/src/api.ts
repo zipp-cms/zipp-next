@@ -61,6 +61,8 @@ export type Schema = {
 	sections: Section[];
 	components: Component[];
 	nav: NavGroup[];
+	/** texts of the frontend: namespace and [key, default] */
+	translations: { namespace: string; keys: [string, string][] }[];
 	/** the url of each site, by handle */
 	siteUrls: Record<string, string>;
 };
@@ -334,4 +336,20 @@ export function restoreRevision(id: number, rev: number): Promise<Draft> {
 /** A link that shows the draft on the website for a day. */
 export async function previewToken(id: number): Promise<string> {
 	return (await request('POST', `/entries/${id}/preview`)).token;
+}
+
+/** site → namespace → key → saved text, defaults are in the schema */
+export async function getTranslations(): Promise<
+	Record<string, Record<string, Record<string, string>>>
+> {
+	return (await request('GET', '/translations')).saved;
+}
+
+export function putTranslation(
+	site: string,
+	namespace: string,
+	key: string,
+	value: string,
+): Promise<void> {
+	return request('PUT', '/translations', { site, namespace, key, value });
 }
