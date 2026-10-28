@@ -380,7 +380,15 @@ fn render(node: &Value, resolve: &mut Resolve, out: &mut String) {
 		}
 		Some("listItem") => {
 			*out += "<li>";
-			children(resolve, out);
+			// an item of one paragraph is only its text, like CKEditor's
+			match node["content"].as_array().map(Vec::as_slice) {
+				Some([p]) if p["type"] == "paragraph" => {
+					for child in p["content"].as_array().into_iter().flatten() {
+						render(child, resolve, out);
+					}
+				}
+				_ => children(resolve, out),
+			}
 			*out += "</li>";
 		}
 		Some("hardBreak") => *out += "<br>",
@@ -527,5 +535,19 @@ mod tests {
 			Chunk::Html("<p><a href=\"/d\"><strong>d</strong></a></p>".into())
 		);
 		assert_eq!(links(&doc).len(), 2);
+	}
+
+	#[test]
+	fn list_items_of_one_paragraph_are_tight() {
+		let item =
+			|content: Value| json!({ "type": "listItem", "content": content });
+		let doc = json!({ "type": "doc", "content": [{ "type": "bulletList", "content": [
+			item(json!([p("one")])),
+			item(json!([p("two"), p("three")])),
+		] }] });
+		assert_eq!(
+			html(&doc, &mut resolver),
+			"<ul><li>one</li><li><p>two</p><p>three</p></li></ul>"
+		);
 	}
 }
