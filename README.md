@@ -182,6 +182,11 @@ Cms::new(schema(), zipp::migrations!())
   and opens another page when not. A site tells the studio its page with
   a small bridge (`example/crelte/svelte/src/components/PreviewBridge.svelte`),
   crelte's live preview mode keeps the scroll position on reloads.
+- **The content model in the studio.** Admins see it read only under
+  Model, like Craft's settings with admin changes off: sections (kind,
+  entry types, uri, number of entries), entry types and blocks with
+  their fields (handle, kind and settings, per site or shared, where
+  they are used, the GraphQL type), sites, transforms and roles.
 - **Check before a deploy.** Every command checks the schema first (the
   handles it names: types of sections, relations, groups, blocks, nav,
   roles). `serve` applies new migrations and refuses to start when the

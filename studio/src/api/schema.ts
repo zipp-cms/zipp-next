@@ -61,6 +61,16 @@ export type Section = {
 	kind: 'single' | 'channel' | 'structure';
 	types: string[];
 	uri: string | null;
+	/** the uri of an entry type that differs from `uri` */
+	type_uris?: Record<string, string>;
+};
+
+/** A named image size, only these exist. */
+export type Transform = {
+	handle: string;
+	width: number | null;
+	height: number | null;
+	crop: boolean;
 };
 
 export type NavGroup = { name: string; sections: string[] };
@@ -72,6 +82,7 @@ export type Schema = {
 	nav: NavGroup[];
 	/** the url of each site, by handle */
 	siteUrls: Record<string, string>;
+	transforms: Transform[];
 	roles: Role[];
 	me: Me;
 	/** the models of the AI chat, empty if it is off */

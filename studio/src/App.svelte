@@ -9,6 +9,7 @@
 	import Ai from './pages/Ai.svelte';
 	import Doc from './pages/Doc.svelte';
 	import Users from './pages/Users.svelte';
+	import Model from './pages/Model.svelte';
 	import Icon from './lib/Icon.svelte';
 
 	let schema = $state<Schema | null>(null);
@@ -86,6 +87,7 @@
 	{@const assets = route.current.page === 'assets'}
 	{@const ai = route.current.page === 'ai'}
 	{@const users = route.current.page === 'users'}
+	{@const model = route.current.page === 'model'}
 	<div class="layout" class:wide={ai}>
 		<div class="logo">zipp</div>
 		<header>
@@ -93,7 +95,11 @@
 				{#each groups as g (g.name)}
 					<a
 						href={navHref(g.sections[0])}
-						class:active={!assets && !ai && !users && g === group}
+						class:active={!assets &&
+							!ai &&
+							!users &&
+							!model &&
+							g === group}
 					>
 						{g.name}
 					</a>
@@ -105,6 +111,9 @@
 					<a href="/admin/ai" class:active={ai}>AI</a>
 				{/if}
 				{#if isAdmin(schema)}
+					<a href="/admin/model/sections" class:active={model}>
+						Model
+					</a>
 					<a href="/admin/users" class:active={users}>Users</a>
 				{/if}
 			</nav>
@@ -129,6 +138,17 @@
 					<Icon name="dashboard" />
 					Assets
 				</a>
+			{:else if model}
+				{#each [['sections', 'Sections', 'all_pages'], ['types', 'Entry types', 'single'], ['blocks', 'Blocks', 'dashboard'], ['sites', 'Sites and more', 'doc']] as [tab, name, icon] (tab)}
+					<a
+						href="/admin/model/{tab}"
+						class:active={route.current.page === 'model' &&
+							route.current.tab === tab}
+					>
+						<Icon name={icon} />
+						{name}
+					</a>
+				{/each}
 			{:else if users}
 				<a href="/admin/users" class="active">
 					<Icon name="single" />
@@ -152,6 +172,8 @@
 					<Assets {schema} />
 				{:else if users}
 					<Users {schema} />
+				{:else if route.current.page === 'model'}
+					<Model {schema} tab={route.current.tab} />
 				{:else if ai}
 					<Ai {schema} />
 				{:else if doc}
