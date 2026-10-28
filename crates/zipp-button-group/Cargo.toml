@@ -6,4 +6,4 @@ description = "A field of buttons in colors for zipp, like Craft's button group"
 
 [dependencies]
 serde_json = "1.0"
-zipp = { path = "../../crates/zipp" }
+zipp = { path = "../zipp" }

@@ -20,7 +20,7 @@ fn schema() -> Schema {
 	};
 
 	Schema::new()
-		// a field type of another crate, see example/button-group
+		// a field type of another crate, see crates/zipp-button-group
 		.field_type(ButtonGroup)
 		.site("de", "Deutsch", "de-CH")
 		.site("en", "English", "en")

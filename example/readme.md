@@ -3,7 +3,6 @@
 zipp is a headless CMS where the **content model is code**. This studio, the GraphQL API and the migrations are all made from one Rust file: [`example/cms/src/main.rs`](https://github.com/zipp-cms/zipp-next/blob/code-first/example/cms/src/main.rs). The website is a separate crelte project that reads the content over GraphQL.
 
 - **Website (crelte):** <https://zipp-crelte.noah.meierlabs.dev> — and `/en` for English
-- **A plain Svelte frontend:** <https://zipp.noah.meierlabs.dev>
 - **GraphQL** is private like Craft's: frontends send a token, the playground (GraphiQL) is only on in development (`serve --dev`)
 
 This page is itself a feature: a markdown file of the repository ([`example/readme.md`](https://github.com/zipp-cms/zipp-next/blob/code-first/example/readme.md)), shown in the navigation with `.doc("readme", "Readme", include_str!("../../readme.md"))`. Editors read it, the code changes it.
@@ -28,7 +27,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Group | a page → SEO | fields of another component under one name |
 | Markdown | Events → Description | written as markdown, the website gets it as html |
 | Dropdown | Image block → Width (3 options: buttons), Events → Language (5: a select) | the website sizes the image, filters events by language |
-| A field type of another crate | Events → Genre | `example/button-group`: Craft's button group with a color per option, its own editor and GraphQL type |
+| A field type of another crate | Events → Genre | `crates/zipp-button-group`: Craft's button group with a color per option, its own editor and GraphQL type |
 | Boolean, number, indexed fields | Events | *sold out*, price; the website filters and sorts by them |
 | Relations | Events → More info, Header → navigation | the website gets the linked entries with their fields |
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |

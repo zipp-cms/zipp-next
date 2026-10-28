@@ -53,11 +53,12 @@ Cms::new(schema(), zipp::migrations!())
 
 - `crates/zipp`: the cms, a library the site crate calls
 - `studio`: the editing ui (Svelte), its build is embedded in the zipp
-  crate and served on `/`
+  crate and served on `/admin`
+- `crates/zipp-button-group`: a field type of another crate, as an example
+  of a plugin
 - `example/cms`: the cms crate of an example site, with its migrations;
   `example/readme.md` is its first page in the studio and says where to
   try which feature
-- `example/frontend`: a small Svelte frontend for it
 - `example/crelte`: the same site as a crelte project, with crelte's
   default template and no Craft
 
@@ -135,7 +136,7 @@ Cms::new(schema(), zipp::migrations!())
   `mount(target, { field, value, onchange })`, built with its own
   framework and compiled into the crate. The site registers it with
   `Schema::field_type(...)`, the studio loads the module from
-  `/_fields/<type>.js` when a field needs it. `example/button-group` is
+  `/_fields/<type>.js` when a field needs it. `crates/zipp-button-group` is
   such a crate: Craft's button group, options in colors.
 - **Docs.** `.doc("readme", "Readme", include_str!("../readme.md"))`
   shows a markdown file of the repository as a read-only page of the
@@ -227,9 +228,8 @@ read the migrations from disk, so a new one works without a rebuild.
 
 To work on the studio run `npm run dev` in `studio/` (it proxies `/api`
 to the cms), `npm run build` updates the embedded build in
-`crates/zipp/studio`, commit it with the change. The frontend runs
-with `npm run dev` in `example/frontend`, it loads everything over
-GraphQL.
+`crates/zipp/studio`, commit it with the change. The website is the
+crelte project in `example/crelte` (`npm run dev` in its `svelte/`).
 
 After changing `example/cms/src/main.rs`:
 

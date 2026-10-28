@@ -6,4 +6,4 @@ edition = "2024"
 [dependencies]
 serde_json = "1.0"
 zipp = { path = "../../crates/zipp" }
-zipp-button-group = { path = "../button-group" }
+zipp-button-group = { path = "../../crates/zipp-button-group" }
