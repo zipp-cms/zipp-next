@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { markdown } from '../lib/markdown';
 	import {
+		agentEvents,
+		agentForget,
+		agentStart,
 		aiChat,
 		sitePreviewToken,
 		type AiAction,
@@ -31,6 +34,8 @@
 	const home = untrack(() => schema.siteUrls[site.current] ?? '');
 	// the first model; the choice is hidden for now (operator 2026-10-28)
 	const model = untrack(() => schema.aiModels[0]?.id ?? '');
+	// development: the coding agent does everything, content and code
+	const agent = untrack(() => schema.agent);
 	let input = $state('');
 	let busy = $state(false);
 	let error = $state('');
@@ -118,10 +123,100 @@
 		queueMicrotask(() => log?.scrollTo({ top: log.scrollHeight }));
 	}
 
+	/** A step of the agent as a line, short. */
+	function step(tool: { name: string; input: any }): string {
+		const file = (p: string) =>
+			String(p ?? '')
+				.split('/')
+				.slice(-3)
+				.join('/');
+		const i = tool.input ?? {};
+		switch (tool.name) {
+			case 'Edit':
+			case 'MultiEdit':
+				return `Edits ${file(i.file_path)}`;
+			case 'Write':
+				return `Writes ${file(i.file_path)}`;
+			case 'Read':
+				return `Reads ${file(i.file_path)}`;
+			case 'Bash':
+				return (
+					i.description || `Runs ${String(i.command).slice(0, 80)}`
+				);
+			case 'Grep':
+			case 'Glob':
+				return `Searches ${i.pattern ?? ''}`;
+			default:
+				return tool.name;
+		}
+	}
+
+	/** Development: the agent works, its text and steps come as lines. */
+	async function sendAgent(text: string) {
+		const id = await agentStart(text, view || null);
+		let next = 0;
+		let changed = false;
+		let failures = 0;
+		const onLine = (n: number, ev: any) => {
+			next = n + 1;
+			if (ev.type === 'assistant') {
+				for (const c of ev.message?.content ?? []) {
+					if (c.type === 'text' && c.text.trim()) {
+						lines.push({ who: 'ai', text: c.text });
+					} else if (
+						c.type === 'tool_use' &&
+						c.name !== 'TodoWrite'
+					) {
+						if (/Edit|Write|Bash/.test(c.name)) changed = true;
+						const a = {
+							text: step(c),
+							entryId: null,
+							section: null,
+							url: null,
+							navigate: false,
+						};
+						lines.push({ who: 'action', action: a });
+					}
+				}
+				scroll();
+			} else if (ev.type === 'result' && ev.is_error) {
+				error = ev.result || 'The agent stopped with an error';
+			}
+		};
+		// a restart of the cms ends the stream, read on after it
+		for (;;) {
+			try {
+				const err = await agentEvents(id, next, onLine);
+				if (err && !lines.some(l => l.who === 'ai')) error = err;
+				break;
+			} catch (e: any) {
+				if (++failures > 120) throw e;
+				await new Promise(r => setTimeout(r, 1000));
+			}
+		}
+		if (changed) refresh();
+	}
+
 	async function send(e: Event) {
 		e.preventDefault();
 		const text = input.trim();
 		if (!text || busy) return;
+		if (agent) {
+			input = '';
+			error = '';
+			lines.push({ who: 'user', text });
+			scroll();
+			busy = true;
+			try {
+				await sendAgent(text);
+			} catch (e: any) {
+				error = e.message;
+			} finally {
+				busy = false;
+				scroll();
+			}
+			return;
+		}
 		input = '';
 		error = '';
 		const from = lines.length;
@@ -172,6 +267,7 @@
 	function clear() {
 		messages = [];
 		lines = [];
+		if (agent) agentForget().catch(e => (error = e.message));
 	}
 </script>
 
@@ -187,10 +283,18 @@
 		<div class="log" bind:this={log}>
 			{#if !lines.length}
 				<p class="hint">
-					Ask for anything on the website, e.g. “Write a better intro
-					for Über uns”, “Add an event in Basel” or “Translate the
-					footer into English”. Changes are drafts: you see them on
-					the right and publish them in the editor.
+					{#if agent}
+						Development: ask for anything, content, design or new
+						fields, e.g. “Add a field for the opening hours” or
+						“Make the buttons round”. Code changes show on the right
+						right away, content changes are drafts you publish.
+					{:else}
+						Ask for anything on the website, e.g. “Write a better
+						intro for Über uns”, “Add an event in Basel” or
+						“Translate the footer into English”. Changes are drafts:
+						you see them on the right and publish them in the
+						editor.
+					{/if}
 				</p>
 			{/if}
 			{#each lines as line, i (i)}

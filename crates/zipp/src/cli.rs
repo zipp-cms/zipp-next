@@ -43,6 +43,16 @@ pub(super) struct ServeArgs {
 	/// in development)
 	#[arg(long, env = "ZIPP_NOINDEX")]
 	pub(super) noindex: bool,
+	/// Development only: the AI chat hands everything to this coding
+	/// agent, like `claude` (Claude Code), for admins
+	#[arg(long, requires = "dev")]
+	pub(super) agent: Option<String>,
+	/// The project the agent works in
+	#[arg(long, default_value = "..")]
+	pub(super) agent_dir: PathBuf,
+	/// A shell command the agent runs to rebuild and restart the cms
+	#[arg(long)]
+	pub(super) agent_restart: Option<String>,
 }
 
 #[derive(Debug, Subcommand)]

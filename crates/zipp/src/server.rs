@@ -17,6 +17,9 @@ pub(super) async fn serve(
 		graphql_token,
 		dev,
 		noindex,
+		agent,
+		agent_dir,
+		agent_restart,
 	} = args;
 	if graphql_token.is_none() && !dev {
 		tracing::warn!(
@@ -47,6 +50,23 @@ pub(super) async fn serve(
 			.into());
 	}
 
+	let agent = match agent {
+		Some(command) => {
+			agent::check_dir(&agent_dir)?;
+			let dir =
+				fs::canonicalize(&agent_dir).map_err(|e| e.to_string())?;
+			let port = listen.rsplit(':').next().unwrap_or("8090");
+			Some(agent::AgentConfig {
+				command,
+				dir,
+				runs: files.join("../agent-runs"),
+				restart: agent_restart,
+				api: format!("http://127.0.0.1:{port}/api"),
+			})
+		}
+		None => None,
+	};
+
 	let schema = Arc::new(schema);
 	let ai = match key_file {
 		Some(path) => {
@@ -73,6 +93,7 @@ pub(super) async fn serve(
 		dev,
 		indexing: !dev && !noindex,
 		ai,
+		agent,
 		hooks: Arc::new(hooks),
 	};
 	let api = Router::new()
@@ -82,6 +103,7 @@ pub(super) async fn serve(
 		.merge(users::routes())
 		.merge(drafts::routes())
 		.merge(ai::routes())
+		.merge(agent::routes())
 		.merge(assets::api_routes())
 		.merge(graphql::routes());
 	let app = Router::new()

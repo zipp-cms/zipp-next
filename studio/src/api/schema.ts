@@ -109,6 +109,8 @@ export type Schema = {
 	/** sites not on the website yet */
 	offline: string[];
 	roles: Role[];
+	/** the chat hands everything to the coding agent (development) */
+	agent: boolean;
 	/** the plugins with a studio module, `/_plugins/<name>.js` */
 	plugins: { name: string; data: unknown }[];
 	me: Me;

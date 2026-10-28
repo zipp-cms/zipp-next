@@ -2,6 +2,7 @@
 //! crate that builds its [`Schema`] and calls [`run`]. The content is
 //! edited in the studio and read by any frontend over the api.
 
+pub mod agent;
 pub mod ai;
 pub mod assets;
 pub mod auth;
@@ -104,6 +105,8 @@ pub struct AppState {
 	pub indexing: bool,
 	/// the AI chat, if there is an api key
 	pub ai: Option<ai::AiConfig>,
+	/// the coding agent in development, see `serve --agent`
+	pub agent: Option<agent::AgentConfig>,
 	hooks: Arc<Vec<Hook>>,
 }
 

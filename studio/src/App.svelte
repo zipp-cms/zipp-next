@@ -120,7 +120,7 @@
 				{#if canAssets(schema, 'view')}
 					<a href="/admin/assets" class:active={assets}>Assets</a>
 				{/if}
-				{#if schema.aiModels.length && canAi(schema)}
+				{#if (schema.aiModels.length || schema.agent) && canAi(schema)}
 					<a href="/admin/ai" class:active={ai}>AI</a>
 				{/if}
 				<!-- read only for everyone, a role sees its part -->
