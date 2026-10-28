@@ -21,3 +21,8 @@
 - [ ] Data migrations in code, for changes the ops can't express
 - [ ] crelte adapter, so a crelte project can use zipp instead of Craft
 - [ ] Full text search
+- [ ] Storage backends: SQLite (today), in memory (SQLite `:memory:`,
+      already used by the tests; for previews and throwaway instances),
+      Postgres for bigger sites. Needs a small store interface around the
+      SQL in entries.rs, auth.rs and query.rs; the index tables stay the
+      same in both
