@@ -114,6 +114,8 @@ struct SchemaResp {
 	roles: Vec<crate::schema::Role>,
 	/// sites not on the website yet
 	offline: Vec<String>,
+	/// SEO defaults of sections and entry types, shown in the setup
+	seo: Option<crate::schema::seo::Seo>,
 	me: Me,
 }
 
@@ -137,6 +139,7 @@ async fn schema_route(
 	Ok(Json(SchemaResp {
 		roles: state.schema.roles.clone(),
 		offline: state.schema.offline.clone(),
+		seo: state.schema.seo.clone(),
 		me: Me {
 			id: auth.user_id,
 			email,

@@ -154,58 +154,60 @@
 {:else if (tab === 'types' || tab === 'blocks') && handle}
 	{@const c = schema.components.find(c => c.handle === handle)}
 	{#if c}
-		<div class="card">
-			<h2>
-				{c.name}
-				<code>{c.handle}</code>
-				<code class="gql">
-					{c.handle}_{c.entry ? 'Entry' : 'Block'}
-				</code>
-			</h2>
-			<p class="muted">
-				Used in:
-				{#each usedIn(c) as u, i (u.text)}
-					{i ? ', ' : ''}
-					<a href={u.href}>{u.text}</a>
-				{:else}
-					nothing
-				{/each}
-			</p>
-			{#if c.fields.length}
-				<table>
-					<thead>
-						<tr>
-							<th>Label</th>
-							<th>Handle</th>
-							<th>Kind</th>
-							<th>Sites</th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each c.fields as f (f.handle)}
-							<tr id={f.handle}>
-								<td>{f.label}</td>
-								<td><code>{f.handle}</code></td>
-								<td>{describeField(f)}</td>
-								<td>
-									{c.entry
-										? f.translatable
-											? 'per site'
-											: 'all sites'
-										: ''}
-								</td>
-								<td class="flags">
-									{f.required ? 'required' : ''}
-									{f.indexed ? 'indexed' : ''}
-								</td>
+		<div class="layout">
+			<div class="card">
+				<h2>
+					Fields
+					<code class="gql">
+						{c.handle}_{c.entry ? 'Entry' : 'Block'}
+					</code>
+				</h2>
+				{#if c.fields.length}
+					<table>
+						<thead>
+							<tr>
+								<th>Label</th>
+								<th>Handle</th>
+								<th>Kind</th>
+								<th>Sites</th>
+								<th></th>
 							</tr>
-						{/each}
-					</tbody>
-				</table>
-			{:else}
-				<p class="muted">No fields, only a title.</p>
-			{/if}
+						</thead>
+						<tbody>
+							{#each c.fields as f (f.handle)}
+								<tr id={f.handle}>
+									<td>{f.label}</td>
+									<td><code>{f.handle}</code></td>
+									<td>{describeField(f)}</td>
+									<td>
+										{c.entry
+											? f.translatable
+												? 'per site'
+												: 'all sites'
+											: ''}
+									</td>
+									<td class="flags">
+										{f.required ? 'required' : ''}
+										{f.indexed ? 'indexed' : ''}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				{:else}
+					<p class="muted">No fields, only a title.</p>
+				{/if}
+			</div>
+			<aside class="card">
+				<h2>Used in</h2>
+				<ul>
+					{#each usedIn(c) as u (u.text)}
+						<li><a href={u.href}>{u.text}</a></li>
+					{:else}
+						<li class="muted">nothing</li>
+					{/each}
+				</ul>
+			</aside>
 		</div>
 	{:else}
 		<p class="error">
@@ -345,6 +347,31 @@
 
 	.up {
 		color: inherit;
+	}
+
+	.layout {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 300px;
+		gap: 20px;
+		align-items: start;
+	}
+
+	@media (max-width: 1100px) {
+		.layout {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		font-size: 14px;
+	}
+
+	li {
+		padding: 5px 0;
+		border-top: 1px solid var(--line);
 	}
 
 	.card {

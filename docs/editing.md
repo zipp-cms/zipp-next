@@ -19,8 +19,12 @@ role; the header shows who is logged in with which role), like Craft's settings 
 entry types, uri, and each section's entries with whether they are live
 per site and have unpublished changes), entry types and blocks with
 their fields (handle, kind and settings, per site or shared, where
-they are used, the GraphQL type), sites, transforms and roles. Entry
-types and blocks are tables that link to a page per type.
+they are used, the GraphQL type), sites, transforms and roles. Sections,
+entry types and blocks are tables that link to a page each. A section's
+page shows its settings (kind, navigation, GraphQL, entry types with
+their uri, the urls per site, which role may do what, the SEO defaults)
+and its entries as a short list on the side that links to the editor; a
+type's page its fields, with where it is used on the side.
 
 "Handles" in the header (saved in the browser) shows each field's handle
 next to its label, like Craft's "show field handles"; the handle links
