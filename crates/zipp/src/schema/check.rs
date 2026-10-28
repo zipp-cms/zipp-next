@@ -69,11 +69,9 @@ impl Schema {
 				}
 			}
 			for g in &self.nav {
-				// translations and docs are pages of the studio, not sections
+				// docs are pages of the studio, not sections
 				let unknown = g.sections.iter().find(|s| {
 					self.get_section(s).is_none()
-						&& !(*s == "translations"
-							&& !self.translations.is_empty())
 						&& !self.docs.iter().any(|d| d.handle == **s)
 				});
 				if let Some(s) = unknown {
@@ -85,28 +83,9 @@ impl Schema {
 		for (i, d) in self.docs.iter().enumerate() {
 			check_handle(&d.handle)?;
 			if self.get_section(&d.handle).is_some()
-				|| d.handle == "translations"
 				|| self.docs[..i].iter().any(|x| x.handle == d.handle)
 			{
 				return Err(format!("doc {} exists twice", d.handle));
-			}
-		}
-
-		for (i, g) in self.translations.iter().enumerate() {
-			check_handle(&g.namespace)?;
-			if self.translations[..i]
-				.iter()
-				.any(|x| x.namespace == g.namespace)
-			{
-				return Err(format!(
-					"translations {} exist twice",
-					g.namespace
-				));
-			}
-			for (j, (key, _)) in g.keys.iter().enumerate() {
-				if g.keys[..j].iter().any(|(k, _)| k == key) {
-					return Err(format!("translation {} exists twice", key));
-				}
 			}
 		}
 
@@ -209,6 +188,13 @@ impl Schema {
 			&& to.is_empty()
 		{
 			return Err("a link needs something to point to".into());
+		}
+		if let FieldKind::Texts { keys } = &field.kind {
+			for (i, (key, _)) in keys.iter().enumerate() {
+				if keys[..i].iter().any(|(k, _)| k == key) {
+					return Err(format!("text {key} exists twice"));
+				}
+			}
 		}
 		if let FieldKind::Dropdown { options } = &field.kind {
 			if options.is_empty() {

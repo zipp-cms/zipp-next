@@ -86,6 +86,12 @@ pub enum FieldKind {
 	},
 	/// Text in Markdown, GraphQL renders it to html too.
 	Markdown,
+	/// Texts of the frontend by key, `{ "nav.home": "Home" }`; the keys
+	/// and the texts of the primary site come from the code, see
+	/// [`Schema::translations`](crate::Schema::translations).
+	Texts {
+		keys: Vec<(String, String)>,
+	},
 	/// One of some options, the value is the option's value. The studio
 	/// shows up to three as buttons, more as a select.
 	Dropdown {
@@ -265,6 +271,17 @@ impl Field {
 
 	pub fn markdown(handle: &str) -> Self {
 		Self::new(handle, FieldKind::Markdown)
+	}
+
+	pub(crate) fn texts<'a>(
+		handle: &str,
+		keys: impl IntoIterator<Item = (&'a str, &'a str)>,
+	) -> Self {
+		let keys = keys
+			.into_iter()
+			.map(|(k, d)| (k.to_string(), d.to_string()))
+			.collect();
+		Self::new(handle, FieldKind::Texts { keys }).translatable()
 	}
 
 	/// One of the options, given as value and label.

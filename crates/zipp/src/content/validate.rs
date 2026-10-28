@@ -92,6 +92,23 @@ pub(super) fn validate_value(
 		}
 		(FieldKind::Boolean, Value::Bool(_)) => {}
 		(FieldKind::Markdown, Value::String(_)) => {}
+		(FieldKind::Texts { keys }, Value::Object(texts)) => {
+			// only the keys of the code, empty ones fall back to its text
+			let mut out = Map::new();
+			for (key, text) in texts {
+				match text {
+					Value::String(t) if t.is_empty() => {}
+					Value::String(_) if keys.iter().any(|(k, _)| k == key) => {
+						out.insert(key.clone(), text.clone());
+					}
+					Value::String(_) => {}
+					_ => {
+						error(errors, &format!("{path}.{key}"), "must be text")
+					}
+				}
+			}
+			return (!out.is_empty()).then_some(Value::Object(out));
+		}
 		(FieldKind::Dropdown { options }, Value::String(s)) => {
 			if !options.iter().any(|o| &o.value == s) {
 				error(errors, path, "not one of the options");

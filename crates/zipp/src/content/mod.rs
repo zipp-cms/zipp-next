@@ -81,6 +81,19 @@ pub fn walk_mut(
 
 /// The fields of `into` with the shared (not translatable) ones taken
 /// from `from`, so every site has the same shared values.
+/// The texts of a texts field with the code's text where none is saved.
+pub fn texts_of(
+	keys: &[(String, String)],
+	value: &Value,
+) -> Map<String, Value> {
+	keys.iter()
+		.map(|(key, default)| {
+			let text = value[key].as_str().filter(|t| !t.is_empty());
+			(key.clone(), Value::from(text.unwrap_or(default)))
+		})
+		.collect()
+}
+
 pub fn share(comp: &Component, from: &Value, into: &Value) -> Value {
 	let mut out = into.as_object().cloned().unwrap_or_default();
 	for f in comp.fields.iter().filter(|f| !f.translatable) {

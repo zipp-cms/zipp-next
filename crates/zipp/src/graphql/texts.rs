@@ -1,58 +1,51 @@
 use super::*;
 
+use crate::schema::TRANSLATIONS;
+
 /// The texts of the frontend, for crelte's translations plugin:
-/// `translations: translations(siteId: $siteId) { common }` in global.graphql
+/// `translations: translations(siteId: $siteId) { common }` in
+/// global.graphql. They are the fields of the single `translations`, a
+/// preview shows its draft.
 pub(super) fn translations_field(
 	schema: &Schema,
 ) -> Option<(Object, GqlField)> {
-	if schema.translations.is_empty() {
-		return None;
-	}
+	let comp = schema.get(TRANSLATIONS)?;
 	let mut obj = Object::new("Translations");
-	for g in &schema.translations {
+	for field in &comp.fields {
+		let FieldKind::Texts { keys } = field.kind.clone() else {
+			continue;
+		};
+		let handle = field.handle.clone();
 		obj = obj.field(GqlField::new(
-			g.namespace.clone(),
+			field.handle.clone(),
 			TypeRef::named_nn(TypeRef::STRING),
-			{
-				let ns = g.namespace.clone();
-				move |ctx| {
-					let ns = ns.clone();
-					FieldFuture::new(async move {
-						let GqlValue::Object(o) =
-							ctx.parent_value.try_to_value()?
-						else {
-							return Ok(None);
-						};
-						Ok(o.get(ns.as_str()).cloned().map(FieldValue::value))
-					})
-				}
+			move |ctx| {
+				let (handle, keys) = (handle.clone(), keys.clone());
+				FieldFuture::new(async move {
+					let entry =
+						ctx.parent_value.downcast_ref::<Option<Entry>>();
+					let value = entry
+						.and_then(|e| e.as_ref())
+						.map(|e| e.fields[&handle].clone())
+						.unwrap_or_default();
+					let texts = crate::content::texts_of(&keys, &value);
+					Ok(Some(GqlValue::from(serde_json::to_string(&texts)?)))
+				})
 			},
 		));
 	}
+
 	let field = GqlField::new(
 		"translations",
 		TypeRef::named_nn("Translations"),
 		|ctx| {
 			FieldFuture::new(async move {
-				let params = params_from_args(&ctx)?;
-				let schema = ctx.data::<Arc<Schema>>()?;
-				let site = params
-					.iter()
-					.find(|(k, _)| k == "site")
-					.map(|(_, v)| v.clone())
-					.unwrap_or_else(|| schema.primary_site().handle.clone());
-				let db = ctx.data::<Db>()?;
-				let texts = translations::texts(&db.conn(), schema, &site)?;
-				// each namespace as a JSON string, crelte parses it
-				let mut o = async_graphql::indexmap::IndexMap::new();
-				for (ns, keys) in texts {
-					let json = serde_json::to_string(&keys)?;
-					o.insert(
-						async_graphql::Name::new(ns),
-						GqlValue::from(json),
-					);
-				}
-				Ok(Some(FieldValue::value(GqlValue::Object(o))))
+				let mut params = params_from_args(&ctx)?;
+				params.push(("section".into(), TRANSLATIONS.into()));
+				params.push(("limit".into(), "1".into()));
+				let entry: Option<Entry> =
+					load(&ctx, &params)?.into_iter().next();
+				Ok(Some(FieldValue::owned_any(entry)))
 			})
 		},
 	)

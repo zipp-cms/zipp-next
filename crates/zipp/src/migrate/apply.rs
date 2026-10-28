@@ -234,7 +234,7 @@ fn share_primary(
 }
 
 /// Every single has its entry, titled like the section.
-fn create_singles(conn: &Connection, schema: &Schema) -> Result<()> {
+pub(crate) fn create_singles(conn: &Connection, schema: &Schema) -> Result<()> {
 	let singles = schema
 		.sections
 		.iter()

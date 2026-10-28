@@ -3,6 +3,42 @@
     {
       "op": "addComponent",
       "component": {
+        "handle": "translations",
+        "name": "Translations",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "common",
+            "label": "Common",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "texts",
+            "keys": [
+              [
+                "nav.home",
+                "Startseite"
+              ],
+              [
+                "footer.made",
+                "Ein crelte-Frontend, die Inhalte kommen von zipp."
+              ],
+              [
+                "events.none",
+                "Keine Veranstaltungen"
+              ],
+              [
+                "events.soldOut",
+                "Ausverkauft"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
         "handle": "home",
         "name": "Home",
         "entry": true,
@@ -532,6 +568,18 @@
         ],
         "uri": null
       }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "translations",
+        "name": "Translations",
+        "kind": "single",
+        "types": [
+          "translations"
+        ],
+        "uri": null
+      }
     }
   ],
   "schema": {
@@ -587,9 +635,51 @@
           "footer"
         ],
         "uri": null
+      },
+      {
+        "handle": "translations",
+        "name": "Translations",
+        "kind": "single",
+        "types": [
+          "translations"
+        ],
+        "uri": null
       }
     ],
     "components": [
+      {
+        "handle": "translations",
+        "name": "Translations",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "common",
+            "label": "Common",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "texts",
+            "keys": [
+              [
+                "nav.home",
+                "Startseite"
+              ],
+              [
+                "footer.made",
+                "Ein crelte-Frontend, die Inhalte kommen von zipp."
+              ],
+              [
+                "events.none",
+                "Keine Veranstaltungen"
+              ],
+              [
+                "events.soldOut",
+                "Ausverkauft"
+              ]
+            ]
+          }
+        ]
+      },
       {
         "handle": "home",
         "name": "Home",
@@ -1064,29 +1154,6 @@
           "header",
           "footer",
           "translations"
-        ]
-      }
-    ],
-    "translations": [
-      {
-        "namespace": "common",
-        "keys": [
-          [
-            "nav.home",
-            "Startseite"
-          ],
-          [
-            "footer.made",
-            "Ein crelte-Frontend, die Inhalte kommen von zipp."
-          ],
-          [
-            "events.none",
-            "Keine Veranstaltungen"
-          ],
-          [
-            "events.soldOut",
-            "Ausverkauft"
-          ]
         ]
       }
     ]

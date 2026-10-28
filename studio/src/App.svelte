@@ -5,7 +5,6 @@
 	import List from './pages/List.svelte';
 	import Edit from './pages/edit/Edit.svelte';
 	import Assets from './pages/Assets.svelte';
-	import Translations from './pages/Translations.svelte';
 	import Ai from './pages/Ai.svelte';
 	import Doc from './pages/Doc.svelte';
 	import Icon from './lib/Icon.svelte';
@@ -23,10 +22,12 @@
 	const groupItems = $derived(
 		(group?.sections ?? []).map(h => {
 			const s = schema?.sections.find(s => s.handle === h);
-			if (s) return { handle: h, name: s.name, icon: s.kind };
+			// the texts of the frontend are a single of their own
+			const icon =
+				h === 'translations' ? 'translate' : (s?.kind ?? 'doc');
+			if (s) return { handle: h, name: s.name, icon };
 			const d = schema?.docs.find(d => d.handle === h);
-			if (d) return { handle: h, name: d.name, icon: 'doc' };
-			return { handle: h, name: 'Translations', icon: 'translate' };
+			return { handle: h, name: d?.name ?? h, icon: 'doc' };
 		}),
 	);
 	const doc = $derived.by(() => {
@@ -36,9 +37,8 @@
 			: (schema?.docs.find(d => d.handle === current) ?? null);
 	});
 
-	/** The page of a section, doc or the translations in the nav. */
+	/** The page of a section or a doc in the nav. */
 	function navHref(handle: string) {
-		if (handle === 'translations') return '/admin/translations';
 		if (schema?.docs.some(d => d.handle === handle))
 			return '/admin/docs/' + handle;
 		return '/admin/entries/' + handle;
@@ -138,8 +138,6 @@
 					<Assets />
 				{:else if ai}
 					<Ai {schema} />
-				{:else if route.current.page === 'translations' || current === 'translations'}
-					<Translations {schema} />
 				{:else if doc}
 					<Doc {doc} />
 				{:else if route.current.page === 'list' && current}

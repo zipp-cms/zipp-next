@@ -507,15 +507,41 @@ async fn translations_for_crelte() {
 		Arc::new(site().translations("common", [("menu.open", "Menü öffnen")]));
 	let gql =
 		build(s.clone(), db.clone(), String::new(), SiteUrls::new()).unwrap();
-	translations::set(&db.conn(), &s, "en", "common", "menu.open", "Open menu")
-		.unwrap();
-
-	let data =
-		run(&gql, r#"{ translations(siteId: 2) { common } }"#, true).await;
-	let common: Value =
-		serde_json::from_str(data["translations"]["common"].as_str().unwrap())
+	// the single of the texts, as the first migration makes it
+	{
+		let conn = db.conn();
+		crate::apply::create_singles(&conn, &s).unwrap();
+		let id: i64 = conn
+			.query_row(
+				"SELECT id FROM entries WHERE section = 'translations'",
+				[],
+				|r| r.get(0),
+			)
 			.unwrap();
-	assert_eq!(common, json!({ "menu.open": "Open menu" }));
+		let mut en = input(
+			"translations",
+			"translations",
+			"T",
+			json!({
+				"common": { "menu.open": "Open menu", "gone": "x" }
+			}),
+		);
+		en.site = Some("en".into());
+		save(&conn, &s, Some(id), en).unwrap();
+	}
+
+	let common = |site: u8| {
+		let q = format!("{{ translations(siteId: {site}) {{ common }} }}");
+		let gql = gql.clone();
+		async move {
+			let data = run(&gql, &q, true).await;
+			let common = data["translations"]["common"].as_str().unwrap();
+			serde_json::from_str::<Value>(common).unwrap()
+		}
+	};
+	// a key the code no longer has is dropped, a missing text is the code's
+	assert_eq!(common(2).await, json!({ "menu.open": "Open menu" }));
+	assert_eq!(common(1).await, json!({ "menu.open": "Menü öffnen" }));
 }
 
 #[tokio::test]

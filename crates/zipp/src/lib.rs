@@ -16,7 +16,6 @@ pub mod migrate;
 pub mod schema;
 mod server;
 mod studio;
-pub mod translations;
 pub mod typescript;
 
 pub use content::richtext;

@@ -9,6 +9,7 @@
 	import RichTextField from './RichTextField.svelte';
 	import CustomField from './CustomField.svelte';
 	import DropdownField from './DropdownField.svelte';
+	import TextsField from './TextsField.svelte';
 
 	let {
 		schema,
@@ -95,6 +96,8 @@
 				<RichTextField {schema} {field} {values} {refs} />
 			{:else if field.kind === 'link'}
 				<LinkField {schema} {field} {values} {refs} />
+			{:else if field.kind === 'texts'}
+				<TextsField {schema} {field} {values} />
 			{:else if field.kind === 'dropdown'}
 				<DropdownField {field} {values} />
 			{:else if field.kind === 'custom'}

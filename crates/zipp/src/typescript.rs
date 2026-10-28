@@ -81,6 +81,7 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 				"number[]".into()
 			}
 			FieldKind::Markdown => "string".into(),
+			FieldKind::Texts { .. } => "Record<string, string>".into(),
 			FieldKind::Dropdown { options } => options
 				.iter()
 				.map(|o| format!("{:?}", o.value))

@@ -83,7 +83,6 @@ pub(super) async fn serve(
 		.merge(entries::routes())
 		.merge(drafts::routes())
 		.merge(ai::routes())
-		.merge(translations::routes())
 		.merge(assets::api_routes())
 		.merge(graphql::routes());
 	let app = Router::new()

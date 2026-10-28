@@ -18,6 +18,8 @@ export type FieldKind =
 	| { kind: 'link'; to: LinkKind[]; labels: boolean; newTab: boolean }
 	| { kind: 'group'; component: string }
 	| { kind: 'markdown' }
+	/** texts of the frontend by key, [key, text of the code] */
+	| { kind: 'texts'; keys: [string, string][] }
 	| { kind: 'dropdown'; options: { value: string; label: string }[] }
 	| {
 			kind: 'richText';
@@ -68,8 +70,6 @@ export type Schema = {
 	sections: Section[];
 	components: Component[];
 	nav: NavGroup[];
-	/** texts of the frontend: namespace and [key, default] */
-	translations: { namespace: string; keys: [string, string][] }[];
 	/** the url of each site, by handle */
 	siteUrls: Record<string, string>;
 	/** the models of the AI chat, empty if it is off */

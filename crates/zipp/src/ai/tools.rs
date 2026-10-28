@@ -86,34 +86,6 @@ pub(super) fn tools() -> Vec<Tool> {
 			}
 		},
 		{
-			"name": "get_translations",
-			"description": "The texts of the website's code in a site (menu labels, \
-				messages), by namespace and key.",
-			"input_schema": {
-				"type": "object",
-				"properties": { "site": { "type": "string" } },
-				"required": ["site"],
-				"additionalProperties": false
-			}
-		},
-		{
-			"name": "set_translation",
-			"description": "Sets one text of the website's code in a site. Unlike entries \
-				this is live at once, there are no drafts of texts. An empty value goes \
-				back to the default.",
-			"input_schema": {
-				"type": "object",
-				"properties": {
-					"site": { "type": "string" },
-					"namespace": { "type": "string" },
-					"key": { "type": "string" },
-					"value": { "type": "string" }
-				},
-				"required": ["site", "namespace", "key", "value"],
-				"additionalProperties": false
-			}
-		},
-		{
 			"name": "show_page",
 			"description": "Opens a page of the website in the preview next to the chat: \
 				the page of an entry, or a path of the site like `events`.",
@@ -213,8 +185,6 @@ pub(super) fn run_tool(
 		"update_entry" => tool_update_entry(&t, input),
 		"create_entry" => tool_create_entry(&t, input),
 		"list_assets" => tool_list_assets(&t, input),
-		"get_translations" => tool_get_translations(&t, input),
-		"set_translation" => tool_set_translation(&t, input),
 		"show_page" => tool_show_page(&t, input),
 		_ => Err(Error::Request(format!("unknown tool {name}"))),
 	}
@@ -374,36 +344,6 @@ fn tool_list_assets(t: &Ctx, input: &Value) -> ToolResult {
 	})?;
 	let out: Vec<Value> = rows.collect::<rusqlite::Result<_>>()?;
 	Ok((json!(out), None))
-}
-
-/// The texts of the website's code in a site.
-fn tool_get_translations(t: &Ctx, _input: &Value) -> ToolResult {
-	let conn = t.conn;
-	let schema = t.schema;
-	let site = t.site.clone();
-
-	let texts = crate::translations::texts(conn, schema, &site)?;
-	Ok((json!(texts), None))
-}
-
-/// One text of the website's code, live at once.
-fn tool_set_translation(t: &Ctx, input: &Value) -> ToolResult {
-	let conn = t.conn;
-	let schema = t.schema;
-	let site = t.site.clone();
-
-	let ns = input["namespace"].as_str().unwrap_or_default();
-	let key = input["key"].as_str().unwrap_or_default();
-	let value = input["value"].as_str().unwrap_or_default();
-	crate::translations::set(conn, schema, &site, ns, key, value)?;
-	let action = Action {
-		text: format!("Set the text {ns}.{key} ({site}), live at once"),
-		entry_id: None,
-		section: None,
-		url: None,
-		navigate: false,
-	};
-	Ok((json!({ "ok": true }), Some(action)))
 }
 
 /// A page of the website for the preview.

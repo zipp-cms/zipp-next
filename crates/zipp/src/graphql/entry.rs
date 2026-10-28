@@ -104,6 +104,8 @@ pub(super) fn content_field(
 		FieldKind::Link { .. } => TypeRef::named("Link"),
 		FieldKind::RichText { .. } => TypeRef::named("RichText"),
 		FieldKind::Markdown => TypeRef::named("Markdown"),
+		// as JSON, like crelte's translations want them
+		FieldKind::Texts { .. } => TypeRef::named_nn(TypeRef::STRING),
 		// the value, like Craft's dropdown
 		FieldKind::Dropdown { .. } => TypeRef::named(TypeRef::STRING),
 		FieldKind::Group { component } => {
@@ -207,6 +209,11 @@ pub(super) fn content_field(
 					};
 					let out = t.output(&options, &value);
 					Ok(Some(FieldValue::value(GqlValue::from_json(out)?)))
+				}
+				FieldKind::Texts { keys } => {
+					let texts = crate::content::texts_of(&keys, &value);
+					let json = serde_json::to_string(&texts)?;
+					Ok(Some(FieldValue::value(GqlValue::from(json))))
 				}
 				_ if value.is_null() => Ok(None),
 				_ => Ok(Some(FieldValue::value(GqlValue::from_json(value)?))),

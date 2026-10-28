@@ -6,12 +6,12 @@ pub(super) fn system_prompt(schema: &Schema, view: &str) -> String {
 		"sites": schema.sites,
 		"sections": schema.sections,
 		"components": schema.components,
-		"translations": schema.translations,
 	});
 	format!(
 		"You help the editors of a website that runs on the headless CMS zipp. You \
 		see and change everything an editor can: entries of every section (pages, \
-		globals like header and footer), images and the texts of the website's code. \
+		globals like header and footer), images and the texts of the website's code \
+		(the single `translations`, a texts field per namespace: key to text). \
 		Next to the chat the editor sees the website as a preview with every draft.\n\n\
 		- Changes of entries are drafts, the website stays as it is until the editor \
 		publishes them in the editor. Say what you changed in a sentence or two.\n\

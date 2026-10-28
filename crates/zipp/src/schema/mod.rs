@@ -37,6 +37,9 @@ pub use field::FieldKind;
 pub use field::LinkKind;
 use field::*;
 
+/// The single of the texts of the frontend, see [`Schema::translations`].
+pub const TRANSLATIONS: &str = "translations";
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Schema {
 	/// The first one is the primary site.
@@ -52,9 +55,6 @@ pub struct Schema {
 	/// sections in one group. Only looks, like labels.
 	#[serde(default)]
 	pub nav: Vec<NavGroup>,
-	/// Texts of the frontend (`menu.open`), editors only translate them.
-	#[serde(default)]
-	pub translations: Vec<TranslationGroup>,
 	/// Pages of markdown from the code, the studio shows them read only.
 	/// Not part of the content model, so not in migrations.
 	#[serde(skip)]
@@ -70,14 +70,6 @@ pub struct DocPage {
 	pub handle: String,
 	pub name: String,
 	pub markdown: String,
-}
-
-/// A namespace of texts, crelte loads `common` always.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TranslationGroup {
-	pub namespace: String,
-	/// the key and its text in the primary site
-	pub keys: Vec<(String, String)>,
 }
 
 /// A group of sections in the studio, like Content or Settings.
@@ -197,20 +189,23 @@ impl Schema {
 	}
 
 	/// Texts of the frontend in a namespace, the key and its text in the
-	/// primary site; editors translate them in the studio. To show them
-	/// in the studio, put `translations` into a nav group.
+	/// primary site; editors translate them. They are a single
+	/// `translations` with a texts field per namespace, so they have
+	/// drafts like any entry; put `translations` into a nav group.
 	pub fn translations<'a>(
 		mut self,
 		namespace: &str,
 		keys: impl IntoIterator<Item = (&'a str, &'a str)>,
 	) -> Self {
-		self.translations.push(TranslationGroup {
-			namespace: namespace.into(),
-			keys: keys
-				.into_iter()
-				.map(|(k, d)| (k.to_string(), d.to_string()))
-				.collect(),
-		});
+		if self.get(TRANSLATIONS).is_none() {
+			self.sections.push(
+				Section::single(TRANSLATIONS, TRANSLATIONS)
+					.name("Translations"),
+			);
+			self = self.component(TRANSLATIONS, "Translations", true, []);
+		}
+		let field = Field::texts(namespace, keys);
+		self.get_mut(TRANSLATIONS).unwrap().fields.push(field);
 		self
 	}
 

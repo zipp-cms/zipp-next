@@ -140,8 +140,10 @@ Cms::new(schema(), zipp::migrations!())
   of buttons arrives grouped. Links in the text point to entries by id.
 - **Translations.** The texts of the frontend are keys in the code with
   the text of the primary site: `.translations("common", [("menu.open",
-  "Menü öffnen")])`. Editors translate them per site on the studio page
-  `translations` (put it into a nav group); an empty text is the default.
+  "Menü öffnen")])`. They are a single `translations` with a texts field
+  per namespace, so editors translate them per site with drafts,
+  revisions and the preview like any entry (put `translations` into a
+  nav group); an empty text is the code's.
   crelte's translations plugin gets them with `translations:
   translations(siteId: $siteId) { common }` in `global.graphql`.
 - **Assets and transforms.** Uploads live in `--files`, `Field::images`

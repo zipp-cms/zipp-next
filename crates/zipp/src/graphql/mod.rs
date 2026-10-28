@@ -52,7 +52,6 @@ use crate::field_type::{GraphqlType, Scalar as FieldScalar};
 use crate::query::Query;
 use crate::richtext::{self, Chunk};
 use crate::schema::{FieldKind, Schema};
-use crate::translations;
 
 mod asset;
 mod entry;
