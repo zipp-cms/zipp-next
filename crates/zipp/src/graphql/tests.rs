@@ -759,3 +759,77 @@ async fn offline_sites_only_for_previews() {
 		"the primary site can't be offline"
 	);
 }
+
+#[tokio::test]
+async fn checkboxes_tables_and_navigations() {
+	use crate::schema::{Column, Field, LinkKind, Section};
+	let db = Db::memory().unwrap();
+	let s =
+		Arc::new(site().section(Section::channel("menus", ["menu"])).entry(
+			"menu",
+			"Menu",
+			[
+				Field::navigation("main", [LinkKind::Entry, LinkKind::Url]),
+				Field::table(
+					"links",
+					[Column::text("label"), Column::url("url")],
+				),
+				Field::checkboxes("cycles", [("1", "One"), ("2", "Two")]),
+			],
+		));
+	s.check().unwrap();
+	let urls = SiteUrls::from([("de".to_string(), "https://x.ch".to_string())]);
+	let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
+	{
+		let conn = db.conn();
+		let team =
+			save(&conn, &s, None, input("pages", "page", "Team", json!({})))
+				.unwrap();
+		let fields = json!({
+			"main": [
+				{ "type": "url", "value": "https://a.ch", "label": "A",
+					"children": [{ "type": "entry", "value": team.id }] },
+			],
+			"links": [{ "label": "Docs", "url": "https://d.ch" }, { "label": " " }],
+			"cycles": ["2", "1", "2"],
+		});
+		save(&conn, &s, None, input("menus", "menu", "M", fields)).unwrap();
+
+		// mistakes: too deep, a url that isn't one, an unknown option
+		let bad = json!({
+			"main": [{ "type": "url", "value": "https://a.ch", "children": [
+				{ "type": "url", "value": "https://b.ch", "children": [
+					{ "type": "url", "value": "https://c.ch" }] }] }],
+			"links": [{ "url": "javascript:x" }],
+			"cycles": ["3"],
+		});
+		let Err(crate::error::Error::Invalid(errs)) =
+			save(&conn, &s, None, input("menus", "menu", "B", bad))
+		else {
+			panic!("should fail");
+		};
+		let paths: Vec<&str> = errs.iter().map(|e| e.path.as_str()).collect();
+		assert_eq!(paths, ["main.0.children.0", "links.0.url", "cycles"]);
+	}
+
+	let data = run(
+		&gql,
+		r#"{ entry(section: "menus") { ... on menu_Entry {
+			main { url label target children { url defaultLabel children { url } } }
+			links { label url }
+			cycles
+		} } }"#,
+		true,
+	)
+	.await;
+	assert_eq!(
+		data["entry"],
+		json!({
+			"main": [{ "url": "https://a.ch", "label": "A", "target": "_blank",
+				"children": [{ "url": "https://x.ch/team", "defaultLabel": "Team",
+					"children": [] }] }],
+			"links": [{ "label": "Docs", "url": "https://d.ch" }],
+			"cycles": ["2", "1"],
+		})
+	);
+}

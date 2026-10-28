@@ -3,8 +3,16 @@ query ($siteId: [QueryArgument]) {
 	header: globalSet(handle: "header", siteId: $siteId) {
 		... on header_Entry {
 			navigation {
-				title
 				url
+				label
+				defaultLabel
+				target
+				children {
+					url
+					label
+					defaultLabel
+					target
+				}
 			}
 		}
 	}
@@ -15,6 +23,10 @@ query ($siteId: [QueryArgument]) {
 	footer: globalSet(handle: "footer", siteId: $siteId) {
 		... on footer_Entry {
 			text
+			links {
+				label
+				url
+			}
 		}
 	}
 }

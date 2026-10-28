@@ -5,7 +5,9 @@ use rand::Rng;
 use serde::Serialize;
 use serde_json::{Map, Value};
 
-use crate::schema::{Component, Field, FieldKind, LinkKind, Schema};
+use crate::schema::{
+	ColumnKind, Component, Field, FieldKind, LinkKind, Schema,
+};
 
 mod relations;
 pub mod richtext;

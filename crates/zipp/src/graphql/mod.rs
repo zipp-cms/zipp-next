@@ -203,6 +203,7 @@ pub fn build(
 		.register(site_object())
 		.register(asset_object())
 		.register(link_object())
+		.register(nav_item_object())
 		.register(rich_text_object())
 		.register(Object::new("Html").field(GqlField::new(
 			"html",

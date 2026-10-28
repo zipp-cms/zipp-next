@@ -240,9 +240,11 @@ impl Schema {
 				}
 			}
 		}
-		if let FieldKind::Dropdown { options } = &field.kind {
+		if let FieldKind::Dropdown { options }
+		| FieldKind::Checkboxes { options } = &field.kind
+		{
 			if options.is_empty() {
-				return Err("a dropdown needs options".into());
+				return Err("it needs options".into());
 			}
 			for (i, o) in options.iter().enumerate() {
 				if o.value.is_empty() {
@@ -252,6 +254,22 @@ impl Schema {
 					return Err(format!("option {} exists twice", o.value));
 				}
 			}
+		}
+		if let FieldKind::Table { columns } = &field.kind {
+			if columns.is_empty() {
+				return Err("a table needs columns".into());
+			}
+			for (i, c) in columns.iter().enumerate() {
+				check_handle(&c.handle)?;
+				if columns[..i].iter().any(|x| x.handle == c.handle) {
+					return Err(format!("column {} exists twice", c.handle));
+				}
+			}
+		}
+		if let FieldKind::Navigation { to, depth } = &field.kind
+			&& (to.is_empty() || *depth == 0)
+		{
+			return Err("a navigation needs link kinds and a depth".into());
 		}
 		if let FieldKind::Custom { ty, options } = &field.kind {
 			let Some(t) = self.field_types.get(ty) else {

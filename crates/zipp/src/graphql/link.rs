@@ -60,7 +60,48 @@ pub(super) fn resolve_link(
 		"label": link["label"].as_str().filter(|l| !l.is_empty()),
 		"defaultLabel": default_label,
 		"target": if new_tab { Some("_blank") } else { None },
+		"download": link["download"].as_bool().unwrap_or(false),
 	}))?))
+}
+
+/// The items of a navigation with the ones under them; items that link
+/// nowhere (a deleted entry) are left out with theirs.
+pub(super) fn nav_items(
+	ctx: &ResolverContext,
+	items: &Value,
+	site: &str,
+) -> async_graphql::Result<Vec<GqlValue>> {
+	let mut out = vec![];
+	for item in items.as_array().into_iter().flatten() {
+		let Some(GqlValue::Object(mut o)) =
+			resolve_link(ctx, item, site, true)?
+		else {
+			continue;
+		};
+		let children = nav_items(ctx, &item["children"], site)?;
+		o.insert(
+			async_graphql::Name::new("children"),
+			GqlValue::List(children),
+		);
+		out.push(GqlValue::Object(o));
+	}
+	Ok(out)
+}
+
+/// An item of a navigation: a link and the items under it.
+pub(super) fn nav_item_object() -> Object {
+	let field = |name: &'static str, ty: TypeRef| {
+		GqlField::new(name, ty, move |ctx| value_field(ctx, name))
+	};
+	let s = || TypeRef::named(TypeRef::STRING);
+	Object::new("NavItem")
+		.field(field("type", TypeRef::named_nn(TypeRef::STRING)))
+		.field(field("url", TypeRef::named_nn(TypeRef::STRING)))
+		.field(field("label", s()))
+		.field(field("defaultLabel", TypeRef::named_nn(TypeRef::STRING)))
+		.field(field("target", s()))
+		.field(field("download", TypeRef::named_nn(TypeRef::BOOLEAN)))
+		.field(field("children", TypeRef::named_nn_list_nn("NavItem")))
 }
 
 pub(super) fn link_object() -> Object {
@@ -83,6 +124,7 @@ pub(super) fn link_object() -> Object {
 		.field(field("label", s()))
 		.field(field("defaultLabel", TypeRef::named_nn(TypeRef::STRING)))
 		.field(field("target", s()))
+		.field(field("download", TypeRef::named_nn(TypeRef::BOOLEAN)))
 }
 
 pub(super) fn entry_url(

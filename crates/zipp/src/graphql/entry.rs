@@ -78,6 +78,7 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 /// A field of the content model, read from the JSON of its entry or block.
 pub(super) fn content_field(
 	schema: &Schema,
+	comp: &str,
 	field: &crate::schema::Field,
 ) -> GqlField {
 	// a custom type turns the stored value into its output
@@ -106,6 +107,13 @@ pub(super) fn content_field(
 		FieldKind::Markdown => TypeRef::named("Markdown"),
 		// as JSON, like crelte's translations want them
 		FieldKind::Texts { .. } => TypeRef::named_nn(TypeRef::STRING),
+		FieldKind::Checkboxes { .. } => {
+			TypeRef::named_nn_list_nn(TypeRef::STRING)
+		}
+		FieldKind::Table { .. } => {
+			TypeRef::named_nn_list_nn(table_row(comp, &field.handle))
+		}
+		FieldKind::Navigation { .. } => TypeRef::named_nn_list_nn("NavItem"),
 		// the resolved SEO, like the plugin's `seo`
 		FieldKind::Seo => TypeRef::named("Seo"),
 		// the value, like Craft's dropdown
@@ -212,6 +220,23 @@ pub(super) fn content_field(
 					let out = t.output(&options, &value);
 					Ok(Some(FieldValue::value(GqlValue::from_json(out)?)))
 				}
+				FieldKind::Checkboxes { .. } | FieldKind::Table { .. } => {
+					let items = value.as_array().cloned().unwrap_or_default();
+					Ok(Some(FieldValue::list(
+						items
+							.into_iter()
+							.map(|v| {
+								GqlValue::from_json(v).map(FieldValue::value)
+							})
+							.collect::<std::result::Result<Vec<_>, _>>()?,
+					)))
+				}
+				FieldKind::Navigation { .. } => {
+					let items = nav_items(&ctx, &value, &site)?;
+					Ok(Some(FieldValue::list(
+						items.into_iter().map(FieldValue::value),
+					)))
+				}
 				FieldKind::Seo => {
 					let e = ctx.parent_value.try_downcast_ref::<Entry>()?;
 					let v = resolve_seo(&ctx, &e.site, Some(e))?;
@@ -277,9 +302,39 @@ pub(super) fn content_objects(schema: &Schema) -> Vec<Object> {
 		let comp = schema.get(handle).unwrap();
 		let mut obj = Object::new(format!("{handle}_Fields"));
 		for field in &comp.fields {
-			obj = obj.field(content_field(schema, field));
+			obj = obj.field(content_field(schema, &comp.handle, field));
 		}
 		objects.push(obj);
+	}
+
+	// a type of the rows of each table field, its columns as fields
+	for comp in &schema.components {
+		for field in &comp.fields {
+			let FieldKind::Table { columns } = &field.kind else {
+				continue;
+			};
+			let mut row = Object::new(table_row(&comp.handle, &field.handle));
+			for c in columns {
+				let column = c.handle.clone();
+				row = row.field(GqlField::new(
+					c.handle.clone(),
+					TypeRef::named(TypeRef::STRING),
+					move |ctx| {
+						let column = column.clone();
+						FieldFuture::new(async move {
+							let v = ctx.parent_value.try_to_value()?;
+							let GqlValue::Object(o) = v else {
+								return Ok(None);
+							};
+							Ok(o.get(column.as_str())
+								.cloned()
+								.map(FieldValue::value))
+						})
+					},
+				));
+			}
+			objects.push(row);
+		}
 	}
 
 	for comp in &schema.components {
@@ -312,9 +367,14 @@ pub(super) fn content_objects(schema: &Schema) -> Vec<Object> {
 				))
 		};
 		for field in &comp.fields {
-			obj = obj.field(content_field(schema, field));
+			obj = obj.field(content_field(schema, &comp.handle, field));
 		}
 		objects.push(obj);
 	}
 	objects
+}
+
+/// The type of the rows of a table field.
+pub(super) fn table_row(comp: &str, field: &str) -> String {
+	format!("{comp}_{field}_Row")
 }

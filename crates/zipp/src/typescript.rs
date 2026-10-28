@@ -29,6 +29,14 @@ export type Entry<T extends string, F> = {
 };
 
 export type Block<T extends string, F> = { id: string; type: T; fields: F };
+
+export type NavItem = {
+	type: 'entry' | 'url' | 'email' | 'phone' | 'asset';
+	value: string | number;
+	label?: string;
+	newTab?: boolean;
+	children?: NavItem[];
+};
 ";
 
 pub fn generate(schema: &Schema) -> String {
@@ -82,6 +90,23 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 			}
 			FieldKind::Markdown => "string".into(),
 			FieldKind::Texts { .. } => "Record<string, string>".into(),
+			FieldKind::Checkboxes { options } => format!(
+				"({})[]",
+				options
+					.iter()
+					.map(|o| format!("{:?}", o.value))
+					.collect::<Vec<_>>()
+					.join(" | ")
+			),
+			FieldKind::Table { columns } => format!(
+				"{{ {} }}[]",
+				columns
+					.iter()
+					.map(|c| format!("{}?: string", c.handle))
+					.collect::<Vec<_>>()
+					.join("; ")
+			),
+			FieldKind::Navigation { .. } => "NavItem[]".into(),
 			FieldKind::Seo => "{ title?: string; description?: string; \
 				image?: number[]; socialTitle?: string; \
 				socialDescription?: string; socialImage?: number[]; \

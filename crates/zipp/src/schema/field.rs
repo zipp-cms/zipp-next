@@ -7,6 +7,62 @@ pub struct Choice {
 	pub label: String,
 }
 
+fn choices<'a>(
+	options: impl IntoIterator<Item = (&'a str, &'a str)>,
+) -> Vec<Choice> {
+	options
+		.into_iter()
+		.map(|(value, label)| Choice {
+			value: value.into(),
+			label: label.into(),
+		})
+		.collect()
+}
+
+/// A column of a table field.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Column {
+	pub handle: String,
+	pub label: String,
+	pub kind: ColumnKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ColumnKind {
+	Text,
+	/// a url of the web or a path of the site
+	Url,
+	Email,
+}
+
+impl Column {
+	fn new(handle: &str, kind: ColumnKind) -> Self {
+		Self {
+			handle: handle.into(),
+			label: humanize(handle),
+			kind,
+		}
+	}
+
+	pub fn text(handle: &str) -> Self {
+		Self::new(handle, ColumnKind::Text)
+	}
+
+	pub fn url(handle: &str) -> Self {
+		Self::new(handle, ColumnKind::Url)
+	}
+
+	pub fn email(handle: &str) -> Self {
+		Self::new(handle, ColumnKind::Email)
+	}
+
+	pub fn label(mut self, label: &str) -> Self {
+		self.label = label.into();
+		self
+	}
+}
+
 /// What a link field can point to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -86,6 +142,20 @@ pub enum FieldKind {
 	},
 	/// Text in Markdown, GraphQL renders it to html too.
 	Markdown,
+	/// Some of the options, the value is the list of their values.
+	Checkboxes {
+		options: Vec<Choice>,
+	},
+	/// Rows of the columns, each row an object of texts.
+	Table {
+		columns: Vec<Column>,
+	},
+	/// A menu: links with their own label and links under them, up to
+	/// `depth` levels.
+	Navigation {
+		to: Vec<LinkKind>,
+		depth: u32,
+	},
 	/// The SEO of a single entry: title, description, image, social
 	/// title, description and image, robots and canonical url, each
 	/// optional, see [`Schema::seo`](crate::Schema::seo).
@@ -300,14 +370,52 @@ impl Field {
 		handle: &str,
 		options: impl IntoIterator<Item = (&'a str, &'a str)>,
 	) -> Self {
-		let options = options
-			.into_iter()
-			.map(|(value, label)| Choice {
-				value: value.into(),
-				label: label.into(),
-			})
-			.collect();
-		Self::new(handle, FieldKind::Dropdown { options })
+		Self::new(
+			handle,
+			FieldKind::Dropdown {
+				options: choices(options),
+			},
+		)
+	}
+
+	/// Some of the options, given as value and label.
+	pub fn checkboxes<'a>(
+		handle: &str,
+		options: impl IntoIterator<Item = (&'a str, &'a str)>,
+	) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Checkboxes {
+				options: choices(options),
+			},
+		)
+	}
+
+	/// Rows of the columns, like Craft's table field.
+	pub fn table(
+		handle: &str,
+		columns: impl IntoIterator<Item = Column>,
+	) -> Self {
+		let columns = columns.into_iter().collect();
+		Self::new(handle, FieldKind::Table { columns })
+	}
+
+	/// A menu of links to the given kinds, two levels deep unless
+	/// [`Field::depth`] says otherwise.
+	pub fn navigation(
+		handle: &str,
+		to: impl IntoIterator<Item = LinkKind>,
+	) -> Self {
+		let to = to.into_iter().collect();
+		Self::new(handle, FieldKind::Navigation { to, depth: 2 })
+	}
+
+	/// Levels of a navigation.
+	pub fn depth(mut self, levels: u32) -> Self {
+		if let FieldKind::Navigation { depth, .. } = &mut self.kind {
+			*depth = levels;
+		}
+		self
 	}
 
 	/// A field of a type of another crate, it has to be registered with

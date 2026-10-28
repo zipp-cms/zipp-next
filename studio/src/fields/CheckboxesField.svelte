@@ -1,0 +1,43 @@
+<script lang="ts">
+	import type { Field, Values } from '../api';
+
+	/** Some of the options, stored in the order of the options. */
+	let { field, values }: { field: Field; values: Values } = $props();
+
+	const options = $derived(field.kind === 'checkboxes' ? field.options : []);
+	const picked = $derived<string[]>(values[field.handle] ?? []);
+
+	function toggle(value: string, on: boolean) {
+		const next = options
+			.map(o => o.value)
+			.filter(v => (v === value ? on : picked.includes(v)));
+		values[field.handle] = next.length ? next : null;
+	}
+</script>
+
+<div class="options">
+	{#each options as o (o.value)}
+		<label>
+			<input
+				type="checkbox"
+				checked={picked.includes(o.value)}
+				onchange={e => toggle(o.value, e.currentTarget.checked)}
+			/>
+			{o.label}
+		</label>
+	{/each}
+</div>
+
+<style>
+	.options {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px 20px;
+	}
+
+	label {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+</style>

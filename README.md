@@ -126,6 +126,13 @@ Cms::new(schema(), zipp::migrations!())
   of another component together under one name (an object, not a list
   like blocks). `Field::markdown("text")` is shown rendered in the studio
   and comes as `markdown` and `html` from GraphQL.
+- **Checkboxes, tables and navigations.** `Field::checkboxes` stores some
+  of its options (GraphQL: a list of values). `Field::table("links",
+  [Column::text("label"), Column::url("url")])` stores rows, GraphQL has a
+  row type per table. `Field::navigation("main", [LinkKind::Entry,
+  LinkKind::Url]).depth(2)` is a menu: links with their own label and the
+  links under them, GraphQL gives `{ url label defaultLabel target
+  download children }`; links to entries count as relations.
 - **Dropdowns.** `Field::dropdown("width", [("small", "Small"), ...])`
   stores the value of one option, GraphQL gives that value like Craft.
   The studio shows up to three options as buttons, more as a select.

@@ -696,6 +696,28 @@
             ]
           },
           {
+            "handle": "audience",
+            "label": "Für wen",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "checkboxes",
+            "options": [
+              {
+                "value": "kids",
+                "label": "Kinder"
+              },
+              {
+                "value": "adults",
+                "label": "Erwachsene"
+              },
+              {
+                "value": "families",
+                "label": "Familien"
+              }
+            ]
+          },
+          {
             "handle": "language",
             "label": "Language",
             "required": false,
@@ -788,13 +810,13 @@
             "label": "Main navigation",
             "required": false,
             "indexed": false,
-            "translatable": false,
-            "kind": "relation",
-            "types": [
-              "page",
-              "event"
+            "translatable": true,
+            "kind": "navigation",
+            "to": [
+              "entry",
+              "url"
             ],
-            "max": null
+            "depth": 2
           }
         ]
       }
@@ -815,6 +837,26 @@
             "kind": "text",
             "max": null,
             "multiline": true
+          },
+          {
+            "handle": "links",
+            "label": "Links",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "table",
+            "columns": [
+              {
+                "handle": "label",
+                "label": "Label",
+                "kind": "text"
+              },
+              {
+                "handle": "url",
+                "label": "Url",
+                "kind": "url"
+              }
+            ]
           }
         ]
       }
@@ -1808,6 +1850,28 @@
             ]
           },
           {
+            "handle": "audience",
+            "label": "Für wen",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "checkboxes",
+            "options": [
+              {
+                "value": "kids",
+                "label": "Kinder"
+              },
+              {
+                "value": "adults",
+                "label": "Erwachsene"
+              },
+              {
+                "value": "families",
+                "label": "Familien"
+              }
+            ]
+          },
+          {
             "handle": "language",
             "label": "Language",
             "required": false,
@@ -1897,13 +1961,13 @@
             "label": "Main navigation",
             "required": false,
             "indexed": false,
-            "translatable": false,
-            "kind": "relation",
-            "types": [
-              "page",
-              "event"
+            "translatable": true,
+            "kind": "navigation",
+            "to": [
+              "entry",
+              "url"
             ],
-            "max": null
+            "depth": 2
           }
         ]
       },
@@ -1921,6 +1985,26 @@
             "kind": "text",
             "max": null,
             "multiline": true
+          },
+          {
+            "handle": "links",
+            "label": "Links",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "table",
+            "columns": [
+              {
+                "handle": "label",
+                "label": "Label",
+                "kind": "text"
+              },
+              {
+                "handle": "url",
+                "label": "Url",
+                "kind": "url"
+              }
+            ]
           }
         ]
       },

@@ -39,6 +39,12 @@ export function describeField(f: Field): string {
 			return 'Markdown';
 		case 'seo':
 			return 'SEO';
+		case 'checkboxes':
+			return `Checkboxes: ${list(f.options.map(o => o.value))}`;
+		case 'table':
+			return `Table: ${list(f.columns.map(c => c.handle))}`;
+		case 'navigation':
+			return `Navigation to ${list(f.to)}, ${f.depth} levels`;
 		case 'dropdown':
 			return `Dropdown: ${list(f.options.map(o => o.value))}`;
 		case 'texts':

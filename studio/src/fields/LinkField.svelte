@@ -34,8 +34,13 @@
 	const link = $derived<Link>(
 		values[field.handle] ?? { type: to[0], value: null },
 	);
+	// only entries with a page can be linked to
 	const entryTypes = $derived(
-		schema.components.filter(c => c.entry).map(c => c.handle),
+		schema.sections
+			.filter(
+				s => s.uri !== null || Object.keys(s.type_uris ?? {}).length,
+			)
+			.flatMap(s => s.types),
 	);
 	// like the website: external urls and files in a new tab
 	const external = $derived(
@@ -175,6 +180,17 @@
 		/>
 		Open in a new tab
 	</label>
+	{#if link.type === 'asset'}
+		<label class="tab">
+			<input
+				type="checkbox"
+				checked={link.download ?? false}
+				onchange={e =>
+					set({ download: e.currentTarget.checked || undefined })}
+			/>
+			Download instead of opening
+		</label>
+	{/if}
 </div>
 
 {#if picking}

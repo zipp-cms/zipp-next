@@ -8,7 +8,7 @@ use zipp::axum::routing::get;
 use zipp::error::Result;
 use zipp::query::Query;
 use zipp::{
-	Access, AppState, Cms, Field, LinkKind, Role, Schema, Section, Seo,
+	Access, AppState, Cms, Column, Field, LinkKind, Role, Schema, Section, Seo,
 	SeoDefaults, Transform,
 };
 use zipp_button_group::{ButtonGroup, button_group};
@@ -137,6 +137,16 @@ fn schema() -> Schema {
 				)
 				.required(),
 				// more options: a select in the studio
+				// some of the options
+				Field::checkboxes(
+					"audience",
+					[
+						("kids", "Kinder"),
+						("adults", "Erwachsene"),
+						("families", "Familien"),
+					],
+				)
+				.label("Für wen"),
 				Field::dropdown(
 					"language",
 					[
@@ -158,13 +168,27 @@ fn schema() -> Schema {
 		.entry(
 			"header",
 			"Header",
-			[Field::relation("navigation", ["page", "event"])
-				.label("Main navigation")],
+			// a menu with a second level, to pages or anywhere
+			[
+				Field::navigation(
+					"navigation",
+					[LinkKind::Entry, LinkKind::Url],
+				)
+				.translatable()
+				.label("Main navigation"),
+			],
 		)
 		.entry(
 			"footer",
 			"Footer",
-			[Field::text("text").multiline().translatable()],
+			[
+				Field::text("text").multiline().translatable(),
+				Field::table(
+					"links",
+					[Column::text("label"), Column::url("url")],
+				)
+				.translatable(),
+			],
 		)
 		.block(
 			"heading",

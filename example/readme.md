@@ -26,6 +26,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Links | a Button block | entry, URL, email, phone or file; external ones open in a new tab |
 | Group | a page → SEO | fields of another component under one name |
 | Markdown | Events → Description | written as markdown, the website gets it as html |
+| Navigation, table, checkboxes | Settings → Header, Footer · Events → Für wen | a menu with a second level, footer links as rows, some of the options |
 | Dropdown | Image block → Width (3 options: buttons), Events → Language (5: a select) | the website sizes the image, filters events by language |
 | A field type of another crate | Events → Genre | `crates/zipp-button-group`: Craft's button group with a color per option, its own editor and GraphQL type |
 | Boolean, number, indexed fields | Events | *sold out*, price; the website filters and sorts by them |

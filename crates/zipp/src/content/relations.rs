@@ -101,6 +101,10 @@ pub(super) fn collect_relations(
 			out.extend(link_relation(schema, &fields[&field.handle], &path));
 			continue;
 		}
+		if let FieldKind::Navigation { .. } = field.kind {
+			nav_relations(schema, &fields[&field.handle], &path, out);
+			continue;
+		}
 
 		let Some(Value::Array(items)) = fields.get(&field.handle) else {
 			continue;
@@ -134,5 +138,19 @@ pub(super) fn collect_relations(
 			}
 			_ => {}
 		}
+	}
+}
+
+/// The links of a navigation and the ones under them.
+fn nav_relations(
+	schema: &Schema,
+	items: &Value,
+	path: &str,
+	out: &mut Vec<RelationRef>,
+) {
+	for (i, item) in items.as_array().into_iter().flatten().enumerate() {
+		let p = format!("{path}.{i}");
+		out.extend(link_relation(schema, item, &p));
+		nav_relations(schema, &item["children"], &format!("{p}.children"), out);
 	}
 }

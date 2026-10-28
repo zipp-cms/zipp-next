@@ -7,6 +7,17 @@ export type Link = {
 	value: string | number | null;
 	label?: string;
 	newTab?: boolean;
+	/** a file to download instead of opening it */
+	download?: boolean;
+};
+
+/** An item of a navigation: a link and the items under it. */
+export type NavItem = Link & { children?: NavItem[] };
+
+export type Column = {
+	handle: string;
+	label: string;
+	kind: 'text' | 'url' | 'email';
 };
 
 export type FieldKind =
@@ -23,6 +34,9 @@ export type FieldKind =
 	/** texts of the frontend by key, [key, text of the code] */
 	| { kind: 'texts'; keys: [string, string][] }
 	| { kind: 'dropdown'; options: { value: string; label: string }[] }
+	| { kind: 'checkboxes'; options: { value: string; label: string }[] }
+	| { kind: 'table'; columns: Column[] }
+	| { kind: 'navigation'; to: LinkKind[]; depth: number }
 	| {
 			kind: 'richText';
 			headings: number[];

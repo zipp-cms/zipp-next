@@ -94,6 +94,60 @@ pub(super) fn validate_value(
 		}
 		(FieldKind::Boolean, Value::Bool(_)) => {}
 		(FieldKind::Markdown, Value::String(_)) => {}
+		(FieldKind::Checkboxes { options }, Value::Array(values)) => {
+			let mut out: Vec<Value> = vec![];
+			for v in values {
+				match v.as_str() {
+					Some(s) if options.iter().any(|o| o.value == s) => {
+						if !out.contains(v) {
+							out.push(v.clone());
+						}
+					}
+					_ => error(errors, path, "not one of the options"),
+				}
+			}
+			return (!out.is_empty()).then_some(Value::Array(out));
+		}
+		(FieldKind::Table { columns }, Value::Array(rows)) => {
+			let mut out = vec![];
+			for (i, row) in rows.iter().enumerate() {
+				let Some(row) = row.as_object() else {
+					error(errors, &format!("{path}.{i}"), "must be a row");
+					continue;
+				};
+				let mut cells = Map::new();
+				for c in columns {
+					let text = row.get(&c.handle).and_then(Value::as_str);
+					let Some(text) =
+						text.map(str::trim).filter(|t| !t.is_empty())
+					else {
+						continue;
+					};
+					let ok = match c.kind {
+						ColumnKind::Text => true,
+						ColumnKind::Url => safe_url(text),
+						ColumnKind::Email => text.contains('@'),
+					};
+					if !ok {
+						error(
+							errors,
+							&format!("{path}.{i}.{}", c.handle),
+							"not valid",
+						);
+					}
+					cells.insert(c.handle.clone(), Value::from(text));
+				}
+				// an empty row is no row
+				if !cells.is_empty() {
+					out.push(Value::Object(cells));
+				}
+			}
+			return (!out.is_empty()).then_some(Value::Array(out));
+		}
+		(FieldKind::Navigation { to, depth }, Value::Array(items)) => {
+			let out = validate_navigation(to, *depth, items, path, errors);
+			return (!out.is_empty()).then_some(Value::Array(out));
+		}
 		(FieldKind::Seo, Value::Object(seo)) => {
 			let mut out = Map::new();
 			for (key, v) in seo {
@@ -289,6 +343,8 @@ pub(crate) fn check_link(
 	for key in link.keys() {
 		let known = match key.as_str() {
 			"type" | "value" | "newTab" => true,
+			// a file to download instead of opening it
+			"download" => kind == LinkKind::Asset,
 			"label" => label,
 			_ => false,
 		};
@@ -318,4 +374,49 @@ pub(super) fn check_count(
 	if max.is_some_and(|max| len > max as usize) {
 		error(errors, path, &format!("at most {} allowed", max.unwrap()));
 	}
+}
+
+/// The items of a navigation: a link with a label and the items under it.
+fn validate_navigation(
+	to: &[LinkKind],
+	depth: u32,
+	items: &[Value],
+	path: &str,
+	errors: &mut Vec<FieldError>,
+) -> Vec<Value> {
+	let mut out = vec![];
+	for (i, item) in items.iter().enumerate() {
+		let p = format!("{path}.{i}");
+		let Some(obj) = item.as_object() else {
+			error(errors, &p, "must be a link");
+			continue;
+		};
+		let mut link = obj.clone();
+		link.remove("children");
+		if let Err(e) = check_link(to, true, &link) {
+			error(errors, &p, &e);
+		}
+		let mut item = obj.clone();
+		let children = obj.get("children").and_then(Value::as_array);
+		match children.filter(|c| !c.is_empty()) {
+			Some(_) if depth <= 1 => {
+				error(errors, &p, "too deep");
+			}
+			Some(children) => {
+				let children = validate_navigation(
+					to,
+					depth - 1,
+					children,
+					&format!("{p}.children"),
+					errors,
+				);
+				item.insert("children".into(), Value::Array(children));
+			}
+			None => {
+				item.remove("children");
+			}
+		}
+		out.push(Value::Object(item));
+	}
+	out
 }

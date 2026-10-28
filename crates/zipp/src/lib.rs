@@ -45,7 +45,8 @@ use server::*;
 
 pub use crate::field_type::{FieldType, GraphqlType, Scalar, StudioModule};
 pub use crate::schema::{
-	Access, Field, LinkKind, Role, Schema, Section, Seo, SeoDefaults, Transform,
+	Access, Column, Field, LinkKind, Role, Schema, Section, Seo, SeoDefaults,
+	Transform,
 };
 pub use axum;
 

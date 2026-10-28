@@ -11,6 +11,9 @@
 	import DropdownField from './DropdownField.svelte';
 	import TextsField from './TextsField.svelte';
 	import SeoField from './SeoField.svelte';
+	import CheckboxesField from './CheckboxesField.svelte';
+	import TableField from './TableField.svelte';
+	import NavigationField from './NavigationField.svelte';
 
 	let {
 		schema,
@@ -97,6 +100,12 @@
 				<RichTextField {schema} {field} {values} {refs} />
 			{:else if field.kind === 'link'}
 				<LinkField {schema} {field} {values} {refs} />
+			{:else if field.kind === 'checkboxes'}
+				<CheckboxesField {field} {values} />
+			{:else if field.kind === 'table'}
+				<TableField {field} {values} />
+			{:else if field.kind === 'navigation'}
+				<NavigationField {schema} {field} {values} {refs} />
 			{:else if field.kind === 'seo'}
 				<SeoField {field} {values} />
 			{:else if field.kind === 'texts'}
