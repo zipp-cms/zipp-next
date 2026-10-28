@@ -607,7 +607,8 @@ async fn checks_queries_of_frontends() {
 	let gql = build(s, Db::memory().unwrap(), String::new(), SiteUrls::new())
 		.unwrap();
 	let ok = "query ($uri: String!) { entry(uri: $uri) { title } }";
-	assert!(check_query(&gql, ok).await.is_empty());
+	let errors = check_query(&gql, ok).await;
+	assert!(errors.is_empty(), "{errors:?}");
 	let bad = "{ entries { ... on event_Entry { town } } }";
 	let errors = check_query(&gql, bad).await;
 	assert!(errors[0].contains("Unknown field \"town\""), "{errors:?}");

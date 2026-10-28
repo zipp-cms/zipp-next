@@ -304,7 +304,12 @@ pub async fn check_query(gql: &GqlSchema, query: &str) -> Vec<String> {
 		.await
 		.errors
 		.into_iter()
-		.filter(|e| !e.message.contains("not provided"))
+		// the values of the variables come from the frontend
+		.filter(|e| {
+			!e.message.contains("not provided")
+				&& !(e.message.starts_with("Variable ")
+					&& e.message.ends_with(" is not defined."))
+		})
 		.map(|e| match e.locations.first() {
 			Some(l) => format!("{}:{}: {}", l.line, l.column, e.message),
 			None => e.message,
