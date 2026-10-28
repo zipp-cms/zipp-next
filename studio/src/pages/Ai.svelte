@@ -29,9 +29,8 @@
 	let lines = $state<Line[]>(saved?.lines ?? []);
 	// the schema does not change while the page is open
 	const home = untrack(() => schema.siteUrls[site.current] ?? '');
-	const models = untrack(() => schema.aiModels.map(m => m.id));
-	const stored = localStorage.getItem('zipp-ai-model') ?? '';
-	let model = $state(models.includes(stored) ? stored : models[0]);
+	// the first model; the choice is hidden for now (operator 2026-10-28)
+	const model = untrack(() => schema.aiModels[0]?.id ?? '');
 	let input = $state('');
 	let busy = $state(false);
 	let error = $state('');
@@ -174,26 +173,12 @@
 		messages = [];
 		lines = [];
 	}
-
-	function setModel(m: string) {
-		model = m;
-		localStorage.setItem('zipp-ai-model', m);
-	}
 </script>
 
 <div class="split">
 	<section class="chat">
 		<div class="top">
 			<h1>AI</h1>
-			<select
-				value={model}
-				onchange={e => setModel(e.currentTarget.value)}
-				title="Model"
-			>
-				{#each schema.aiModels as m (m.id)}
-					<option value={m.id}>{m.name}</option>
-				{/each}
-			</select>
 			<button onclick={clear} disabled={busy || !lines.length}>
 				New
 			</button>
@@ -284,10 +269,6 @@
 
 		h1 {
 			flex: 1;
-		}
-
-		select {
-			width: auto;
 		}
 	}
 
