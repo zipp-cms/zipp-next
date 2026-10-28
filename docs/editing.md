@@ -32,9 +32,9 @@ their uri, the urls per site, which role may do what, the SEO defaults)
 and its entries as a short list on the side that links to the editor; a
 type's page its fields, with where it is used on the side.
 
-"Handles" in the header (saved in the browser) shows each field's handle
-next to its label, like Craft's "show field handles"; the handle links
-to the field in Setup.
+Admins see each field's handle next to its label, like Craft's "show
+field handles"; the handle links to the field in Setup, the entry type
+in the sidebar to the type's fields.
 
 Lists of structures (Pages) have a search too; while searching, entries
 can't be moved. Globals (singles without a url) have no title field, their

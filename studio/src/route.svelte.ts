@@ -110,16 +110,3 @@ export function setSite(handle: string) {
 
 /** The section the page shows, so the navigation knows its group. */
 export const shown = $state({ section: '' });
-
-/**
- * Preferences of the user in this browser: `handles` shows the handle of
- * every field next to its label, like Craft's "show field handles".
- */
-export const prefs = $state({
-	handles: localStorage.getItem('zipp-handles') === '1',
-});
-
-export function setHandles(on: boolean) {
-	prefs.handles = on;
-	localStorage.setItem('zipp-handles', on ? '1' : '0');
-}

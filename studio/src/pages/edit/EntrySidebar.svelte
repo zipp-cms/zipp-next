@@ -120,7 +120,13 @@
 						{/each}
 					</select>
 				{:else}
-					<span class="value">{comp.name}</span>
+					<a
+						class="value"
+						href="/admin/setup/types/{comp.handle}"
+						title="Its fields in Setup"
+					>
+						{comp.name}
+					</a>
 				{/if}
 			</label>
 

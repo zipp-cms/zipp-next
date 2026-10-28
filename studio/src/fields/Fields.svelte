@@ -14,7 +14,7 @@
 	import CheckboxesField from './CheckboxesField.svelte';
 	import TableField from './TableField.svelte';
 	import NavigationField from './NavigationField.svelte';
-	import { prefs } from '../route.svelte';
+	import { isAdmin } from '../lib/access';
 
 	let {
 		schema,
@@ -55,7 +55,8 @@
 					*
 				</span>{/if}
 			{#if shared(field)}<span class="shared">all sites</span>{/if}
-			{#if prefs.handles}
+			<!-- for admins the handle, like Craft's "show field handles" -->
+			{#if isAdmin(schema)}
 				<a
 					class="handle"
 					href="/admin/setup/{component.entry
