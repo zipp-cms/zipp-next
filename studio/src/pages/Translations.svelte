@@ -28,6 +28,7 @@
 	}
 
 	const primary = $derived(schema.sites[0].handle);
+	const isPrimary = $derived(site.current === primary);
 	// the site to translate from, the primary one unless that is edited
 	let chosen = $state('');
 	const other = $derived(
@@ -115,17 +116,24 @@
 							</td>
 						{/if}
 						<td>
+							<!-- the primary site has the text of the code as its
+							value, the others show it until translated -->
 							<input
-								class:empty={!own && site.current !== primary}
-								value={own}
-								placeholder={fallback}
-								onchange={e =>
+								class:empty={!own && !isPrimary}
+								value={isPrimary ? own || fallback : own}
+								placeholder={isPrimary
+									? fallback
+									: `Not translated: ${fallback}`}
+								onchange={e => {
+									const v = e.currentTarget.value;
 									save(
 										site.current,
 										group.namespace,
 										key,
-										e.currentTarget.value,
-									)}
+										// the code's text needs no copy
+										isPrimary && v === fallback ? '' : v,
+									);
+								}}
 							/>
 						</td>
 					</tr>
