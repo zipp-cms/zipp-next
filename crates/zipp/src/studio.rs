@@ -112,6 +112,8 @@ struct SchemaResp {
 	docs: Vec<DocResp>,
 	/// the roles, the studio shows what the user's may do
 	roles: Vec<crate::schema::Role>,
+	/// sites not on the website yet
+	offline: Vec<String>,
 	me: Me,
 }
 
@@ -134,6 +136,7 @@ async fn schema_route(
 	)?;
 	Ok(Json(SchemaResp {
 		roles: state.schema.roles.clone(),
+		offline: state.schema.offline.clone(),
 		me: Me {
 			id: auth.user_id,
 			email,

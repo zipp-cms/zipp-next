@@ -67,6 +67,7 @@ fn sites_for<'a>(state: &'a AppState, origin_: &str) -> Vec<&'a Site> {
 		.sites
 		.iter()
 		.filter(|s| state.site_urls.contains_key(&s.handle))
+		.filter(|s| !state.schema.is_offline(&s.handle))
 		.collect();
 	let matching: Vec<&Site> = with_url
 		.iter()
@@ -201,7 +202,10 @@ async fn page(
 	Params(p): Params<PageParams>,
 ) -> Result<Response> {
 	let schema = &state.schema;
-	let Some(site) = schema.get_site(&p.site) else {
+	let Some(site) = schema
+		.get_site(&p.site)
+		.filter(|s| !schema.is_offline(&s.handle))
+	else {
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	};
 	if p.page < 1 || !sections(schema).contains(&p.section.as_str()) {

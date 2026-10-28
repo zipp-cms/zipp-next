@@ -42,7 +42,12 @@ pub(super) fn sites_field(name: &str) -> GqlField {
 		FieldFuture::new(async move {
 			let schema = ctx.data::<Arc<Schema>>()?;
 			let urls = ctx.data::<SiteUrls>()?;
-			let sites = schema.sites.iter().enumerate().map(|(i, s)| {
+			// offline sites only for previews and admins, the ids stay
+			let all = !hides_offline(ctx.data::<Viewer>()?);
+			let sites = schema.sites.iter().enumerate();
+			let sites =
+				sites.filter(|(_, s)| all || !schema.is_offline(&s.handle));
+			let sites = sites.map(|(i, s)| {
 				let site = serde_json::json!({
 					"id": i + 1,
 					"handle": s.handle,
@@ -201,6 +206,10 @@ pub(super) fn load(
 	params: &[(String, String)],
 ) -> async_graphql::Result<Vec<Entry>> {
 	let q = query(ctx, params)?;
+	let schema = ctx.data::<Arc<Schema>>()?;
+	if schema.is_offline(&q.site) && hides_offline(ctx.data::<Viewer>()?) {
+		return Ok(vec![]);
+	}
 	let db = ctx.data::<Db>()?;
 	let (mut entries, _) = list(&db.conn(), &q)?;
 
@@ -303,4 +312,10 @@ pub(super) fn query_object() -> Object {
 		.field(sites_field("sites"))
 		// what crelte asks for on start
 		.field(sites_field("crelteSites"))
+}
+
+/// Whether offline sites are hidden: from frontends, not from previews
+/// and admins.
+pub(super) fn hides_offline(viewer: &Viewer) -> bool {
+	viewer.published_only && viewer.preview.is_none()
 }

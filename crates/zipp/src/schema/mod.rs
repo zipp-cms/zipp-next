@@ -72,6 +72,9 @@ pub struct Schema {
 	/// SEO defaults of sections and entry types, see [`Schema::seo`].
 	#[serde(skip)]
 	pub seo: Option<Seo>,
+	/// Sites not on the website yet, see [`Schema::offline`].
+	#[serde(skip)]
+	pub offline: Vec<String>,
 }
 
 /// A markdown file of the project shown in the studio, like a readme.
@@ -158,6 +161,18 @@ impl Schema {
 			language: language.into(),
 		});
 		self
+	}
+
+	/// A site that is not on the website, like a disabled site in Craft:
+	/// frontends get none of its entries, only previews and admins do, and
+	/// it is not in `crelteSites` and the sitemaps. Editors fill it in.
+	pub fn offline(mut self, site: &str) -> Self {
+		self.offline.push(site.into());
+		self
+	}
+
+	pub fn is_offline(&self, site: &str) -> bool {
+		self.offline.iter().any(|s| s == site)
 	}
 
 	pub fn section(mut self, section: Section) -> Self {

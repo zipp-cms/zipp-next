@@ -216,7 +216,13 @@
 			<tbody>
 				{#each schema.sites as s, i (s.handle)}
 					<tr>
-						<td>{s.name}{i === 0 ? ' (primary)' : ''}</td>
+						<td>
+							{s.name}{i === 0
+								? ' (primary)'
+								: ''}{schema.offline.includes(s.handle)
+								? ' (offline, not on the website)'
+								: ''}
+						</td>
 						<td><code>{s.handle}</code></td>
 						<td>{s.language}</td>
 						<td>{schema.siteUrls[s.handle] ?? '–'}</td>

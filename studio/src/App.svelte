@@ -130,7 +130,11 @@
 						title="Site"
 					>
 						{#each schema.sites as s (s.handle)}
-							<option value={s.handle}>{s.name}</option>
+							<option value={s.handle}>
+								{s.name}{schema.offline.includes(s.handle)
+									? ' (offline)'
+									: ''}
+							</option>
 						{/each}
 					</select>
 				{/if}

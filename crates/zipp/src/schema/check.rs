@@ -80,6 +80,15 @@ impl Schema {
 			}
 		}
 
+		if let Some(s) =
+			self.offline.iter().find(|s| self.get_site(s).is_none())
+		{
+			return Err(format!("offline: unknown site {s}"));
+		}
+		if self.is_offline(&self.primary_site().handle) {
+			return Err("the primary site can't be offline".into());
+		}
+
 		if let Some(seo) = &self.seo {
 			for s in seo.sections.keys() {
 				if self.get_section(s).is_none() {

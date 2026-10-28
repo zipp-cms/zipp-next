@@ -85,6 +85,8 @@ export type Schema = {
 	/** the url of each site, by handle */
 	siteUrls: Record<string, string>;
 	transforms: Transform[];
+	/** sites not on the website yet */
+	offline: string[];
 	roles: Role[];
 	me: Me;
 	/** the models of the AI chat, empty if it is off */

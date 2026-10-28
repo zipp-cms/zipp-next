@@ -731,3 +731,31 @@ async fn seo_like_the_craft_plugin() {
 	assert_eq!(data["seoJson"]["title"], "Zandi");
 	assert_eq!(data["seoJson"]["description"], Value::Null);
 }
+
+#[tokio::test]
+async fn offline_sites_only_for_previews() {
+	let db = Db::memory().unwrap();
+	let s = Arc::new(site().offline("en"));
+	s.check().unwrap();
+	let gql =
+		build(s.clone(), db.clone(), String::new(), SiteUrls::new()).unwrap();
+	save(
+		&db.conn(),
+		&s,
+		None,
+		input("pages", "page", "Team", json!({})),
+	)
+	.unwrap();
+
+	let q = r#"{ crelteSites { handle } entries(section: "pages", site: "en") { title } }"#;
+	let data = run(&gql, q, true).await;
+	assert_eq!(data["crelteSites"], json!([{ "handle": "de" }]));
+	assert_eq!(data["entries"], json!([]));
+	// an admin sees it
+	let data = run(&gql, q, false).await;
+	assert_eq!(data["entries"], json!([{ "title": "Team" }]));
+	assert_eq!(
+		site().offline("de").check().unwrap_err(),
+		"the primary site can't be offline"
+	);
+}

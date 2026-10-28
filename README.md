@@ -183,6 +183,10 @@ Cms::new(schema(), zipp::migrations!())
   and opens another page when not. A site tells the studio its page with
   a small bridge (`example/crelte/svelte/src/components/PreviewBridge.svelte`),
   crelte's live preview mode keeps the scroll position on reloads.
+- **Offline sites.** `.offline("fr")` keeps a site off the website
+  like a disabled site in Craft: frontends get none of its entries and it
+  is not in `crelteSites` or the sitemaps; editors fill it in, previews and
+  admins see it.
 - **The content model in the studio.** Everyone sees it read only under
   Setup (a role only its sections, with what it may do there, and its own
   role; the header shows who is logged in with which role), like Craft's settings with admin changes off: sections (kind,
