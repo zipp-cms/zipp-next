@@ -17,7 +17,7 @@
 			id
 			typeHandle
 			... on heading_Block { text }
-			... on text_Block { content }
+			... on text_Block { content { html } }
 			... on image_Block {
 				caption
 				image {

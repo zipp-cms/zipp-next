@@ -163,6 +163,16 @@ pub enum FieldKind {
 		#[serde(rename = "newTab")]
 		new_tab: bool,
 	},
+	/// Text with formatting, stored as TipTap's JSON. Bold and italic are
+	/// always there; headings of the given levels, lists, links, rows of
+	/// buttons and blocks of the given types only if the field says so.
+	RichText {
+		headings: Vec<u8>,
+		lists: bool,
+		links: bool,
+		buttons: bool,
+		blocks: Vec<String>,
+	},
 	/// A list of blocks of the given types.
 	Blocks {
 		types: Vec<String>,
@@ -427,8 +437,14 @@ impl Schema {
 		let (types, entry) = match &field.kind {
 			FieldKind::Relation { types, .. } => (types, true),
 			FieldKind::Blocks { types, .. } => (types, false),
+			FieldKind::RichText { blocks, .. } => (blocks, false),
 			_ => (&vec![], false),
 		};
+		if let FieldKind::RichText { headings, .. } = &field.kind
+			&& headings.iter().any(|h| !(1..=6).contains(h))
+		{
+			return Err("headings go from 1 to 6".into());
+		}
 		if matches!(
 			field.kind,
 			FieldKind::Relation { .. } | FieldKind::Blocks { .. }
@@ -564,6 +580,73 @@ impl Field {
 			_ => panic!("{}: same_tab is only for links", self.handle),
 		}
 		self
+	}
+
+	/// Text with bold and italic, more with `headings`, `lists`, `links`,
+	/// `buttons` and `embed`.
+	pub fn rich_text(handle: &str) -> Self {
+		Self::new(
+			handle,
+			FieldKind::RichText {
+				headings: vec![],
+				lists: false,
+				links: false,
+				buttons: false,
+				blocks: vec![],
+			},
+		)
+	}
+
+	fn rich(mut self, f: impl FnOnce(&mut FieldKind)) -> Self {
+		if !matches!(self.kind, FieldKind::RichText { .. }) {
+			panic!("{}: only rich text has this", self.handle);
+		}
+		f(&mut self.kind);
+		self
+	}
+
+	/// Headings of these levels, like `[2, 3]`.
+	pub fn headings(self, levels: impl IntoIterator<Item = u8>) -> Self {
+		self.rich(|k| {
+			if let FieldKind::RichText { headings, .. } = k {
+				*headings = levels.into_iter().collect();
+			}
+		})
+	}
+
+	pub fn lists(self) -> Self {
+		self.rich(|k| {
+			if let FieldKind::RichText { lists, .. } = k {
+				*lists = true;
+			}
+		})
+	}
+
+	/// Links in the text, to entries, urls, emails and phone numbers.
+	pub fn links(self) -> Self {
+		self.rich(|k| {
+			if let FieldKind::RichText { links, .. } = k {
+				*links = true;
+			}
+		})
+	}
+
+	/// Rows of buttons in the text.
+	pub fn buttons(self) -> Self {
+		self.rich(|k| {
+			if let FieldKind::RichText { buttons, .. } = k {
+				*buttons = true;
+			}
+		})
+	}
+
+	/// Blocks of these types in the text, like an image or a contact box.
+	pub fn embed<'a>(self, types: impl IntoIterator<Item = &'a str>) -> Self {
+		self.rich(|k| {
+			if let FieldKind::RichText { blocks, .. } = k {
+				*blocks = types.into_iter().map(Into::into).collect();
+			}
+		})
 	}
 
 	/// Any files.
@@ -796,6 +879,12 @@ pub(crate) mod tests {
 				[
 					Field::text("intro").multiline().translatable(),
 					Field::blocks("body", ["text", "button"]).translatable(),
+					Field::rich_text("story")
+						.headings([2, 3])
+						.links()
+						.buttons()
+						.embed(["text"])
+						.translatable(),
 				],
 			)
 			.entry(

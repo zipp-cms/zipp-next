@@ -13,6 +13,7 @@ pub mod error;
 pub mod graphql;
 pub mod migrate;
 pub mod query;
+pub mod richtext;
 pub mod schema;
 mod studio;
 pub mod typescript;

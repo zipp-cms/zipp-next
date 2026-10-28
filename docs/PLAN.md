@@ -32,7 +32,7 @@
 - [ ] Releases: several drafts published together (Craft 6), on top of the drafts
 - [ ] Live preview: preview tokens, frontend renders unsaved content
 - [ ] WebP/AVIF output for transforms, alt text per site
-- [ ] Rich text field
+- [x] Rich text field (TipTap): headings, lists, links, button rows, embedded blocks, html + chunks
 - [ ] Field kinds as plugins: a crate with the Rust side and a studio
       package with its Svelte field
 - [ ] Data migrations in code, for changes the ops can't express

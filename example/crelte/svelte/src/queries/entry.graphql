@@ -21,7 +21,27 @@ fragment Body on Block {
 		text
 	}
 	... on text_Block {
-		content
+		content {
+			chunks {
+				... on Html {
+					html
+				}
+				... on Buttons {
+					buttons {
+						url
+						label
+						defaultLabel
+						target
+					}
+				}
+				... on image_Block {
+					caption
+					image {
+						...Image
+					}
+				}
+			}
+		}
 	}
 	... on image_Block {
 		caption

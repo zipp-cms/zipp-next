@@ -10,7 +10,7 @@
 	{#if block.typeHandle === 'heading'}
 		<h2>{block.text}</h2>
 	{:else if block.typeHandle === 'text'}
-		<p>{block.content}</p>
+		<div class="rt">{@html block.content?.html ?? ''}</div>
 	{:else if block.typeHandle === 'image'}
 		<figure>
 			{#each block.image as img (img.url)}

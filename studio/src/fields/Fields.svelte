@@ -4,6 +4,7 @@
 	import RelationField from './RelationField.svelte';
 	import AssetField from './AssetField.svelte';
 	import LinkField from './LinkField.svelte';
+	import RichTextField from './RichTextField.svelte';
 
 	let {
 		schema,
@@ -74,6 +75,8 @@
 				/>
 			{:else if field.kind === 'relation'}
 				<RelationField {schema} {field} {values} {refs} />
+			{:else if field.kind === 'richText'}
+				<RichTextField {schema} {field} {values} {refs} />
 			{:else if field.kind === 'link'}
 				<LinkField {schema} {field} {values} {refs} />
 			{:else if field.kind === 'assets'}

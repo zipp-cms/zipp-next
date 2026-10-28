@@ -242,9 +242,16 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": true
+            "kind": "richText",
+            "headings": [
+              3
+            ],
+            "lists": true,
+            "links": true,
+            "buttons": true,
+            "blocks": [
+              "image"
+            ]
           }
         ]
       }
@@ -673,9 +680,16 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": true
+            "kind": "richText",
+            "headings": [
+              3
+            ],
+            "lists": true,
+            "links": true,
+            "buttons": true,
+            "blocks": [
+              "image"
+            ]
           }
         ]
       },

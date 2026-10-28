@@ -77,6 +77,9 @@ fn fields(comp: &Component) -> String {
 			FieldKind::Relation { .. } | FieldKind::Assets { .. } => {
 				"number[]".into()
 			}
+			FieldKind::RichText { .. } => {
+				"{ type: 'doc'; content: unknown[] }".into()
+			}
 			FieldKind::Link { .. } => {
 				"{ type: 'entry' | 'url' | 'email' | 'phone' | 'asset'; \
 				value: string | number; label?: string; newTab?: boolean }"

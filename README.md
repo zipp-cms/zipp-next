@@ -91,6 +91,14 @@ fn main() {
   and `entryCount` take the same filters as the rest api (`where: [{
   field: "city", value: "Bern" }]`). Without a session only published
   entries show. A GET opens GraphiQL to try queries.
+- **Rich text.** `Field::rich_text("text").headings([3]).lists().links()
+  .buttons().embed(["image"])` says what an editor may contain: bold and
+  italic always, the rest only if the field allows it, blocks of the
+  schema as boxes in the text. It is edited with TipTap and stored as its
+  JSON; publishing removes empty paragraphs, `&nbsp;` and trailing line
+  breaks, so frontends need no margin hacks. GraphQL has `html` and
+  `chunks` (`Html`, `Buttons` with a row of links, the blocks), so a row
+  of buttons arrives grouped. Links in the text point to entries by id.
 - **Assets and transforms.** Uploads live in `--files`, `Field::images`
   and `Field::assets` link them. Transforms are named in code
   (`Transform::new("hero").width(1600).height(700).crop()`), generated

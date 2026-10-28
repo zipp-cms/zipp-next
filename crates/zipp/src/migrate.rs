@@ -348,9 +348,9 @@ impl Op {
 				}
 				walk_mut(schema, comp, fields, &mut |_, obj| {
 					for v in obj.values_mut() {
-						if let Value::Array(items) = v {
-							items.retain(|b| b["type"] != component.as_str());
-						}
+						for_blocks(v, &mut |list| {
+							list.retain(|b| b["type"] != component.as_str())
+						});
 					}
 				});
 			}
@@ -365,12 +365,14 @@ impl Op {
 				let comp = after.get(ty).unwrap();
 				walk_mut(&after, comp, fields, &mut |_, obj| {
 					for v in obj.values_mut() {
-						let Value::Array(items) = v else { continue };
-						for b in items {
-							if b["type"] == from.as_str() {
+						for_blocks(v, &mut |list| {
+							for b in list
+								.iter_mut()
+								.filter(|b| b["type"] == from.as_str())
+							{
 								b["type"] = to.clone().into();
 							}
-						}
+						});
 					}
 				});
 			}
@@ -460,6 +462,42 @@ impl Op {
 				section.handle
 			),
 		}
+	}
+}
+
+/// Calls `f` with the blocks of a value: a blocks list as it is, the
+/// blocks of a rich text as their attrs (they look the same: id, type,
+/// fields). Afterwards the rich text gets them back.
+fn for_blocks(v: &mut Value, f: &mut impl FnMut(&mut Vec<Value>)) {
+	match v {
+		Value::Array(list) => f(list),
+		Value::Object(o) if o.get("type").is_some_and(|t| t == "doc") => {
+			let Some(Value::Array(content)) = o.get_mut("content") else {
+				return;
+			};
+			let mut attrs: Vec<Value> = content
+				.iter()
+				.filter(|n| n["type"] == "embed")
+				.map(|n| n["attrs"].clone())
+				.collect();
+			f(&mut attrs);
+
+			// put the changed blocks back, the removed ones go away
+			let mut out = vec![];
+			for node in content.drain(..) {
+				if node["type"] != "embed" {
+					out.push(node);
+				} else if let Some(a) =
+					attrs.iter().find(|a| a["id"] == node["attrs"]["id"])
+				{
+					out.push(
+						serde_json::json!({ "type": "embed", "attrs": a }),
+					);
+				}
+			}
+			*content = out;
+		}
+		_ => {}
 	}
 }
 
@@ -651,6 +689,31 @@ mod tests {
 			op.apply_schema(&mut schema);
 		}
 		assert_eq!(fields, json!({ "price": 3 }));
+	}
+
+	#[test]
+	fn renames_blocks_in_rich_text() {
+		let op = Op::RenameComponent {
+			from: "text".into(),
+			to: "paragraph".into(),
+		};
+		let mut ty = "page".to_string();
+		let mut fields = json!({ "story": { "type": "doc", "content": [
+			{ "type": "paragraph" },
+			{ "type": "embed", "attrs": { "id": "a", "type": "text",
+				"fields": { "content": "x" } } },
+		] } });
+		op.apply_entry(&site(), &mut ty, &mut fields);
+		assert_eq!(fields["story"]["content"][1]["attrs"]["type"], "paragraph");
+
+		let op = Op::RemoveComponent {
+			component: "text".into(),
+		};
+		let mut fields = json!({ "story": { "type": "doc", "content": [
+			{ "type": "embed", "attrs": { "id": "a", "type": "text", "fields": {} } },
+		] } });
+		op.apply_entry(&site(), &mut ty, &mut fields);
+		assert_eq!(fields["story"]["content"], json!([]));
 	}
 
 	#[test]

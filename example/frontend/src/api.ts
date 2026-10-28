@@ -53,7 +53,7 @@ export type Image = {
 
 export type Block =
 	| { id: string; typeHandle: 'heading'; text: string }
-	| { id: string; typeHandle: 'text'; content: string }
+	| { id: string; typeHandle: 'text'; content: { html: string } | null }
 	| {
 			id: string;
 			typeHandle: 'image';

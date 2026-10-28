@@ -79,7 +79,13 @@ fn schema() -> Schema {
 		.block(
 			"text",
 			"Text",
-			[Field::text("content").required().multiline()],
+			[Field::rich_text("content")
+				.required()
+				.headings([3])
+				.lists()
+				.links()
+				.buttons()
+				.embed(["image"])],
 		)
 		.block(
 			"image",

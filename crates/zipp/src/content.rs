@@ -5,6 +5,7 @@ use rand::Rng;
 use serde::Serialize;
 use serde_json::{Map, Value};
 
+use crate::richtext;
 use crate::schema::{Component, Field, FieldKind, LinkKind, Schema};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -30,7 +31,7 @@ pub fn validate(
 	}
 }
 
-fn validate_fields(
+pub(crate) fn validate_fields(
 	schema: &Schema,
 	comp: &Component,
 	fields: &Value,
@@ -105,6 +106,17 @@ fn validate_value(
 			}
 		}
 		(FieldKind::Boolean, Value::Bool(_)) => {}
+		(kind @ FieldKind::RichText { .. }, Value::Object(_)) => {
+			let allowed = richtext::Allowed::of(kind).unwrap();
+			let doc = richtext::validate(schema, &allowed, value, path, errors);
+			if richtext::is_empty(&doc) {
+				if field.required {
+					error(errors, path, "is required");
+				}
+				return None;
+			}
+			return Some(doc);
+		}
 		(FieldKind::Link { to, labels, .. }, Value::Object(link)) => {
 			if let Err(e) = check_link(to, *labels, link) {
 				error(errors, path, &e);
@@ -173,7 +185,7 @@ fn validate_block(
 
 /// `{ "type": "url", "value": "https://…", "label": "…", "newTab": true }`,
 /// value is the id for an entry or an asset.
-fn check_link(
+pub(crate) fn check_link(
 	to: &[LinkKind],
 	label: bool,
 	link: &Map<String, Value>,
@@ -252,7 +264,7 @@ fn error(errors: &mut Vec<FieldError>, path: &str, message: &str) {
 	});
 }
 
-fn new_block_id() -> String {
+pub(crate) fn new_block_id() -> String {
 	let n: u64 = rand::rng().random();
 	format!("{n:016x}")
 }
@@ -270,12 +282,17 @@ pub fn walk_mut(
 	f(comp, obj);
 
 	for field in &comp.fields {
-		if !matches!(field.kind, FieldKind::Blocks { .. }) {
-			continue;
-		}
-		let Some(Value::Array(blocks)) = obj.get_mut(&field.handle) else {
-			continue;
-		};
+		let blocks: Vec<&mut Value> =
+			match (&field.kind, obj.get_mut(&field.handle)) {
+				(FieldKind::Blocks { .. }, Some(Value::Array(blocks))) => {
+					blocks.iter_mut().collect()
+				}
+				// blocks in a rich text, their attrs have the same shape
+				(FieldKind::RichText { .. }, Some(doc)) => {
+					richtext::blocks_mut(doc)
+				}
+				_ => continue,
+			};
 		for block in blocks {
 			let ty = block["type"].as_str().unwrap_or_default();
 			if let Some(c) = schema.get(ty) {
@@ -312,6 +329,31 @@ pub fn relations(
 	out
 }
 
+/// The relation of one link, to an entry or an asset.
+fn link_relation(
+	schema: &Schema,
+	link: &Value,
+	path: &str,
+) -> Option<RelationRef> {
+	let target = match link["type"].as_str() {
+		Some("entry") => Target::Entries(
+			schema
+				.components
+				.iter()
+				.filter(|c| c.entry)
+				.map(|c| c.handle.clone())
+				.collect(),
+		),
+		Some("asset") => Target::Assets(false),
+		_ => return None,
+	};
+	Some(RelationRef {
+		path: path.into(),
+		target,
+		ids: vec![link["value"].as_i64()?],
+	})
+}
+
 fn collect_relations(
 	schema: &Schema,
 	comp: &Component,
@@ -322,28 +364,34 @@ fn collect_relations(
 	for field in &comp.fields {
 		let path = format!("{prefix}{}", field.handle);
 
+		// links in a rich text and the relations of its blocks
+		if let FieldKind::RichText { .. } = field.kind {
+			let doc = &fields[&field.handle];
+			for link in richtext::links(doc) {
+				out.extend(link_relation(schema, link, &path));
+			}
+			let content = doc["content"].as_array().into_iter().flatten();
+			for (i, node) in content.enumerate() {
+				let bt = node["attrs"]["type"].as_str().unwrap_or_default();
+				if let (true, Some(c)) =
+					(node["type"] == "embed", schema.get(bt))
+				{
+					let prefix = format!("{path}.{i}.");
+					collect_relations(
+						schema,
+						c,
+						&node["attrs"]["fields"],
+						&prefix,
+						out,
+					);
+				}
+			}
+			continue;
+		}
+
 		// a link to an entry or an asset is a relation too
 		if let FieldKind::Link { .. } = field.kind {
-			let link = &fields[&field.handle];
-			let target = match link["type"].as_str() {
-				Some("entry") => Target::Entries(
-					schema
-						.components
-						.iter()
-						.filter(|c| c.entry)
-						.map(|c| c.handle.clone())
-						.collect(),
-				),
-				Some("asset") => Target::Assets(false),
-				_ => continue,
-			};
-			if let Some(id) = link["value"].as_i64() {
-				out.push(RelationRef {
-					path,
-					target,
-					ids: vec![id],
-				});
-			}
+			out.extend(link_relation(schema, &fields[&field.handle], &path));
 			continue;
 		}
 

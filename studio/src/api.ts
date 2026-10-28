@@ -15,6 +15,14 @@ export type FieldKind =
 	| { kind: 'assets'; images: boolean; max: number | null }
 	| { kind: 'link'; to: LinkKind[]; labels: boolean; newTab: boolean }
 	| {
+			kind: 'richText';
+			headings: number[];
+			lists: boolean;
+			links: boolean;
+			buttons: boolean;
+			blocks: string[];
+	  }
+	| {
 			kind: 'blocks';
 			types: string[];
 			min: number | null;

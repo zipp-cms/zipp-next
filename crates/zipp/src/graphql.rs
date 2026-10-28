@@ -28,7 +28,7 @@ use std::sync::Arc;
 use async_graphql::dynamic::{
 	Field as GqlField, FieldFuture, FieldValue, InputObject, InputValue,
 	Interface, InterfaceField, Object, ResolverContext, Scalar,
-	Schema as GqlSchema, TypeRef,
+	Schema as GqlSchema, TypeRef, Union,
 };
 use async_graphql::http::GraphiQLSource;
 use async_graphql::{Error as GqlError, Value as GqlValue};
@@ -49,6 +49,7 @@ use crate::drafts::{Doc, preview};
 use crate::entries::{Entry, list};
 use crate::error::Result;
 use crate::query::Query;
+use crate::richtext::{self, Chunk};
 use crate::schema::{FieldKind, Schema};
 
 /// Fields every entry has, field handles can't use them.
@@ -83,6 +84,135 @@ struct Viewer {
 	published_only: bool,
 	/// the entry of a preview token and its draft
 	preview: Option<(i64, Doc)>,
+}
+
+/// A rich text field as parent of html and chunks.
+struct RichText {
+	doc: Value,
+	site: String,
+}
+
+/// A part of an object value, for objects built as values.
+fn value_field<'a>(
+	ctx: ResolverContext<'a>,
+	name: &'static str,
+) -> FieldFuture<'a> {
+	FieldFuture::new(async move {
+		let GqlValue::Object(o) = ctx.parent_value.try_to_value()? else {
+			return Ok(None);
+		};
+		Ok(match o.get(name) {
+			Some(GqlValue::List(l)) => {
+				Some(FieldValue::list(l.iter().cloned().map(FieldValue::value)))
+			}
+			Some(v) => Some(FieldValue::value(v.clone())),
+			None => None,
+		})
+	})
+}
+
+/// What a chunk of a rich text is: html, a row of buttons or a block.
+fn chunk_union(schema: &Schema) -> Union {
+	let mut u = Union::new("Chunk")
+		.possible_type("Html")
+		.possible_type("Buttons");
+	for c in schema.components.iter().filter(|c| !c.entry) {
+		u = u.possible_type(format!("{}_Block", c.handle));
+	}
+	u
+}
+
+fn rich_text_object() -> Object {
+	Object::new("RichText")
+		.description(
+			"Rich text: all as html, or in chunks with buttons and blocks",
+		)
+		.field(GqlField::new(
+			"html",
+			TypeRef::named_nn(TypeRef::STRING),
+			|ctx| {
+				FieldFuture::new(async move {
+					let rt = ctx.parent_value.try_downcast_ref::<RichText>()?;
+					let mut resolve = resolver(&ctx, &rt.site);
+					let html = richtext::html(&rt.doc, &mut resolve);
+					Ok(Some(FieldValue::value(html)))
+				})
+			},
+		))
+		.field(GqlField::new(
+			"chunks",
+			TypeRef::named_nn_list_nn("Chunk"),
+			|ctx| {
+				FieldFuture::new(async move {
+					let rt = ctx.parent_value.try_downcast_ref::<RichText>()?;
+					let mut resolve = resolver(&ctx, &rt.site);
+					let mut out = vec![];
+					for chunk in richtext::chunks(&rt.doc, &mut resolve) {
+						out.push(match chunk {
+							Chunk::Html(html) => {
+								FieldValue::value(GqlValue::from_json(
+									serde_json::json!({ "html": html }),
+								)?)
+								.with_type("Html")
+							}
+							Chunk::Buttons(links) => {
+								let mut buttons = vec![];
+								for l in &links {
+									buttons.extend(resolve_link(
+										&ctx, l, &rt.site, true,
+									)?);
+								}
+								let mut o =
+									async_graphql::indexmap::IndexMap::new();
+								o.insert(
+									async_graphql::Name::new("buttons"),
+									GqlValue::List(buttons),
+								);
+								FieldValue::value(GqlValue::Object(o))
+									.with_type("Buttons")
+							}
+							Chunk::Block(attrs) => {
+								let ty = attrs["type"]
+									.as_str()
+									.unwrap_or_default()
+									.to_string();
+								FieldValue::owned_any(Block {
+									id: attrs["id"]
+										.as_str()
+										.unwrap_or_default()
+										.into(),
+									ty: ty.clone(),
+									site: rt.site.clone(),
+									fields: attrs["fields"].clone(),
+								})
+								.with_type(format!("{ty}_Block"))
+							}
+						});
+					}
+					Ok(Some(FieldValue::list(out)))
+				})
+			},
+		))
+}
+
+/// Url and target of the links of a rich text, external ones in a new tab.
+fn resolver<'a>(
+	ctx: &'a ResolverContext,
+	site: &'a str,
+) -> impl FnMut(&Value) -> Option<(String, Option<String>)> + 'a {
+	move |link| {
+		let v = resolve_link(ctx, link, site, true).ok()??;
+		let GqlValue::Object(o) = v else { return None };
+		let url = match o.get("url")? {
+			GqlValue::String(u) => u.clone(),
+			_ => return None,
+		};
+		let target = match o.get("target") {
+			Some(GqlValue::String(t)) => Some(t.clone()),
+			_ => None,
+		};
+		Some((url, target))
+	}
 }
 
 /// A block as parent of its fields, it knows its site for relations.
@@ -120,6 +250,18 @@ pub fn build(
 		.register(site_object())
 		.register(asset_object())
 		.register(link_object())
+		.register(rich_text_object())
+		.register(Object::new("Html").field(GqlField::new(
+			"html",
+			TypeRef::named_nn(TypeRef::STRING),
+			|ctx| value_field(ctx, "html"),
+		)))
+		.register(Object::new("Buttons").field(GqlField::new(
+			"buttons",
+			TypeRef::named_nn_list_nn("Link"),
+			|ctx| value_field(ctx, "buttons"),
+		)))
+		.register(chunk_union(&schema))
 		.register(
 			Scalar::new("QueryArgument")
 				.description("An id or a handle, like Craft's QueryArgument"),
@@ -318,6 +460,7 @@ fn content_field(field: &crate::schema::Field) -> GqlField {
 		FieldKind::Relation { .. } => TypeRef::named_nn_list_nn("Entry"),
 		FieldKind::Assets { .. } => TypeRef::named_nn_list_nn("Asset"),
 		FieldKind::Link { .. } => TypeRef::named("Link"),
+		FieldKind::RichText { .. } => TypeRef::named("RichText"),
 		FieldKind::Blocks { .. } => TypeRef::named_nn_list_nn("Block"),
 	};
 	let handle = field.handle.clone();
@@ -384,6 +527,10 @@ fn content_field(field: &crate::schema::Field) -> GqlField {
 						.with_type(format!("{ty}_Block"))
 					});
 					Ok(Some(FieldValue::list(blocks)))
+				}
+				FieldKind::RichText { .. } if !value.is_null() => {
+					let rt = RichText { doc: value, site };
+					Ok(Some(FieldValue::owned_any(rt)))
 				}
 				FieldKind::Link { new_tab, .. } if !value.is_null() => {
 					let link = resolve_link(&ctx, &value, &site, new_tab)?;
@@ -1218,6 +1365,80 @@ mod tests {
 				json!({ "type": "email", "url": "mailto:hi@x.ch", "label": null,
 					"defaultLabel": "hi@x.ch", "target": null }),
 			]
+		);
+	}
+
+	#[tokio::test]
+	async fn rich_text_in_chunks() {
+		let db = Db::memory().unwrap();
+		let s = Arc::new(site());
+		let urls =
+			SiteUrls::from([("de".to_string(), "https://x.ch".to_string())]);
+		let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
+		{
+			let conn = db.conn();
+			let about = save(
+				&conn,
+				&s,
+				None,
+				input("pages", "page", "About", json!({})),
+			)
+			.unwrap();
+			let story = json!({ "type": "doc", "content": [
+				{ "type": "heading", "attrs": { "level": 2 }, "content": [
+					{ "type": "text", "text": "Hi" }] },
+				{ "type": "paragraph", "content": [{ "type": "text", "text": "about",
+					"marks": [{ "type": "link", "attrs": { "link":
+						{ "type": "entry", "value": about.id } } }] }] },
+				{ "type": "buttons", "attrs": { "links": [
+					{ "type": "entry", "value": about.id, "label": "More" },
+					{ "type": "url", "value": "https://y.ch" },
+				] } },
+				{ "type": "embed", "attrs": { "type": "text",
+					"fields": { "content": "boxed" } } },
+				{ "type": "paragraph" },
+			] });
+			save(
+				&conn,
+				&s,
+				None,
+				input("pages", "page", "Story", json!({ "story": story })),
+			)
+			.unwrap();
+		}
+
+		let data = run(
+			&gql,
+			r#"{ entry(uri: "story") { ... on page_Entry { story {
+				html
+				chunks {
+					__typename
+					... on Html { html }
+					... on Buttons { buttons { url label target } }
+					... on text_Block { content }
+				}
+			} } } }"#,
+			true,
+		)
+		.await;
+		let story = &data["entry"]["story"];
+		assert_eq!(
+			story["chunks"],
+			json!([
+				{ "__typename": "Html", "html":
+					"<h2>Hi</h2><p><a href=\"https://x.ch/about\">about</a></p>" },
+				{ "__typename": "Buttons", "buttons": [
+					{ "url": "https://x.ch/about", "label": "More", "target": null },
+					{ "url": "https://y.ch", "label": null, "target": "_blank" },
+				] },
+				{ "__typename": "text_Block", "content": "boxed" },
+			])
+		);
+		assert!(
+			story["html"]
+				.as_str()
+				.unwrap()
+				.contains("<p class=\"buttons\">")
 		);
 	}
 
