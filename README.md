@@ -29,14 +29,15 @@ fn schema() -> Schema {
 }
 
 fn main() {
-	zipp::run(schema());
+	zipp::run(schema(), zipp::migrations!());
 }
 ```
 
 ## Layout
 
 - `crates/zipp`: the cms, a library the site crate calls
-- `studio`: the editing ui (Svelte), served by the cms on `/`
+- `studio`: the editing ui (Svelte), its build is embedded in the zipp
+  crate and served on `/`
 - `example/cms`: the cms crate of an example site, with its migrations
 - `example/frontend`: a small Svelte frontend for it
 
@@ -69,11 +70,16 @@ fn main() {
 ```sh
 cd example/cms
 cargo run -- user admin@example.com          # asks for a password
-cargo run -- serve --studio ../../studio/dist
+cargo run -- serve                            # studio on http://127.0.0.1:8090
 ```
 
-Build the studio once with `npm install && npm run build` in `studio/`
-(or `npm run dev` there, it proxies `/api` to the cms). The frontend runs
+A release build is a single binary with the api, the studio and the
+migrations; it only needs a place for its database (`--db`). Debug builds
+read the migrations from disk, so a new one works without a rebuild.
+
+To work on the studio run `npm run dev` in `studio/` (it proxies `/api`
+to the cms), `npm run build` updates the embedded build in
+`crates/zipp/studio`, commit it with the change. The frontend runs
 with `npm run dev` in `example/frontend`, `npm run types` updates its
 types after a schema change.
 

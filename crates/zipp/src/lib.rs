@@ -10,6 +10,7 @@ pub mod error;
 pub mod migrate;
 pub mod query;
 pub mod schema;
+mod studio;
 pub mod typescript;
 
 use std::fs;
@@ -22,14 +23,33 @@ use axum::extract::FromRef;
 use axum::http::{Method, header};
 use clap::{Parser, Subcommand};
 use tower_http::cors::{self, CorsLayer};
-use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
 use crate::db::Db;
-use crate::migrate::{Migration, Rename};
+use crate::migrate::{Migration, Migrations, Rename};
 
 pub use crate::schema::{Field, Schema};
+
+#[doc(hidden)]
+pub use rust_embed;
+
+/// The `migrations/` directory of the calling crate. Debug builds read it
+/// from disk, release builds contain it.
+#[macro_export]
+macro_rules! migrations {
+	() => {{
+		#[derive($crate::rust_embed::Embed)]
+		#[folder = "migrations/"]
+		#[crate_path = "zipp::rust_embed"]
+		#[allow_missing = true]
+		struct Files;
+		$crate::migrate::Migrations::new::<Files>(concat!(
+			env!("CARGO_MANIFEST_DIR"),
+			"/migrations"
+		))
+	}};
+}
 
 #[derive(Clone, FromRef)]
 pub struct AppState {
@@ -41,8 +61,6 @@ pub struct AppState {
 struct Opts {
 	#[arg(long, default_value = "zipp.db")]
 	db: PathBuf,
-	#[arg(long, default_value = "migrations")]
-	migrations: PathBuf,
 	#[command(subcommand)]
 	cmd: Cmd,
 }
@@ -53,11 +71,8 @@ enum Cmd {
 	Serve {
 		#[arg(long, default_value = "127.0.0.1:8090")]
 		listen: String,
-		/// The built studio, served on `/`
-		#[arg(long)]
-		studio: Option<PathBuf>,
 	},
-	/// Write a migration from the schema in code to `--migrations`.
+	/// Write a migration from the schema in code to `migrations/`.
 	Makemigration {
 		/// A rename instead of remove and add: `old=new` for a component,
 		/// `component.old=new` for a field
@@ -72,8 +87,8 @@ enum Cmd {
 	User { email: String },
 }
 
-/// The main of a site's cms crate.
-pub fn run(schema: Schema) {
+/// The main of a site's cms crate: `zipp::run(schema(), zipp::migrations!())`.
+pub fn run(schema: Schema, migrations: Migrations) {
 	tracing_subscriber::fmt()
 		.with_env_filter(
 			tracing_subscriber::EnvFilter::try_from_default_env()
@@ -88,17 +103,11 @@ pub fn run(schema: Schema) {
 
 	let opts = Opts::parse();
 	let res = match opts.cmd {
-		Cmd::Serve { listen, studio } => {
-			tokio::runtime::Runtime::new().unwrap().block_on(serve(
-				schema,
-				&opts.db,
-				&opts.migrations,
-				&listen,
-				studio,
-			))
-		}
+		Cmd::Serve { listen } => tokio::runtime::Runtime::new()
+			.unwrap()
+			.block_on(serve(schema, &opts.db, &migrations, &listen)),
 		Cmd::Makemigration { rename, name } => {
-			makemigration(&schema, &opts.migrations, &rename, name.as_deref())
+			makemigration(&schema, &migrations, &rename, name.as_deref())
 		}
 		Cmd::Types => {
 			print!("{}", typescript::generate(&schema));
@@ -116,14 +125,12 @@ pub fn run(schema: Schema) {
 async fn serve(
 	schema: Schema,
 	db_path: &Path,
-	migrations_dir: &Path,
+	migrations: &Migrations,
 	listen: &str,
-	studio: Option<PathBuf>,
 ) -> Result<(), String> {
 	let db = Db::open(db_path).map_err(|e| e.to_string())?;
 
-	let migrations =
-		migrate::load_dir(migrations_dir).map_err(|e| e.to_string())?;
+	let migrations = migrations.load()?;
 	let applied = entries::apply_migrations(&db.conn(), &migrations)
 		.map_err(|e| e.to_string())?;
 	for name in applied {
@@ -146,11 +153,7 @@ async fn serve(
 	let api = Router::new()
 		.nest("/auth", auth::routes())
 		.merge(entries::routes());
-	let mut app = Router::new().nest("/api", api);
-	if let Some(dir) = studio {
-		let index = ServeFile::new(dir.join("index.html"));
-		app = app.fallback_service(ServeDir::new(dir).fallback(index));
-	}
+	let app = Router::new().nest("/api", api).merge(studio::routes());
 
 	// frontends on other domains read the content
 	let app = app
@@ -172,7 +175,7 @@ async fn serve(
 
 fn makemigration(
 	schema: &Schema,
-	dir: &Path,
+	migrations: &Migrations,
 	renames: &[String],
 	name: Option<&str>,
 ) -> Result<(), String> {
@@ -180,7 +183,8 @@ fn makemigration(
 		.iter()
 		.map(|r| Rename::parse(r))
 		.collect::<Result<Vec<_>, _>>()?;
-	let migrations = migrate::load_dir(dir).map_err(|e| e.to_string())?;
+	let dir = &migrations.dir;
+	let migrations = migrations.load()?;
 	let last = migrations
 		.last()
 		.map(|m| m.schema.clone())

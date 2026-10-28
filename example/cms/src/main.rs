@@ -52,5 +52,5 @@ fn schema() -> Schema {
 }
 
 fn main() {
-	zipp::run(schema());
+	zipp::run(schema(), zipp::migrations!());
 }

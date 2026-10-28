@@ -9,9 +9,7 @@
 //! don't touch content. Everything else needs a migration. A rename can't
 //! be told apart from a remove and an add, it is passed as a hint.
 
-use std::fs;
-use std::io;
-use std::path::Path;
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -362,30 +360,42 @@ pub struct Migration {
 	pub schema: Schema,
 }
 
-/// The migration files of a directory, sorted by name.
-pub fn load_dir(dir: &Path) -> io::Result<Vec<Migration>> {
-	let mut migrations = vec![];
-	let entries = match fs::read_dir(dir) {
-		Ok(e) => e,
-		Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(vec![]),
-		Err(e) => return Err(e),
-	};
+/// The migration files of a site, see [`migrations!`](crate::migrations).
+pub struct Migrations {
+	/// `migrations/` of the site's crate, where new ones are written
+	pub dir: PathBuf,
+	files: Vec<(String, Vec<u8>)>,
+}
 
-	for entry in entries {
-		let path = entry?.path();
-		if path.extension().is_none_or(|e| e != "json") {
-			continue;
+impl Migrations {
+	pub fn new<E: rust_embed::Embed>(dir: &str) -> Self {
+		let files = E::iter()
+			.filter_map(|name| {
+				Some((name.to_string(), E::get(&name)?.data.into()))
+			})
+			.collect();
+		Self {
+			dir: dir.into(),
+			files,
 		}
-		let mut m: Migration =
-			serde_json::from_str(&fs::read_to_string(&path)?).map_err(|e| {
-				io::Error::other(format!("{}: {e}", path.display()))
-			})?;
-		m.name = path.file_stem().unwrap().to_string_lossy().into();
-		migrations.push(m);
 	}
 
-	migrations.sort_by(|a, b| a.name.cmp(&b.name));
-	Ok(migrations)
+	/// The migrations sorted by name.
+	pub fn load(&self) -> Result<Vec<Migration>, String> {
+		let mut migrations = vec![];
+		for (file, data) in &self.files {
+			let Some(name) = file.strip_suffix(".json") else {
+				continue;
+			};
+			let mut m: Migration = serde_json::from_slice(data)
+				.map_err(|e| format!("migration {file}: {e}"))?;
+			m.name = name.into();
+			migrations.push(m);
+		}
+
+		migrations.sort_by(|a, b| a.name.cmp(&b.name));
+		Ok(migrations)
+	}
 }
 
 /// `0003` or `0003_name` after two existing migrations.
