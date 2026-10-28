@@ -1,47 +1,84 @@
 # Zipp
 
-Tries to be the best cms on the planet.
+A headless cms where the content model is code.
 
-## Best, what does that mean?
+Writing code got cheap, so the schema doesn't need a builder in the
+admin anymore: a site has a small Rust crate that describes its entries
+and blocks, zipp turns that into an api, a studio for the editors,
+migrations and TypeScript types. The frontend (crelte or anything else)
+is a separate project that reads the api.
 
-Best is defined by the following terms:
-- Performance, a cms should be fast to respond to requests and able to edit content with a blink of an eye
-- flexible, fields and layouts should be easely changeable, some might even be changed on the flight, like a form builder
-- localized, since the planet speaks a lot of different languages, the cms should support those
-- extendable, a good cms, should be extenable, from new backend sites to field types and new datastructures
-- diverse, the cms should be language and framework agnostic
-- Secure, this cms should be able to be used safely by news outlets and goverment authorities
-- Accessible, the cms should be accessable to any human with a computer (with a recent browser)
-- Free, the cms in it's basic form should be open source and accesable to any body
-- Maintanance, the cms should be easely deployed, and be able to auto update itself
+```rust
+use zipp::{Field, Schema};
 
-## Target group
+fn schema() -> Schema {
+	Schema::new()
+		.entry("page", "Page", [
+			Field::text("intro").multiline().max(300),
+			Field::blocks("body", ["heading", "button"]),
+		])
+		.entry("event", "Event", [
+			Field::text("date").required().indexed(),
+			Field::text("city").required().indexed(),
+		])
+		.block("heading", "Heading", [Field::text("text").required()])
+		.block("button", "Button", [
+			Field::text("label").required(),
+			Field::relation("link", ["page", "event"]).max(1),
+		])
+}
 
-Who is the best cms for.
-This cms should be able to be used from a small website for you're neighbour to a million views news outlet.
-It might even be used for a online shop with a few thousand orthers per day, but let's not get ahead of ourself.
+fn main() {
+	zipp::run(schema());
+}
+```
 
-## What this requires
+## Layout
 
-Since the web knows many technologies and framework the best cms should be able to be used by any of them.
-Having a web api is crucial to achieve this goal.
-I see two options, either a custom api or a graphql api, the graphql seems to be the better option.
+- `crates/zipp`: the cms, a library the site crate calls
+- `studio`: the editing ui (Svelte), served by the cms on `/`
+- `example/cms`: the cms crate of an example site, with its migrations
+- `example/frontend`: a small Svelte frontend for it
 
-To build a fast and secure cms the fundamentals need to be correct, there is no better language to facilitate this than rust.
+## Concepts
 
-## The architecture
+- **Entries and blocks.** Both are components made of fields: text,
+  number, boolean, relation (ids of entries) and blocks (a list of
+  blocks, nested as deep as needed). Every entry has a title, a slug and
+  a published flag.
+- **Content is JSON.** An entry's fields are stored as one JSON document,
+  a block is `{ "id", "type", "fields" }`.
+- **Queries go through index tables.** Fields marked `indexed()` are
+  copied to `entry_values` on every save, every relation (also inside
+  blocks) to `entry_relations`. So entries can be filtered and sorted by
+  them and you can ask what links to an entry:
+  `/api/entries?type=event&f.city=Bern&f.date.gte=2026-11-01&order=date`,
+  `/api/entries?related=5`. See `crates/zipp/src/query.rs`.
+- **Migrations from the code.** `makemigration` compares the schema in
+  code with the last file in `migrations/` and writes the difference as
+  ops. Renames are hints (`--rename event.city=town`), otherwise a rename
+  is a remove and an add, and the tool says which content is lost. `serve`
+  applies new migrations to all content and refuses to start when the
+  code changed without one. Labels, names, `required` and the field order
+  change freely.
+- **Types for the frontend.** `types` prints TypeScript types of all
+  entries and blocks.
 
-The best cms might be organized in 4 different layers
+## Run the example
 
-### 1. Database
-To achieve a loosely schemed database a new database wrapper might be required (maybe it could interface with postgres and cassandra)
+```sh
+cd example/cms
+cargo run -- user admin@example.com          # asks for a password
+cargo run -- serve --studio ../../studio/dist
+```
 
-### 2. Backend
-This layer contains the graphql endpoint which allows editors and viewers to access their content and edit fields...
+Build the studio once with `npm install && npm run build` in `studio/`
+(or `npm run dev` there, it proxies `/api` to the cms). The frontend runs
+with `npm run dev` in `example/frontend`, `npm run types` updates its
+types after a schema change.
 
-### 3. Admin UI
-The be able to edit content not just for machines, a user interface is needed.
+After changing `example/cms/src/main.rs`:
 
-### 4. Frontend Framework
-To delivery the best and fastest developer experience a new library and or frameworks needs to be built.
-This layers needs to be optional as to our goals.
+```sh
+cargo run -- makemigration --name what-changed
+```

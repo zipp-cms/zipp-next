@@ -1,0 +1,21 @@
+{
+	"name": "example-frontend",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"check": "svelte-check --tsconfig ./tsconfig.json",
+		"types": "cargo run -q -p example-cms -- types > src/content.ts"
+	},
+	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "^5.0.0",
+		"@tsconfig/svelte": "^5.0.2",
+		"svelte": "^5.0.0",
+		"svelte-check": "^4.3.1",
+		"tslib": "^2.6.2",
+		"typescript": "^5.2.2",
+		"vite": "^6.0.0"
+	}
+}
