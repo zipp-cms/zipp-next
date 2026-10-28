@@ -15,6 +15,8 @@
 		secDef,
 		comp,
 		isNew,
+		canEdit,
+		canPublish,
 		published = $bindable(),
 		ty = $bindable(),
 		parentId = $bindable(),
@@ -28,6 +30,8 @@
 		secDef: Section;
 		comp: Component;
 		isNew: boolean;
+		canEdit: boolean;
+		canPublish: boolean;
 		published: boolean;
 		ty: string;
 		parentId: number | null;
@@ -41,7 +45,7 @@
 
 <div class="options">
 	<span>Published</span>
-	<input type="checkbox" bind:checked={published} />
+	<input type="checkbox" bind:checked={published} disabled={!canPublish} />
 	<span>Section</span>
 	<span>{secDef.name}</span>
 	<span>Type</span>
@@ -60,6 +64,7 @@
 		<span>Content</span>
 		<select
 			value=""
+			disabled={!canEdit}
 			onchange={e => {
 				const other = e.currentTarget.value;
 				e.currentTarget.value = '';
@@ -79,7 +84,7 @@
 			{comp}
 			multiSite={schema.sites.length > 1}
 			{onview}
-			{onrestore}
+			onrestore={canEdit ? onrestore : null}
 		/>
 	{/if}
 	{#if isNew && parents.length}

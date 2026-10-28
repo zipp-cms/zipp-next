@@ -23,7 +23,8 @@
 		rev: Revision;
 		doc: SiteDoc | null;
 		changed: Set<string>;
-		onrestore: () => void;
+		/** none for a role that may not edit */
+		onrestore: (() => void) | null;
 		onback: () => void;
 	} = $props();
 </script>
@@ -37,7 +38,9 @@
 			Changed: {changeText(rev, comp, schema.sites.length > 1)}
 		</small>
 	</span>
-	<button class="dark" onclick={onrestore}>Restore</button>
+	{#if onrestore}
+		<button class="dark" onclick={onrestore}>Restore</button>
+	{/if}
 	<button class="light" onclick={onback}>Back to editing</button>
 </div>
 {#if doc}

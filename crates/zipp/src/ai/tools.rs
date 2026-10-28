@@ -159,13 +159,22 @@ struct Ctx<'a> {
 	/// the site of the input, the primary one if it has none
 	site: String,
 	user_id: i64,
+	/// the AI can do what the user's role can
+	auth: &'a Authed,
+}
+
+impl Ctx<'_> {
+	fn need(&self, id: i64, access: Access) -> Result<()> {
+		let section = crate::entries::section_of(self.conn, id)?;
+		self.auth.check(self.schema, &section, access)
+	}
 }
 
 /// Runs one tool, returns its result for the model and what the studio
 /// shows.
 pub(super) fn run_tool(
 	state: &AppState,
-	user_id: i64,
+	auth: &Authed,
 	name: &str,
 	input: &Value,
 ) -> ToolResult {
@@ -177,7 +186,8 @@ pub(super) fn run_tool(
 		conn: &conn,
 		schema,
 		site: input["site"].as_str().unwrap_or(primary).to_string(),
-		user_id,
+		user_id: auth.user_id,
+		auth,
 	};
 	match name {
 		"list_entries" => tool_list_entries(&t, input),
@@ -208,7 +218,10 @@ fn tool_list_entries(t: &Ctx, input: &Value) -> ToolResult {
 	let q = Query::parse(schema, &params).map_err(Error::Request)?;
 	let (entries, _) = list(conn, &q)?;
 	let mut out = vec![];
-	for e in &entries {
+	for e in entries
+		.iter()
+		.filter(|e| t.auth.can(schema, &e.section, Access::View))
+	{
 		let (content, draft) = current(conn, e.id, &site)?;
 		out.push(json!({ "id": e.id, "section": e.section, "type": e.ty,
 				"title": content.title, "uri": e.uri,
@@ -224,6 +237,7 @@ fn tool_get_entry(t: &Ctx, input: &Value) -> ToolResult {
 	let site = t.site.clone();
 
 	let id = input["id"].as_i64().unwrap_or_default();
+	t.need(id, Access::View)?;
 	let e = get_entry(conn, id, &site)?;
 	let (content, draft) = current(conn, id, &site)?;
 	Ok((
@@ -242,6 +256,7 @@ fn tool_update_entry(t: &Ctx, input: &Value) -> ToolResult {
 	let user_id = t.user_id;
 
 	let id = input["id"].as_i64().unwrap_or_default();
+	t.need(id, Access::Edit)?;
 	let entry = get_entry(conn, id, &site)?;
 	let base = get_draft(conn, id)?.map(|d| d.updated_at);
 	let (mut content, _) = current(conn, id, &site)?;
@@ -284,6 +299,7 @@ fn tool_create_entry(t: &Ctx, input: &Value) -> ToolResult {
 	let user_id = t.user_id;
 
 	let req = |k: &str| input[k].as_str().unwrap_or_default().to_string();
+	t.auth.check(schema, &req("section"), Access::Edit)?;
 	// live it is off, the draft publishes it in every site
 	let entry = save(
 		conn,
@@ -329,6 +345,7 @@ fn tool_create_entry(t: &Ctx, input: &Value) -> ToolResult {
 
 /// Images and files for the fields that hold them.
 fn tool_list_assets(t: &Ctx, input: &Value) -> ToolResult {
+	t.auth.check_assets(t.schema, Access::View)?;
 	let conn = t.conn;
 
 	let search = format!("%{}%", input["search"].as_str().unwrap_or_default());
@@ -354,6 +371,7 @@ fn tool_show_page(t: &Ctx, input: &Value) -> ToolResult {
 
 	let url = match (input["entry_id"].as_i64(), input["path"].as_str()) {
 		(Some(id), _) => {
+			t.need(id, Access::View)?;
 			let e = get_entry(conn, id, &site)?;
 			let Some(url) = page_url(state, &site, e.uri.as_deref()) else {
 				return Err(Error::Request(format!(

@@ -81,6 +81,7 @@ pub(super) async fn serve(
 		.nest("/auth", auth::routes())
 		.merge(studio::api_routes())
 		.merge(entries::routes())
+		.merge(users::routes())
 		.merge(drafts::routes())
 		.merge(ai::routes())
 		.merge(assets::api_routes())

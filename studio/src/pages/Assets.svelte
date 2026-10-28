@@ -6,9 +6,15 @@
 		updateAsset,
 		uploadAssets,
 		type Asset,
+		type Schema,
 	} from '../api';
+	import { canAssets } from '../lib/access';
 	import AssetGrid from '../lib/AssetGrid.svelte';
 	import Icon from '../lib/Icon.svelte';
+
+	let { schema }: { schema: Schema } = $props();
+	const canEdit = $derived(canAssets(schema, 'edit'));
+	const canDelete = $derived(canAssets(schema, 'delete'));
 
 	let assets = $state<Asset[]>([]);
 	let search = $state('');
@@ -74,7 +80,7 @@
 
 	function ondrop(e: DragEvent) {
 		e.preventDefault();
-		upload(e.dataTransfer?.files ?? null);
+		if (canEdit) upload(e.dataTransfer?.files ?? null);
 	}
 </script>
 
@@ -87,15 +93,17 @@
 >
 	<div class="page-top">
 		<h1>Assets</h1>
-		<label class="upload">
-			<Icon name="add" />
-			{uploading ? 'Uploading…' : 'Upload'}
-			<input
-				type="file"
-				multiple
-				onchange={e => upload(e.currentTarget.files)}
-			/>
-		</label>
+		{#if canEdit}
+			<label class="upload">
+				<Icon name="add" />
+				{uploading ? 'Uploading…' : 'Upload'}
+				<input
+					type="file"
+					multiple
+					onchange={e => upload(e.currentTarget.files)}
+				/>
+			</label>
+		{/if}
 	</div>
 
 	{#if error}<p class="error">{error}</p>{/if}
@@ -118,17 +126,21 @@
 			onclick={e => e.stopPropagation()}
 		>
 			{#if current.kind === 'image'}
-				<p class="muted">Click on the image to set the focal point.</p>
+				{#if canEdit}
+					<p class="muted">
+						Click on the image to set the focal point.
+					</p>
+				{/if}
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<div
 					class="focal"
 					role="button"
 					tabindex="0"
-					onclick={setFocal}
+					onclick={e => canEdit && setFocal(e)}
 				>
 					<img src={assetUrl(current)} {alt} />
 					<span
-						class="dot"
+						class="point"
 						style:left="{focal.x * 100}%"
 						style:top="{focal.y * 100}%"
 					></span>
@@ -145,11 +157,19 @@
 			</p>
 			<label>
 				Alt text
-				<input bind:value={alt} placeholder="What the image shows" />
+				<input
+					bind:value={alt}
+					placeholder="What the image shows"
+					disabled={!canEdit}
+				/>
 			</label>
 			<div class="actions">
-				<button class="danger" onclick={remove}>Delete</button>
-				<button class="primary" onclick={save}>Save</button>
+				{#if canDelete}
+					<button class="danger" onclick={remove}>Delete</button>
+				{/if}
+				{#if canEdit}
+					<button class="primary" onclick={save}>Save</button>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -228,7 +248,7 @@
 		}
 	}
 
-	.dot {
+	.point {
 		position: absolute;
 		width: 1.4rem;
 		height: 1.4rem;

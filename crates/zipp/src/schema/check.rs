@@ -80,6 +80,20 @@ impl Schema {
 			}
 		}
 
+		for (i, r) in self.roles.iter().enumerate() {
+			check_handle(&r.handle)?;
+			if r.handle == "admin"
+				|| self.roles[..i].iter().any(|x| x.handle == r.handle)
+			{
+				return Err(format!("role {} exists twice", r.handle));
+			}
+			if let Some(s) =
+				r.sections.keys().find(|s| self.get_section(s).is_none())
+			{
+				return Err(format!("role {}: unknown section {s}", r.handle));
+			}
+		}
+
 		for (i, d) in self.docs.iter().enumerate() {
 			check_handle(&d.handle)?;
 			if self.get_section(&d.handle).is_some()

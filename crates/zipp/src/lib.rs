@@ -17,6 +17,7 @@ pub mod schema;
 mod server;
 mod studio;
 pub mod typescript;
+pub mod users;
 
 pub use content::richtext;
 pub use entries::query;
@@ -42,7 +43,9 @@ use cli::*;
 use server::*;
 
 pub use crate::field_type::{FieldType, GraphqlType, Scalar, StudioModule};
-pub use crate::schema::{Field, LinkKind, Schema, Section, Transform};
+pub use crate::schema::{
+	Access, Field, LinkKind, Role, Schema, Section, Transform,
+};
 pub use axum;
 
 #[doc(hidden)]
@@ -211,7 +214,9 @@ impl Cms {
 				print!("{}", typescript::generate(&schema));
 				Ok(())
 			}
-			Cmd::User { email } => add_user(&opts.db, &email),
+			Cmd::User { email, role } => {
+				add_user(&schema, &opts.db, &email, role.as_deref())
+			}
 		};
 
 		if let Err(e) = res {

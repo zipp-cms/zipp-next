@@ -55,8 +55,13 @@ pub(super) enum Cmd {
 	},
 	/// Print the TypeScript types of the content.
 	Types,
-	/// Add a studio user or set a new password, reads it from stdin.
-	User { email: String },
+	/// Add a studio user or set a new password and role, reads the
+	/// password from stdin. Without a role the user is an admin.
+	User {
+		email: String,
+		#[arg(long)]
+		role: Option<String>,
+	},
 }
 
 pub(super) fn makemigration(
@@ -104,7 +109,17 @@ pub(super) fn makemigration(
 	fs::write(dir.join(format!("{name}.json")), json).map_err(|e| e.to_string())
 }
 
-pub(super) fn add_user(db_path: &Path, email: &str) -> Result<(), String> {
+pub(super) fn add_user(
+	schema: &Schema,
+	db_path: &Path,
+	email: &str,
+	role: Option<&str>,
+) -> Result<(), String> {
+	if let Some(r) = role
+		&& schema.get_role(r).is_none()
+	{
+		return Err(format!("unknown role {r}"));
+	}
 	print!("Password: ");
 	io::stdout().flush().ok();
 	let mut password = String::new();
@@ -118,7 +133,8 @@ pub(super) fn add_user(db_path: &Path, email: &str) -> Result<(), String> {
 	}
 
 	let db = Db::open(db_path).map_err(|e| e.to_string())?;
-	auth::add_user(&db.conn(), email, password).map_err(|e| e.to_string())?;
-	println!("Saved {email}");
+	auth::add_user(&db.conn(), email, password, role)
+		.map_err(|e| e.to_string())?;
+	println!("Saved {email} as {}", role.unwrap_or("admin"));
 	Ok(())
 }

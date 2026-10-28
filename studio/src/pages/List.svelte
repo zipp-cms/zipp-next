@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { can } from '../lib/access';
 	import { listEntries, moveEntry, type Entry, type Schema } from '../api';
 	import { entryPath, go, shown, site } from '../route.svelte';
 	import Icon from '../lib/Icon.svelte';
@@ -7,6 +8,8 @@
 
 	const sec = $derived(schema.sections.find(s => s.handle === section)!);
 	const tree = $derived(sec.kind === 'structure');
+	// moving changes the website at once, like publishing
+	const canMove = $derived(tree && can(schema, section, 'publish'));
 	let search = $state('');
 	let entries = $state<Entry[]>([]);
 	let published = $state<Record<number, Record<string, boolean>>>({});
@@ -111,7 +114,7 @@
 
 <div class="page-top">
 	<h1>{sec.name}</h1>
-	{#if sec.kind !== 'single'}
+	{#if sec.kind !== 'single' && can(schema, section, 'edit')}
 		<button class="dark" onclick={() => go(`/entries/${section}/new`)}>
 			<Icon name="add" />
 			New entry
@@ -137,13 +140,13 @@
 			class:drop-before={drop?.id === e.id && drop.where === 'before'}
 			class:drop-after={drop?.id === e.id && drop.where === 'after'}
 			class:drop-into={drop?.id === e.id && drop.where === 'into'}
-			ondragover={ev => tree && ondragover(ev, e)}
+			ondragover={ev => canMove && ondragover(ev, e)}
 			ondragleave={() => drop?.id === e.id && (drop = null)}
 			{ondrop}
 			role="listitem"
 		>
 			<span class="name" style:padding-left="{depth(e) * 1.5}rem">
-				{#if tree}
+				{#if canMove}
 					<span
 						class="handle"
 						draggable="true"

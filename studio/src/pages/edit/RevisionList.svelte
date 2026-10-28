@@ -14,7 +14,8 @@
 		comp: Component;
 		multiSite: boolean;
 		onview: (rev: Revision) => void;
-		onrestore: (rev: Revision) => void;
+		/** none for a role that may not edit */
+		onrestore: ((rev: Revision) => void) | null;
 	} = $props();
 </script>
 
@@ -29,7 +30,7 @@
 				</span>
 				<span class="what">{changeText(rev, comp, multiSite)}</span>
 			</button>
-			{#if i > 0}
+			{#if i > 0 && onrestore}
 				<button class="link" onclick={() => onrestore(rev)}>
 					Restore
 				</button>

@@ -78,9 +78,10 @@ pub(super) static GENERATING: tokio::sync::Semaphore =
 
 pub(super) async fn upload(
 	State(state): State<AppState>,
-	_auth: Authed,
+	auth: Authed,
 	mut multipart: Multipart,
 ) -> Result<Json<Vec<Asset>>> {
+	auth.check_assets(&state.schema, crate::schema::Access::Edit)?;
 	let mut assets = vec![];
 	while let Some(field) = multipart
 		.next_field()
@@ -107,9 +108,10 @@ pub(super) struct ListParams {
 
 pub(super) async fn list(
 	State(state): State<AppState>,
-	_auth: Authed,
+	auth: Authed,
 	Query(p): Query<ListParams>,
 ) -> Result<Json<Vec<Asset>>> {
+	auth.check_assets(&state.schema, crate::schema::Access::View)?;
 	let conn = state.db.conn();
 	if let Some(ids) = p.ids {
 		let ids: Vec<i64> =
@@ -140,10 +142,11 @@ pub(super) struct UpdateReq {
 
 pub(super) async fn update(
 	State(state): State<AppState>,
-	_auth: Authed,
+	auth: Authed,
 	Path(id): Path<i64>,
 	Json(req): Json<UpdateReq>,
 ) -> Result<Json<Asset>> {
+	auth.check_assets(&state.schema, crate::schema::Access::Edit)?;
 	let conn = state.db.conn();
 	let old = get_asset(&conn, id)?;
 	let (fx, fy) = (req.focal_x.clamp(0.0, 1.0), req.focal_y.clamp(0.0, 1.0));
@@ -159,9 +162,10 @@ pub(super) async fn update(
 
 pub(super) async fn delete(
 	State(state): State<AppState>,
-	_auth: Authed,
+	auth: Authed,
 	Path(id): Path<i64>,
 ) -> Result<()> {
+	auth.check_assets(&state.schema, crate::schema::Access::Delete)?;
 	let conn = state.db.conn();
 	if conn.execute("DELETE FROM assets WHERE id = ?1", [id])? == 0 {
 		return Err(Error::NotFound);

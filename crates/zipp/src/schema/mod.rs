@@ -23,11 +23,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::field_type::{FieldType, FieldTypes, GraphqlType};
+pub use role::{Access, Role};
 
 mod builders;
 mod check;
 mod field;
 pub mod field_type;
+pub mod role;
 #[cfg(test)]
 pub(crate) mod tests;
 
@@ -62,6 +64,9 @@ pub struct Schema {
 	/// Field types of other crates, see [`FieldType`].
 	#[serde(skip)]
 	pub field_types: FieldTypes,
+	/// Roles of studio users, not part of the content model.
+	#[serde(skip)]
+	pub roles: Vec<Role>,
 }
 
 /// A markdown file of the project shown in the studio, like a readme.
@@ -207,6 +212,16 @@ impl Schema {
 		let field = Field::texts(namespace, keys);
 		self.get_mut(TRANSLATIONS).unwrap().fields.push(field);
 		self
+	}
+
+	/// A role of studio users, see [`Role`].
+	pub fn role(mut self, role: Role) -> Self {
+		self.roles.push(role);
+		self
+	}
+
+	pub fn get_role(&self, handle: &str) -> Option<&Role> {
+		self.roles.iter().find(|r| r.handle == handle)
 	}
 
 	pub fn transform(mut self, transform: Transform) -> Self {

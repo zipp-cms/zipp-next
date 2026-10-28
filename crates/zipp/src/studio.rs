@@ -110,13 +110,35 @@ struct SchemaResp {
 	/// the models of the AI chat, none if it is off
 	ai_models: Vec<AiModel>,
 	docs: Vec<DocResp>,
+	/// the roles, the studio shows what the user's may do
+	roles: Vec<crate::schema::Role>,
+	me: Me,
+}
+
+/// The logged in user, `role: None` is an admin.
+#[derive(Debug, Serialize)]
+struct Me {
+	id: i64,
+	email: String,
+	role: Option<String>,
 }
 
 async fn schema_route(
 	State(state): State<AppState>,
-	_auth: Authed,
-) -> Json<SchemaResp> {
-	Json(SchemaResp {
+	auth: Authed,
+) -> crate::error::Result<Json<SchemaResp>> {
+	let email = state.db.conn().query_row(
+		"SELECT email FROM users WHERE id = ?1",
+		[auth.user_id],
+		|r| r.get(0),
+	)?;
+	Ok(Json(SchemaResp {
+		roles: state.schema.roles.clone(),
+		me: Me {
+			id: auth.user_id,
+			email,
+			role: auth.role.clone(),
+		},
 		schema: (*state.schema).clone(),
 		site_urls: (*state.site_urls).clone(),
 		ai_models: match state.ai {
@@ -139,7 +161,7 @@ async fn schema_route(
 				html: crate::graphql::markdown_html(&d.markdown),
 			})
 			.collect(),
-	})
+	}))
 }
 
 /// What the studio loads first: the schema and its settings.

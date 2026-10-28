@@ -104,6 +104,16 @@ Cms::new(schema(), zipp::migrations!())
   and `entryCount` take the same filters as the rest api (`where: [{
   field: "city", value: "Bern" }]`). Without a session only published
   entries show.
+- **Roles.** Like Craft Pro's user groups, roles are code:
+  `.role(Role::new("author", "Author").section("events", Access::Edit)
+  .section("pages", Access::View).assets(Access::Edit))`, with View <
+  Edit (drafts, new entries unpublished) < Publish (also moving in a
+  structure) < Delete per section and for assets, and `.ai()` for the
+  chat. Which user has which role is in the database (`user <email>
+  --role author`, or the Users page of an admin); a user without a role
+  is an admin. The server checks every request, the AI can only do what
+  its user can, the studio hides the rest. Only admins see drafts in
+  GraphQL with their session.
 - **Private GraphQL, dev and prod.** Like Craft's schema tokens, GraphQL
   only answers frontends that send `Authorization: Bearer <token>`, the
   token of `serve` (`ZIPP_GRAPHQL_TOKEN`; crelte reads it as

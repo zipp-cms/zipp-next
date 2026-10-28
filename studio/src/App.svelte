@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getSchema, logout, navGroups, token, type Schema } from './api';
+	import { getSchema, logout, token, type Schema } from './api';
+	import { canAi, canAssets, isAdmin, visibleNav } from './lib/access';
 	import { go, route, setSite, shown, site, toLogin } from './route.svelte';
 	import Login from './pages/Login.svelte';
 	import List from './pages/List.svelte';
@@ -7,13 +8,15 @@
 	import Assets from './pages/Assets.svelte';
 	import Ai from './pages/Ai.svelte';
 	import Doc from './pages/Doc.svelte';
+	import Users from './pages/Users.svelte';
 	import Icon from './lib/Icon.svelte';
 
 	let schema = $state<Schema | null>(null);
 	let error = $state('');
 
 	const loggedIn = $derived(route.current.page !== 'login' && !!token());
-	const groups = $derived(schema ? navGroups(schema) : []);
+	// only the sections the role may see
+	const groups = $derived(schema ? visibleNav(schema) : []);
 	// the group of the section on screen
 	const group = $derived(
 		groups.find(g => g.sections.includes(shown.section)) ?? groups[0],
@@ -82,6 +85,7 @@
 {:else if schema}
 	{@const assets = route.current.page === 'assets'}
 	{@const ai = route.current.page === 'ai'}
+	{@const users = route.current.page === 'users'}
 	<div class="layout" class:wide={ai}>
 		<div class="logo">zipp</div>
 		<header>
@@ -89,14 +93,19 @@
 				{#each groups as g (g.name)}
 					<a
 						href={navHref(g.sections[0])}
-						class:active={!assets && !ai && g === group}
+						class:active={!assets && !ai && !users && g === group}
 					>
 						{g.name}
 					</a>
 				{/each}
-				<a href="/admin/assets" class:active={assets}>Assets</a>
-				{#if schema.aiModels.length}
+				{#if canAssets(schema, 'view')}
+					<a href="/admin/assets" class:active={assets}>Assets</a>
+				{/if}
+				{#if schema.aiModels.length && canAi(schema)}
 					<a href="/admin/ai" class:active={ai}>AI</a>
+				{/if}
+				{#if isAdmin(schema)}
+					<a href="/admin/users" class:active={users}>Users</a>
 				{/if}
 			</nav>
 			<div class="right">
@@ -120,6 +129,11 @@
 					<Icon name="dashboard" />
 					Assets
 				</a>
+			{:else if users}
+				<a href="/admin/users" class="active">
+					<Icon name="single" />
+					Users
+				</a>
 			{:else}
 				{#each groupItems as item (item.handle)}
 					<a
@@ -135,7 +149,9 @@
 		<main>
 			{#key site.current}
 				{#if assets}
-					<Assets />
+					<Assets {schema} />
+				{:else if users}
+					<Users {schema} />
 				{:else if ai}
 					<Ai {schema} />
 				{:else if doc}

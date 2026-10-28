@@ -25,8 +25,8 @@ fn conflicts_with_others() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();
 	let s = site();
-	crate::auth::add_user(&conn, "a@x.ch", "password").unwrap();
-	crate::auth::add_user(&conn, "b@x.ch", "password").unwrap();
+	crate::auth::add_user(&conn, "a@x.ch", "password", None).unwrap();
+	crate::auth::add_user(&conn, "b@x.ch", "password", None).unwrap();
 	let e =
 		save(&conn, &s, None, input("pages", "page", "P", json!({}))).unwrap();
 

@@ -25,6 +25,7 @@
 	import { untrack } from 'svelte';
 	import { entryPath, go, shown, site } from '../../route.svelte';
 	import Fields from '../../fields/Fields.svelte';
+	import { can } from '../../lib/access';
 	import { changedPaths, clean } from '../../lib/diff';
 	import ConflictBanner from './ConflictBanner.svelte';
 	import EditHeader from './EditHeader.svelte';
@@ -73,6 +74,9 @@
 	const secDef = $derived(schema.sections.find(s => s.handle === sec));
 	const comp = $derived(schema.components.find(c => c.handle === ty));
 	const single = $derived(secDef?.kind === 'single');
+	// what the role may do here, the server checks it too
+	const canEdit = $derived(can(schema, sec, 'edit'));
+	const canPublish = $derived(can(schema, sec, 'publish'));
 	const url = $derived(entryUrl(schema, site.current, uri));
 
 	$effect(() => {
@@ -140,6 +144,7 @@
 	$effect(() => {
 		const snap = snapshot();
 		if (!loaded || id === null || snap === lastSaved || conflict) return;
+		if (!canEdit) return;
 		clearTimeout(timer);
 		draftState = 'saving';
 		timer = setTimeout(() => saveDraft(snap), 700);
@@ -334,7 +339,9 @@
 		{url}
 		{busy}
 		isNew={id === null}
-		canDelete={id !== null && !single}
+		{canEdit}
+		{canPublish}
+		canDelete={id !== null && !single && can(schema, sec, 'delete')}
 		onpreview={preview}
 		ondiscard={discard}
 		onremove={remove}
@@ -376,26 +383,29 @@
 					rev={viewing.rev}
 					doc={viewing.doc}
 					changed={viewing.changed}
-					onrestore={() => restore(viewing!.rev)}
+					onrestore={canEdit ? () => restore(viewing!.rev) : null}
 					onback={() => (viewing = null)}
 				/>
 			{:else}
-				<EntryHead
-					bind:title
-					bind:slug
-					{single}
-					{changed}
-					{uri}
-					{errors}
-				/>
-				<Fields
-					{schema}
-					component={comp}
-					values={fields}
-					{errors}
-					{refs}
-					{changed}
-				/>
+				<!-- read only for a role that may only look -->
+				<fieldset disabled={!canEdit}>
+					<EntryHead
+						bind:title
+						bind:slug
+						{single}
+						{changed}
+						{uri}
+						{errors}
+					/>
+					<Fields
+						{schema}
+						component={comp}
+						values={fields}
+						{errors}
+						{refs}
+						{changed}
+					/>
+				</fieldset>
 			{/if}
 		{:else}
 			<OptionsTab
@@ -403,6 +413,8 @@
 				{secDef}
 				{comp}
 				isNew={id === null}
+				{canEdit}
+				{canPublish}
 				bind:published
 				bind:ty
 				bind:parentId
@@ -417,6 +429,12 @@
 {/if}
 
 <style lang="scss">
+	fieldset {
+		margin: 0;
+		padding: 0;
+		border: none;
+	}
+
 	.tabs {
 		display: grid;
 		grid-template-columns: 1fr 1fr;

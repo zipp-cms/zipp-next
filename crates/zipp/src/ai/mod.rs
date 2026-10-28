@@ -20,6 +20,7 @@ use crate::drafts::{SiteDoc, get_draft, put_draft};
 use crate::entries::{EntryInput, get_entry, list, save};
 use crate::error::{Error, Result};
 use crate::query::Query;
+use crate::schema::Access;
 use crate::schema::Schema;
 
 mod prompt;
@@ -135,6 +136,9 @@ async fn chat(
 	auth: Authed,
 	Json(req): Json<ChatReq>,
 ) -> Result<Json<ChatResp>> {
+	if !auth.can_ai(&state.schema) {
+		return Err(Error::Forbidden);
+	}
 	let cfg = state.ai.clone().ok_or_else(|| {
 		Error::Request("the AI chat is off, no api key".into())
 	})?;
@@ -208,7 +212,7 @@ async fn chat(
 		}
 
 		for (id, name, input) in calls {
-			let output = match run_tool(&state, auth.user_id, &name, &input) {
+			let output = match run_tool(&state, &auth, &name, &input) {
 				Ok((v, action)) => {
 					actions.extend(action);
 					v.to_string()

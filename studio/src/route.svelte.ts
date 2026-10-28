@@ -1,6 +1,6 @@
 /**
  * The pages of the studio are paths under `/admin`, like Craft:
- * `/admin/login`, `/admin/assets`, `/admin/ai`,
+ * `/admin/login`, `/admin/assets`, `/admin/ai`, `/admin/users`,
  * `/admin/docs/<doc>`, `/admin/entries/<section>`,
  * `/admin/entries/<section>/new`, `/admin/entries/<section>/<id>`.
  */
@@ -8,6 +8,7 @@ export type Route =
 	| { page: 'login' }
 	| { page: 'assets' }
 	| { page: 'ai' }
+	| { page: 'users' }
 	| { page: 'doc'; handle: string }
 	| { page: 'list'; section: string | null }
 	| { page: 'new'; section: string }
@@ -25,6 +26,7 @@ function parse(path: string): Route {
 		case 'login':
 		case 'assets':
 		case 'ai':
+		case 'users':
 			return { page };
 		case 'docs':
 			return { page: 'doc', handle: a };

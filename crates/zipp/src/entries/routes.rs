@@ -11,13 +11,18 @@ pub(super) struct ListResp {
 
 pub(super) async fn list_route(
 	State(state): State<AppState>,
-	_auth: Authed,
+	auth: Authed,
 	QueryParams(params): QueryParams<Vec<(String, String)>>,
 ) -> Result<Json<ListResp>> {
 	let conn = state.db.conn();
 	let q = Query::parse(&state.schema, &params).map_err(Error::Request)?;
+	if let Some(section) = &q.section {
+		auth.check(&state.schema, section, Access::View)?;
+	}
 
-	let (entries, total) = list(&conn, &q)?;
+	let (mut entries, total) = list(&conn, &q)?;
+	// a search over all sections only finds what the role sees
+	entries.retain(|e| auth.can(&state.schema, &e.section, Access::View));
 	let ids: Vec<i64> = entries.iter().map(|e| e.id).collect();
 	let relations = refs(&conn, &ids, &q.site, q.published_only)?;
 	let published = published_per_site(&conn, &ids)?;
@@ -43,11 +48,12 @@ pub(super) struct EntryResp {
 
 pub(super) async fn get_route(
 	State(state): State<AppState>,
-	_auth: Authed,
+	auth: Authed,
 	Path(id): Path<i64>,
 	QueryParams(p): QueryParams<SiteParam>,
 ) -> Result<Json<EntryResp>> {
 	let conn = state.db.conn();
+	auth.check(&state.schema, &section_of(&conn, id)?, Access::View)?;
 	let site = p
 		.site
 		.unwrap_or_else(|| state.schema.primary_site().handle.clone());
@@ -61,8 +67,11 @@ pub(super) async fn get_route(
 pub(super) async fn create_route(
 	State(state): State<AppState>,
 	auth: Authed,
-	Json(input): Json<EntryInput>,
+	Json(mut input): Json<EntryInput>,
 ) -> Result<Json<Entry>> {
+	auth.check(&state.schema, &input.section, Access::Edit)?;
+	// published only by who may publish
+	input.published &= auth.can(&state.schema, &input.section, Access::Publish);
 	let entry = {
 		let conn = state.db.conn();
 		let entry = save(&conn, &state.schema, None, input)?;
@@ -82,6 +91,8 @@ pub(super) async fn update_route(
 ) -> Result<Json<Entry>> {
 	let entry = {
 		let conn = state.db.conn();
+		// live at once, like publishing
+		auth.check(&state.schema, &section_of(&conn, id)?, Access::Publish)?;
 		let entry = save(&conn, &state.schema, Some(id), input)?;
 		record_revision(&conn, id, Some(auth.user_id))?;
 		entry
@@ -99,12 +110,13 @@ pub(super) struct MoveReq {
 
 pub(super) async fn move_route(
 	State(state): State<AppState>,
-	_auth: Authed,
+	auth: Authed,
 	Path(id): Path<i64>,
 	Json(req): Json<MoveReq>,
 ) -> Result<()> {
 	let section = {
 		let conn = state.db.conn();
+		auth.check(&state.schema, &section_of(&conn, id)?, Access::Publish)?;
 		move_entry(&conn, &state.schema, id, req.parent_id, req.index)?;
 		section_of(&conn, id)?
 	};
@@ -114,12 +126,13 @@ pub(super) async fn move_route(
 
 pub(super) async fn delete_route(
 	State(state): State<AppState>,
-	_auth: Authed,
+	auth: Authed,
 	Path(id): Path<i64>,
 ) -> Result<()> {
 	let section = {
 		let conn = state.db.conn();
 		let section = section_of(&conn, id)?;
+		auth.check(&state.schema, &section, Access::Delete)?;
 		delete(&conn, &state.schema, id)?;
 		section
 	};

@@ -72,6 +72,8 @@ export type Schema = {
 	nav: NavGroup[];
 	/** the url of each site, by handle */
 	siteUrls: Record<string, string>;
+	roles: Role[];
+	me: Me;
 	/** the models of the AI chat, empty if it is off */
 	aiModels: { id: string; name: string }[];
 	/** markdown files of the code, read only, as html */
@@ -102,3 +104,17 @@ export function entryUrl(
 	if (uri === null || !base) return null;
 	return `${base.replace(/\/$/, '')}/${uri}`;
 }
+
+/** What a role may do, each level includes the ones before. */
+export type Access = 'view' | 'edit' | 'publish' | 'delete';
+
+export type Role = {
+	handle: string;
+	name: string;
+	sections: Record<string, Access>;
+	assets: Access | null;
+	ai: boolean;
+};
+
+/** The logged in user, `role: null` is an admin. */
+export type Me = { id: number; email: string; role: string | null };

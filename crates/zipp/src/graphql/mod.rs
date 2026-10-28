@@ -260,7 +260,16 @@ async fn graphql(
 ) -> Result<GraphQLResponse> {
 	let (published_only, preview) = {
 		let conn = state.db.conn();
-		let editor = session(&conn, &headers)?.is_some();
+		// only admins see every draft and unpublished entry, a role only
+		// some sections: it reads GraphQL like a frontend
+		let editor = match session(&conn, &headers)? {
+			Some(user) => conn.query_row(
+				"SELECT role IS NULL FROM users WHERE id = ?1",
+				[user],
+				|r| r.get::<_, bool>(0),
+			)?,
+			None => false,
+		};
 		// private like Craft's: frontends send the token, the studio its
 		// session; development without a token is open
 		let open = state.dev && state.graphql_token.is_none();

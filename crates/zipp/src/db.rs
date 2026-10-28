@@ -105,6 +105,8 @@ const MIGRATIONS: &[&str] = &[r#"
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		email TEXT NOT NULL UNIQUE,
 		password_hash TEXT NOT NULL,
+		-- a role of the schema, NULL is an admin
+		role TEXT,
 		created_at INTEGER NOT NULL
 	);
 

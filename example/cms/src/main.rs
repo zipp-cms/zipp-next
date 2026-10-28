@@ -7,7 +7,9 @@ use zipp::axum::response::IntoResponse;
 use zipp::axum::routing::get;
 use zipp::error::Result;
 use zipp::query::Query;
-use zipp::{AppState, Cms, Field, LinkKind, Schema, Section, Transform};
+use zipp::{
+	Access, AppState, Cms, Field, LinkKind, Role, Schema, Section, Transform,
+};
 use zipp_button_group::{ButtonGroup, button_group};
 
 fn schema() -> Schema {
@@ -35,6 +37,23 @@ fn schema() -> Schema {
 		.doc("readme", "Readme", include_str!("../../readme.md"))
 		.nav("Content", ["readme", "pages", "events"])
 		.nav("Settings", ["header", "footer", "translations"])
+		// roles of studio users, a user without one is an admin
+		.role(
+			Role::new("editor", "Editor")
+				.sections(
+					["pages", "header", "footer", "translations"],
+					Access::Publish,
+				)
+				.section("events", Access::Delete)
+				.assets(Access::Delete)
+				.ai(),
+		)
+		.role(
+			Role::new("author", "Author")
+				.section("events", Access::Edit)
+				.section("pages", Access::View)
+				.assets(Access::Edit),
+		)
 		// texts of the frontend, editors translate them
 		.translations(
 			"common",

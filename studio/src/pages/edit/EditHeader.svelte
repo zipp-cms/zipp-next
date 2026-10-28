@@ -10,6 +10,8 @@
 		url,
 		busy,
 		isNew,
+		canEdit,
+		canPublish,
 		canDelete,
 		onpreview,
 		ondiscard,
@@ -23,6 +25,8 @@
 		url: string | null;
 		busy: boolean;
 		isNew: boolean;
+		canEdit: boolean;
+		canPublish: boolean;
 		canDelete: boolean;
 		onpreview: () => void;
 		ondiscard: () => void;
@@ -57,7 +61,7 @@
 		{/if}
 	{/if}
 	{#if hasDraft}
-		<button class="light" onclick={ondiscard} disabled={busy}>
+		<button class="light" onclick={ondiscard} disabled={busy || !canEdit}>
 			Discard
 		</button>
 	{/if}
@@ -67,10 +71,14 @@
 			Delete
 		</button>
 	{/if}
+	<!-- a role that may only edit leaves its draft for someone to publish -->
 	<button
 		class="dark"
 		onclick={onsave}
-		disabled={busy || (!isNew && !hasDraft)}
+		disabled={busy || (isNew ? !canEdit : !hasDraft || !canPublish)}
+		title={!isNew && !canPublish
+			? 'Your role can edit drafts, someone else publishes them'
+			: undefined}
 	>
 		<Icon name="save" />
 		{isNew ? 'Create' : 'Publish'}

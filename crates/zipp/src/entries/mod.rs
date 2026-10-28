@@ -20,6 +20,7 @@ use crate::db::now;
 use crate::drafts::record_revision;
 use crate::error::{Error, Result};
 use crate::query::Query;
+use crate::schema::Access;
 use crate::schema::{Schema, Section, SectionKind};
 use crate::{AppState, ChangeKind};
 

@@ -19,6 +19,8 @@ pub enum Error {
 	/// GraphQL without the endpoint token or a session
 	#[error("GraphQL needs the endpoint token: Authorization: Bearer <token>")]
 	MissingEndpointToken,
+	#[error("Your role may not do that")]
+	Forbidden,
 	#[error("Resource not found")]
 	NotFound,
 	#[error("Some fields are invalid")]
@@ -38,7 +40,9 @@ impl Error {
 			Self::LoginIncorrect
 			| Self::MissingSessionToken
 			| Self::MissingEndpointToken => StatusCode::UNAUTHORIZED,
-			Self::InvalidSessionToken => StatusCode::FORBIDDEN,
+			Self::InvalidSessionToken | Self::Forbidden => {
+				StatusCode::FORBIDDEN
+			}
 			Self::NotFound => StatusCode::NOT_FOUND,
 			Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
 			Self::Invalid(_) | Self::Request(_) => StatusCode::BAD_REQUEST,
