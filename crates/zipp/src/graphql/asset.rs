@@ -1,0 +1,140 @@
+use super::*;
+
+/// An asset, like Craft's: `url(transform: "medium")` and the size after
+/// the transform. Transforms are the named ones of the schema.
+pub(super) fn asset_object() -> Object {
+	let plain = |name: &'static str, ty: TypeRef| {
+		GqlField::new(name, ty, move |ctx| {
+			FieldFuture::new(async move {
+				let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+				let v = match name {
+					"id" => GqlValue::from(a.id),
+					"filename" => GqlValue::from(a.filename.clone()),
+					"kind" => GqlValue::from(a.kind.clone()),
+					"mimeType" => GqlValue::from(a.mime.clone()),
+					"size" => GqlValue::from(a.size),
+					"alt" => GqlValue::from(a.alt.clone()),
+					"focalX" => GqlValue::from(a.focal_x),
+					"focalY" => GqlValue::from(a.focal_y),
+					_ => unreachable!(),
+				};
+				Ok(Some(FieldValue::value(v)))
+			})
+		})
+	};
+	let transform_arg =
+		|| InputValue::new("transform", TypeRef::named(TypeRef::STRING));
+	let s = || TypeRef::named_nn(TypeRef::STRING);
+	let f = || TypeRef::named_nn(TypeRef::FLOAT);
+
+	Object::new("Asset")
+		.field(plain("id", TypeRef::named_nn(TypeRef::INT)))
+		.field(plain("filename", s()))
+		.field(plain("kind", s()))
+		.field(plain("mimeType", s()))
+		.field(plain("size", TypeRef::named_nn(TypeRef::INT)))
+		.field(plain("alt", s()))
+		.field(plain("focalX", f()))
+		.field(plain("focalY", f()))
+		.field(
+			GqlField::new("url", s(), |ctx| {
+				FieldFuture::new(async move {
+					let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+					let t = transform_of(&ctx, a)?;
+					let url = asset_url(
+						&ctx,
+						a,
+						t.as_ref().map(|t| t.handle.as_str()),
+					)?;
+					Ok(Some(FieldValue::value(url)))
+				})
+			})
+			.argument(transform_arg()),
+		)
+		.field(
+			GqlField::new("width", TypeRef::named(TypeRef::INT), |ctx| {
+				asset_size(ctx, |(w, _)| w)
+			})
+			.argument(transform_arg()),
+		)
+		.field(
+			GqlField::new("height", TypeRef::named(TypeRef::INT), |ctx| {
+				asset_size(ctx, |(_, h)| h)
+			})
+			.argument(transform_arg()),
+		)
+		.field(
+			GqlField::new("srcset", TypeRef::named(TypeRef::STRING), |ctx| {
+				FieldFuture::new(async move {
+					let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+					let schema = ctx.data::<Arc<Schema>>()?;
+					let mut parts = vec![];
+					for name in ctx.args.try_get("transforms")?.list()?.iter() {
+						let name = name.string()?;
+						let t =
+							schema.get_transform(name).ok_or_else(|| {
+								GqlError::new(format!(
+									"unknown transform {name}"
+								))
+							})?;
+						let Some((w, _)) = a.size_after(t) else {
+							return Ok(None);
+						};
+						parts.push(format!(
+							"{} {w}w",
+							asset_url(&ctx, a, Some(name))?
+						));
+					}
+					Ok(Some(FieldValue::value(parts.join(", "))))
+				})
+			})
+			.argument(InputValue::new(
+				"transforms",
+				TypeRef::named_nn_list_nn(TypeRef::STRING),
+			)),
+		)
+}
+
+/// The transform of the `transform` argument, `None` for the original.
+pub(super) fn transform_of(
+	ctx: &ResolverContext,
+	a: &Asset,
+) -> async_graphql::Result<Option<crate::schema::Transform>> {
+	let Some(name) = ctx.args.get("transform").filter(|v| !v.is_null()) else {
+		return Ok(None);
+	};
+	let name = name.string()?;
+	let schema = ctx.data::<Arc<Schema>>()?;
+	let t = schema
+		.get_transform(name)
+		.ok_or_else(|| GqlError::new(format!("unknown transform {name}")))?;
+	// only images have transforms, a file stays itself
+	Ok((a.kind == "image").then(|| t.clone()))
+}
+
+pub(super) fn asset_url(
+	ctx: &ResolverContext,
+	a: &Asset,
+	transform: Option<&str>,
+) -> async_graphql::Result<String> {
+	let base = &ctx.data::<PublicUrl>()?.0;
+	Ok(format!(
+		"{}{}",
+		base.trim_end_matches('/'),
+		a.url(transform)
+	))
+}
+
+pub(super) fn asset_size(
+	ctx: ResolverContext,
+	pick: fn((u32, u32)) -> u32,
+) -> FieldFuture {
+	FieldFuture::new(async move {
+		let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+		let size = match transform_of(&ctx, a)? {
+			Some(t) => a.size_after(&t),
+			None => a.width.zip(a.height),
+		};
+		Ok(size.map(|s| FieldValue::value(pick(s))))
+	})
+}

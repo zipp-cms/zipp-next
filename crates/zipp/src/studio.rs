@@ -1,13 +1,17 @@
 //! The studio, built from `studio/` of the repository into
 //! `crates/zipp/studio` (`npm run build`), so a site needs no npm.
 
-use axum::Router;
 use axum::extract::{Path, State};
 use axum::http::{StatusCode, Uri, header};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
+use axum::{Json, Router};
+
+use serde::Serialize;
 
 use crate::AppState;
+use crate::auth::Authed;
+use crate::schema::Schema;
 
 #[derive(rust_embed::Embed)]
 #[folder = "studio/"]
@@ -80,4 +84,65 @@ pub fn routes() -> Router<AppState> {
 	Router::new()
 		.route("/_fields/{file}", get(field_module))
 		.fallback(file)
+}
+
+/// A doc of the code, as html.
+#[derive(Debug, Serialize)]
+struct DocResp {
+	handle: String,
+	name: String,
+	html: String,
+}
+
+#[derive(Debug, Serialize)]
+struct AiModel {
+	id: String,
+	name: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SchemaResp {
+	#[serde(flatten)]
+	schema: Schema,
+	/// for the preview button of the studio
+	site_urls: crate::graphql::SiteUrls,
+	/// the models of the AI chat, none if it is off
+	ai_models: Vec<AiModel>,
+	docs: Vec<DocResp>,
+}
+
+async fn schema_route(
+	State(state): State<AppState>,
+	_auth: Authed,
+) -> Json<SchemaResp> {
+	Json(SchemaResp {
+		schema: (*state.schema).clone(),
+		site_urls: (*state.site_urls).clone(),
+		ai_models: match state.ai {
+			Some(_) => crate::ai::MODELS
+				.iter()
+				.map(|(id, name)| AiModel {
+					id: id.to_string(),
+					name: name.to_string(),
+				})
+				.collect(),
+			None => vec![],
+		},
+		docs: state
+			.schema
+			.docs
+			.iter()
+			.map(|d| DocResp {
+				handle: d.handle.clone(),
+				name: d.name.clone(),
+				html: crate::graphql::markdown_html(&d.markdown),
+			})
+			.collect(),
+	})
+}
+
+/// What the studio loads first: the schema and its settings.
+pub fn api_routes() -> Router<AppState> {
+	Router::new().route("/schema", get(schema_route))
 }

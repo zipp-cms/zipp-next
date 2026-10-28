@@ -3,23 +3,26 @@
 //! edited in the studio and read by any frontend over the api.
 
 pub mod ai;
-pub mod apply;
 pub mod assets;
 pub mod auth;
+mod cli;
 pub mod content;
 pub mod db;
 pub mod drafts;
 pub mod entries;
 pub mod error;
-pub mod field_type;
 pub mod graphql;
 pub mod migrate;
-pub mod query;
-pub mod richtext;
 pub mod schema;
+mod server;
 mod studio;
 pub mod translations;
 pub mod typescript;
+
+pub use content::richtext;
+pub use entries::query;
+pub use migrate::apply;
+pub use schema::field_type;
 
 use std::fs;
 use std::io::{self, BufRead, Write};
@@ -36,6 +39,8 @@ use tracing::info;
 
 use crate::db::Db;
 use crate::migrate::{Migration, Migrations, Rename};
+use cli::*;
+use server::*;
 
 pub use crate::field_type::{FieldType, GraphqlType, Scalar, StudioModule};
 pub use crate::schema::{Field, LinkKind, Schema, Section, Transform};
@@ -204,223 +209,8 @@ impl Cms {
 	}
 }
 
-#[derive(Debug, Parser)]
-struct Opts {
-	#[arg(long, default_value = "zipp.db")]
-	db: PathBuf,
-	#[command(subcommand)]
-	cmd: Cmd,
-}
-
-#[derive(Debug, clap::Args)]
-struct ServeArgs {
-	#[arg(long, default_value = "127.0.0.1:8090")]
-	listen: String,
-	/// Where uploaded files go
-	#[arg(long, default_value = "files")]
-	files: PathBuf,
-	/// Put before asset urls in GraphQL, e.g. `https://cms.example.com`
-	/// when the frontend runs on another domain
-	#[arg(long, default_value = "")]
-	public_url: String,
-	/// The url of a site for crelte and `url` in GraphQL:
-	/// `--site-url de=https://example.ch`, repeat for each site
-	#[arg(long)]
-	site_url: Vec<String>,
-	/// A file with an OpenRouter api key, turns on the AI chat
-	#[arg(long)]
-	openrouter_key_file: Option<PathBuf>,
-	/// A site that may show the studio in a frame, like a dashboard:
-	/// `--frame-ancestor https://dash.example.com`, repeat for more
-	#[arg(long)]
-	frame_ancestor: Vec<String>,
-}
-
-#[derive(Debug, Subcommand)]
-enum Cmd {
-	/// Apply new migrations and serve the api and the studio.
-	Serve(ServeArgs),
-	/// Write a migration from the schema in code to `migrations/`.
-	Makemigration {
-		/// A rename instead of remove and add: `old=new` for a component,
-		/// `component.old=new` for a field
-		#[arg(long)]
-		rename: Vec<String>,
-		#[arg(long)]
-		name: Option<String>,
-	},
-	/// Print the TypeScript types of the content.
-	Types,
-	/// Add a studio user or set a new password, reads it from stdin.
-	User { email: String },
-}
-
 /// The main of a site's cms crate: `zipp::run(schema(), zipp::migrations!())`,
 /// `Cms` for routes and hooks of the site.
 pub fn run(schema: Schema, migrations: Migrations) {
 	Cms::new(schema, migrations).run();
-}
-
-async fn serve(
-	schema: Schema,
-	db_path: &Path,
-	migrations: &Migrations,
-	args: ServeArgs,
-	(routes, hooks): (Router<AppState>, Vec<Hook>),
-) -> Result<(), String> {
-	let ServeArgs {
-		listen,
-		files,
-		public_url,
-		site_url: site_urls,
-		openrouter_key_file: key_file,
-		frame_ancestor,
-	} = args;
-	let site_urls = site_urls
-		.iter()
-		.map(|s| match s.split_once('=') {
-			Some((site, url)) if schema.get_site(site).is_some() => {
-				Ok((site.to_string(), url.to_string()))
-			}
-			_ => Err(format!("--site-url {s:?} needs <site>=<url>")),
-		})
-		.collect::<Result<graphql::SiteUrls, _>>()?;
-	let files = assets::files_dir(files).map_err(|e| e.to_string())?;
-	let db = Db::open(db_path).map_err(|e| e.to_string())?;
-
-	let migrations = migrations.load()?;
-	let applied = apply::apply_migrations(&db.conn(), &migrations)
-		.map_err(|e| e.to_string())?;
-	for name in applied {
-		info!("applied migration {name}");
-	}
-	let last = migrations
-		.last()
-		.map(|m| m.schema.clone())
-		.unwrap_or_default();
-	if !migrate::diff(&last, &schema, &[])?.is_empty() {
-		return Err("The schema changed since the last migration, run \
-			`makemigration` first"
-			.into());
-	}
-
-	let schema = Arc::new(schema);
-	let ai = match key_file {
-		Some(path) => {
-			let key = fs::read_to_string(&path)
-				.map_err(|e| format!("{}: {e}", path.display()))?;
-			Some(ai::AiConfig::openrouter(key.trim().to_string()))
-		}
-		None => None,
-	};
-	let gql = graphql::build(
-		schema.clone(),
-		db.clone(),
-		public_url,
-		site_urls.clone(),
-	)?;
-	let state = AppState {
-		db,
-		schema,
-		gql,
-		files,
-		site_urls: Arc::new(site_urls),
-		frame_ancestors: Arc::new(frame_ancestor),
-		ai,
-		hooks: Arc::new(hooks),
-	};
-	let api = Router::new()
-		.nest("/auth", auth::routes())
-		.merge(entries::routes())
-		.merge(drafts::routes())
-		.merge(ai::routes())
-		.merge(translations::routes())
-		.merge(assets::api_routes())
-		.merge(graphql::routes());
-	let app = Router::new()
-		.nest("/api", api)
-		.merge(assets::file_routes())
-		.merge(routes)
-		.merge(studio::routes());
-
-	// frontends on other domains read the content, graphql is a POST
-	let app = app
-		.layer(
-			CorsLayer::new()
-				.allow_origin(cors::Any)
-				.allow_methods([Method::GET, Method::POST])
-				.allow_headers([header::CONTENT_TYPE]),
-		)
-		.layer(TraceLayer::new_for_http())
-		.with_state(state);
-
-	let listener = tokio::net::TcpListener::bind(&listen)
-		.await
-		.map_err(|e| e.to_string())?;
-	info!("listening on {listen}");
-	axum::serve(listener, app).await.map_err(|e| e.to_string())
-}
-
-fn makemigration(
-	schema: &Schema,
-	migrations: &Migrations,
-	renames: &[String],
-	name: Option<&str>,
-) -> Result<(), String> {
-	let renames = renames
-		.iter()
-		.map(|r| Rename::parse(r))
-		.collect::<Result<Vec<_>, _>>()?;
-	let dir = &migrations.dir;
-	let migrations = migrations.load()?;
-	let last = migrations
-		.last()
-		.map(|m| m.schema.clone())
-		.unwrap_or_default();
-
-	let ops = migrate::diff(&last, schema, &renames)?;
-	if ops.is_empty() {
-		println!("No changes");
-		return Ok(());
-	}
-
-	let name = migrate::next_name(&migrations, name);
-	println!("Migration {name}:");
-	for op in &ops {
-		println!("{}", op.describe());
-	}
-	if ops.iter().any(|o| o.describe().starts_with('!')) {
-		println!(
-			"Content marked with ! is deleted. If something was renamed, \
-			pass --rename instead."
-		);
-	}
-
-	let m = Migration {
-		name: name.clone(),
-		ops,
-		schema: schema.clone(),
-	};
-	fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-	let json = serde_json::to_string_pretty(&m).unwrap() + "\n";
-	fs::write(dir.join(format!("{name}.json")), json).map_err(|e| e.to_string())
-}
-
-fn add_user(db_path: &Path, email: &str) -> Result<(), String> {
-	print!("Password: ");
-	io::stdout().flush().ok();
-	let mut password = String::new();
-	io::stdin()
-		.lock()
-		.read_line(&mut password)
-		.map_err(|e| e.to_string())?;
-	let password = password.trim_end_matches(['\n', '\r']);
-	if password.len() < 8 {
-		return Err("The password needs at least 8 characters".into());
-	}
-
-	let db = Db::open(db_path).map_err(|e| e.to_string())?;
-	auth::add_user(&db.conn(), email, password).map_err(|e| e.to_string())?;
-	println!("Saved {email}");
-	Ok(())
 }

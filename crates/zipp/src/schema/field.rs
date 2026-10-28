@@ -1,0 +1,410 @@
+use super::*;
+
+/// An option of a dropdown: the value that is stored and its label.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Choice {
+	pub value: String,
+	pub label: String,
+}
+
+/// What a link field can point to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum LinkKind {
+	Entry,
+	Url,
+	Email,
+	Phone,
+	Asset,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Field {
+	pub handle: String,
+	pub label: String,
+	#[serde(default)]
+	pub required: bool,
+	/// Indexed fields are copied to `entry_values`, so entries can be
+	/// filtered and sorted by them.
+	#[serde(default)]
+	pub indexed: bool,
+	/// Translatable fields have a value per site, the others are the same
+	/// in all sites.
+	#[serde(default)]
+	pub translatable: bool,
+	#[serde(flatten)]
+	pub kind: FieldKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum FieldKind {
+	Text {
+		max: Option<u32>,
+		multiline: bool,
+	},
+	Number {
+		min: Option<f64>,
+		max: Option<f64>,
+	},
+	Boolean,
+	/// Ids of entries of the given types.
+	Relation {
+		types: Vec<String>,
+		max: Option<u32>,
+	},
+	/// Ids of assets, with `images` only images.
+	Assets {
+		images: bool,
+		max: Option<u32>,
+	},
+	/// One link to an entry, a url, an email, a phone number or an asset,
+	/// with an optional label. External urls and files open in a new tab
+	/// unless `new_tab` is off; a link can override it.
+	Link {
+		to: Vec<LinkKind>,
+		/// whether a link can have its own label
+		labels: bool,
+		#[serde(rename = "newTab")]
+		new_tab: bool,
+	},
+	/// Text with formatting, stored as TipTap's JSON. Bold and italic are
+	/// always there; headings of the given levels, lists, links, rows of
+	/// buttons and blocks of the given types only if the field says so.
+	RichText {
+		headings: Vec<u8>,
+		lists: bool,
+		links: bool,
+		buttons: bool,
+		blocks: Vec<String>,
+	},
+	/// The fields of another component (a block or an entry type), kept
+	/// together under one name, like zandi's `pageIntro`. The value is an
+	/// object, not a list like blocks.
+	Group {
+		component: String,
+	},
+	/// Text in Markdown, GraphQL renders it to html too.
+	Markdown,
+	/// One of some options, the value is the option's value. The studio
+	/// shows up to three as buttons, more as a select.
+	Dropdown {
+		options: Vec<Choice>,
+	},
+	/// A list of blocks of the given types.
+	Blocks {
+		types: Vec<String>,
+		min: Option<u32>,
+		max: Option<u32>,
+	},
+	/// A field type of another crate, registered in the schema; the
+	/// options are its own.
+	Custom {
+		#[serde(rename = "type")]
+		ty: String,
+		#[serde(default)]
+		options: Value,
+	},
+}
+
+impl Field {
+	fn new(handle: &str, kind: FieldKind) -> Self {
+		Self {
+			handle: handle.into(),
+			label: humanize(handle),
+			required: false,
+			indexed: false,
+			translatable: false,
+			kind,
+		}
+	}
+
+	pub fn text(handle: &str) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Text {
+				max: None,
+				multiline: false,
+			},
+		)
+	}
+
+	pub fn number(handle: &str) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Number {
+				min: None,
+				max: None,
+			},
+		)
+	}
+
+	pub fn boolean(handle: &str) -> Self {
+		Self::new(handle, FieldKind::Boolean)
+	}
+
+	pub fn relation<'a>(
+		handle: &str,
+		types: impl IntoIterator<Item = &'a str>,
+	) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Relation {
+				types: types.into_iter().map(Into::into).collect(),
+				max: None,
+			},
+		)
+	}
+
+	/// A link to one of `to`, with a label, external ones in a new tab.
+	pub fn link(handle: &str, to: impl IntoIterator<Item = LinkKind>) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Link {
+				to: to.into_iter().collect(),
+				labels: true,
+				new_tab: true,
+			},
+		)
+	}
+
+	/// A link without its own label, the frontend shows its default.
+	pub fn without_label(mut self) -> Self {
+		match &mut self.kind {
+			FieldKind::Link { labels, .. } => *labels = false,
+			_ => panic!("{}: without_label is only for links", self.handle),
+		}
+		self
+	}
+
+	/// External links open in the same tab too.
+	pub fn same_tab(mut self) -> Self {
+		match &mut self.kind {
+			FieldKind::Link { new_tab, .. } => *new_tab = false,
+			_ => panic!("{}: same_tab is only for links", self.handle),
+		}
+		self
+	}
+
+	/// Text with bold and italic, more with `headings`, `lists`, `links`,
+	/// `buttons` and `embed`.
+	pub fn rich_text(handle: &str) -> Self {
+		Self::new(
+			handle,
+			FieldKind::RichText {
+				headings: vec![],
+				lists: false,
+				links: false,
+				buttons: false,
+				blocks: vec![],
+			},
+		)
+	}
+
+	fn rich(mut self, f: impl FnOnce(&mut FieldKind)) -> Self {
+		if !matches!(self.kind, FieldKind::RichText { .. }) {
+			panic!("{}: only rich text has this", self.handle);
+		}
+		f(&mut self.kind);
+		self
+	}
+
+	/// Headings of these levels, like `[2, 3]`.
+	pub fn headings(self, levels: impl IntoIterator<Item = u8>) -> Self {
+		self.rich(|k| {
+			if let FieldKind::RichText { headings, .. } = k {
+				*headings = levels.into_iter().collect();
+			}
+		})
+	}
+
+	pub fn lists(self) -> Self {
+		self.rich(|k| {
+			if let FieldKind::RichText { lists, .. } = k {
+				*lists = true;
+			}
+		})
+	}
+
+	/// Links in the text, to entries, urls, emails and phone numbers.
+	pub fn links(self) -> Self {
+		self.rich(|k| {
+			if let FieldKind::RichText { links, .. } = k {
+				*links = true;
+			}
+		})
+	}
+
+	/// Rows of buttons in the text.
+	pub fn buttons(self) -> Self {
+		self.rich(|k| {
+			if let FieldKind::RichText { buttons, .. } = k {
+				*buttons = true;
+			}
+		})
+	}
+
+	/// Blocks of these types in the text, like an image or a contact box.
+	pub fn embed<'a>(self, types: impl IntoIterator<Item = &'a str>) -> Self {
+		self.rich(|k| {
+			if let FieldKind::RichText { blocks, .. } = k {
+				*blocks = types.into_iter().map(Into::into).collect();
+			}
+		})
+	}
+
+	/// The fields of `component` under one name.
+	pub fn group(handle: &str, component: &str) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Group {
+				component: component.into(),
+			},
+		)
+	}
+
+	pub fn markdown(handle: &str) -> Self {
+		Self::new(handle, FieldKind::Markdown)
+	}
+
+	/// One of the options, given as value and label.
+	pub fn dropdown<'a>(
+		handle: &str,
+		options: impl IntoIterator<Item = (&'a str, &'a str)>,
+	) -> Self {
+		let options = options
+			.into_iter()
+			.map(|(value, label)| Choice {
+				value: value.into(),
+				label: label.into(),
+			})
+			.collect();
+		Self::new(handle, FieldKind::Dropdown { options })
+	}
+
+	/// A field of a type of another crate, it has to be registered with
+	/// [`Schema::field_type`]. Such crates usually have a builder of their
+	/// own that calls this.
+	pub fn custom(handle: &str, ty: &str, options: Value) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Custom {
+				ty: ty.into(),
+				options,
+			},
+		)
+	}
+
+	/// Any files.
+	pub fn assets(handle: &str) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Assets {
+				images: false,
+				max: None,
+			},
+		)
+	}
+
+	/// Only images.
+	pub fn images(handle: &str) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Assets {
+				images: true,
+				max: None,
+			},
+		)
+	}
+
+	pub fn blocks<'a>(
+		handle: &str,
+		types: impl IntoIterator<Item = &'a str>,
+	) -> Self {
+		Self::new(
+			handle,
+			FieldKind::Blocks {
+				types: types.into_iter().map(Into::into).collect(),
+				min: None,
+				max: None,
+			},
+		)
+	}
+
+	pub fn label(mut self, label: &str) -> Self {
+		self.label = label.into();
+		self
+	}
+
+	pub fn required(mut self) -> Self {
+		self.required = true;
+		self
+	}
+
+	pub fn indexed(mut self) -> Self {
+		self.indexed = true;
+		self
+	}
+
+	pub fn translatable(mut self) -> Self {
+		self.translatable = true;
+		self
+	}
+
+	pub fn multiline(mut self) -> Self {
+		match &mut self.kind {
+			FieldKind::Text { multiline, .. } => *multiline = true,
+			_ => panic!("{}: multiline is only for text", self.handle),
+		}
+		self
+	}
+
+	/// Number range.
+	pub fn range(mut self, from: f64, to: f64) -> Self {
+		match &mut self.kind {
+			FieldKind::Number { min, max } => {
+				*min = Some(from);
+				*max = Some(to);
+			}
+			_ => panic!("{}: range is only for numbers", self.handle),
+		}
+		self
+	}
+
+	/// Least number of blocks.
+	pub fn min(mut self, n: u32) -> Self {
+		match &mut self.kind {
+			FieldKind::Blocks { min, .. } => *min = Some(n),
+			_ => panic!("{}: min is only for blocks", self.handle),
+		}
+		self
+	}
+
+	/// Most characters of a text, entries of a relation or blocks.
+	pub fn max(mut self, n: u32) -> Self {
+		match &mut self.kind {
+			FieldKind::Text { max, .. }
+			| FieldKind::Relation { max, .. }
+			| FieldKind::Assets { max, .. }
+			| FieldKind::Blocks { max, .. } => *max = Some(n),
+			_ => panic!("{}: max is not for numbers, use range", self.handle),
+		}
+		self
+	}
+}
+
+/// `eventDate` becomes `Event date`.
+pub(super) fn humanize(handle: &str) -> String {
+	let mut s = String::new();
+	for (i, c) in handle.chars().enumerate() {
+		if i == 0 {
+			s.push(c.to_ascii_uppercase());
+		} else if c.is_ascii_uppercase() {
+			s.push(' ');
+			s.push(c.to_ascii_lowercase());
+		} else {
+			s.push(c);
+		}
+	}
+	s
+}
