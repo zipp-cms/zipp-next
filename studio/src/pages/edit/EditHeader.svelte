@@ -8,6 +8,7 @@
 		title,
 		published,
 		hasDraft,
+		draftBy,
 		saving,
 		url,
 		busy,
@@ -24,6 +25,8 @@
 		title: string;
 		published: boolean;
 		hasDraft: boolean;
+		/** who changed the draft last, and when */
+		draftBy: string | null;
 		saving: boolean;
 		url: string | null;
 		busy: boolean;
@@ -50,6 +53,7 @@
 			<span class="badge changes" title="Saved as draft, not live yet">
 				{saving ? 'Saving…' : 'Draft'}
 			</span>
+			{#if draftBy}<span class="by">{draftBy}</span>{/if}
 		{/if}
 	</span>
 	<span class="actions">
@@ -93,8 +97,20 @@
 <style>
 	.state {
 		display: flex;
+		align-items: center;
 		gap: 6px;
 		margin-right: auto;
+	}
+
+	.by {
+		color: var(--subtle);
+		font-size: 12px;
+	}
+
+	@media (max-width: 1100px) {
+		.by {
+			display: none;
+		}
 	}
 
 	.actions {

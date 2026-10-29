@@ -31,6 +31,7 @@
 	import EditHeader from './EditHeader.svelte';
 	import EntryHead from './EntryHead.svelte';
 	import EntrySidebar from './EntrySidebar.svelte';
+	import { time } from '../../lib/format';
 	import TabBar from './TabBar.svelte';
 	import RevisionView from './RevisionView.svelte';
 
@@ -356,6 +357,9 @@
 		title={global ? secDef.name : title}
 		{published}
 		hasDraft={!!draft}
+		draftBy={draft?.user
+			? `by ${draft.user}, ${time(draft.updatedAt)}`
+			: null}
 		saving={draftState === 'saving'}
 		{url}
 		{busy}
@@ -371,7 +375,6 @@
 
 	<ConflictBanner
 		{conflict}
-		{draft}
 		onloadtheirs={loadTheirs}
 		onkeepmine={keepMine}
 	/>

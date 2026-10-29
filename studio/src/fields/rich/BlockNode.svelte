@@ -71,8 +71,10 @@
 	.block {
 		margin: 8px 0;
 		padding: 10px 12px 14px;
-		background: var(--side, #f4f4f5);
-		border-left: 3px solid var(--dark);
+		background: var(--side, var(--surface-2));
+		border: 1px solid var(--line);
+		border-left: 3px solid var(--accent);
+		border-radius: 5px;
 	}
 
 	.head {

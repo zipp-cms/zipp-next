@@ -56,12 +56,16 @@
 	{#each shown as field (field.handle)}
 		{@const path = prefix + field.handle}
 		<label for={path}>
-			{#if changed.has(path)}<span
-					class="changed"
-					title="Changed"
-				></span>{/if}{field.label}{#if field.required}<span class="req">
-					*
-				</span>{/if}
+			<span class="name">
+				{#if changed.has(path)}<span
+						class="changed"
+						title="Changed"
+					></span>{/if}{field.label}{#if field.required}<span
+						class="req"
+					>
+						*
+					</span>{/if}
+			</span>
 			{#if shared(field)}<span class="shared">all sites</span>{/if}
 			<!-- for admins the handle, like Craft's "show field handles" -->
 			{#if isAdmin(schema)}
@@ -212,6 +216,7 @@
 	}
 
 	.req {
+		margin-left: 2px;
 		color: var(--danger);
 	}
 

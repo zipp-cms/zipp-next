@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { assetUrl, type Asset } from '../api';
+	import Icon from './Icon.svelte';
 
-	/** A square tile with the file type, like the media of the old Zipp. */
+	/** A square tile of a file: the image, or an icon with its name. */
 	let { asset }: { asset: Asset } = $props();
 
 	const ext = $derived(asset.filename.split('.').pop()?.toUpperCase() ?? '');
@@ -11,7 +12,10 @@
 	{#if asset.kind === 'image'}
 		<img src={assetUrl(asset, true)} alt={asset.alt} loading="lazy" />
 	{:else}
-		<span class="name">{asset.filename}</span>
+		<span class="file">
+			<Icon name="single" size={28} />
+			<span class="name">{asset.filename}</span>
+		</span>
 	{/if}
 	<span class="ext">{ext}</span>
 </div>
@@ -21,7 +25,9 @@
 		position: relative;
 		width: 100%;
 		aspect-ratio: 1;
-		background: var(--bg);
+		background: var(--surface-2);
+		border: 1px solid var(--line);
+		border-radius: 6px;
 		overflow: hidden;
 	}
 
@@ -32,25 +38,34 @@
 		object-fit: cover;
 	}
 
-	.ext {
-		position: absolute;
-		top: 8px;
-		left: 6px;
-		padding: 1px 5px;
-		font-size: 12px;
-		color: white;
-		background: black;
+	.file {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		height: 100%;
+		padding: 10px;
+		color: var(--subtle);
 	}
 
 	.name {
-		position: absolute;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		padding: 4px 6px;
-		font-size: 12px;
-		color: white;
-		background: black;
+		color: var(--text-2);
+		font-size: 11px;
+		text-align: center;
 		word-break: break-all;
+	}
+
+	.ext {
+		position: absolute;
+		top: 6px;
+		left: 6px;
+		padding: 0 5px;
+		font-size: 10px;
+		font-weight: 600;
+		line-height: 16px;
+		color: var(--text-2);
+		background: rgba(255, 255, 255, 0.88);
+		border-radius: 4px;
 	}
 </style>

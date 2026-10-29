@@ -95,8 +95,10 @@
 	.buttons {
 		margin: 8px 0;
 		padding: 10px 12px 12px;
-		background: #f4f4f5;
-		border-left: 3px solid var(--dark);
+		background: var(--surface-2);
+		border: 1px solid var(--line);
+		border-left: 3px solid var(--accent);
+		border-radius: 5px;
 	}
 
 	.head {

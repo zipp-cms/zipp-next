@@ -191,16 +191,22 @@
 		min-height: 80vh;
 	}
 
+	// looks like the main button, it is a label for the file input
 	.upload {
 		display: inline-flex;
 		align-items: center;
-		gap: 8px;
-		padding: 10px 12px;
-		font-size: 14px;
+		gap: 6px;
+		padding: 6px 12px;
+		font-size: 13px;
+		font-weight: 500;
 		cursor: pointer;
-		border-radius: 2px;
-		background: var(--dark);
+		border-radius: 5px;
+		background: var(--accent);
 		color: white;
+
+		&:hover {
+			background: var(--accent-hover);
+		}
 
 		input {
 			display: none;

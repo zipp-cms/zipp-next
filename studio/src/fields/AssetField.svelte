@@ -33,14 +33,23 @@
 <div class="assets">
 	{#each chosen as a (a.id)}
 		<div class="chosen">
-			<div class="tile"><Thumb asset={a} /></div>
-			<button class="icon" title="Remove" onclick={() => toggle(a)}>
-				<Icon name="delete" />
+			<Thumb asset={a} />
+			<span class="caption" title={a.filename}>
+				{a.title || a.filename}
+			</span>
+			<button
+				type="button"
+				class="remove"
+				title="Remove"
+				onclick={() => toggle(a)}
+			>
+				<Icon name="close" size={14} />
 			</button>
 		</div>
 	{/each}
 	{#if !full}
-		<button onclick={() => (picking = true)}>
+		<button type="button" class="choose" onclick={() => (picking = true)}>
+			<Icon name="add" size={14} />
 			Choose {images ? 'image' : 'file'}
 		</button>
 	{/if}
@@ -60,17 +69,60 @@
 	.assets {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 16px;
-		align-items: center;
+		gap: 12px;
+		align-items: flex-start;
 	}
 
 	.chosen {
+		position: relative;
 		display: flex;
-		align-items: center;
-		gap: 6px;
+		flex-direction: column;
+		gap: 4px;
+		width: 120px;
 	}
 
-	.tile {
-		width: 117px;
+	.caption {
+		overflow: hidden;
+		color: var(--muted);
+		font-size: 11px;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	// on the tile, when the pointer is on it
+	.remove {
+		position: absolute;
+		top: 5px;
+		right: 5px;
+		padding: 3px;
+		border: none;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.92);
+		color: var(--text);
+		box-shadow: var(--shadow);
+		opacity: 0;
+		transition: opacity 0.15s;
+
+		&:hover:not(:disabled) {
+			background: white;
+			color: var(--danger);
+		}
+	}
+
+	.chosen:hover .remove,
+	.remove:focus-visible {
+		opacity: 1;
+	}
+
+	@media (hover: none) {
+		.remove {
+			opacity: 1;
+		}
+	}
+
+	.choose {
+		border-style: dashed;
+		border-color: var(--border-strong);
+		color: var(--accent);
 	}
 </style>

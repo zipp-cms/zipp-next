@@ -48,8 +48,11 @@
 {/if}
 
 <style>
+	/* a white box like an open block, its fields on the left */
 	.group {
-		padding: 12px 14px;
-		background: #f4f4f5;
+		padding: 14px;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 6px;
 	}
 </style>

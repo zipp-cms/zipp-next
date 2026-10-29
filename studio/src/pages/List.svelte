@@ -17,6 +17,10 @@
 	);
 	let entries = $state<Entry[]>([]);
 	let published = $state<Record<number, Record<string, boolean>>>({});
+	// the entries with unpublished changes
+	let drafts = $state<number[]>([]);
+	// the type is worth a column only with several
+	const types = $derived(sec.types.length > 1);
 
 	$effect(() => {
 		shown.section = section;
@@ -42,6 +46,7 @@
 				entries = r.entries;
 				total = r.total;
 				published = r.published;
+				drafts = r.drafts;
 			})
 			.catch(e => (error = e.message));
 	}
@@ -106,11 +111,6 @@
 		}
 	}
 
-	/** Published in how many sites, for the status next to the current one. */
-	function publishedCount(e: Entry) {
-		return Object.values(published[e.id] ?? {}).filter(Boolean).length;
-	}
-
 	function date(ms: number) {
 		return new Date(ms).toLocaleDateString();
 	}
@@ -119,7 +119,7 @@
 <div class="page-top">
 	<h1><Crumbs items={sectionCrumbs(schema, section)} /></h1>
 	{#if sec.kind !== 'single' && can(schema, section, 'edit')}
-		<button class="dark" onclick={() => go(`/entries/${section}/new`)}>
+		<button class="primary" onclick={() => go(`/entries/${section}/new`)}>
 			<Icon name="add" />
 			New entry
 		</button>
@@ -130,13 +130,24 @@
 
 <div class="card list">
 	<div class="search">
-		<input placeholder="Search entries" bind:value={search} />
-		<Icon name="search" />
+		<span class="field">
+			<Icon name="search" size={15} />
+			<input placeholder="Search entries" bind:value={search} />
+		</span>
+		<span class="total">{total} {total === 1 ? 'entry' : 'entries'}</span>
 	</div>
+	{#if entries.length}
+		<div class="row columns" class:types>
+			<span>Title</span>
+			<span>Status</span>
+			{#if types}<span class="hide-small">Type</span>{/if}
+			<span class="hide-small">Updated</span>
+		</div>
+	{/if}
 	{#each entries as e (e.id)}
-		{@const on = published[e.id]?.[site.current]}
 		<div
 			class="row"
+			class:types
 			class:dragging={dragged === e}
 			class:drop-before={drop?.id === e.id && drop.where === 'before'}
 			class:drop-after={drop?.id === e.id && drop.where === 'after'}
@@ -166,7 +177,7 @@
 							drop = null;
 						}}
 					>
-						<Icon name="move" />
+						<Icon name="move" size={15} />
 					</span>
 				{/if}
 				<a class="title" href="/admin{entryPath(section, e.id)}">
@@ -174,29 +185,30 @@
 				</a>
 			</span>
 			<span class="status">
-				<span
-					class="badge"
-					class:draft={!on}
-					title="{site.current.toUpperCase()}: {on
-						? 'published'
-						: 'not published'}"
-				>
-					{site.current.toUpperCase()}
-				</span>
-				{#if schema.sites.length > 1}
+				<!-- live or not in every site, the current one first -->
+				{#each schema.sites as s (s.handle)}
+					{@const on = published[e.id]?.[s.handle]}
 					<span
-						class="count"
-						title="Published in {publishedCount(e)} of {schema.sites
-							.length} sites"
+						class="badge"
+						class:draft={!on}
+						class:current={s.handle === site.current}
+						title="{s.name}: {on ? 'published' : 'not published'}"
 					>
-						{publishedCount(e)}/{schema.sites.length}
+						{s.handle.toUpperCase()}
+					</span>
+				{/each}
+				{#if drafts.includes(e.id)}
+					<span class="badge changes" title="Unpublished changes">
+						Draft
 					</span>
 				{/if}
 			</span>
-			<span class="type hide-small">
-				Type: {schema.components.find(c => c.handle === e.type)?.name}
-			</span>
-			<span class="type hide-small">{date(e.updatedAt)}</span>
+			{#if types}
+				<span class="type hide-small">
+					{schema.components.find(c => c.handle === e.type)?.name}
+				</span>
+			{/if}
+			<span class="date hide-small">{date(e.updatedAt)}</span>
 		</div>
 	{:else}
 		<p class="empty">No entries yet</p>
@@ -208,55 +220,94 @@
 
 <style lang="scss">
 	.list {
-		padding: 0 0 8px;
+		padding: 0 0 6px;
+		overflow: hidden;
 	}
 
 	.search {
-		position: relative;
 		display: flex;
-		justify-content: flex-end;
-		padding: 10px 16px;
-		border-bottom: 2px solid var(--line);
+		align-items: center;
+		gap: 12px;
+		padding: 10px 14px;
 
-		input {
-			width: 340px;
-			padding-right: 36px;
+		.field {
+			position: relative;
+			display: flex;
+			align-items: center;
+			width: 320px;
+			color: var(--subtle);
+
+			:global(.icon) {
+				position: absolute;
+				left: 10px;
+			}
 		}
 
-		:global(.icon) {
-			position: absolute;
-			right: 28px;
-			top: 50%;
-			transform: translateY(-50%);
+		input {
+			padding-left: 32px;
+		}
+
+		.total {
+			margin-left: auto;
+			color: var(--muted);
+			font-size: 12px;
 		}
 	}
 
 	.row {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 7rem 12rem 7rem;
+		grid-template-columns: minmax(0, 1fr) 13rem 7rem;
 		align-items: center;
-		padding: 10px 26px;
+		gap: 12px;
+		min-height: 44px;
+		padding: 4px 16px;
+		border-top: 1px solid var(--line);
+
+		&.types {
+			grid-template-columns: minmax(0, 1fr) 13rem 10rem 7rem;
+		}
+
+		&:not(.columns):hover {
+			background: var(--surface-2);
+		}
+	}
+
+	.columns {
+		min-height: 32px;
+		color: var(--muted);
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		background: var(--surface-2);
 	}
 
 	.title {
-		font-size: 17px;
-		color: inherit;
+		color: var(--text);
+		font-weight: 500;
 		text-decoration: none;
 
 		&:hover {
-			text-decoration: underline;
+			color: var(--accent);
 		}
 	}
 
 	.status {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		gap: 4px;
+		flex-wrap: wrap;
+
+		.current {
+			outline: 1px solid currentColor;
+			outline-offset: -1px;
+		}
 	}
 
-	.count {
-		font-size: 13px;
+	.type,
+	.date {
 		color: var(--muted);
+		font-size: 13px;
 	}
 
 	.name {
@@ -269,7 +320,12 @@
 	.handle {
 		display: flex;
 		cursor: grab;
-		color: var(--muted);
+		color: var(--subtle);
+		opacity: 0;
+	}
+
+	.row:hover .handle {
+		opacity: 1;
 	}
 
 	.dragging {
@@ -277,15 +333,15 @@
 	}
 
 	.drop-before {
-		box-shadow: inset 0 2px 0 var(--dark);
+		box-shadow: inset 0 2px 0 var(--accent);
 	}
 
 	.drop-after {
-		box-shadow: inset 0 -2px 0 var(--dark);
+		box-shadow: inset 0 -2px 0 var(--accent);
 	}
 
 	.drop-into {
-		background: var(--hover);
+		background: var(--accent-soft);
 	}
 
 	.type {
@@ -298,16 +354,16 @@
 	}
 
 	@media (max-width: 800px) {
-		.row {
-			grid-template-columns: minmax(0, 1fr) auto auto;
-			padding: 10px 16px;
+		.row,
+		.row.types {
+			grid-template-columns: minmax(0, 1fr) auto;
 		}
 
 		.hide-small {
 			display: none;
 		}
 
-		.search input {
+		.search .field {
 			width: 100%;
 		}
 	}
