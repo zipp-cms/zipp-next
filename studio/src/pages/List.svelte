@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { can } from '../lib/access';
+	import { can, sectionCrumbs } from '../lib/access';
+	import Crumbs from '../lib/Crumbs.svelte';
 	import { listEntries, moveEntry, type Entry, type Schema } from '../api';
 	import { entryPath, go, shown, site } from '../route.svelte';
 	import Icon from '../lib/Icon.svelte';
@@ -116,7 +117,7 @@
 </script>
 
 <div class="page-top">
-	<h1>{sec.name}</h1>
+	<h1><Crumbs items={sectionCrumbs(schema, section)} /></h1>
 	{#if sec.kind !== 'single' && can(schema, section, 'edit')}
 		<button class="dark" onclick={() => go(`/entries/${section}/new`)}>
 			<Icon name="add" />

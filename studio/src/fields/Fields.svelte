@@ -51,7 +51,7 @@
 	}
 </script>
 
-<!-- the old Zipp grid: labels on the left, fields on the right -->
+<!-- on the page the label above its field, inside a block on its left -->
 <div class="fields" class:nested={prefix !== ''}>
 	{#each shown as field (field.handle)}
 		{@const path = prefix + field.handle}
@@ -154,67 +154,84 @@
 
 <style lang="scss">
 	.fields {
-		display: grid;
-		grid-template-columns: 200px minmax(0, 1fr);
-		gap: 10px 30px;
-		align-items: center;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+
+		.value {
+			margin-bottom: 14px;
+		}
 	}
 
+	// inside a block: the label on the left, compact
 	.nested {
+		display: grid;
 		grid-template-columns: 130px minmax(0, 1fr);
+		gap: 10px 20px;
+		align-items: center;
+
+		.value {
+			margin-bottom: 0;
+		}
+
+		// at the top of tall fields like blocks or rich text, the first
+		// line of a field is 34px high
+		label {
+			align-self: start;
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 1px;
+			padding-top: 7px;
+		}
 	}
 
-	// at the top of tall fields like blocks or rich text, the first line
-	// of a field is 37px high
 	label {
-		align-self: start;
-		padding-top: 9px;
+		display: flex;
+		align-items: baseline;
+		gap: 6px;
+		flex-wrap: wrap;
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--text);
 	}
 
 	.shared {
-		display: block;
-		margin-top: 2px;
-		font-size: 12px;
-		color: var(--muted);
+		font-size: 11px;
+		font-weight: 400;
+		color: var(--subtle);
 	}
 
 	// like Craft: a dot in front of changed fields
 	.changed {
 		display: inline-block;
-		width: 8px;
-		height: 8px;
-		margin-right: 6px;
+		width: 7px;
+		height: 7px;
+		margin-right: 4px;
 		border-radius: 50%;
 		background: #d98e04;
 	}
 
 	.req {
 		color: var(--danger);
-		margin-left: 2px;
 	}
 
 	@media (max-width: 800px) {
-		.fields {
+		.nested {
 			grid-template-columns: 1fr;
 			gap: 6px;
-		}
-
-		.value {
-			margin-bottom: 10px;
 		}
 	}
 
 	/* the handle for developers, links to the field in Setup */
 	.handle {
-		display: block;
-		margin-top: 2px;
-		font-family: monospace;
-		font-size: 12px;
-		color: var(--muted);
+		font-family: var(--mono);
+		font-size: 11px;
+		font-weight: 400;
+		color: var(--subtle);
 		text-decoration: none;
 
 		&:hover {
-			text-decoration: underline;
+			color: var(--accent);
 		}
 	}
 </style>

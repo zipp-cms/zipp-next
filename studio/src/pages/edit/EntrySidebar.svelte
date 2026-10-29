@@ -6,13 +6,16 @@
 		Schema,
 		Section,
 	} from '../../api';
+	import type { Block, Values } from '../../api';
+	import { blockSummary, showBlock } from '../../lib/blocks.svelte';
 	import { setSite, site } from '../../route.svelte';
 	import RevisionList from './RevisionList.svelte';
 
 	/**
 	 * Next to the content like Craft's sidebar: the status in each site,
-	 * slug, type and parent, copying from another site and the revisions.
-	 * A global only has the last two, it has no page and is always live.
+	 * slug, type and parent, the outline of the blocks, copying from
+	 * another site and the revisions. A global has no page and is always
+	 * live, it has no status, slug or type.
 	 */
 	let {
 		schema,
@@ -32,6 +35,8 @@
 		errors,
 		parents,
 		revisions,
+		values,
+		shownFields,
 		oncopy,
 		onview,
 		onrestore,
@@ -54,6 +59,10 @@
 		errors: Record<string, string>;
 		parents: Entry[];
 		revisions: Revision[];
+		/** the fields of the entry, for the outline */
+		values: Values;
+		/** the fields of the open tab, all without tabs */
+		shownFields: string[] | null;
 		oncopy: (site: string) => void;
 		onview: (rev: Revision) => void;
 		onrestore: (rev: Revision) => void;
@@ -61,6 +70,20 @@
 
 	const single = $derived(secDef.kind === 'single');
 	const multiSite = $derived(schema.sites.length > 1);
+
+	// the blocks fields on screen, each with its blocks
+	const outlines = $derived(
+		comp.fields
+			.filter(f => f.kind === 'blocks')
+			.filter(f => !shownFields || shownFields.includes(f.handle))
+			.map(f => ({
+				field: f,
+				blocks: (values[f.handle] ?? []) as Block[],
+			}))
+			.filter(o => o.blocks.length),
+	);
+	const nameOf = (type: string) =>
+		schema.components.find(c => c.handle === type)?.name ?? type;
 </script>
 
 <aside>
@@ -150,6 +173,36 @@
 		</fieldset>
 	{/if}
 
+	{#each outlines as o (o.field.handle)}
+		<nav class="card outline" aria-label="Outline of {o.field.label}">
+			<h3>Outline · {o.field.label}</h3>
+			<ol>
+				{#each o.blocks as b, i (i)}
+					<li>
+						<button
+							type="button"
+							onclick={() => showBlock(o.field.handle, i)}
+						>
+							<span class="n">
+								{String(i + 1).padStart(2, '0')}
+							</span>
+							<span class="name">{nameOf(b.type)}</span>
+							<span class="sum">
+								{blockSummary(
+									schema,
+									schema.components.find(
+										c => c.handle === b.type,
+									),
+									b.fields,
+								)}
+							</span>
+						</button>
+					</li>
+				{/each}
+			</ol>
+		</nav>
+	{/each}
+
 	{#if !isNew && multiSite && canEdit}
 		<div class="card">
 			<label>
@@ -187,9 +240,13 @@
 
 <style lang="scss">
 	aside {
+		position: sticky;
+		top: 64px;
 		display: flex;
 		flex-direction: column;
-		gap: 20px;
+		gap: 12px;
+		max-height: calc(100vh - 80px);
+		overflow-y: auto;
 	}
 
 	fieldset {
@@ -201,41 +258,43 @@
 	.card {
 		display: flex;
 		flex-direction: column;
-		gap: 18px;
-		font-size: 14px;
+		gap: 14px;
+		padding: 12px;
 	}
 
 	label {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 5px;
 
 		> span:first-child {
-			color: var(--muted);
+			font-size: 12px;
+			font-weight: 600;
 		}
 	}
 
 	.switch {
 		flex-direction: row;
 		align-items: center;
-		gap: 10px;
+		gap: 8px;
 
 		> span:first-child {
-			color: var(--text);
+			font-size: 13px;
+			font-weight: 500;
 		}
 	}
 
 	.sites {
 		display: flex;
 		gap: 4px;
-		margin-top: -8px;
+		margin-top: -6px;
 
 		button {
 			border: none;
 			cursor: pointer;
 
 			&.current {
-				outline: 2px solid var(--muted);
+				outline: 2px solid var(--accent);
 				outline-offset: 1px;
 			}
 		}
@@ -246,15 +305,57 @@
 	}
 
 	.muted {
-		margin-top: -2px;
-		color: var(--muted);
-		font-size: 13px;
+		color: var(--subtle);
+		font-size: 12px;
 		word-break: break-all;
 	}
 
 	h3 {
-		margin: 0 0 -8px;
-		font-size: 16px;
-		font-weight: 500;
+		margin: 0 0 -6px;
+		font-size: 12px;
+		font-weight: 600;
+	}
+
+	.outline {
+		gap: 8px;
+
+		ol {
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+
+		button {
+			display: grid;
+			grid-template-columns: 22px auto minmax(0, 1fr);
+			align-items: baseline;
+			gap: 6px;
+			width: 100%;
+			padding: 5px 4px;
+			border: none;
+			background: none;
+			text-align: left;
+			font-weight: 400;
+		}
+
+		.n {
+			color: var(--subtle);
+			font-family: var(--mono);
+			font-size: 10px;
+		}
+
+		.name {
+			font-size: 13px;
+			font-weight: 500;
+		}
+
+		.sum {
+			overflow: hidden;
+			color: var(--subtle);
+			font-size: 11px;
+			text-align: right;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
 	}
 </style>

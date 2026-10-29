@@ -259,40 +259,48 @@
 <style lang="scss">
 	.rich {
 		background: var(--input);
-		border-radius: 2px;
+		border: 1px solid var(--border-strong);
+		border-radius: 5px;
+
+		&:focus-within {
+			border-color: var(--accent);
+			outline: 1px solid var(--accent);
+		}
 	}
 
-	// like the old Zipp editor: a dark bar over the text
+	// a light bar over the text
 	.toolbar {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 2px;
-		padding: 4px 6px;
-		background: #5d5f6f;
-		border-radius: 2px 2px 0 0;
+		padding: 3px 4px;
+		background: var(--surface-2);
+		border-bottom: 1px solid var(--line);
+		border-radius: 5px 5px 0 0;
 
 		button {
-			padding: 4px 8px;
+			padding: 3px 7px;
 			border: none;
 			background: none;
-			color: white;
-			font-size: 13px;
+			color: var(--text-2);
+			font-size: 12px;
 
 			&.on {
-				background: rgba(255, 255, 255, 0.2);
+				background: var(--accent-soft);
+				color: var(--accent);
 			}
 
-			&:hover {
-				background: rgba(255, 255, 255, 0.12);
+			&:hover:not(:disabled) {
+				background: var(--hover);
 			}
 		}
 
 		.sep {
 			width: 1px;
-			height: 18px;
-			margin: 0 6px;
-			background: rgba(255, 255, 255, 0.3);
+			height: 16px;
+			margin: 0 4px;
+			background: var(--border);
 		}
 	}
 

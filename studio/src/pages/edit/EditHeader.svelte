@@ -1,8 +1,10 @@
 <script lang="ts">
+	import Crumbs from '../../lib/Crumbs.svelte';
 	import Icon from '../../lib/Icon.svelte';
 
-	/** The title of the entry, its state and what can be done with it. */
+	/** Where the entry is, its state and what can be done with it. */
 	let {
+		crumbs,
 		title,
 		published,
 		hasDraft,
@@ -18,6 +20,7 @@
 		onremove,
 		onsave,
 	}: {
+		crumbs: { label: string; href?: string }[];
 		title: string;
 		published: boolean;
 		hasDraft: boolean;
@@ -36,63 +39,67 @@
 </script>
 
 <div class="page-top">
-	<h1>
-		{title || 'New entry'}
-		<span class="badge" class:draft={!published}>
-			{published ? 'Published' : 'Not published'}
-		</span>
-		{#if hasDraft}
-			<span class="badge changes" title="Saved as draft, not live yet">
-				{saving ? 'Saving…' : 'Unpublished changes'}
+	<Crumbs items={[...crumbs, { label: title || 'New entry' }]} />
+	<span class="state">
+		{#if !isNew}
+			<span class="badge" class:live={published} class:draft={!published}>
+				{published ? 'Live' : 'Not published'}
 			</span>
 		{/if}
-	</h1>
-	{#if url}
 		{#if hasDraft}
-			<button class="light" onclick={onpreview}>
-				<Icon name="view" />
-				Preview
-			</button>
-		{:else}
-			<a class="light" href={url} target="_blank">
-				<Icon name="view" />
-				View
-			</a>
+			<span class="badge changes" title="Saved as draft, not live yet">
+				{saving ? 'Saving…' : 'Draft'}
+			</span>
 		{/if}
-	{/if}
-	{#if hasDraft}
-		<button class="light" onclick={ondiscard} disabled={busy || !canEdit}>
-			Discard
+	</span>
+	<span class="actions">
+		{#if canDelete}
+			<button class="icon" onclick={onremove} title="Delete in all sites">
+				<Icon name="delete" />
+			</button>
+		{/if}
+		{#if hasDraft}
+			<button onclick={ondiscard} disabled={busy || !canEdit}>
+				Discard
+			</button>
+		{/if}
+		{#if url}
+			{#if hasDraft}
+				<button onclick={onpreview}>
+					<Icon name="view" />
+					Preview
+				</button>
+			{:else}
+				<a class="light" href={url} target="_blank">
+					<Icon name="external" />
+					View
+				</a>
+			{/if}
+		{/if}
+		<!-- a role that may only edit leaves its draft for someone to publish -->
+		<button
+			class="primary"
+			onclick={onsave}
+			disabled={busy || (isNew ? !canEdit : !hasDraft || !canPublish)}
+			title={!isNew && !canPublish
+				? 'Your role can edit drafts, someone else publishes them'
+				: undefined}
+		>
+			{isNew ? 'Create' : 'Publish'}
 		</button>
-	{/if}
-	{#if canDelete}
-		<button class="dark" onclick={onremove}>
-			<Icon name="delete" />
-			Delete
-		</button>
-	{/if}
-	<!-- a role that may only edit leaves its draft for someone to publish -->
-	<button
-		class="dark"
-		onclick={onsave}
-		disabled={busy || (isNew ? !canEdit : !hasDraft || !canPublish)}
-		title={!isNew && !canPublish
-			? 'Your role can edit drafts, someone else publishes them'
-			: undefined}
-	>
-		<Icon name="save" />
-		{isNew ? 'Create' : 'Publish'}
-	</button>
+	</span>
 </div>
 
 <style>
-	h1 {
+	.state {
 		display: flex;
-		align-items: center;
-		gap: 10px;
+		gap: 6px;
+		margin-right: auto;
 	}
 
-	.changes {
-		background: #d98e04;
+	.actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
 	}
 </style>

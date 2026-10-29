@@ -19,28 +19,26 @@
 </script>
 
 <div class="login">
-	<div class="image"><span class="logo">zipp</span></div>
-	<form {onsubmit}>
-		<h2>Log in to Zipp</h2>
+	<form class="card" {onsubmit}>
+		<div class="brand">
+			<span class="mark">z</span>
+			<strong>zipp studio</strong>
+		</div>
+		<h1>Log in</h1>
 		<label>
 			Email
 			<input
 				type="email"
-				placeholder="Email"
+				placeholder="you@example.com"
 				bind:value={email}
 				required
 			/>
 		</label>
 		<label>
 			Password
-			<input
-				type="password"
-				placeholder="Password"
-				bind:value={password}
-				required
-			/>
+			<input type="password" bind:value={password} required />
 		</label>
-		<button class="dark">Log in</button>
+		<button class="primary">Log in</button>
 		{#if error}<p class="error">{error}</p>{/if}
 	</form>
 </div>
@@ -49,57 +47,47 @@
 	.login {
 		position: fixed;
 		inset: 0;
-		display: flex;
-		background: white;
-	}
-
-	.image {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 70%;
-		background: linear-gradient(135deg, #2c2d35, #5d5f6f);
-	}
-
-	.logo {
-		color: white;
-		font-size: 64px;
-		font-weight: 900;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		display: grid;
+		place-items: center;
+		padding: 16px;
+		background: var(--bg);
 	}
 
 	form {
 		display: flex;
 		flex-direction: column;
-		justify-content: center;
-		gap: 20px;
-		width: 30%;
-		padding: 32px;
+		gap: 16px;
+		width: min(360px, 100%);
+		padding: 28px;
 	}
 
-	h2 {
-		margin-bottom: 20px;
-		font-size: 24px;
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.mark {
+		display: grid;
+		place-items: center;
+		width: 28px;
+		height: 28px;
+		border-radius: 6px;
+		background: var(--accent);
+		color: white;
+		font-weight: 700;
 	}
 
 	label {
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
+		gap: 5px;
+		font-size: 12px;
+		font-weight: 600;
 	}
 
 	button {
-		align-self: flex-start;
-	}
-
-	@media (max-width: 800px) {
-		.image {
-			display: none;
-		}
-
-		form {
-			width: 100%;
-		}
+		justify-content: center;
+		padding: 8px 12px;
 	}
 </style>

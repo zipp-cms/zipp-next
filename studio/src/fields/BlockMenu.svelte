@@ -2,22 +2,36 @@
 	import Icon from '../lib/Icon.svelte';
 	import type { Component } from '../api';
 
+	/**
+	 * Adds a block: as a bar with the types (the first ones as buttons,
+	 * the rest under More), or `inline` a small + between blocks.
+	 */
 	let {
 		types,
 		onpick,
-	}: { types: Component[]; onpick: (type: string) => void } = $props();
+		inline = false,
+	}: {
+		types: Component[];
+		onpick: (type: string) => void;
+		inline?: boolean;
+	} = $props();
+
+	// as many buttons as fit a line, the rest in the popup
+	const SHOWN = 6;
+	const buttons = $derived(inline ? [] : types.slice(0, SHOWN));
+	const rest = $derived(inline ? types : types.slice(SHOWN));
 
 	let open = $state(false);
 	let search = $state('');
 	let input = $state<HTMLInputElement>();
 
 	const found = $derived(
-		types.filter(t => t.name.toLowerCase().includes(search.toLowerCase())),
+		rest.filter(t => t.name.toLowerCase().includes(search.toLowerCase())),
 	);
 
-	// with a single type there is nothing to choose
 	function toggle() {
-		if (types.length === 1) return onpick(types[0].handle);
+		// with a single type there is nothing to choose
+		if (inline && types.length === 1) return onpick(types[0].handle);
 		open = !open;
 		search = '';
 		if (open) setTimeout(() => input?.focus());
@@ -34,21 +48,48 @@
 	}
 </script>
 
-<div class="menu">
-	<button class="add" onclick={toggle}>
-		<Icon name="add" />
-		Add {types.length === 1 ? types[0].name : 'block'}
-	</button>
+<div class="menu" class:inline>
+	{#if inline}
+		<button
+			type="button"
+			class="insert"
+			title="Add a block here"
+			onclick={toggle}
+		>
+			<Icon name="add" size={14} />
+		</button>
+	{:else}
+		<div class="bar">
+			{#each buttons as t, i (t.handle)}
+				<button type="button" onclick={() => pick(t.handle)}>
+					{#if i === 0}<Icon name="add" size={14} />{/if}
+					{t.name}
+				</button>
+			{/each}
+			{#if rest.length}
+				<button type="button" onclick={toggle}>
+					More
+					<Icon name="chevron-down" size={14} />
+				</button>
+			{/if}
+		</div>
+	{/if}
 	{#if open}
 		<div class="popup">
-			<input
-				bind:this={input}
-				placeholder="Search blocks"
-				bind:value={search}
-				{onkeydown}
-			/>
+			{#if rest.length > 5}
+				<input
+					bind:this={input}
+					placeholder="Search blocks"
+					bind:value={search}
+					{onkeydown}
+				/>
+			{/if}
 			{#each found as t (t.handle)}
-				<button class="item" onclick={() => pick(t.handle)}>
+				<button
+					type="button"
+					class="item"
+					onclick={() => pick(t.handle)}
+				>
 					{t.name}
 				</button>
 			{/each}
@@ -59,35 +100,78 @@
 <style lang="scss">
 	.menu {
 		position: relative;
-		margin-top: 10px;
 	}
 
-	.add {
-		padding: 4px 0;
-		border: none;
-		background: none;
+	// the types side by side like one control
+	.bar {
+		display: inline-flex;
+		flex-wrap: wrap;
+		margin-top: 8px;
+		border: 1px solid var(--border-strong);
+		border-radius: 6px;
+		background: var(--surface);
+		overflow: hidden;
+
+		button {
+			border: none;
+			border-radius: 0;
+			border-right: 1px solid var(--line);
+
+			&:last-child {
+				border-right: none;
+			}
+		}
+	}
+
+	// between two blocks, it shows when the pointer is near
+	.inline {
+		display: flex;
+		justify-content: center;
+		height: 10px;
+		margin: -1px 0;
+		z-index: 2;
+	}
+
+	.insert {
+		align-self: center;
+		padding: 2px;
+		border-radius: 50%;
+		color: var(--accent);
+		opacity: 0;
+		transition: opacity 0.15s;
+	}
+
+	.inline:hover .insert,
+	.insert:focus-visible,
+	.inline:has(.popup) .insert {
+		opacity: 1;
 	}
 
 	.popup {
 		position: absolute;
-		z-index: 3;
+		z-index: 20;
 		top: 100%;
-		margin-top: 0.25rem;
+		left: 0;
+		margin-top: 4px;
 		width: 16rem;
-		padding: 0.4rem;
-		background: white;
-		box-shadow: var(--shadow);
+		padding: 6px;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
+		gap: 2px;
+	}
+
+	.inline .popup {
+		left: 50%;
+		transform: translateX(-50%);
 	}
 
 	.item {
 		border: none;
 		text-align: left;
-
-		&:hover {
-			background: var(--hover);
-		}
+		font-weight: 400;
 	}
 </style>

@@ -3,6 +3,7 @@
 	import { accessOf, can, isAdmin, roleName } from '../../lib/access';
 	import { describeField } from '../../lib/fieldKind';
 	import SetupSection from './SetupSection.svelte';
+	import Crumbs from '../../lib/Crumbs.svelte';
 	import TypePreview from './TypePreview.svelte';
 	import { shown } from '../../route.svelte';
 
@@ -73,33 +74,35 @@
 		return out;
 	}
 
+	const TAB_NAMES: Record<string, string> = {
+		sections: 'Sections',
+		types: 'Entry types',
+		blocks: 'Blocks',
+		sites: 'Sites, transforms and roles',
+	};
+	// Setup, the tab, the section or type of a page of its own
+	const crumbs = $derived.by(() => {
+		const out: { label: string; href?: string }[] = [
+			{ label: 'Setup', href: '/admin/setup/sections' },
+			{ label: TAB_NAMES[tab] ?? tab, href: `/admin/setup/${tab}` },
+		];
+		if (handle && tab === 'sections') {
+			const s = schema.sections.find(s => s.handle === handle);
+			out.push({ label: s?.name ?? handle });
+		} else if (handle) {
+			const c = schema.components.find(c => c.handle === handle);
+			out.push({ label: c?.name ?? handle });
+		}
+		return out;
+	});
+
 	function access(level: string | null | undefined) {
 		return level ? level[0].toUpperCase() + level.slice(1) : '–';
 	}
 </script>
 
 <div class="page-top">
-	<h1>
-		{#if tab === 'sections' && handle}
-			<a class="up" href="/admin/setup/sections">Sections</a>
-			›
-			{schema.sections.find(s => s.handle === handle)?.name ?? handle}
-		{:else if (tab === 'types' || tab === 'blocks') && handle}
-			<a class="up" href="/admin/setup/{tab}">
-				{tab === 'types' ? 'Entry types' : 'Blocks'}
-			</a>
-			›
-			{schema.components.find(c => c.handle === handle)?.name ?? handle}
-		{:else}
-			{tab === 'types'
-				? 'Entry types'
-				: tab === 'blocks'
-					? 'Blocks'
-					: tab === 'sites'
-						? 'Sites, transforms and roles'
-						: 'Sections'}
-		{/if}
-	</h1>
+	<h1><Crumbs items={crumbs} /></h1>
 	<span class="muted">Read only, the content model is code</span>
 </div>
 
@@ -363,10 +366,6 @@
 	tr:global(.target) td {
 		background: var(--hover);
 		transition: background 0.3s;
-	}
-
-	.up {
-		color: inherit;
 	}
 
 	.layout {

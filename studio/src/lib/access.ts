@@ -66,3 +66,22 @@ export function hasAgent(schema: Schema): boolean {
 		schema.plugins.some(p => p.name === 'agent')
 	);
 }
+
+/** The way to a section in the nav: its group, then the section. */
+export function sectionCrumbs(
+	schema: Schema,
+	section: string,
+): { label: string; href?: string }[] {
+	const group = visibleNav(schema).find(g => g.sections.includes(section));
+	const name =
+		schema.sections.find(s => s.handle === section)?.name ?? section;
+	const out: { label: string; href?: string }[] = [];
+	if (group && group.sections[0] !== section) {
+		out.push({
+			label: group.name,
+			href: '/admin/entries/' + group.sections[0],
+		});
+	}
+	out.push({ label: name, href: '/admin/entries/' + section });
+	return out;
+}

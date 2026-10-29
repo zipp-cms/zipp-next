@@ -25,7 +25,7 @@
 	import { untrack } from 'svelte';
 	import { entryPath, go, shown, site } from '../../route.svelte';
 	import Fields from '../../fields/Fields.svelte';
-	import { can } from '../../lib/access';
+	import { can, isAdmin, sectionCrumbs } from '../../lib/access';
 	import { changedPaths, clean } from '../../lib/diff';
 	import ConflictBanner from './ConflictBanner.svelte';
 	import EditHeader from './EditHeader.svelte';
@@ -350,7 +350,10 @@
 	<p class="error">{error}</p>
 {:else if loaded && secDef && comp}
 	<EditHeader
-		{title}
+		crumbs={global
+			? sectionCrumbs(schema, sec).slice(0, -1)
+			: sectionCrumbs(schema, sec)}
+		title={global ? secDef.name : title}
 		{published}
 		hasDraft={!!draft}
 		saving={draftState === 'saving'}
@@ -374,31 +377,53 @@
 	/>
 
 	<div class="layout">
-		<div class="card">
+		<div class="main">
 			{#if error}<p class="error">{error}</p>{/if}
 
 			{#if viewing}
-				<RevisionView
-					{schema}
-					{comp}
-					{refs}
-					{single}
-					rev={viewing.rev}
-					doc={viewing.doc}
-					changed={viewing.changed}
-					onrestore={canEdit ? () => restore(viewing!.rev) : null}
-					onback={() => (viewing = null)}
-				/>
+				<div class="card">
+					<RevisionView
+						{schema}
+						{comp}
+						{refs}
+						{single}
+						rev={viewing.rev}
+						doc={viewing.doc}
+						changed={viewing.changed}
+						onrestore={canEdit ? () => restore(viewing!.rev) : null}
+						onback={() => (viewing = null)}
+					/>
+				</div>
 			{:else}
 				<!-- read only for a role that may only look -->
-				{#if tabs.length}
-					<TabBar {tabs} bind:current={tab} {changed} {errors} />
-				{/if}
 				<fieldset disabled={!canEdit}>
-					<!-- the title is in the first tab, like in Craft -->
-					{#if !global && (!tabs.length || tab === tabs[0].name)}
+					{#if global}
+						<h1 class="global">{secDef.name}</h1>
+					{:else}
 						<EntryHead bind:title {changed} {errors} />
 					{/if}
+				</fieldset>
+				{#if tabs.length || isAdmin(schema)}
+					<div class="tabs-row">
+						{#if tabs.length}
+							<TabBar
+								{tabs}
+								bind:current={tab}
+								{changed}
+								{errors}
+							/>
+						{/if}
+						{#if isAdmin(schema)}
+							<a
+								class="layout-link"
+								href="/admin/setup/types/{comp.handle}"
+							>
+								Field layout «{comp.name}»
+							</a>
+						{/if}
+					</div>
+				{/if}
+				<fieldset disabled={!canEdit}>
 					<Fields
 						{schema}
 						component={comp}
@@ -430,6 +455,8 @@
 			{errors}
 			{parents}
 			{revisions}
+			values={fields}
+			shownFields={tabs.find(t => t.name === tab)?.fields ?? null}
 			oncopy={copyFrom}
 			onview={view}
 			onrestore={restore}
@@ -446,9 +473,35 @@
 
 	.layout {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 300px;
-		gap: 20px;
+		grid-template-columns: minmax(0, 1fr) 280px;
+		gap: 24px;
 		align-items: start;
+	}
+
+	.global {
+		margin-bottom: 18px;
+		font-size: 26px;
+		line-height: 1.25;
+		font-weight: 700;
+	}
+
+	.tabs-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		margin-bottom: 18px;
+	}
+
+	.layout-link {
+		margin-left: auto;
+		color: var(--muted);
+		font-size: 12px;
+		text-decoration: none;
+
+		&:hover {
+			color: var(--accent);
+		}
 	}
 
 	@media (max-width: 1100px) {

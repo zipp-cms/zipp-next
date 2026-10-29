@@ -1,8 +1,20 @@
-<?xml version="1.0" encoding="utf-8"?>
-<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 16 16" style="enable-background:new 0 0 16 16;" xml:space="preserve">
-
-<path fill-opacity="0.7" d="M8,5.3c0.7,0,1.3-0.6,1.3-1.3S8.7,2.7,8,2.7S6.7,3.3,6.7,4S7.3,5.3,8,5.3z M8,6.7C7.3,6.7,6.7,7.3,6.7,8
-	c0,0.7,0.6,1.3,1.3,1.3S9.3,8.7,9.3,8C9.3,7.3,8.7,6.7,8,6.7z M6.7,12c0-0.7,0.6-1.3,1.3-1.3s1.3,0.6,1.3,1.3c0,0.7-0.6,1.3-1.3,1.3
-	S6.7,12.7,6.7,12z"/>
+<!-- @license lucide-static v1.64.0 - ISC -->
+<svg
+  class="lucide lucide-grip-vertical"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="9" cy="12" r="1" />
+  <circle cx="9" cy="5" r="1" />
+  <circle cx="9" cy="19" r="1" />
+  <circle cx="15" cy="12" r="1" />
+  <circle cx="15" cy="5" r="1" />
+  <circle cx="15" cy="19" r="1" />
 </svg>

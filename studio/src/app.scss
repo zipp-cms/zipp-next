@@ -1,18 +1,35 @@
-// the look of the old Zipp admin
+// the look of the studio: a light grey page, white surfaces with thin
+// borders, one blue for what can be clicked
+// the fonts are bundled, see main.ts
+
 :root {
-	--text: #000;
-	--muted: #6c6c6c;
-	--line: #f4f4f5;
-	--bg: #e5e5e5;
-	--bar: #212121;
-	--dark: #2c2d35;
-	--input: #e9e9ec;
-	--hover: #ececed;
-	--accent: #2c2d35;
-	--danger: #c0312b;
-	--shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-	font-family: 'Roboto', 'Open Sans', 'Helvetica Neue', Arial, sans-serif;
-	font-size: 15px;
+	--text: #1b1e24;
+	--text-2: #3a404c;
+	--muted: #5b6270;
+	--subtle: #8a919e;
+	--line: #e4e7ec;
+	--border: #dadde3;
+	--border-strong: #c9ced7;
+	--bg: #eef0f3;
+	--surface: #fff;
+	--surface-2: #f7f8fa;
+	--input: #fff;
+	--hover: #f2f4f7;
+	--accent: #2b59c3;
+	--accent-hover: #1f4499;
+	--accent-soft: #e8eefb;
+	--dark: #1b1e24;
+	--danger: #b42318;
+	--danger-soft: #fef0ee;
+	--warn: #7a4f00;
+	--warn-soft: #fdf3d8;
+	--ok: #1e7a46;
+	--shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+	--radius: 6px;
+	--mono: 'JetBrains Mono', ui-monospace, monospace;
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 14px;
+	line-height: 1.45;
 	color: var(--text);
 }
 
@@ -25,18 +42,31 @@ body {
 	background: var(--bg);
 }
 
+a {
+	color: var(--accent);
+
+	&:hover {
+		color: var(--accent-hover);
+	}
+}
+
 h1 {
 	margin: 0;
-	font-size: 24px;
-	line-height: 28px;
+	font-size: 20px;
+	line-height: 26px;
 	font-weight: 600;
 }
 
 h2 {
 	margin: 0 0 10px;
-	font-size: 18px;
-	line-height: 21px;
-	font-weight: normal;
+	font-size: 15px;
+	line-height: 20px;
+	font-weight: 600;
+}
+
+code {
+	font-family: var(--mono);
+	font-size: 12px;
 }
 
 input,
@@ -45,18 +75,30 @@ select {
 	display: block;
 	width: 100%;
 	min-width: 0;
-	padding: 9px 12px;
+	padding: 7px 10px;
 	font: inherit;
-	border: none;
-	border-radius: 2px;
+	color: var(--text);
+	border: 1px solid var(--border-strong);
+	border-radius: 5px;
 	background: var(--input);
-	outline-color: var(--dark);
+
+	&:focus {
+		outline: 2px solid var(--accent);
+		outline-offset: -1px;
+		border-color: var(--accent);
+	}
+
+	&:disabled {
+		background: var(--surface-2);
+		color: var(--text-2);
+	}
 }
 
-input[type='checkbox'] {
+input[type='checkbox'],
+input[type='radio'] {
 	width: auto;
 	justify-self: start;
-	accent-color: var(--dark);
+	accent-color: var(--accent);
 }
 
 textarea {
@@ -67,23 +109,37 @@ textarea {
 button {
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
-	padding: 8px 10px;
+	gap: 6px;
+	padding: 6px 12px;
 	font: inherit;
-	font-size: 14px;
+	font-size: 13px;
+	font-weight: 500;
 	cursor: pointer;
-	border: 1px solid var(--dark);
-	border-radius: 2px;
-	background: white;
+	border: 1px solid var(--border-strong);
+	border-radius: 5px;
+	background: var(--surface);
 	color: var(--text);
 
-	// the dark buttons at the top of a page
+	&:hover:not(:disabled) {
+		background: var(--hover);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	// the main action of a page
 	&.primary,
 	&.dark {
-		padding: 10px 12px;
-		border-color: var(--dark);
-		background: var(--dark);
+		border-color: var(--accent);
+		background: var(--accent);
 		color: white;
+
+		&:hover:not(:disabled) {
+			border-color: var(--accent-hover);
+			background: var(--accent-hover);
+		}
 	}
 
 	&.danger {
@@ -96,45 +152,60 @@ button {
 		background: none;
 		padding: 4px;
 		color: var(--muted);
+
+		&:hover:not(:disabled) {
+			color: var(--text);
+			background: var(--hover);
+		}
 	}
 
 	&:disabled {
-		opacity: 0.5;
+		opacity: 0.4;
 		cursor: default;
 	}
 }
 
-// a white box on the grey page
+// a white surface on the grey page
 .card {
 	padding: 14px 16px;
-	background: white;
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-radius: 8px;
 	box-shadow: var(--shadow);
 }
 
-// the title of a page with its actions
+// the bar at the top of a page: breadcrumbs or title, its state, actions
 .page-top {
+	position: sticky;
+	top: 0;
+	z-index: 10;
 	display: flex;
 	align-items: center;
 	gap: 8px;
 	flex-wrap: wrap;
-	margin-bottom: 20px;
-	min-height: 37px;
+	min-height: 48px;
+	margin: 0 -24px 20px;
+	padding: 8px 24px;
+	background: var(--surface);
+	border-bottom: 1px solid var(--line);
 
 	h1 {
 		margin-right: auto;
+		font-size: 15px;
+		line-height: 20px;
 	}
 }
 
 .error {
 	color: var(--danger);
-	font-size: 0.9rem;
+	font-size: 13px;
 	margin: 0.25rem 0 0;
 }
 
 // rendered markdown: the markdown field and the docs
 .markdown-body {
 	padding: 4px 2px;
-	line-height: 1.55;
+	line-height: 1.6;
 
 	> * + * {
 		margin-top: 0.8em;
@@ -152,8 +223,8 @@ button {
 
 	code {
 		padding: 1px 4px;
-		background: var(--input);
-		font-size: 0.9em;
+		background: var(--hover);
+		border-radius: 3px;
 	}
 
 	table {
@@ -168,40 +239,72 @@ button {
 	}
 }
 
-// a button or link next to the dark ones
+// a button or link next to the main one
 .light {
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
-	padding: 10px 12px;
-	font-size: 14px;
+	gap: 6px;
+	padding: 6px 12px;
+	font-size: 13px;
+	font-weight: 500;
 	color: var(--text);
 	text-decoration: none;
-	border: 1px solid var(--dark);
-	border-radius: 2px;
-	background: white;
+	border: 1px solid var(--border-strong);
+	border-radius: 5px;
+	background: var(--surface);
+
+	&:hover {
+		color: var(--text);
+		background: var(--hover);
+	}
 }
 
-// the state of an entry
+// the state of an entry: live, not published, unpublished changes
 .badge {
-	padding: 2px 6px;
-	font-size: 13px;
-	font-weight: normal;
-	color: white;
-	background: var(--dark);
-	border-radius: 2px;
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 1px 7px;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 18px;
+	color: var(--accent);
+	background: var(--accent-soft);
+	border-radius: 999px;
+
+	&.live::before {
+		content: '';
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: currentColor;
+	}
 
 	&.draft {
-		background: #c4c4c8;
+		color: var(--muted);
+		background: var(--hover);
+	}
+
+	&.changes {
+		color: var(--warn);
+		background: var(--warn-soft);
 	}
 }
 
 // a field the draft changes
 .dot {
 	display: inline-block;
-	width: 8px;
-	height: 8px;
+	width: 7px;
+	height: 7px;
 	margin-right: 6px;
 	border-radius: 50%;
 	background: #d98e04;
+}
+
+// the handle of a field or type next to its name
+.handle-code {
+	font-family: var(--mono);
+	font-size: 11px;
+	font-weight: 400;
+	color: var(--subtle);
 }

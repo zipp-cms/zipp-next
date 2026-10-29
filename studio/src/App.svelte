@@ -79,6 +79,21 @@
 			.catch(e => (error = e.message));
 	});
 
+	// a group of only globals is settings, others are content
+	function groupIcon(sections: string[]) {
+		const all = sections.map(h =>
+			schema?.sections.find(s => s.handle === h),
+		);
+		return all.every(s => s?.kind === 'single') ? 'globe' : 'entries';
+	}
+
+	const SETUP_TABS = [
+		['sections', 'Sections'],
+		['types', 'Entry types'],
+		['blocks', 'Blocks'],
+		['sites', 'Sites and roles'],
+	];
+
 	async function onLogout() {
 		await logout();
 		schema = null;
@@ -91,44 +106,31 @@
 {:else if error}
 	<p class="error">{error}</p>
 {:else if schema}
-	{@const assets = route.current.page === 'assets'}
-	{@const ai = route.current.page === 'ai'}
-	{@const users = route.current.page === 'users'}
-	{@const setup = route.current.page === 'setup'}
-	<div class="layout" class:wide={ai}>
-		<div class="logo">zipp</div>
-		<header>
-			<nav class="top">
-				{#each groups as g (g.name)}
-					<a
-						href={navHref(g.sections[0])}
-						class:active={!assets &&
-							!ai &&
-							!users &&
-							!setup &&
-							g === group}
-					>
-						{g.name}
-					</a>
-				{/each}
-				{#if canAssets(schema, 'view')}
-					<a href="/admin/assets" class:active={assets}>Assets</a>
-				{/if}
-				{#if (schema.aiModels.length || hasAgent(schema)) && canAi(schema)}
-					<a href="/admin/ai" class:active={ai}>AI</a>
-				{/if}
-				<!-- read only for everyone, a role sees its part -->
-				<a href="/admin/setup/sections" class:active={setup}>Setup</a>
-				{#if isAdmin(schema)}
-					<a href="/admin/users" class:active={users}>Users</a>
-				{/if}
-			</nav>
-			<div class="right">
+	{@const page = route.current.page}
+	{@const other = ['assets', 'ai', 'users', 'setup'].includes(page)}
+	{@const siteDef = schema.sites.find(s => s.handle === site.current)}
+	<div class="layout" class:wide={page === 'ai'}>
+		<aside class="side">
+			<!-- the site the studio edits, and where it runs -->
+			<label class="site-switch" title="Site">
+				<span class="mark">{(siteDef?.name ?? '?')[0]}</span>
+				<span class="site-name">
+					<strong>{siteDef?.name}</strong>
+					<small>
+						{schema.dev
+							? 'Development'
+							: 'Production'}{schema.offline.includes(
+							site.current,
+						)
+							? ' · offline'
+							: ''}
+					</small>
+				</span>
 				{#if schema.sites.length > 1}
+					<Icon name="chevrons-up-down" />
 					<select
 						value={site.current}
 						onchange={e => setSite(e.currentTarget.value)}
-						title="Site"
 					>
 						{#each schema.sites as s (s.handle)}
 							<option value={s.handle}>
@@ -139,55 +141,112 @@
 						{/each}
 					</select>
 				{/if}
+			</label>
+
+			<nav>
+				{#each groups as g (g.name)}
+					{@const open = !other && g === group}
+					<a
+						class="item"
+						href={navHref(g.sections[0])}
+						class:active={open}
+					>
+						<Icon name={groupIcon(g.sections)} />
+						{g.name}
+					</a>
+					{#if open}
+						<div class="sub">
+							{#each groupItems as item (item.handle)}
+								<a
+									href={navHref(item.handle)}
+									class:active={shown.section ===
+										item.handle ||
+										(page === 'doc' &&
+											route.current.page === 'doc' &&
+											route.current.handle ===
+												item.handle)}
+								>
+									{item.name}
+								</a>
+							{/each}
+						</div>
+					{/if}
+				{/each}
+				{#if canAssets(schema, 'view')}
+					<a
+						class="item"
+						href="/admin/assets"
+						class:active={page === 'assets'}
+					>
+						<Icon name="dashboard" />
+						Assets
+					</a>
+				{/if}
+				{#if (schema.aiModels.length || hasAgent(schema)) && canAi(schema)}
+					<a
+						class="item"
+						href="/admin/ai"
+						class:active={page === 'ai'}
+					>
+						<Icon name="sparkles" />
+						AI
+					</a>
+				{/if}
+				<hr />
+				<!-- read only for everyone, a role sees its part -->
 				<a
-					class="me"
-					href="/admin/setup/sites#roles"
-					title="What you may do"
+					class="item"
+					href="/admin/setup/sections"
+					class:active={page === 'setup'}
 				>
-					{schema.me.email} · {roleName(schema)}
+					<Icon name="settings" />
+					Setup
 				</a>
-				<button class="link" onclick={onLogout}>Log out</button>
+				{#if page === 'setup'}
+					<div class="sub">
+						{#each SETUP_TABS as [tab, name] (tab)}
+							<a
+								href="/admin/setup/{tab}"
+								class:active={route.current.page === 'setup' &&
+									route.current.tab === tab}
+							>
+								{name}
+							</a>
+						{/each}
+					</div>
+				{/if}
+				{#if isAdmin(schema)}
+					<a
+						class="item"
+						href="/admin/users"
+						class:active={page === 'users'}
+					>
+						<Icon name="users" />
+						Users
+					</a>
+				{/if}
+			</nav>
+
+			<div class="me">
+				<a href="/admin/setup/sites#roles" title="What you may do">
+					<span class="avatar">
+						{schema.me.email[0].toUpperCase()}
+					</span>
+					<span class="who">
+						<strong>{schema.me.email}</strong>
+						<small>{roleName(schema)}</small>
+					</span>
+				</a>
+				<button class="icon" onclick={onLogout} title="Log out">
+					<Icon name="logout" />
+				</button>
 			</div>
-		</header>
-		<nav class="side">
-			{#if assets}
-				<a href="/admin/assets" class="active">
-					<Icon name="dashboard" />
-					Assets
-				</a>
-			{:else if setup}
-				{#each [['sections', 'Sections', 'all_pages'], ['types', 'Entry types', 'single'], ['blocks', 'Blocks', 'dashboard'], ['sites', 'Sites and more', 'doc']] as [tab, name, icon] (tab)}
-					<a
-						href="/admin/setup/{tab}"
-						class:active={route.current.page === 'setup' &&
-							route.current.tab === tab}
-					>
-						<Icon name={icon} />
-						{name}
-					</a>
-				{/each}
-			{:else if users}
-				<a href="/admin/users" class="active">
-					<Icon name="single" />
-					Users
-				</a>
-			{:else}
-				{#each groupItems as item (item.handle)}
-					<a
-						href={navHref(item.handle)}
-						class:active={shown.section === item.handle}
-					>
-						<Icon name={item.icon} />
-						{item.name}
-					</a>
-				{/each}
-			{/if}
-		</nav>
+		</aside>
 		<main>
 			{#key site.current}
-				{#if assets}
+				{#if page === 'assets'}
 					<Assets {schema} />
-				{:else if users}
+				{:else if page === 'users'}
 					<Users {schema} />
 				{:else if route.current.page === 'setup'}
 					<Setup
@@ -195,7 +254,7 @@
 						tab={route.current.tab}
 						handle={route.current.handle}
 					/>
-				{:else if ai}
+				{:else if page === 'ai'}
 					<Ai {schema} />
 				{:else if doc}
 					<Doc {doc} />
@@ -224,143 +283,230 @@
 <style lang="scss">
 	.layout {
 		display: grid;
-		grid-template-columns: 240px 1fr;
-		grid-template-rows: 60px 1fr;
+		grid-template-columns: 232px minmax(0, 1fr);
 		min-height: 100vh;
 	}
 
-	.logo {
+	.side {
+		position: sticky;
+		top: 0;
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--bar);
-		color: white;
-		font-size: 22px;
-		font-weight: 900;
-		text-transform: uppercase;
+		flex-direction: column;
+		gap: 12px;
+		height: 100vh;
+		padding: 12px 10px;
+		overflow-y: auto;
+		background: var(--surface);
+		border-right: 1px solid var(--line);
 	}
 
-	header {
+	.site-switch {
+		position: relative;
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		padding: 0 32px;
-		background: var(--bar);
-		color: white;
+		gap: 10px;
+		padding: 8px 10px;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		color: var(--muted);
+
+		.mark {
+			display: grid;
+			place-items: center;
+			width: 28px;
+			height: 28px;
+			flex-shrink: 0;
+			border-radius: 6px;
+			background: var(--accent);
+			color: white;
+			font-weight: 700;
+			font-size: 13px;
+		}
+
+		.site-name {
+			display: flex;
+			flex-direction: column;
+			margin-right: auto;
+			min-width: 0;
+
+			strong {
+				color: var(--text);
+				font-size: 13px;
+			}
+
+			small {
+				font-size: 11px;
+			}
+		}
+
+		// the whole box opens the choice
+		select {
+			position: absolute;
+			inset: 0;
+			opacity: 0;
+			cursor: pointer;
+		}
 	}
 
-	.top {
+	nav {
 		display: flex;
-		gap: 32px;
+		flex-direction: column;
+		gap: 2px;
+
+		hr {
+			width: 100%;
+			margin: 8px 0;
+			border: none;
+			border-top: 1px solid var(--line);
+		}
+	}
+
+	.item {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 7px 10px;
+		border-radius: 6px;
+		color: var(--text-2);
+		font-weight: 500;
+		text-decoration: none;
+
+		&:hover {
+			color: var(--text);
+			background: var(--hover);
+		}
+
+		&.active {
+			color: var(--accent);
+			background: var(--accent-soft);
+		}
+	}
+
+	.sub {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		margin: 2px 0 6px 18px;
+		padding-left: 8px;
 
 		a {
-			color: rgba(255, 255, 255, 0.7);
+			padding: 5px 10px;
+			border-radius: 6px;
+			color: var(--muted);
+			font-size: 13px;
 			text-decoration: none;
-			transition: color 0.4s ease;
 
-			&.active,
 			&:hover {
-				color: white;
+				color: var(--text);
+				background: var(--hover);
+			}
+
+			&.active {
+				color: var(--text);
+				font-weight: 600;
+				background: var(--hover);
 			}
 		}
 	}
 
-	.right {
+	.me {
 		display: flex;
 		align-items: center;
-		gap: 16px;
-
-		select {
-			width: auto;
-			padding: 6px 10px;
-			background: #3a3b44;
-			color: white;
-		}
-
-		.link {
-			color: white;
-		}
-
-		.me {
-			color: rgba(255, 255, 255, 0.7);
-			font-size: 14px;
-			text-decoration: none;
-		}
-	}
-
-	.side {
-		padding: 16px;
-		background: white;
+		gap: 4px;
+		margin-top: auto;
+		padding-top: 12px;
+		border-top: 1px solid var(--line);
 
 		a {
 			display: flex;
 			align-items: center;
-			gap: 8px;
-			margin-bottom: 8px;
-			padding: 9px 8px;
-			border-radius: 2px;
+			gap: 10px;
+			flex: 1;
+			min-width: 0;
+			padding: 4px 6px;
+			border-radius: 6px;
 			color: inherit;
 			text-decoration: none;
-			transition: background-color 0.4s ease;
 
-			&.active,
 			&:hover {
 				background: var(--hover);
+			}
+		}
+
+		.avatar {
+			display: grid;
+			place-items: center;
+			width: 28px;
+			height: 28px;
+			flex-shrink: 0;
+			border-radius: 50%;
+			background: var(--accent-soft);
+			color: var(--accent);
+			font-size: 12px;
+			font-weight: 700;
+		}
+
+		.who {
+			display: flex;
+			flex-direction: column;
+			min-width: 0;
+
+			strong {
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				font-size: 12px;
+				font-weight: 600;
+			}
+
+			small {
+				color: var(--muted);
+				font-size: 11px;
 			}
 		}
 	}
 
 	main {
 		min-width: 0;
-		padding: 16px 32px;
+		padding: 0 24px 32px;
 	}
 
-	// the AI chat and the website take the whole width
+	// the AI chat and the website take the whole height
 	.wide {
 		height: 100vh;
-		grid-template-rows: 60px minmax(0, 1fr);
-
-		.side {
-			display: none;
-		}
 
 		main {
-			grid-column: 1 / -1;
 			padding: 0;
+			height: 100vh;
 		}
 	}
 
 	@media (max-width: 800px) {
 		.layout {
 			grid-template-columns: 1fr;
-			grid-template-rows: auto;
-			align-content: start;
-		}
-
-		.logo {
-			justify-content: flex-start;
-			padding: 12px 16px 0;
-		}
-
-		header {
-			flex-wrap: wrap;
-			gap: 12px;
-			padding: 12px 16px;
 		}
 
 		.side {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 4px;
-			padding: 8px;
+			position: static;
+			height: auto;
+		}
 
-			a {
-				margin: 0;
+		nav {
+			flex-direction: row;
+			flex-wrap: wrap;
+
+			.sub,
+			hr {
+				display: none;
 			}
 		}
 
+		.me {
+			margin-top: 0;
+		}
+
 		main {
-			padding: 16px;
+			padding: 0 16px 24px;
 		}
 	}
 </style>

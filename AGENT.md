@@ -62,8 +62,11 @@ What the owner decided, so it doesn't get asked again:
   type's editor as editors see it.
 - The coding agent in the chat is the plugin `crates/zipp-agent`
   (operator 2026-10-28): development only, admins only, in a sandbox VM.
-- The studio looks like the old Zipp (dark top bar, white side nav, grey
-  page, white cards), its pages are paths under `/admin`.
+- The studio's look follows the operator's design (2026-10-29, Claude Design
+  "Variante E"): light sidebar with the site and the nav groups, a white bar
+  with breadcrumbs, state and actions on every page, Inter (bundled, nothing
+  from other servers), one blue accent; collapsible blocks with an outline
+  in the sidebar, error counts on the tabs. Pages are paths under `/admin`.
 - AI models run through soe-llms on OpenRouter, never a provider's api
   directly; the AI only writes drafts and can do what its user can.
   Spending limits are set on the key, not in zipp.
