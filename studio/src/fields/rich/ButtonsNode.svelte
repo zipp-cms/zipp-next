@@ -13,6 +13,7 @@
 		editable,
 		update,
 		remove,
+		insertLine,
 	}: {
 		attrs: { links: Link[] };
 		schema: Schema;
@@ -20,6 +21,7 @@
 		editable: boolean;
 		update: (attrs: Record<string, unknown>) => void;
 		remove: () => void;
+		insertLine: (where: 'before' | 'after') => void;
 	} = $props();
 
 	// attrs are reactive proxies, structuredClone can't copy them
@@ -86,7 +88,7 @@
 	}
 </script>
 
-<EmbedCard kind="Buttons" {editable} bind:editing onremove={remove}>
+<EmbedCard kind="Buttons" {editable} bind:editing onremove={remove} oninsert={insertLine}>
 	{#snippet preview()}
 		{#each items as { link }, i (i)}
 			<span class="button">

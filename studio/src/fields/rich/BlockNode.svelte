@@ -16,6 +16,7 @@
 		editable,
 		update,
 		remove,
+		insertLine,
 	}: {
 		attrs: { id: string | null; type: string; fields: Values };
 		schema: Schema;
@@ -23,6 +24,7 @@
 		editable: boolean;
 		update: (attrs: Record<string, unknown>) => void;
 		remove: () => void;
+		insertLine: (where: 'before' | 'after') => void;
 	} = $props();
 
 	// attrs are reactive proxies, structuredClone can't copy them
@@ -56,6 +58,7 @@
 	{editable}
 	bind:editing
 	onremove={remove}
+	oninsert={insertLine}
 >
 	{#snippet preview()}
 		<span class="summary">

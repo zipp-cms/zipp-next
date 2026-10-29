@@ -40,6 +40,16 @@ Lists of structures (Pages) have a search too; while searching, entries
 can't be moved. Globals (singles without a url) have no title field, their
 name is the section's.
 
+## Entries and images in other fields
+
+Relations and entry links choose with a button that lists the entries of
+their types, with a search. A chosen entry or image opens in a flyout from
+the right, like Craft's slideout: the entry with its whole editor, an image
+with its title, alt text and focal point; Done or Escape closes it and the
+page behind stays as it was. In rich text, buttons and blocks are cards
+that open their form with edit, with + Line above and below to write
+before or after them.
+
 ## AI chat
 
 `--openrouter-key-file <file>` adds *AI* to the studio:

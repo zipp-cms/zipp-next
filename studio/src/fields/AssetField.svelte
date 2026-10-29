@@ -3,6 +3,7 @@
 	import AssetPicker from '../lib/AssetPicker.svelte';
 	import Thumb from '../lib/Thumb.svelte';
 	import Icon from '../lib/Icon.svelte';
+	import { flyout, openAsset } from '../lib/flyout.svelte';
 
 	let { field, values }: { field: Field; values: Values } = $props();
 
@@ -15,6 +16,8 @@
 	let picking = $state(false);
 	// the assets of the field, in its order
 	$effect(() => {
+		// again after the flyout saved a title or focal point
+		void flyout.saved;
 		if (!ids.length) return void (chosen = []);
 		listAssets({ ids: ids.join(',') }).then(a => (chosen = a));
 	});
@@ -33,7 +36,14 @@
 <div class="assets">
 	{#each chosen as a (a.id)}
 		<div class="chosen">
-			<Thumb asset={a} />
+			<button
+				type="button"
+				class="open"
+				title="Details: title, alt text, focal point"
+				onclick={() => openAsset(a.id)}
+			>
+				<Thumb asset={a} />
+			</button>
 			<span class="caption" title={a.filename}>
 				{a.title || a.filename}
 			</span>
@@ -79,6 +89,21 @@
 		flex-direction: column;
 		gap: 4px;
 		width: 120px;
+	}
+
+	.open {
+		display: block;
+		padding: 0;
+		border: none;
+		background: none;
+
+		&:hover:not(:disabled) {
+			background: none;
+		}
+
+		&:hover :global(.thumb) {
+			border-color: var(--border-strong);
+		}
 	}
 
 	.caption {

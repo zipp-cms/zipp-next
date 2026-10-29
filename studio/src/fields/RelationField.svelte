@@ -8,6 +8,7 @@
 	} from '../api';
 	import Icon from '../lib/Icon.svelte';
 	import EntrySearch from '../lib/EntrySearch.svelte';
+	import { openEntry } from '../lib/flyout.svelte';
 
 	let {
 		schema,
@@ -38,18 +39,36 @@
 <div class="relation">
 	{#each ids as id (id)}
 		<div class="chip">
-			<span>{refs[id]?.title ?? `#${id}`}</span>
-			{#if refs[id]}<span class="muted">
-					{typeName(refs[id].type)}
-				</span>{/if}
-			<button class="icon" onclick={() => remove(id)} title="Remove">
-				<Icon name="delete" />
+			<button
+				type="button"
+				class="open"
+				title="Open in the flyout"
+				onclick={() => openEntry(id)}
+			>
+				<span class="title">{refs[id]?.title ?? `#${id}`}</span>
+				{#if refs[id]}<span class="muted">
+						{typeName(refs[id].type)}
+					</span>{/if}
+			</button>
+			<button
+				type="button"
+				class="icon"
+				onclick={() => remove(id)}
+				title="Remove from the field"
+			>
+				<Icon name="close" size={15} />
 			</button>
 		</div>
 	{/each}
 
 	{#if !full}
-		<EntrySearch {schema} {types} exclude={ids} onpick={add} />
+		<EntrySearch
+			{schema}
+			{types}
+			exclude={ids}
+			multiple={max !== 1}
+			onpick={add}
+		/>
 	{/if}
 </div>
 
@@ -57,7 +76,12 @@
 	.relation {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		align-items: stretch;
+		gap: 6px;
+
+		> :global(.picker) {
+			align-self: flex-start;
+		}
 	}
 
 	// a row like an input, with the remove action on the right
@@ -70,10 +94,31 @@
 		border: 1px solid var(--border);
 		border-radius: 5px;
 		background: var(--surface);
+	}
 
-		button {
-			margin-left: auto;
+	// the title opens the entry, like Craft's element chips
+	.open {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+		flex: 1;
+		min-width: 0;
+		padding: 4px 0;
+		border: none;
+		background: none;
+		font-weight: 500;
+		text-align: left;
+
+		&:hover:not(:disabled) {
+			background: none;
+			color: var(--accent);
 		}
+	}
+
+	.title {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.muted {

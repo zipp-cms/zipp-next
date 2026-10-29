@@ -1,0 +1,47 @@
+<script lang="ts">
+	import { listAssets, type Asset, type Schema } from '../api';
+	import Edit from '../pages/edit/Edit.svelte';
+	import AssetDetail from './AssetDetail.svelte';
+	import Flyout from './Flyout.svelte';
+	import { closeFlyout, flyout } from './flyout.svelte';
+
+	/** The entry or asset a field opened, over the page. */
+	let { schema }: { schema: Schema } = $props();
+
+	let asset = $state<Asset | null>(null);
+	$effect(() => {
+		const open = flyout.open;
+		asset = null;
+		if (open?.kind !== 'asset') return;
+		listAssets({ ids: String(open.id) }).then(a => (asset = a[0] ?? null));
+	});
+</script>
+
+{#if flyout.open?.kind === 'entry'}
+	<Flyout title="Entry" onclose={closeFlyout}>
+		{#key flyout.open.id}
+			<Edit
+				{schema}
+				id={flyout.open.id}
+				section={null}
+				onclose={closeFlyout}
+			/>
+		{/key}
+	</Flyout>
+{:else if flyout.open?.kind === 'asset'}
+	<Flyout
+		title={asset ? asset.title || asset.filename : 'File'}
+		onclose={closeFlyout}
+	>
+		{#if asset}
+			{#key asset.id}
+				<AssetDetail
+					{schema}
+					{asset}
+					onsaved={closeFlyout}
+					ondeleted={closeFlyout}
+				/>
+			{/key}
+		{/if}
+	</Flyout>
+{/if}

@@ -18,6 +18,7 @@
 	import Users from './pages/Users.svelte';
 	import Setup from './pages/setup/Setup.svelte';
 	import Icon from './lib/Icon.svelte';
+	import FlyoutHost from './lib/FlyoutHost.svelte';
 
 	let schema = $state<Schema | null>(null);
 	let error = $state('');
@@ -278,6 +279,7 @@
 			{/key}
 		</main>
 	</div>
+	<FlyoutHost {schema} />
 {/if}
 
 <style lang="scss">

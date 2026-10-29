@@ -220,6 +220,23 @@
 		color: var(--danger);
 	}
 
+	// a wide editor: the label on the left of its field, like the old Zipp
+	@container (min-width: 720px) {
+		.fields:not(.nested) {
+			display: grid;
+			grid-template-columns: 180px minmax(0, 1fr);
+			gap: 0 24px;
+
+			> label {
+				align-self: start;
+				flex-direction: column;
+				align-items: flex-start;
+				gap: 1px;
+				padding-top: 8px;
+			}
+		}
+	}
+
 	@media (max-width: 800px) {
 		.nested {
 			grid-template-columns: 1fr;

@@ -11,6 +11,7 @@
 		editable,
 		editing = $bindable(false),
 		onremove,
+		oninsert,
 		preview,
 		children,
 	}: {
@@ -19,6 +20,8 @@
 		editable: boolean;
 		editing?: boolean;
 		onremove: () => void;
+		/** an empty line before or after, the cursor goes there */
+		oninsert: (where: 'before' | 'after') => void;
 		preview: Snippet;
 		children: Snippet;
 	} = $props();
@@ -26,6 +29,16 @@
 
 <!-- not part of the text: the editor doesn't place the cursor in it -->
 <div class="card-embed" class:editing contenteditable="false">
+	{#if editable}
+		<button
+			type="button"
+			class="line before"
+			title="Add a line above"
+			onclick={() => oninsert('before')}
+		>
+			<Icon name="add" size={12} /> Line
+		</button>
+	{/if}
 	<div class="head">
 		<div class="preview">
 			<span class="kind">{kind}</span>
@@ -54,17 +67,63 @@
 	{#if editing}
 		<div class="form">{@render children()}</div>
 	{/if}
+	{#if editable}
+		<button
+			type="button"
+			class="line after"
+			title="Add a line below"
+			onclick={() => oninsert('after')}
+		>
+			<Icon name="add" size={12} /> Line
+		</button>
+	{/if}
 </div>
 
 <style lang="scss">
 	.card-embed {
-		margin: 8px 0;
+		position: relative;
+		margin: 12px 0;
 		background: var(--surface);
 		border: 1px solid var(--border);
 		border-radius: 8px;
 		font-size: 13px;
 		line-height: 1.4;
 		white-space: normal;
+	}
+
+	// on the edge of the card, when the pointer is on it
+	.line {
+		position: absolute;
+		left: 50%;
+		z-index: 2;
+		gap: 3px;
+		padding: 1px 8px;
+		font-size: 11px;
+		color: var(--accent);
+		border-color: var(--border);
+		border-radius: 999px;
+		transform: translate(-50%, -50%);
+		opacity: 0;
+		transition: opacity 0.15s;
+
+		&.before {
+			top: 0;
+		}
+
+		&.after {
+			top: 100%;
+		}
+	}
+
+	.card-embed:hover > .line,
+	.line:focus-visible {
+		opacity: 1;
+	}
+
+	@media (hover: none) {
+		.line {
+			opacity: 1;
+		}
 	}
 
 	.editing {

@@ -30,7 +30,8 @@ type Options = { schema: Schema; refs: Refs };
 
 /**
  * A node edited by a Svelte component outside of the text: it gets the
- * attrs, `update` to change them and `remove`.
+ * attrs, `update` to change them, `remove`, and `insertLine` for an empty
+ * line before or after it with the cursor in it.
  */
 function svelteView(component: Component<any>, options: Options) {
 	return ({ node, getPos, editor }: NodeViewRendererProps) => {
@@ -56,6 +57,17 @@ function svelteView(component: Component<any>, options: Options) {
 				editor.view.dispatch(
 					editor.view.state.tr.delete(pos, pos + node.nodeSize),
 				);
+			},
+			insertLine: (where: 'before' | 'after') => {
+				const pos = getPos();
+				if (pos === undefined) return;
+				const at = where === 'before' ? pos : pos + node.nodeSize;
+				editor
+					.chain()
+					.insertContentAt(at, { type: 'paragraph' })
+					.setTextSelection(at + 1)
+					.focus()
+					.run();
 			},
 		});
 		const app = mount(component, { target: dom, props });

@@ -32,6 +32,7 @@
 	import EntryHead from './EntryHead.svelte';
 	import EntrySidebar from './EntrySidebar.svelte';
 	import { time } from '../../lib/format';
+	import { flyout } from '../../lib/flyout.svelte';
 	import TabBar from './TabBar.svelte';
 	import RevisionView from './RevisionView.svelte';
 
@@ -39,7 +40,14 @@
 		schema,
 		id,
 		section,
-	}: { schema: Schema; id: number | null; section: string | null } = $props();
+		onclose,
+	}: {
+		schema: Schema;
+		id: number | null;
+		section: string | null;
+		/** shown in the flyout, which this closes */
+		onclose?: () => void;
+	} = $props();
 
 	// the page is keyed by id, section and site, they don't change
 	let sec = $state(untrack(() => section ?? ''));
@@ -95,7 +103,8 @@
 	const url = $derived(entryUrl(schema, site.current, uri));
 
 	$effect(() => {
-		shown.section = sec;
+		// in the flyout the nav stays at the page behind it
+		if (!onclose) shown.section = sec;
 	});
 
 	async function load() {
@@ -334,10 +343,13 @@
 	async function remove() {
 		if (id === null || !confirm(`Delete ${title} in all sites?`)) return;
 		await deleteEntry(id);
-		go('/entries/' + sec);
+		if (onclose) onclose();
+		else go('/entries/' + sec);
 	}
 
 	function onkeydown(e: KeyboardEvent) {
+		// with an entry in the flyout, it is the one that saves
+		if (!onclose && flyout.open) return;
 		if ((e.metaKey || e.ctrlKey) && e.key === 's') {
 			e.preventDefault();
 			save();
@@ -479,6 +491,11 @@
 		grid-template-columns: minmax(0, 1fr) 280px;
 		gap: 24px;
 		align-items: start;
+	}
+
+	// the fields put their labels on the left when this is wide
+	.main {
+		container-type: inline-size;
 	}
 
 	.global {

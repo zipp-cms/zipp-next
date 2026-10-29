@@ -122,11 +122,13 @@
 </button>
 
 <style>
+	/* white boxes like blocks, the second level indented */
 	.item {
-		margin-bottom: 10px;
+		margin-bottom: 8px;
 		padding: 10px;
-		border-left: 3px solid var(--line);
-		background: rgba(0, 0, 0, 0.02);
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 6px;
 	}
 
 	.head {
@@ -145,7 +147,9 @@
 	}
 
 	.children {
-		margin: 10px 0 0 16px;
+		margin: 10px 0 0 6px;
+		padding-left: 12px;
+		border-left: 2px solid var(--accent-soft);
 	}
 
 	.add {

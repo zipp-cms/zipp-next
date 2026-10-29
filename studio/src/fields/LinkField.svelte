@@ -12,6 +12,7 @@
 	} from '../api';
 	import AssetPicker from '../lib/AssetPicker.svelte';
 	import EntrySearch from '../lib/EntrySearch.svelte';
+	import { openEntry } from '../lib/flyout.svelte';
 	import Thumb from '../lib/Thumb.svelte';
 	import Icon from '../lib/Icon.svelte';
 
@@ -109,15 +110,21 @@
 			{#if link.type === 'entry'}
 				{#if typeof link.value === 'number'}
 					<div class="chip">
-						<span>
-							{refs[link.value]?.title ?? `#${link.value}`}
-						</span>
 						<button
+							type="button"
+							class="open"
+							title="Open in the flyout"
+							onclick={() => openEntry(link.value as number)}
+						>
+							{refs[link.value]?.title ?? `#${link.value}`}
+						</button>
+						<button
+							type="button"
 							class="icon"
-							title="Remove"
+							title="Choose another entry"
 							onclick={() => set({ value: null })}
 						>
-							<Icon name="delete" />
+							<Icon name="close" size={15} />
 						</button>
 					</div>
 				{:else}
@@ -235,8 +242,18 @@
 		border-radius: 5px;
 		background: var(--surface);
 
-		button {
-			margin-left: auto;
+		.open {
+			flex: 1;
+			padding: 4px 0;
+			border: none;
+			background: none;
+			font-weight: 500;
+			text-align: left;
+
+			&:hover:not(:disabled) {
+				background: none;
+				color: var(--accent);
+			}
 		}
 	}
 
