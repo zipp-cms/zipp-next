@@ -2,6 +2,7 @@
 	import { untrack } from 'svelte';
 	import type { Field, Link, Refs, Schema } from '../../api';
 	import LinkField from '../LinkField.svelte';
+	import EmbedCard from './EmbedCard.svelte';
 	import Icon from '../../lib/Icon.svelte';
 
 	/** A row of buttons in a rich text, each one a link with a label. */
@@ -60,54 +61,76 @@
 	function add() {
 		items.push({ link: { type: 'entry', value: null } });
 	}
+
+	// a new row without a target opens to be filled in
+	let editing = $state(
+		untrack(
+			() =>
+				!attrs.links.length || attrs.links.some(l => l.value === null),
+		),
+	);
+
+	/** What a button says: its label, else the title of its entry. */
+	function label(link: Link) {
+		if (link.label) return link.label;
+		if (link.type === 'entry' && typeof link.value === 'number')
+			return refs[link.value]?.title ?? 'Button';
+		return String(link.value ?? 'Button');
+	}
+
+	function target(link: Link) {
+		if (link.value === null || link.value === '') return 'no target';
+		if (link.type === 'entry' && typeof link.value === 'number')
+			return refs[link.value]?.title ?? `entry ${link.value}`;
+		return String(link.value);
+	}
 </script>
 
-<div class="buttons">
-	<div class="head">
-		<span>Buttons</span>
-		{#if editable}
-			<button class="icon" title="Remove the row" onclick={remove}>
-				<Icon name="delete" />
-			</button>
-		{/if}
-	</div>
+<EmbedCard kind="Buttons" {editable} bind:editing onremove={remove}>
+	{#snippet preview()}
+		{#each items as { link }, i (i)}
+			<span class="button">
+				<strong>{label(link)}</strong>
+				<span class="target">→ {target(link)}</span>
+			</span>
+		{:else}
+			<span class="none">No buttons yet</span>
+		{/each}
+	{/snippet}
 	<fieldset disabled={!editable}>
 		{#each items as item, i (i)}
 			<div class="item">
 				<LinkField {schema} {field} values={item} {refs} />
 				<button
+					type="button"
 					class="icon"
 					title="Remove the button"
 					onclick={() => items.splice(i, 1)}
 				>
-					<Icon name="delete" />
+					<Icon name="close" size={15} />
 				</button>
 			</div>
 		{/each}
-		<button class="add" onclick={add}>
-			<Icon name="add" />
+		<button type="button" class="link add" onclick={add}>
+			<Icon name="add" size={14} />
 			Add a button
 		</button>
 	</fieldset>
-</div>
+</EmbedCard>
 
 <style>
-	.buttons {
-		margin: 8px 0;
-		padding: 10px 12px 12px;
-		background: var(--surface-2);
-		border: 1px solid var(--line);
-		border-left: 3px solid var(--accent);
-		border-radius: 5px;
+	.button {
+		display: flex;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 4px 10px;
 	}
 
-	.head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 8px;
-		font-size: 13px;
-		font-weight: 600;
+	.target,
+	.none {
+		color: var(--muted);
+		font-family: var(--mono);
+		font-size: 11px;
 	}
 
 	.item {
@@ -124,9 +147,7 @@
 	}
 
 	.add {
-		border: none;
-		background: none;
-		padding: 4px 0;
+		color: var(--accent);
 	}
 
 	fieldset {

@@ -1,14 +1,18 @@
 <script lang="ts">
 	import { Editor } from '@tiptap/core';
 	import StarterKit from '@tiptap/starter-kit';
+	import { Placeholder } from '@tiptap/extensions';
+	import Icon from '../lib/Icon.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import type { Field, Link, Refs, Schema, Values } from '../api';
 	import { Block, Buttons, ZippLink } from './rich/extensions.svelte';
 	import LinkField from './LinkField.svelte';
+	import { site } from '../route.svelte';
 
 	/**
 	 * Rich text with TipTap. The toolbar has only what the schema allows
-	 * for this field; buttons and blocks are edited in boxes in the text.
+	 * for this field; buttons and blocks show as cards in the text that
+	 * open to be edited. The empty line at the end invites to continue.
 	 */
 	let {
 		schema,
@@ -48,11 +52,34 @@
 
 	const EMPTY = { type: 'doc', content: [] };
 
+	/**
+	 * Without the empty paragraphs at the end: TipTap keeps one after a
+	 * card to write on, it is no change of the content.
+	 */
+	function trimmed(doc: any) {
+		const content = [...(doc.content ?? [])];
+		while (
+			content.length &&
+			content[content.length - 1].type === 'paragraph' &&
+			!content[content.length - 1].content?.length
+		)
+			content.pop();
+		return { ...doc, content };
+	}
+
 	onMount(() => {
 		const disabled = !!el.closest('fieldset[disabled]');
 		editor = new Editor({
 			element: el,
 			editable: !disabled,
+			// the language of the site, so spellcheck checks the right one
+			editorProps: {
+				attributes: {
+					lang:
+						schema.sites.find(s => s.handle === site.current)
+							?.language ?? '',
+				},
+			},
 			// a plain copy, TipTap doesn't take Svelte's proxies
 			content: $state.snapshot(values[field.handle]) ?? EMPTY,
 			extensions: [
@@ -73,12 +100,20 @@
 					link: false,
 				}),
 				...(opts.links ? [ZippLink] : []),
+				// css shows it only at the end, see .tiptap below
+				Placeholder.configure({
+					placeholder: ({ editor }) =>
+						editor.isEmpty ? 'Write …' : 'Continue writing …',
+					showOnlyCurrent: false,
+				}),
 				Buttons.configure({ schema, refs }),
 				Block.configure({ schema, refs }),
 			],
 			onUpdate: ({ editor }) => {
-				const doc = editor.getJSON();
-				last = JSON.stringify(doc);
+				const doc = trimmed(editor.getJSON());
+				const json = JSON.stringify(doc);
+				if (json === last) return;
+				last = json;
 				values[field.handle] = doc;
 			},
 			// later: a transaction can come while Svelte renders (a blur)
@@ -86,13 +121,13 @@
 			enableContentCheck: true,
 			onContentError: ({ error }) => console.error('rich text:', error),
 		});
-		last = JSON.stringify(editor.getJSON());
+		last = JSON.stringify(trimmed(editor.getJSON()));
 	});
 
 	// content that changes from outside (load, restore) goes into the editor
 	$effect(() => {
 		const doc = values[field.handle] ?? EMPTY;
-		const json = JSON.stringify(doc);
+		const json = JSON.stringify(trimmed(doc));
 		if (!editor || json === last) return;
 		last = json;
 		editor.commands.setContent($state.snapshot(doc), { emitUpdate: false });
@@ -160,27 +195,29 @@
 <div class="rich" class:readonly={editor && !editor.isEditable}>
 	{#if editor?.isEditable}
 		<div class="toolbar">
-			<button title="Undo" onclick={() => chain().undo().run()}>↶</button>
-			<button title="Redo" onclick={() => chain().redo().run()}>↷</button>
-			<button
-				title="Clear formatting"
-				onclick={() => chain().unsetAllMarks().setParagraph().run()}
-			>
-				⌫
-			</button>
-			<span class="sep"></span>
-			{#each opts.headings as level (level)}
-				<button
-					class:on={active('heading', { level })}
-					title="Heading {level}"
-					onclick={() =>
-						chain()
-							.toggleHeading({ level: level as any })
-							.run()}
+			{#if opts.headings.length}
+				<select
+					class="format"
+					title="Format"
+					value={opts.headings.find(level =>
+						active('heading', { level }),
+					) ?? 0}
+					onchange={e => {
+						const level = Number(e.currentTarget.value);
+						if (level)
+							chain()
+								.setHeading({ level: level as any })
+								.run();
+						else chain().setParagraph().run();
+					}}
 				>
-					H{level}
-				</button>
-			{/each}
+					<option value={0}>Paragraph</option>
+					{#each opts.headings as level (level)}
+						<option value={level}>Heading {level}</option>
+					{/each}
+				</select>
+				<span class="sep"></span>
+			{/if}
 			<button
 				class:on={active('bold')}
 				title="Bold"
@@ -193,7 +230,7 @@
 				title="Italic"
 				onclick={() => chain().toggleItalic().run()}
 			>
-				<i>I</i>
+				<i class="italic">I</i>
 			</button>
 			{#if opts.lists}
 				<button
@@ -201,14 +238,14 @@
 					title="List"
 					onclick={() => chain().toggleBulletList().run()}
 				>
-					•≡
+					<Icon name="channel" size={15} />
 				</button>
 				<button
 					class:on={active('orderedList')}
 					title="Numbered list"
 					onclick={() => chain().toggleOrderedList().run()}
 				>
-					1≡
+					<span class="num">1.</span>
 				</button>
 			{/if}
 			{#if opts.links}
@@ -217,20 +254,27 @@
 					title="Link"
 					onclick={openLink}
 				>
-					Link
+					<Icon name="external" size={14} />
 				</button>
 			{/if}
 			{#if opts.buttons || blockTypes.length}
 				<span class="sep"></span>
+				<span class="insert-label">Insert:</span>
 			{/if}
 			{#if opts.buttons}
-				<button title="A row of buttons" onclick={insertButtons}>
-					+ Buttons
+				<button
+					class="insert"
+					title="A row of buttons"
+					onclick={insertButtons}
+				>
+					<Icon name="add" size={13} />
+					Buttons
 				</button>
 			{/if}
 			{#each blockTypes as b (b.handle)}
-				<button onclick={() => insertBlock(b.handle)}>
-					+ {b.name}
+				<button class="insert" onclick={() => insertBlock(b.handle)}>
+					<Icon name="add" size={13} />
+					{b.name}
 				</button>
 			{/each}
 		</div>
@@ -248,7 +292,7 @@
 				>
 					Remove link
 				</button>
-				<button class="dark" onclick={applyLink}>Apply</button>
+				<button class="primary" onclick={applyLink}>Apply</button>
 			</div>
 		</div>
 	{/if}
@@ -302,6 +346,35 @@
 			margin: 0 4px;
 			background: var(--border);
 		}
+
+		.format {
+			width: auto;
+			height: 28px;
+			padding: 0 6px;
+			font-size: 12px;
+			border-color: var(--border);
+			border-radius: 4px;
+		}
+
+		.italic {
+			font-family: Georgia, serif;
+		}
+
+		.num {
+			font-size: 11px;
+			font-weight: 600;
+		}
+
+		.insert-label {
+			padding: 0 4px;
+			color: var(--muted);
+			font-size: 11px;
+		}
+
+		.insert {
+			color: var(--accent-hover);
+			font-weight: 500;
+		}
 	}
 
 	.link-edit {
@@ -324,6 +397,16 @@
 		:global(.tiptap) {
 			outline: none;
 			min-height: 5rem;
+		}
+
+		// the invitation to write: in an empty text, else only at the end
+		:global(.tiptap p.is-editor-empty:first-child::before),
+		:global(.tiptap > p.is-empty:last-child:not(:first-child)::before) {
+			content: attr(data-placeholder);
+			float: left;
+			height: 0;
+			color: var(--subtle);
+			pointer-events: none;
 		}
 
 		:global(.tiptap > * + *) {

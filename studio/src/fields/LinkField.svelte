@@ -229,9 +229,11 @@
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		padding: 5px 4px 5px 12px;
-		border-radius: 2px;
-		background: var(--input);
+		min-height: 34px;
+		padding: 2px 4px 2px 12px;
+		border: 1px solid var(--border);
+		border-radius: 5px;
+		background: var(--surface);
 
 		button {
 			margin-left: auto;

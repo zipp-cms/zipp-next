@@ -2,9 +2,13 @@
 	import { untrack } from 'svelte';
 	import type { Refs, Schema, Values } from '../../api';
 	import Fields from '../Fields.svelte';
-	import Icon from '../../lib/Icon.svelte';
+	import EmbedCard from './EmbedCard.svelte';
+	import { blockSummary } from '../../lib/blocks.svelte';
 
-	/** A block inside a rich text, its fields like in a blocks field. */
+	/**
+	 * A block inside a rich text: a card with its summary, its fields like
+	 * in a blocks field when it opens. A new one opens.
+	 */
 	let {
 		attrs,
 		schema,
@@ -27,6 +31,9 @@
 	const comp = $derived(schema.components.find(c => c.handle === attrs.type));
 	let fields = $state<Values>(untrack(() => clone(attrs.fields)));
 	let last = JSON.stringify(untrack(() => attrs.fields));
+	let editing = $state(
+		untrack(() => !Object.keys(attrs.fields ?? {}).length),
+	);
 
 	// changes from the text (undo) come in, changes of the fields go out
 	$effect(() => {
@@ -44,15 +51,17 @@
 	});
 </script>
 
-<div class="block">
-	<div class="head">
-		<span>{comp?.name ?? attrs.type}</span>
-		{#if editable}
-			<button class="icon" title="Remove" onclick={remove}>
-				<Icon name="delete" />
-			</button>
-		{/if}
-	</div>
+<EmbedCard
+	kind={comp?.name ?? attrs.type}
+	{editable}
+	bind:editing
+	onremove={remove}
+>
+	{#snippet preview()}
+		<span class="summary">
+			{blockSummary(schema, comp, fields) || 'Empty'}
+		</span>
+	{/snippet}
 	{#if comp}
 		<fieldset disabled={!editable}>
 			<Fields
@@ -65,25 +74,15 @@
 			/>
 		</fieldset>
 	{/if}
-</div>
+</EmbedCard>
 
 <style>
-	.block {
-		margin: 8px 0;
-		padding: 10px 12px 14px;
-		background: var(--side, var(--surface-2));
-		border: 1px solid var(--line);
-		border-left: 3px solid var(--accent);
-		border-radius: 5px;
-	}
-
-	.head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 8px;
-		font-size: 13px;
-		font-weight: 600;
+	.summary {
+		overflow: hidden;
+		color: var(--text);
+		font-weight: 500;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	fieldset {
