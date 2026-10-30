@@ -461,10 +461,10 @@ async fn rich_text_in_chunks() {
 			{ "type": "paragraph", "content": [{ "type": "text", "text": "about",
 				"marks": [{ "type": "link", "attrs": { "link":
 					{ "type": "entry", "value": about.id } } }] }] },
-			{ "type": "buttons", "attrs": { "links": [
-				{ "type": "entry", "value": about.id, "label": "More" },
-				{ "type": "url", "value": "https://y.ch" },
-			] } },
+			{ "type": "button", "attrs": { "link":
+				{ "type": "entry", "value": about.id, "label": "More" } } },
+			{ "type": "button", "attrs": { "link":
+				{ "type": "url", "value": "https://y.ch" } } },
 			{ "type": "embed", "attrs": { "type": "text",
 				"fields": { "content": "boxed" } } },
 			{ "type": "paragraph" },

@@ -3,7 +3,7 @@ import { mount, unmount, type Component } from 'svelte';
 import type { Schema } from '../../core/schema';
 import type { Refs } from '../../entries/api';
 import BlockNode from './BlockNode.svelte';
-import ButtonsNode from './ButtonsNode.svelte';
+import ButtonNode from './ButtonNode.svelte';
 
 /**
  * A link like the link field (entry by id, url, email, phone), stored in
@@ -93,9 +93,12 @@ function svelteView(component: Component<any>, options: Options) {
 	};
 }
 
-/** A row of buttons, `attrs.links` are links with labels. */
-export const Buttons = Node.create<Options>({
-	name: 'buttons',
+/**
+ * A button, `attrs.link` a link with a label; buttons next to each other
+ * are one row on the website.
+ */
+export const Button = Node.create<Options>({
+	name: 'button',
 	group: 'block',
 	atom: true,
 	draggable: true,
@@ -103,16 +106,16 @@ export const Buttons = Node.create<Options>({
 		return { schema: null as any, refs: () => ({}) };
 	},
 	addAttributes() {
-		return { links: { default: [] } };
+		return { link: { default: { type: 'entry', value: null } } };
 	},
 	parseHTML() {
-		return [{ tag: 'div[data-buttons]' }];
+		return [{ tag: 'div[data-button]' }];
 	},
 	renderHTML() {
-		return ['div', { 'data-buttons': '' }];
+		return ['div', { 'data-button': '' }];
 	},
 	addNodeView() {
-		return svelteView(ButtonsNode, this.options);
+		return svelteView(ButtonNode, this.options);
 	},
 });
 

@@ -255,7 +255,7 @@ pub fn plain_text(v: &Value) -> String {
 		}
 		// buttons and embedded blocks are no text
 		let ty = v["type"].as_str().unwrap_or_default();
-		if ty == "buttons" || ty == "embed" {
+		if ty == "button" || ty == "embed" {
 			return;
 		}
 		for c in v["content"].as_array().into_iter().flatten() {

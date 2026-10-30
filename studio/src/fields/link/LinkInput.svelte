@@ -22,6 +22,8 @@
 		newTab: externalInNewTab = true,
 		required = false,
 		onchange,
+		onremove,
+		removeTitle = 'Remove',
 	}: {
 		schema: Schema;
 		refs: Refs;
@@ -34,6 +36,9 @@
 		newTab?: boolean;
 		required?: boolean;
 		onchange: (link: Link) => void;
+		/** removes what holds the link, like a button of a rich text */
+		onremove?: () => void;
+		removeTitle?: string;
 	} = $props();
 
 	let editing = $state(false);
@@ -62,12 +67,28 @@
 	}
 </script>
 
+{#snippet removeButton()}
+	{#if onremove}
+		<button
+			type="button"
+			class="icon remove"
+			title={removeTitle}
+			onclick={onremove}
+		>
+			<Icon name="delete" size={15} />
+		</button>
+	{/if}
+{/snippet}
+
 {#if !filled && !editing}
 	<div class="link-input empty" class:required>
 		<span>
 			{required ? 'Required – no link yet.' : 'No link yet.'}
 		</span>
-		<LinkAdd {to} onadd={add} />
+		<span class="end">
+			<LinkAdd {to} onadd={add} />
+			{@render removeButton()}
+		</span>
 	</div>
 {:else}
 	<div class="link-input" class:editing>
@@ -95,6 +116,7 @@
 						>
 							<Icon name="unlink" size={15} />
 						</button>
+						{@render removeButton()}
 					{/snippet}
 				</LinkRow>
 			</div>
@@ -149,6 +171,12 @@
 
 	.remove {
 		color: var(--danger);
+	}
+
+	.end {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
 	}
 
 	// no target yet: what to add

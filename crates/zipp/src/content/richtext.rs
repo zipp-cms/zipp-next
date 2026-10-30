@@ -93,25 +93,22 @@ pub fn validate(
 			"bulletList" | "orderedList" if allowed.lists => {
 				clean_list(node, allowed, &mut err)
 			}
-			"buttons" if allowed.buttons => {
-				let links = node["attrs"]["links"].as_array().cloned();
-				let links: Vec<Value> = links
-					.unwrap_or_default()
-					.into_iter()
-					.filter(|l| l["value"] != Value::Null && l["value"] != "")
-					.collect();
-				for l in &links {
-					let ok = l
-						.as_object()
-						.ok_or("not a link".to_string())
-						.and_then(|o| check_link(&LINKS, true, o));
-					if let Err(e) = ok {
-						err(format!("button: {e}"));
-					}
+			// a button, its link with a label; buttons next to each other
+			// are one row on the website, see `chunks`. One without a target
+			// yet is left out.
+			"button" if allowed.buttons => {
+				let link = &node["attrs"]["link"];
+				if link["value"] == Value::Null || link["value"] == "" {
+					continue;
 				}
-				(!links.is_empty()).then(
-					|| json!({ "type": "buttons", "attrs": { "links": links } }),
-				)
+				let ok = link
+					.as_object()
+					.ok_or("not a link".to_string())
+					.and_then(|o| check_link(&LINKS, true, o));
+				if let Err(e) = ok {
+					err(format!("button: {e}"));
+				}
+				Some(json!({ "type": "button", "attrs": { "link": link } }))
 			}
 			"embed" => {
 				let attrs = &node["attrs"];
@@ -290,8 +287,8 @@ pub fn links(doc: &Value) -> Vec<&Value> {
 }
 
 fn collect_links<'a>(node: &'a Value, out: &mut Vec<&'a Value>) {
-	if node["type"] == "buttons" {
-		out.extend(node["attrs"]["links"].as_array().into_iter().flatten());
+	if node["type"] == "button" {
+		out.push(&node["attrs"]["link"]);
 	}
 	for m in node["marks"].as_array().into_iter().flatten() {
 		if m["type"] == "link" {
@@ -318,25 +315,25 @@ pub enum Chunk {
 pub type Resolve<'a> =
 	dyn FnMut(&Value) -> Option<(String, Option<String>)> + 'a;
 
-/// The chunks of a document: html between buttons and blocks.
+/// The chunks of a document: html between rows of buttons (the buttons
+/// next to each other) and blocks.
 pub fn chunks(doc: &Value, resolve: &mut Resolve) -> Vec<Chunk> {
 	let mut out = vec![];
 	let mut html = String::new();
 	for node in doc["content"].as_array().into_iter().flatten() {
 		match node["type"].as_str() {
-			Some("buttons") | Some("embed") => {
+			Some("button") | Some("embed") => {
 				if !html.is_empty() {
 					out.push(Chunk::Html(std::mem::take(&mut html)));
 				}
-				out.push(match node["type"].as_str() {
-					Some("buttons") => Chunk::Buttons(
-						node["attrs"]["links"]
-							.as_array()
-							.cloned()
-							.unwrap_or_default(),
-					),
-					_ => Chunk::Block(node["attrs"].clone()),
-				});
+				let link = node["attrs"]["link"].clone();
+				match (node["type"].as_str(), out.last_mut()) {
+					(Some("button"), Some(Chunk::Buttons(row))) => {
+						row.push(link)
+					}
+					(Some("button"), _) => out.push(Chunk::Buttons(vec![link])),
+					_ => out.push(Chunk::Block(node["attrs"].clone())),
+				}
 			}
 			_ => render(node, resolve, &mut html),
 		}
@@ -347,25 +344,32 @@ pub fn chunks(doc: &Value, resolve: &mut Resolve) -> Vec<Chunk> {
 	out
 }
 
-/// The whole document as html, buttons as links in a paragraph, blocks
-/// left out (they are for the chunks).
+/// The whole document as html, a row of buttons as links in a paragraph,
+/// blocks left out (they are for the chunks).
 pub fn html(doc: &Value, resolve: &mut Resolve) -> String {
 	let mut html = String::new();
+	let mut in_row = false;
 	for node in doc["content"].as_array().into_iter().flatten() {
-		if node["type"] == "buttons" {
-			html += "<p class=\"buttons\">";
-			for link in node["attrs"]["links"].as_array().into_iter().flatten()
-			{
-				if let Some((url, target)) = resolve(link) {
-					let label =
-						link["label"].as_str().unwrap_or(&url).to_string();
-					html += &anchor(&url, target.as_deref(), &escape(&label));
-				}
-			}
+		let button = node["type"] == "button";
+		if in_row && !button {
 			html += "</p>";
+		}
+		if button {
+			if !in_row {
+				html += "<p class=\"buttons\">";
+			}
+			let link = &node["attrs"]["link"];
+			if let Some((url, target)) = resolve(link) {
+				let label = link["label"].as_str().unwrap_or(&url).to_string();
+				html += &anchor(&url, target.as_deref(), &escape(&label));
+			}
 		} else if node["type"] != "embed" {
 			render(node, resolve, &mut html);
 		}
+		in_row = button;
+	}
+	if in_row {
+		html += "</p>";
 	}
 	html
 }
@@ -549,7 +553,9 @@ mod tests {
 			json!({ "type": "url", "value": "https://x.ch", "label": "X" });
 		let doc = json!({ "type": "doc", "content": [
 			p("a <b>"),
-			{ "type": "buttons", "attrs": { "links": [link] } },
+			// two buttons next to each other are one row
+			{ "type": "button", "attrs": { "link": link } },
+			{ "type": "button", "attrs": { "link": link } },
 			{ "type": "embed", "attrs": { "type": "text", "fields": { "content": "c" } } },
 			{ "type": "paragraph", "content": [
 				{ "type": "text", "text": "d", "marks": [{ "type": "bold" },
@@ -563,7 +569,7 @@ mod tests {
 
 		let chunks = chunks(&doc, &mut resolver);
 		assert_eq!(chunks[0], Chunk::Html("<p>a &lt;b&gt;</p>".into()));
-		assert!(matches!(&chunks[1], Chunk::Buttons(l) if l.len() == 1));
+		assert!(matches!(&chunks[1], Chunk::Buttons(l) if l.len() == 2));
 		assert!(
 			matches!(&chunks[2], Chunk::Block(b) if b["fields"]["content"] == "c")
 		);
@@ -571,7 +577,27 @@ mod tests {
 			chunks[3],
 			Chunk::Html("<p><a href=\"/d\"><strong>d</strong></a></p>".into())
 		);
-		assert_eq!(links(&doc).len(), 2);
+
+		// text between them: two rows
+		let other = json!({ "type": "doc", "content": [
+			{ "type": "button", "attrs": { "link": link } },
+			p("b"),
+			{ "type": "button", "attrs": { "link": link } },
+		] });
+		let rows = super::chunks(&other, &mut resolver);
+		assert!(matches!(
+			&rows[..],
+			[Chunk::Buttons(_), Chunk::Html(_), Chunk::Buttons(_)]
+		));
+		// a button without a target yet goes
+		let other = json!({ "type": "doc", "content": [
+			{ "type": "button", "attrs": { "link": { "type": "url", "value": null } } },
+		] });
+		let other =
+			validate(&s, &allowed(&["text".into()]), &other, "t", &mut errors);
+		assert_eq!(other["content"], json!([]), "{errors:?}");
+		// the two buttons and the link in the text
+		assert_eq!(links(&doc).len(), 3);
 	}
 
 	#[test]

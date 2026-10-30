@@ -3,7 +3,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { Placeholder } from '@tiptap/extensions';
 import type { FieldOf, Link, Schema } from '../../core/schema';
 import type { Refs } from '../../entries/api';
-import { Block, Buttons, ZippLink } from './extensions.svelte';
+import { Block, Button, ZippLink } from './extensions.svelte';
 
 /** What a rich text field allows: its field. */
 export type RichOptions = Omit<FieldOf<'richText'>, 'kind'>;
@@ -69,7 +69,7 @@ export function createEditor(o: {
 					editor.isEmpty ? 'Write …' : 'Continue writing …',
 				showOnlyCurrent: false,
 			}),
-			Buttons.configure({ schema: o.schema, refs: () => o.refs }),
+			Button.configure({ schema: o.schema, refs: () => o.refs }),
 			Block.configure({ schema: o.schema, refs: () => o.refs }),
 		],
 		onUpdate: ({ editor }) => o.onChange(trimmed(editor.getJSON())),
@@ -90,12 +90,12 @@ export function setLink(editor: Editor, link: Link) {
 	}
 }
 
-/** A row of buttons, its first one empty to be filled in. */
-export function insertButtons(editor: Editor) {
+/** A button without a target yet, to be filled in. */
+export function insertButton(editor: Editor) {
 	chain(editor)
 		.insertContent({
-			type: 'buttons',
-			attrs: { links: [{ type: 'entry', value: null }] },
+			type: 'button',
+			attrs: { link: { type: 'entry', value: null } },
 		})
 		.run();
 }

@@ -1,0 +1,44 @@
+<script lang="ts">
+	import type { Link, Schema } from '../../core/schema';
+	import type { Refs } from '../../entries/api';
+	import LinkInput from '../link/LinkInput.svelte';
+	import NodeFrame from './NodeFrame.svelte';
+	import { BUTTON_LINKS } from '../link/link';
+
+	/**
+	 * A button in a rich text: a link with a label, like a link field;
+	 * buttons next to each other are one row on the website.
+	 */
+	let {
+		attrs,
+		schema,
+		refs,
+		editable,
+		update,
+		remove,
+		insertLine,
+	}: {
+		attrs: { link: Link };
+		schema: Schema;
+		refs: Refs;
+		editable: boolean;
+		update: (attrs: Record<string, unknown>) => void;
+		remove: () => void;
+		insertLine: (where: 'before' | 'after') => void;
+	} = $props();
+</script>
+
+<NodeFrame {editable} oninsert={insertLine}>
+	<fieldset disabled={!editable}>
+		<LinkInput
+			{schema}
+			{refs}
+			link={attrs.link}
+			to={BUTTON_LINKS}
+			labels
+			onchange={link => update({ link })}
+			onremove={remove}
+			removeTitle="Remove the button"
+		/>
+	</fieldset>
+</NodeFrame>

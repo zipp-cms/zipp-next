@@ -8,7 +8,7 @@
 	import { BUTTON_LINKS, opensInNewTab } from '../link/link';
 	import {
 		insertBlock,
-		insertButtons,
+		insertButton,
 		setFormat,
 		setLink,
 		type RichOptions,
@@ -151,9 +151,9 @@
 				<button
 					type="button"
 					class="popup-item"
-					onclick={() => insert(() => insertButtons(editor))}
+					onclick={() => insert(() => insertButton(editor))}
 				>
-					Buttons
+					Button
 				</button>
 			{/if}
 			{#each blockTypes as b (b.handle)}

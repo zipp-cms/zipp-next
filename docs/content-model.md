@@ -54,8 +54,9 @@ italic always, the rest only if the field allows it, blocks of the
 schema as boxes in the text. It is edited with TipTap and stored as its
 JSON; publishing removes empty paragraphs, `&nbsp;` and trailing line
 breaks, so frontends need no margin hacks. GraphQL has `html` and
-`chunks` (`Html`, `Buttons` with a row of links, the blocks), so a row
-of buttons arrives grouped. Links in the text point to entries by id.
+`chunks` (`Html`, `Buttons` with a row of links, the blocks): each
+button is a node of its own in the text, the ones next to each other
+arrive as one row. Links in the text point to entries by id.
 
 ## Groups and markdown
 

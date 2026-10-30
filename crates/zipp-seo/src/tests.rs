@@ -14,7 +14,7 @@ fn texts_for_descriptions() {
 	);
 	let doc = json!({ "type": "doc", "content": [
 		{ "type": "paragraph", "content": [{ "type": "text", "text": "One" }] },
-		{ "type": "buttons", "content": [{ "type": "text", "text": "no" }] },
+		{ "type": "button", "content": [{ "type": "text", "text": "no" }] },
 		{ "type": "paragraph", "content": [{ "type": "text", "text": "two" }] },
 	]});
 	assert_eq!(plain_text(&doc), "One two");

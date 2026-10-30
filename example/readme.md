@@ -23,7 +23,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Revisions | Options → Revisions | what each one changed; click to look, **Restore** to go back |
 | Two editors at once | log in twice | the second one is told instead of overwriting the first |
 | Blocks | Pages → Über uns → Content | text, images, button, upcoming events |
-| Rich text | the Intro tab · the Text block | the intro only with links; the block also with headings, lists, a **row of buttons** and **images** inside the text |
+| Rich text | the Intro tab · the Text block | the intro only with links; the block also with headings, lists, **buttons** (next to each other one row) and **images** inside the text |
 | Links | a Button block | entry, URL, email, phone or file; external ones open in a new tab |
 | Group | a page → SEO | fields of another component under one name |
 | Markdown | Events → Description | written as markdown, the website gets it as html |

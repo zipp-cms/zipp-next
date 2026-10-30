@@ -46,9 +46,10 @@ Relations and entry links choose with a button that lists the entries of
 their types, with a search. A chosen entry or image opens in a flyout from
 the right, like Craft's slideout: the entry with its whole editor, an image
 with its details (below); Done or Escape closes it and the
-page behind stays as it was. In rich text, buttons and blocks are cards
-that open their form with edit, with + Line above and below to write
-before or after them.
+page behind stays as it was. In rich text, a button is a link like the
+link field, right in the text (buttons next to each other are one row on
+the website), a block is a card that opens its form; both have + Line
+above and below to write before or after them.
 
 ## Images and files
 

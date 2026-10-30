@@ -671,20 +671,12 @@ impl Importer<'_> {
 						.flat_map(|f| f.values())
 						.find_map(|f| self.link(f, true));
 					match link {
-						Some(link) if *buttons => {
-							// buttons next to each other are one row
-							let last = content.last_mut();
-							match last.filter(|n| n["type"] == "buttons") {
-								Some(row) => row["attrs"]["links"]
-									.as_array_mut()
-									.unwrap()
-									.push(link),
-								None => content.push(json!({
-									"type": "buttons",
-									"attrs": { "links": [link] },
-								})),
-							}
-						}
+						// buttons next to each other are one row on the
+						// website
+						Some(link) if *buttons => content.push(json!({
+							"type": "button",
+							"attrs": { "link": link },
+						})),
 						_ => self.skip(format!(
 							"{}: an entry {ty} in the text",
 							field.handle

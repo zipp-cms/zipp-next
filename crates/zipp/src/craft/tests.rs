@@ -162,9 +162,10 @@ fn imports_a_site() {
 		text[0]["content"][1]["marks"][0]["attrs"]["link"],
 		json!({ "type": "entry", "value": team.id })
 	);
-	// two nested link entries are one row of buttons
-	assert_eq!(text[1]["type"], "buttons");
-	assert_eq!(text[1]["attrs"]["links"][1]["value"], "https://x.ch");
+	// two nested link entries are two buttons, one row on the website
+	assert_eq!(text[1]["type"], "button");
+	assert_eq!(text[2]["type"], "button");
+	assert_eq!(text[2]["attrs"]["link"]["value"], "https://x.ch");
 	assert_eq!(f["tags"].as_array().unwrap().len(), 1);
 	assert_eq!(f["sections"].as_array().unwrap().len(), 1);
 	assert_eq!(f["sections"][0]["fields"]["title"], "One");
