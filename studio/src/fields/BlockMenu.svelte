@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Component } from '../core/schema';
+	import AddGroup from '../ui/AddGroup.svelte';
 	import Icon from '../ui/Icon.svelte';
 	import Popover from '../ui/Popover.svelte';
 	import SearchList from '../ui/SearchList.svelte';
@@ -85,46 +86,30 @@
 	</div>
 {:else}
 	<div class="bar">
-		{#each buttons as t, i (t.handle)}
-			<button type="button" onclick={() => pick(t.handle)}>
-				{#if i === 0}<Icon name="add" size={14} />{/if}
-				{t.name}
-			</button>
-		{/each}
-		{#if rest.length}
-			<Popover bind:open width="14rem" label="More blocks">
-				{#snippet trigger({ toggle: t })}
-					<button type="button" onclick={() => toggle(t)}>
-						More
-						<Icon name="chevron-down" size={14} />
-					</button>
-				{/snippet}
-				{@render list()}
-			</Popover>
-		{/if}
+		<AddGroup
+			options={buttons.map(t => ({ value: t.handle, label: t.name }))}
+			onadd={pick}
+		>
+			{#snippet more()}
+				{#if rest.length}
+					<Popover bind:open width="14rem" label="More blocks">
+						{#snippet trigger({ toggle: t })}
+							<button type="button" onclick={() => toggle(t)}>
+								More
+								<Icon name="chevron-down" size={14} />
+							</button>
+						{/snippet}
+						{@render list()}
+					</Popover>
+				{/if}
+			{/snippet}
+		</AddGroup>
 	</div>
 {/if}
 
 <style lang="scss">
-	// the types side by side like one control
 	.bar {
-		display: inline-flex;
-		flex-wrap: wrap;
 		margin-top: 0.5rem;
-		border: 1px solid var(--border-strong);
-		border-radius: var(--radius);
-		background: var(--surface);
-
-		button {
-			border: none;
-			border-radius: 0;
-			border-right: 1px solid var(--line);
-		}
-
-		> :last-child,
-		> :last-child :global(> button) {
-			border-right: none;
-		}
 	}
 
 	// between two blocks, it shows when the pointer is near
