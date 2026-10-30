@@ -63,6 +63,7 @@ pub(super) async fn serve(
 		public_url,
 		site_urls.clone(),
 	)?;
+	let icons = Arc::new(crate::studio::schema_icons(&schema));
 	let state = AppState {
 		db,
 		schema,
@@ -74,6 +75,7 @@ pub(super) async fn serve(
 		dev,
 		indexing: !dev && !noindex,
 		ai,
+		icons,
 		hooks: Arc::new(hooks),
 	};
 	let app = app(state, routes);

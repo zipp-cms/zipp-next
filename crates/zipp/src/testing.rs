@@ -60,6 +60,7 @@ impl TestServer {
 			Default::default(),
 		)
 		.unwrap();
+		let icons = Arc::new(crate::studio::schema_icons(&schema));
 		let state = AppState {
 			db,
 			schema,
@@ -71,6 +72,7 @@ impl TestServer {
 			dev: false,
 			indexing: true,
 			ai: None,
+			icons,
 			hooks: Default::default(),
 		};
 		Self {

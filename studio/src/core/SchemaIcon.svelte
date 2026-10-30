@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import type { SchemaIcon } from './schema';
-	import { lucide } from './lucide';
+	import { knownIcon, lucide } from './lucide';
 
 	/**
 	 * The icon the code gave an entry type, a block or a nav group: a
@@ -14,15 +15,15 @@
 		size = 16,
 	}: { icon?: SchemaIcon; fallback?: string; size?: number } = $props();
 
-	let svg = $state('');
+	/** the svg right away: its own, or one the schema brought */
+	const now = (i?: SchemaIcon) =>
+		!i ? '' : 'svg' in i ? i.svg : (knownIcon(i.lucide) ?? '');
+	let svg = $state(untrack(() => now(icon)));
 
 	$effect(() => {
-		svg = '';
-		if (!icon) return;
-		if ('svg' in icon) {
-			svg = icon.svg;
-			return;
-		}
+		svg = now(icon);
+		if (svg || !icon || 'svg' in icon) return;
+		// not in the schema: fetched (dev, or a name it doesn't know)
 		const name = icon.lucide;
 		lucide(name).then(s => {
 			if (icon && 'lucide' in icon && icon.lucide === name) svg = s ?? '';

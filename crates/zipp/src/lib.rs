@@ -107,6 +107,9 @@ pub struct AppState {
 	pub indexing: bool,
 	/// the AI chat, if there is an api key
 	pub ai: Option<ai::AiConfig>,
+	/// the svgs of the schema's Lucide icons, see [`studio::schema_icons`]
+	#[from_ref(skip)]
+	pub icons: Arc<std::collections::BTreeMap<String, String>>,
 	hooks: Arc<Vec<Hook>>,
 }
 

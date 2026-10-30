@@ -109,6 +109,7 @@ async fn schema_route(
 		roles: state.schema.roles.clone(),
 		offline: state.schema.offline.clone(),
 		dev: state.dev,
+		icons: (*state.icons).clone(),
 		plugins: state
 			.schema
 			.plugins

@@ -48,4 +48,7 @@ pub struct SchemaResp {
 	pub plugins: Vec<PluginResp>,
 	/// development mode, see `serve --dev`
 	pub dev: bool,
+	/// the svgs of the Lucide icons the schema names, see
+	/// [`schema_icons`](super::schema_icons)
+	pub icons: std::collections::BTreeMap<String, String>,
 }

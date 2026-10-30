@@ -1,4 +1,5 @@
 import { request } from './client';
+import { knowIcons } from './lucide';
 
 export type LinkKind = 'entry' | 'url' | 'email' | 'phone' | 'asset';
 
@@ -132,6 +133,8 @@ export type Schema = {
 	roles: Role[];
 	/** development mode, see `serve --dev` */
 	dev: boolean;
+	/** the svgs of the Lucide icons it names, by name */
+	icons: Record<string, string>;
 	/** the plugins with a studio module, `/_plugins/<name>.js` */
 	plugins: { name: string; data: unknown }[];
 	/** the models of the AI chat, empty if it is off */
@@ -177,8 +180,10 @@ export function valueOf<K extends Field['kind']>(
 	return values[field.handle] as ValueOf[K] | undefined;
 }
 
-export function getSchema(): Promise<Schema> {
-	return request('GET', '/schema');
+export async function getSchema(): Promise<Schema> {
+	const schema = await request<Schema>('GET', '/schema');
+	knowIcons(schema.icons ?? {});
+	return schema;
 }
 
 /** The groups of the top bar, all sections in one without a nav. */
