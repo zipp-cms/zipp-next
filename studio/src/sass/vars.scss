@@ -1,0 +1,45 @@
+// Breakpoints and mixins, in every style block (vite.config.ts), like
+// zandi. The studio is built for the desktop first: the max- mixins
+// change it for smaller screens.
+
+$bpTablet: 800px;
+$bpDesktop: 1100px;
+
+@mixin tablet {
+	@media (min-width: $bpTablet) {
+		@content;
+	}
+}
+
+// a phone: one column, the sidebar on top
+@mixin max-tablet {
+	@media (max-width: calc($bpTablet - 1px)) {
+		@content;
+	}
+}
+
+@mixin desktop {
+	@media (min-width: $bpDesktop) {
+		@content;
+	}
+}
+
+// no room for a column on the side
+@mixin max-desktop {
+	@media (max-width: calc($bpDesktop - 1px)) {
+		@content;
+	}
+}
+
+// with a pointer that hovers: no sticky hover on touch screens
+@mixin hover {
+	@media (hover: hover) {
+		@content;
+	}
+}
+
+// the ring of the focused control
+@mixin focus-ring($offset: 2px) {
+	outline: 2px solid var(--accent);
+	outline-offset: $offset;
+}

@@ -30,7 +30,7 @@
 	{/each}
 </div>
 
-<style>
+<style lang="scss">
 	.options {
 		display: flex;
 		flex-wrap: wrap;

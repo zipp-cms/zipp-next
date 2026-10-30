@@ -21,7 +21,7 @@
 	{@render children()}
 </button>
 
-<style>
+<style lang="scss">
 	.add {
 		border-style: dashed;
 		color: var(--accent);

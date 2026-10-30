@@ -14,7 +14,7 @@
 	{/each}
 </nav>
 
-<style>
+<style lang="scss">
 	.crumbs {
 		display: flex;
 		align-items: center;

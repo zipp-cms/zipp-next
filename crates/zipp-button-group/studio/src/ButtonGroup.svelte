@@ -51,8 +51,11 @@
 			color 0.2s ease;
 	}
 
-	button:hover:not(:disabled) {
-		border-color: var(--color);
+	/* no sticky hover on touch screens, like the studio's hover mixin */
+	@media (hover: hover) {
+		button:hover:not(:disabled) {
+			border-color: var(--color);
+		}
 	}
 
 	.dot {

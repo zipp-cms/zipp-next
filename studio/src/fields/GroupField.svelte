@@ -50,7 +50,7 @@
 	</div>
 {/if}
 
-<style>
+<style lang="scss">
 	/* a white box like an open block, its fields on the left */
 	.group {
 		padding: 0.875rem;

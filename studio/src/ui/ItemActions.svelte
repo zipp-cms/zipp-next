@@ -67,7 +67,7 @@
 	</button>
 </span>
 
-<style>
+<style lang="scss">
 	.item-actions {
 		display: flex;
 		flex-shrink: 0;
@@ -82,7 +82,9 @@
 		transform: rotate(-90deg);
 	}
 
-	.remove:hover:not(:disabled) {
-		color: var(--danger);
+	@include hover {
+		.remove:hover:not(:disabled) {
+			color: var(--danger);
+		}
 	}
 </style>

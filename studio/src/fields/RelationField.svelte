@@ -59,7 +59,7 @@
 	{/if}
 </div>
 
-<style>
+<style lang="scss">
 	.relation {
 		display: flex;
 		flex-direction: column;

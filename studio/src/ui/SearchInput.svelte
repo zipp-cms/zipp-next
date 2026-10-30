@@ -23,7 +23,7 @@
 	<input type="search" {placeholder} bind:value {onkeydown} />
 </span>
 
-<style>
+<style lang="scss">
 	.search {
 		position: relative;
 		display: flex;

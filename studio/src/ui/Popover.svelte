@@ -58,7 +58,7 @@
 	{/if}
 </div>
 
-<style>
+<style lang="scss">
 	.popover {
 		position: relative;
 	}

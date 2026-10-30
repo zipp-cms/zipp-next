@@ -95,7 +95,7 @@
 	</div>
 </div>
 
-<style>
+<style lang="scss">
 	.items {
 		display: flex;
 		flex-direction: column;

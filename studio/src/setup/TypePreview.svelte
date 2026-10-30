@@ -40,7 +40,7 @@
 	/>
 </fieldset>
 
-<style>
+<style lang="scss">
 	.title {
 		display: flex;
 		flex-direction: column;

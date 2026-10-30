@@ -34,7 +34,7 @@
 	<span class="actions">{@render actions?.()}</span>
 </div>
 
-<style>
+<style lang="scss">
 	.page-top {
 		position: sticky;
 		top: 0;

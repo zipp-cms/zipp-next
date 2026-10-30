@@ -67,9 +67,11 @@
 				box-shadow: var(--shadow);
 			}
 
-			&:hover:not(.on):not(:disabled) {
-				color: var(--text);
-				background: none;
+			@include hover {
+				&:hover:not(.on):not(:disabled) {
+					color: var(--text);
+					background: none;
+				}
 			}
 		}
 	}

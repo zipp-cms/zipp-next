@@ -1,10 +1,19 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { fileURLToPath } from 'node:url';
+
+// breakpoints and mixins in every style block, see sass/vars.scss
+const vars = fileURLToPath(new URL('./src/sass/vars.scss', import.meta.url));
 
 // the build is embedded in the zipp crate, in dev the api runs on
 // `example-cms serve`
 export default defineConfig({
 	plugins: [svelte()],
+	css: {
+		preprocessorOptions: {
+			scss: { additionalData: `@use '${vars}' as *;\n` },
+		},
+	},
 	// /assets are the uploaded files
 	build: {
 		outDir: '../crates/zipp/studio',

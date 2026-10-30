@@ -303,8 +303,10 @@
 				11.375rem 8.75rem 6.125rem 1.75rem;
 		}
 
-		&:not(.columns):hover {
-			background: var(--surface-2);
+		@include hover {
+			&:not(.columns):hover {
+				background: var(--surface-2);
+			}
 		}
 	}
 
@@ -323,8 +325,10 @@
 		font-weight: 500;
 		text-decoration: none;
 
-		&:hover {
-			color: var(--accent);
+		@include hover {
+			&:hover {
+				color: var(--accent);
+			}
 		}
 	}
 
@@ -355,8 +359,10 @@
 		opacity: 0;
 	}
 
-	.row:hover .handle {
-		opacity: 1;
+	@include hover {
+		.row:hover .handle {
+			opacity: 1;
+		}
 	}
 
 	.dragging {
@@ -379,7 +385,7 @@
 		font-size: var(--fs-base);
 	}
 
-	@media (max-width: 800px) {
+	@include max-tablet {
 		.row,
 		.row.types {
 			grid-template-columns: minmax(0, 1fr) auto 1.75rem;

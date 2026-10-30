@@ -34,7 +34,7 @@
 	{#if editable}
 		<button
 			type="button"
-			class="line before"
+			class="line before reveal"
 			title="Add a line above"
 			onclick={() => oninsert('before')}
 		>
@@ -52,7 +52,7 @@
 	{#if editable}
 		<button
 			type="button"
-			class="line after"
+			class="line after reveal"
 			title="Add a line below"
 			onclick={() => oninsert('after')}
 		>
@@ -82,8 +82,6 @@
 		border-color: var(--border);
 		border-radius: 999px;
 		transform: translate(-50%, -50%);
-		opacity: 0;
-		transition: opacity 0.15s;
 
 		&.before {
 			top: 0;
@@ -91,17 +89,6 @@
 
 		&.after {
 			top: 100%;
-		}
-	}
-
-	.embed:hover > .line,
-	.line:focus-visible {
-		opacity: 1;
-	}
-
-	@media (hover: none) {
-		.line {
-			opacity: 1;
 		}
 	}
 </style>

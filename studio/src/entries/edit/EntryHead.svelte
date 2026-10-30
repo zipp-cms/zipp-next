@@ -20,7 +20,7 @@
 	{#if errors.title}<span class="error">{errors.title}</span>{/if}
 </label>
 
-<style>
+<style lang="scss">
 	.head {
 		display: flex;
 		flex-direction: column;

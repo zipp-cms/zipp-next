@@ -93,7 +93,7 @@
 	{/if}
 </Popover>
 
-<style>
+<style lang="scss">
 	.type {
 		margin-left: auto;
 		flex-shrink: 0;

@@ -57,7 +57,7 @@
 </table>
 <AddButton onclick={() => set(inserted(rows, {}))}>Add a row</AddButton>
 
-<style>
+<style lang="scss">
 	table {
 		width: 100%;
 		margin-bottom: 0.375rem;

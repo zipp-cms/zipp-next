@@ -47,7 +47,7 @@
 	{/each}
 </span>
 
-<style>
+<style lang="scss">
 	.sites {
 		display: inline-flex;
 		flex-wrap: wrap;

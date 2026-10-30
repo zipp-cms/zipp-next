@@ -142,13 +142,19 @@
 		padding: 2px;
 		border-radius: 50%;
 		color: var(--accent);
-		opacity: 0;
-		transition: opacity 0.15s;
 	}
 
-	.inline:hover .insert,
-	.insert:focus-visible,
-	.open .insert {
-		opacity: 1;
+	// only where a pointer can come near, always on touch
+	@include hover {
+		.insert {
+			opacity: 0;
+			transition: opacity 0.15s;
+		}
+
+		.inline:hover .insert,
+		.insert:focus-visible,
+		.open .insert {
+			opacity: 1;
+		}
 	}
 </style>

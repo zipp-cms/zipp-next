@@ -241,7 +241,7 @@
 	<p class="error">No section {handle}</p>
 {/if}
 
-<style>
+<style lang="scss">
 	dl {
 		display: grid;
 		grid-template-columns: 8.75rem 1fr;

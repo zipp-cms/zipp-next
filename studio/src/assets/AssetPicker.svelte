@@ -79,7 +79,7 @@
 	</div>
 </Flyout>
 
-<style>
+<style lang="scss">
 	.search {
 		margin: 1rem 0 0.75rem;
 	}

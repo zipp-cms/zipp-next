@@ -225,7 +225,7 @@
 		padding-top: 1rem;
 	}
 
-	@media (max-width: 900px) {
+	@include max-desktop {
 		.detail {
 			grid-template-columns: 1fr;
 		}

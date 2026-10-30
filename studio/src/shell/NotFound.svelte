@@ -9,7 +9,7 @@
 	</p>
 </main>
 
-<style>
+<style lang="scss">
 	.page {
 		max-width: 40rem;
 		margin: 0 auto;

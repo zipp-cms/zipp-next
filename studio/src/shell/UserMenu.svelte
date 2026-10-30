@@ -24,7 +24,7 @@
 	</button>
 </div>
 
-<style>
+<style lang="scss">
 	.me {
 		display: flex;
 		align-items: center;
@@ -46,8 +46,10 @@
 		text-decoration: none;
 	}
 
-	a:hover {
-		background: var(--hover);
+	@include hover {
+		a:hover {
+			background: var(--hover);
+		}
 	}
 
 	.avatar {
@@ -79,7 +81,7 @@
 		font-size: var(--fs-xs);
 	}
 
-	@media (max-width: 800px) {
+	@include max-tablet {
 		.me {
 			margin-top: 0;
 		}

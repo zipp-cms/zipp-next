@@ -88,7 +88,7 @@
 		}
 	}
 
-	@media (max-width: 800px) {
+	@include max-tablet {
 		.nested {
 			grid-template-columns: 1fr;
 			gap: 0.375rem;

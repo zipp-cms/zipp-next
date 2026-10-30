@@ -206,8 +206,10 @@
 				color: var(--accent);
 			}
 
-			&:hover:not(:disabled) {
-				background: var(--hover);
+			@include hover {
+				&:hover:not(:disabled) {
+					background: var(--hover);
+				}
 			}
 		}
 	}

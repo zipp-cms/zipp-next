@@ -43,7 +43,7 @@
 	{/each}
 </div>
 
-<style>
+<style lang="scss">
 	.results {
 		display: flex;
 		flex-direction: column;

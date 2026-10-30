@@ -91,13 +91,13 @@
 	{/snippet}
 </PageTop>
 
-<style>
+<style lang="scss">
 	.by {
 		color: var(--subtle);
 		font-size: var(--fs-sm);
 	}
 
-	@media (max-width: 1100px) {
+	@include max-desktop {
 		.by {
 			display: none;
 		}

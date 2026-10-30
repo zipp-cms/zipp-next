@@ -226,7 +226,7 @@
 		}
 	}
 
-	@media (max-width: 800px) {
+	@include max-tablet {
 		.split {
 			grid-template-columns: 1fr;
 			grid-template-rows: 60vh 80vh;

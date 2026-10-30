@@ -20,7 +20,7 @@
 	<span class="ext">{ext}</span>
 </div>
 
-<style>
+<style lang="scss">
 	.thumb {
 		position: relative;
 		width: 100%;

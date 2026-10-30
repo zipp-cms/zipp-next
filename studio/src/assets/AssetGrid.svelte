@@ -56,12 +56,16 @@
 		font-weight: 400;
 		text-align: left;
 
-		&:hover:not(:disabled) {
-			background: none;
+		@include hover {
+			&:hover:not(:disabled) {
+				background: none;
+			}
 		}
 
-		&:hover :global(.thumb) {
-			border-color: var(--border-strong);
+		@include hover {
+			&:hover :global(.thumb) {
+				border-color: var(--border-strong);
+			}
 		}
 	}
 
@@ -74,8 +78,7 @@
 	}
 
 	.selected :global(.thumb) {
-		outline: 2px solid var(--accent);
-		outline-offset: 1px;
+		@include focus-ring(1px);
 	}
 
 	.check {

@@ -38,7 +38,7 @@
 	{/if}
 </div>
 
-<style>
+<style lang="scss">
 	.tabs {
 		margin-bottom: 0.375rem;
 	}

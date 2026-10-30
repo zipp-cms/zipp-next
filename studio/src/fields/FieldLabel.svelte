@@ -86,8 +86,10 @@
 	.handle-code {
 		text-decoration: none;
 
-		&:hover {
-			color: var(--accent);
+		@include hover {
+			&:hover {
+				color: var(--accent);
+			}
 		}
 	}
 </style>

@@ -92,7 +92,7 @@
 	</fieldset>
 </EmbedCard>
 
-<style>
+<style lang="scss">
 	.buttons {
 		display: flex;
 		flex-direction: column;

@@ -83,7 +83,7 @@
 	</aside>
 </div>
 
-<style>
+<style lang="scss">
 	tr:global(.target) td {
 		background: var(--hover);
 		transition: background 0.3s;

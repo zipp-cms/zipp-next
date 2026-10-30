@@ -122,8 +122,10 @@
 	.open {
 		display: block;
 
-		&:hover :global(.thumb) {
-			border-color: var(--border-strong);
+		@include hover {
+			&:hover :global(.thumb) {
+				border-color: var(--border-strong);
+			}
 		}
 	}
 

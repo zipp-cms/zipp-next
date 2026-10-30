@@ -129,7 +129,7 @@
 		}
 
 		:global(.ProseMirror-selectednode) {
-			outline: 2px solid var(--accent);
+			@include focus-ring(0);
 			border-radius: var(--radius);
 		}
 	}

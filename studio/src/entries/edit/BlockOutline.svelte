@@ -32,7 +32,7 @@
 	</ol>
 </nav>
 
-<style>
+<style lang="scss">
 	.outline {
 		display: flex;
 		flex-direction: column;

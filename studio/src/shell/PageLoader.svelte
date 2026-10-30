@@ -23,7 +23,7 @@
 
 <div class="loader" class:visible style:--progress={progress}></div>
 
-<style>
+<style lang="scss">
 	.loader {
 		position: fixed;
 		top: 0;

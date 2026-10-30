@@ -50,7 +50,7 @@
 	</form>
 </div>
 
-<style>
+<style lang="scss">
 	.login {
 		position: fixed;
 		inset: 0;

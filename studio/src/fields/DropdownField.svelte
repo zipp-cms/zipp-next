@@ -34,7 +34,7 @@
 	</select>
 {/if}
 
-<style>
+<style lang="scss">
 	select {
 		width: auto;
 		min-width: 12.5rem;

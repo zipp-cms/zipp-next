@@ -120,7 +120,7 @@
 	<button class="primary" disabled={action.busy}>Save</button>
 </form>
 
-<style>
+<style lang="scss">
 	select {
 		width: auto;
 	}

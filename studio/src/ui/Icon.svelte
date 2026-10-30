@@ -14,7 +14,7 @@
 	{@html icons[`./icons/${name}.svg`]}
 </span>
 
-<style>
+<style lang="scss">
 	.icon {
 		display: inline-flex;
 		flex-shrink: 0;

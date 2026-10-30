@@ -45,8 +45,7 @@
 		}
 
 		&:focus-within {
-			outline: 2px solid var(--accent);
-			outline-offset: 2px;
+			@include focus-ring;
 		}
 	}
 
@@ -55,10 +54,12 @@
 		background: var(--accent);
 		color: var(--on-accent);
 
-		&:hover {
-			color: var(--on-accent);
-			border-color: var(--accent-hover);
-			background: var(--accent-hover);
+		@include hover {
+			&:hover {
+				color: var(--on-accent);
+				border-color: var(--accent-hover);
+				background: var(--accent-hover);
+			}
 		}
 	}
 </style>

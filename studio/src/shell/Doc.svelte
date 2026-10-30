@@ -36,7 +36,7 @@
 	{@html doc.html}
 </div>
 
-<style>
+<style lang="scss">
 	.card {
 		max-width: 56.25rem;
 		padding: 1.5rem 2rem;

@@ -14,7 +14,7 @@
 	<p class="empty"><a href="/admin">To the start</a></p>
 </div>
 
-<style>
+<style lang="scss">
 	.page {
 		max-width: 40rem;
 		margin: 0 auto;

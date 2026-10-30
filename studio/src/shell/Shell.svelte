@@ -56,7 +56,7 @@
 		}
 	}
 
-	@media (max-width: 800px) {
+	@include max-tablet {
 		.layout {
 			grid-template-columns: 1fr;
 		}

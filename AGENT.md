@@ -57,10 +57,12 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   logic in `.ts`. What several areas use: `ui/` (components without an
   area, the icons), `core/` (`client.ts` sends requests and reads
   streams, `schema.ts` the schema's types and lookups, `router` the
-  pages, `route` the path and site, `access`, `format`, `list`, `busy`, `flyout`), `shell/`
+  pages, the path and the site, `access`, `format`, `list`, `busy`, `flyout`,
+  `synced`), `shell/`
   (the app with its pages, the sidebar). An area imports from `ui/`, `core/` and other areas'
   `api.ts` and components; `ui/` and `core/` import no area. Tokens and
-  shared classes are in `app.scss`.
+  shared classes are in `sass/main.scss`, breakpoints and mixins in
+  `sass/vars.scss` (every style block has them, like zandi).
 
 ## The studio
 
@@ -100,9 +102,14 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   fields work well for a page's state (`entryEditor.svelte.ts`,
   `assetForm.svelte.ts`, `chat.svelte.ts`); `Busy` runs an action with
   its busy state and error.
-- CSS uses the tokens of `app.scss` (colors, `--fs-*`, `--radius*`,
+- CSS uses the tokens of `sass/main.scss` (colors, `--fs-*`, `--radius*`,
   shadows, z-index layers), no hex colors or pixel font sizes in
-  components; a component styles only its own layout.
+  components; a component styles only its own layout. Sizes are rem
+  (16px = 1rem), px only for hairlines up to 3px and shadows.
+- Media queries only through the mixins of `sass/vars.scss`
+  (`@include max-tablet`, `max-desktop`, ...); `:hover` only inside
+  `@include hover { ... }`, so touch screens get no sticky hover and
+  what shows on hover is always there without a pointer.
 - Lookups by handle: `core/schema.ts`; lists of a field: `core/list.ts`;
   links: `fields/link.ts`; dates and sizes: `core/format.ts`.
 - A field never writes its value when it mounts (opening an entry must

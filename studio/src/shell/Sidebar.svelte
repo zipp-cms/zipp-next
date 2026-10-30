@@ -151,9 +151,11 @@
 		font-weight: 500;
 		text-decoration: none;
 
-		&:hover {
-			color: var(--text);
-			background: var(--hover);
+		@include hover {
+			&:hover {
+				color: var(--text);
+				background: var(--hover);
+			}
 		}
 
 		&.active {
@@ -176,9 +178,11 @@
 			font-size: var(--fs-md);
 			text-decoration: none;
 
-			&:hover {
-				color: var(--text);
-				background: var(--hover);
+			@include hover {
+				&:hover {
+					color: var(--text);
+					background: var(--hover);
+				}
 			}
 
 			&.active {
@@ -189,7 +193,7 @@
 		}
 	}
 
-	@media (max-width: 800px) {
+	@include max-tablet {
 		.side {
 			position: static;
 			height: auto;
