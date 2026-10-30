@@ -61,7 +61,7 @@
 		top: 6px;
 		left: 6px;
 		padding: 0 5px;
-		font-size: 10px;
+		font-size: var(--fs-2xs);
 		font-weight: 600;
 		line-height: 16px;
 		color: var(--text-2);

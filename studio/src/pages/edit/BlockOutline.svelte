@@ -61,7 +61,7 @@
 	.n {
 		color: var(--subtle);
 		font-family: var(--mono);
-		font-size: 10px;
+		font-size: var(--fs-2xs);
 	}
 
 	.name {
