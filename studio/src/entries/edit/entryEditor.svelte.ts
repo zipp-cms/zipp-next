@@ -26,6 +26,7 @@ import {
 } from '../drafts';
 import { site } from '../../core/router.svelte';
 import { changedPaths, clean } from './diff';
+import { slugify } from '../../core/format';
 
 /** What the role may do with the entry; the server checks it too. */
 export type May = { edit: boolean; publish: boolean; delete: boolean };
@@ -61,8 +62,33 @@ if (typeof window !== 'undefined') {
 export class EntryEditor {
 	sec = $state('');
 	ty = $state('');
-	title = $state('');
-	slug = $state('');
+	#title = $state('');
+	#slug = $state('');
+	/**
+	 * The slug comes from the title as it is typed, like Craft's: while
+	 * the entry was never published and the slug is the title's (or none);
+	 * one written by hand stays.
+	 */
+	slugFollows = $state(true);
+
+	get title() {
+		return this.#title;
+	}
+
+	set title(t: string) {
+		this.#title = t;
+		if (this.slugFollows) this.#slug = slugify(t);
+	}
+
+	get slug() {
+		return this.#slug;
+	}
+
+	/** A slug written by hand; emptied, it follows the title again. */
+	set slug(s: string) {
+		this.#slug = s;
+		this.slugFollows = !s || s === slugify(this.#title);
+	}
 	uri = $state<string | null>(null);
 	published = $state(false);
 	/** the same in every site */
@@ -185,8 +211,12 @@ export class EntryEditor {
 			expiryDate: entry.expiryDate,
 		};
 		const content = d?.doc[this.site] ?? entry;
-		this.title = content.title;
-		this.slug = content.slug;
+		this.#title = content.title;
+		this.#slug = content.slug;
+		// a live entry's url stays when its title changes
+		this.slugFollows =
+			entry.postDate === null &&
+			(!content.slug || content.slug === slugify(content.title));
 		this.published = content.published;
 		this.dates = {
 			postDate: content.postDate ?? null,
@@ -377,7 +407,8 @@ export class EntryEditor {
 				Object.assign(this.refs, live.relations);
 			}
 			Object.assign(this.refs, relations);
-			this.title = theirs.title;
+			// the slug stays, see above
+			this.#title = theirs.title;
 			this.fields = theirs.fields;
 		});
 	}
