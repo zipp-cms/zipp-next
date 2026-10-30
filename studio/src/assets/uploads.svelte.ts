@@ -1,5 +1,5 @@
 import { upload } from '../core/client';
-import { createFolder, listFolders, type Asset, type Folder } from './api';
+import { createFolder, listFolders, type Asset } from './api';
 
 /** What an asset tile carries when it is dragged: the asset ids. */
 export const ASSETS_DRAG = 'application/x-zipp-assets';
@@ -161,7 +161,7 @@ async function makeFolders(
 	const paths = [...new Set(items.map(i => i.dir.join('/')))].filter(p => p);
 	if (!paths.length) return ids;
 
-	const folders: Folder[] = await listFolders();
+	const { folders } = await listFolders();
 	for (const path of paths) {
 		const parts = path.split('/');
 		for (let i = 1; i <= parts.length; i++) {

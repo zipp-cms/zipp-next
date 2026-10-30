@@ -75,7 +75,6 @@
 		flex-direction: column;
 		min-width: 0;
 		aspect-ratio: 1;
-		overflow: hidden;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
 		background: var(--surface);
@@ -99,6 +98,10 @@
 		min-height: 0;
 		width: 100%;
 		padding: 0;
+		// the card's corners, its ⋯ menu may reach out of it
+		overflow: hidden;
+		border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px)
+			0 0;
 
 		:global(.thumb) {
 			flex: 1;

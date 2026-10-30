@@ -11,13 +11,13 @@
 	/** The folders and the newest assets of the one in the url. */
 	export async function loadProps(_: unknown, lp: LoadProps) {
 		const folder = folderOf(lp.req.search.get('folder'));
-		const [folders, first] = await Promise.all([
+		const [{ folders, top }, first] = await Promise.all([
 			listFolders(),
 			list({ search: '', folder: folder === null ? 'top' : `${folder}` }),
 		]);
 		// a deleted folder
 		const known = folder === null || folders.some(f => f.id === folder);
-		return { folders, first, folder: known ? folder : null };
+		return { folders, top, first, folder: known ? folder : null };
 	}
 </script>
 
@@ -28,6 +28,7 @@
 		assetUrl,
 		assetUsage,
 		deleteAsset,
+		ROOT,
 		folderRows,
 		listAssets,
 		moveAssets,
@@ -58,21 +59,27 @@
 		first,
 		folders: firstFolders,
 		folder: firstFolder,
+		top: firstTop,
 	}: {
 		schema: Schema;
 		first: Asset[];
 		folders: Folder[];
 		folder: number | null;
+		top: number;
 	} = $props();
 	const canEdit = $derived(canAssets(schema, 'edit'));
 	const canDelete = $derived(canAssets(schema, 'delete'));
 
 	let assets = $state<Asset[]>(untrack(() => first));
 	let folders = $state<Folder[]>(untrack(() => firstFolders));
+	let top = $state(untrack(() => firstTop));
 	/** null: the top */
 	let folder = $state<number | null>(untrack(() => firstFolder));
+	/** `Library / Photos / Events` */
 	const path = $derived(
-		folderRows(folders).find(r => r.folder.id === folder)?.path ?? '',
+		[ROOT, folderRows(folders).find(r => r.folder.id === folder)?.path]
+			.filter(Boolean)
+			.join(' / '),
 	);
 	let search = $state('');
 	let error = $state('');
@@ -95,7 +102,10 @@
 	/** The folders with their counts. */
 	function loadFolders() {
 		listFolders()
-			.then(f => (folders = f))
+			.then(f => {
+				folders = f.folders;
+				top = f.top;
+			})
 			.catch(e => (error = e.message));
 	}
 
@@ -200,7 +210,7 @@
 		);
 		if (canEdit && a.folderId !== null)
 			items.push({
-				label: 'Move to Files',
+				label: `Move to ${ROOT}`,
 				icon: 'file',
 				onclick: () => move([a.id], null),
 			});
@@ -253,6 +263,7 @@
 		<aside class="folders">
 			<FolderTree
 				{folders}
+				{top}
 				current={search ? -1 : folder}
 				onselect={select}
 				editable={canEdit}
@@ -265,10 +276,10 @@
 
 		<div class="card files">
 			{#if drag.over}
-				<DropOverlay label="Drop to upload into {path || 'Files'}" />
+				<DropOverlay label="Drop to upload into {path}" />
 			{/if}
 			<div class="top">
-				<h2>{search ? 'In all folders' : path || 'Files'}</h2>
+				<h2>{search ? 'In all folders' : path}</h2>
 				<SearchInput bind:value={search} placeholder="Search files" />
 			</div>
 			<AssetGrid

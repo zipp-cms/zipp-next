@@ -244,7 +244,9 @@ async fn folders_hold_assets() {
 		folder_id: Some(photos.id),
 	};
 	author.call(&moved).await.unwrap();
-	let all = author.call(&FoldersReq {}).await.unwrap();
+	let list = author.call(&FoldersReq {}).await.unwrap();
+	assert_eq!(list.top, 0);
+	let all = list.folders;
 	let count = |id| all.iter().find(|f| f.id == id).unwrap().assets;
 	assert_eq!((count(photos.id), count(events.id)), (1, 1));
 
@@ -259,7 +261,8 @@ async fn folders_hold_assets() {
 	};
 	editor.call(&out).await.unwrap();
 	editor.call(&delete).await.unwrap();
-	assert_eq!(editor.call(&FoldersReq {}).await.unwrap().len(), 1);
+	let list = editor.call(&FoldersReq {}).await.unwrap();
+	assert_eq!((list.folders.len(), list.top), (1, 1));
 }
 
 #[tokio::test]

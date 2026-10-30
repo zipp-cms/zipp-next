@@ -51,7 +51,14 @@ request!(UsageReq, GET "/assets/{id}/usage" => Vec<Usage>);
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FoldersReq {}
 
-request!(FoldersReq, GET "/asset-folders" => Vec<Folder>);
+/// The folders, and how many assets are in none.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Folders {
+	pub folders: Vec<Folder>,
+	pub top: i64,
+}
+
+request!(FoldersReq, GET "/asset-folders" => Folders);
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -2,6 +2,7 @@
 	import { untrack } from 'svelte';
 	import {
 		assetUrl,
+		ROOT,
 		folderRows,
 		transparentEdges,
 		type Asset,
@@ -134,7 +135,7 @@
 					<label class="stacked">
 						Folder
 						<select bind:value={form.folder} disabled={!canEdit}>
-							<option value={null}>Files (no folder)</option>
+							<option value={null}>{ROOT} (no folder)</option>
 							{#each folderRows(folders) as r (r.folder.id)}
 								<option value={r.folder.id}>{r.path}</option>
 							{/each}

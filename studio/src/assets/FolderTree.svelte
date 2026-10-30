@@ -10,10 +10,11 @@
 	import { ASSETS_DRAG, fromDrop, type Upload } from './uploads.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
+	import { ROOT } from './api';
 
 	/**
-	 * The folders of the asset library as a tree, "Files" on the top for
-	 * the ones in none. Opens one with `onselect`; with `editable` it adds,
+	 * The folders of the asset library as a tree below its top (ROOT),
+	 * which holds the assets in no folder. Opens one with `onselect`; with `editable` it adds,
 	 * renames and deletes (only empty ones) folders, and assets dragged
 	 * from the grid or files from the computer drop onto a folder.
 	 */
@@ -26,6 +27,7 @@
 		onchange,
 		onmove,
 		onupload,
+		top = 0,
 	}: {
 		folders: Folder[];
 		/** null: the top */
@@ -37,6 +39,8 @@
 		onchange?: (folder?: Folder) => void;
 		onmove?: (ids: number[], folder: number | null) => void;
 		onupload?: (items: Upload[], folder: number | null) => void;
+		/** the assets in no folder */
+		top?: number;
 	} = $props();
 
 	const parentOf = (id: number) =>
@@ -173,7 +177,7 @@
 		return list;
 	}
 
-	/** The folder a drag is over, `top` for Files. */
+	/** The folder a drag is over, `top` for the library. */
 	let over = $state<number | 'top' | null>(null);
 
 	function canDrop(e: DragEvent) {
@@ -249,15 +253,19 @@
 	>
 		<span class="chevron"></span>
 		<button type="button" class="name" onclick={() => onselect(null)}>
-			<Icon name="file" size={15} />
-			<span class="label">Files</span>
+			<Icon name="dashboard" size={15} />
+			<span class="label">{ROOT}</span>
+			{#if top}<span class="count">{top}</span>{/if}
 		</button>
+		{#if editable || deletable}<span class="menu-space"></span>{/if}
 	</div>
 	{#if editing && 'parent' in editing && editing.parent === null}
-		{@render input(0)}
+		{@render input(1)}
 	{/if}
 
-	{#each rows as { folder: f, depth } (f.id)}
+	<!-- all folders are in the library, one step in -->
+	{#each rows as { folder: f, depth: d } (f.id)}
+		{@const depth = d + 1}
 		{#if editing && 'id' in editing && editing.id === f.id}
 			{@render input(depth)}
 		{:else}
@@ -293,7 +301,11 @@
 				<button
 					type="button"
 					class="name"
-					onclick={() => onselect(f.id)}
+					onclick={() => {
+						// a click shows its subfolders too
+						open = new Set(open).add(f.id);
+						onselect(f.id);
+					}}
 				>
 					<Icon name="folder" size={15} />
 					<span class="label">{f.name}</span>
@@ -398,6 +410,12 @@
 		color: var(--muted);
 		font-size: var(--fs-xs);
 		font-weight: 400;
+	}
+
+	// where the ⋯ of the folders is, their counts line up
+	.menu-space {
+		flex-shrink: 0;
+		width: 1.75rem;
 	}
 
 	.menu {

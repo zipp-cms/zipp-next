@@ -39,13 +39,15 @@
 	let search = $state('');
 	let loaded = $state(false);
 	let folders = $state<Folder[]>([]);
+	let top = $state(0);
 	/** null: the top; a search looks in all folders */
 	let folder = $state<number | null>(null);
 	let foldersLoaded = $state(false);
 
 	listFolders()
-		.then(f => {
+		.then(({ folders: f, top: t }) => {
 			folders = f;
+			top = t;
 			if (f.some(f => f.id === lastFolder)) folder = lastFolder;
 			foldersLoaded = true;
 		})
@@ -126,6 +128,7 @@
 		{#if folders.length}
 			<FolderTree
 				{folders}
+				{top}
 				current={search ? -1 : folder}
 				onselect={select}
 			/>

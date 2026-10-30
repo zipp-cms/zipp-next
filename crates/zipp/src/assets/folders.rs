@@ -39,6 +39,16 @@ pub fn folders(conn: &Connection) -> Result<Vec<Folder>> {
 	Ok(all)
 }
 
+/// How many assets are in no folder, on the top.
+pub fn top_count(conn: &Connection) -> Result<i64> {
+	let n = conn.query_row(
+		"SELECT COUNT(*) FROM assets WHERE folder_id IS NULL",
+		[],
+		|r| r.get(0),
+	)?;
+	Ok(n)
+}
+
 fn folder(conn: &Connection, id: i64) -> Result<Folder> {
 	folders(conn)?
 		.into_iter()

@@ -233,7 +233,11 @@ pub(super) async fn folders_route(
 	_access: AssetAccess<View>,
 	Req(_): Req<FoldersReq>,
 ) -> ApiResult<FoldersReq> {
-	Ok(Json(folders(&state.db.conn())?))
+	let conn = state.db.conn();
+	Ok(Json(Folders {
+		folders: folders(&conn)?,
+		top: top_count(&conn)?,
+	}))
 }
 
 pub(super) async fn create_folder_route(

@@ -131,7 +131,11 @@ export type Folder = {
 	assets: number;
 };
 
-export function listFolders(): Promise<Folder[]> {
+/** The name of the top, where all folders are and the assets in none. */
+export const ROOT = 'Library';
+
+/** The folders, and how many assets are in none. */
+export function listFolders(): Promise<{ folders: Folder[]; top: number }> {
 	return request('GET', '/asset-folders');
 }
 
