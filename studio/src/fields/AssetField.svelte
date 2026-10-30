@@ -76,10 +76,6 @@
 	<ItemActions onremove={() => set(removed(ids, i))} />
 {/snippet}
 
-{#snippet number(i: number)}
-	<span class="number">{String(i + 1).padStart(2, '0')}</span>
-{/snippet}
-
 {#snippet handle(i: number)}
 	<DragHandle sortable={sort} index={i} label="Move the file" />
 {/snippet}
@@ -119,7 +115,6 @@
 					>
 						<Thumb asset={a} />
 						<span class="caption" title={a.filename}>
-							{@render number(i)}
 							<span class="truncate">
 								{a.title || a.filename}
 							</span>
@@ -216,10 +211,13 @@
 		display: block;
 	}
 
-	// an image: the picture, its number and title in a bar below
+	// an image: square with the picture and its title in a bar below
 	.tile {
 		position: relative;
-		width: 8.75rem;
+		display: flex;
+		flex-direction: column;
+		width: 10rem;
+		aspect-ratio: 1;
 		overflow: hidden;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
@@ -231,8 +229,11 @@
 			}
 		}
 
-		// the card has the border, the type is in the title
+		// the card has the border and the square, the type is in the title
 		:global(.thumb) {
+			flex: 1;
+			min-height: 0;
+			aspect-ratio: auto;
 			border: none;
 			border-radius: 0;
 		}
@@ -249,7 +250,12 @@
 	}
 
 	.open {
-		display: block;
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0;
+		min-height: 0;
 		width: 100%;
 		text-align: left;
 	}
@@ -266,13 +272,6 @@
 		border-top: 1px solid var(--border);
 		font-size: var(--fs-sm);
 		font-weight: 500;
-	}
-
-	.number {
-		flex-shrink: 0;
-		color: var(--muted);
-		font-family: var(--mono);
-		font-size: var(--fs-xs);
 	}
 
 	// over the corners of the image
@@ -342,9 +341,8 @@
 	.images .drop-zone {
 		flex-direction: column;
 		justify-content: center;
-		width: 8.75rem;
-		min-height: 10.75rem;
-		align-self: stretch;
+		width: 10rem;
+		aspect-ratio: 1;
 		padding: 0.625rem;
 		font-size: var(--fs-sm);
 		text-align: center;
