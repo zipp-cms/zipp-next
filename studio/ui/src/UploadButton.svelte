@@ -2,10 +2,14 @@
 	import type { Snippet } from 'svelte';
 	import Icon from './Icon.svelte';
 
-	/** A button that opens the file dialog: uploads and replacing a file. */
+	/**
+	 * A button that opens the file dialog: uploads and replacing a file;
+	 * with `directory` a folder, its files with their `webkitRelativePath`.
+	 */
 	let {
 		onfiles,
 		multiple = false,
+		directory = false,
 		accept,
 		primary = false,
 		icon = 'add',
@@ -13,6 +17,7 @@
 	}: {
 		onfiles: (files: FileList) => void;
 		multiple?: boolean;
+		directory?: boolean;
 		accept?: string;
 		primary?: boolean;
 		icon?: string;
@@ -27,6 +32,7 @@
 		type="file"
 		{multiple}
 		{accept}
+		webkitdirectory={directory || undefined}
 		onchange={e => {
 			const files = e.currentTarget.files;
 			if (files?.length) onfiles(files);

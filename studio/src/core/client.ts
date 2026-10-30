@@ -95,7 +95,10 @@ export function isSessionError(e: ApiError): boolean {
 }
 
 /** The error of a response, a session that is missing or gone logs out. */
-function failed(resp: Response, data: any): ApiError {
+function failed(
+	resp: { status: number; statusText: string },
+	data: any,
+): ApiError {
 	const err = ApiError.fromJson(resp.status, data, resp.statusText);
 	// a role that may not do something only gets the error
 	if (isSessionError(err)) {
@@ -125,6 +128,37 @@ export async function request<T = unknown>(
 	}
 	if (!resp.ok) throw failed(resp, data);
 	return data as T;
+}
+
+/**
+ * A form sent with its progress, `onprogress` gets the bytes sent and
+ * all of them; fetch can't tell how far an upload is.
+ */
+export function upload<T = unknown>(
+	path: string,
+	form: FormData,
+	onprogress: (sent: number, total: number) => void,
+): Promise<T> {
+	return new Promise((resolve, reject) => {
+		const xhr = new XMLHttpRequest();
+		xhr.open('POST', '/api' + path);
+		const t = token();
+		if (t) xhr.setRequestHeader('session-token', t);
+		xhr.upload.onprogress = e => onprogress(e.loaded, e.total);
+		xhr.onerror = () => reject(new Error(`${path}: the upload failed`));
+		xhr.onload = () => {
+			let data = null;
+			try {
+				data = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+			} catch {
+				if (xhr.status < 300)
+					return reject(new Error(`${path}: the answer is no JSON`));
+			}
+			if (xhr.status >= 200 && xhr.status < 300) resolve(data as T);
+			else reject(failed(xhr, data));
+		};
+		xhr.send(form);
+	});
 }
 
 /** An event of a stream: its `event:`, `id:` and `data:` lines. */

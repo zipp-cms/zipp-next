@@ -104,17 +104,6 @@ export function listAssets(params: Record<string, string>): Promise<Asset[]> {
 	return request('GET', '/assets?' + new URLSearchParams(params));
 }
 
-/** Into a folder, or on the top without one. */
-export function uploadAssets(
-	files: FileList | File[],
-	folder: number | null = null,
-): Promise<Asset[]> {
-	const form = new FormData();
-	for (const f of files) form.append('file', f, f.name);
-	const into = folder === null ? '' : `?folder=${folder}`;
-	return request('POST', '/assets' + into, form);
-}
-
 export function updateAsset(
 	id: number,
 	data: {

@@ -15,6 +15,7 @@
 	import type { Schema } from '../core/schema';
 	import FlyoutHost from './FlyoutHost.svelte';
 	import Sidebar from './Sidebar.svelte';
+	import UploadProgress from '../assets/UploadProgress.svelte';
 
 	/**
 	 * The frame of the studio's pages: the sidebar, the page, the flyout
@@ -34,6 +35,7 @@
 	<main>{@render children()}</main>
 </div>
 <FlyoutHost {schema} />
+<UploadProgress />
 
 <style lang="scss">
 	.layout {

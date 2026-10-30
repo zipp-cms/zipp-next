@@ -92,4 +92,23 @@
 	input[type='number'] {
 		width: 6.125rem;
 	}
+
+	// a box as high as the inputs next to it
+	.check {
+		padding: 0.4375rem 0.75rem;
+		border: 1px solid var(--border-strong);
+		border-radius: var(--radius);
+		background: var(--input);
+		cursor: pointer;
+		white-space: nowrap;
+
+		input {
+			margin: 0;
+		}
+
+		&:has(:checked) {
+			border-color: var(--accent);
+			background: var(--accent-soft);
+		}
+	}
 </style>

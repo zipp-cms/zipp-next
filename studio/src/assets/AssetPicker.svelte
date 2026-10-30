@@ -4,19 +4,20 @@
 </script>
 
 <script lang="ts">
-	import {
-		listAssets,
-		listFolders,
-		uploadAssets,
-		type Asset,
-		type Folder,
-	} from './api';
+	import { listAssets, listFolders, type Asset, type Folder } from './api';
 	import FolderTree from './FolderTree.svelte';
 	import AssetGrid from './AssetGrid.svelte';
 	import { Busy } from '../core/busy.svelte';
 	import Flyout from 'zipp-ui/Flyout.svelte';
 	import SearchInput from 'zipp-ui/SearchInput.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
+	import DropOverlay from './DropOverlay.svelte';
+	import {
+		FileDrag,
+		fromInput,
+		uploads,
+		type Upload,
+	} from './uploads.svelte';
 
 	/** The asset library in a flyout, to pick assets or upload new ones. */
 	let {
@@ -73,12 +74,18 @@
 
 	const action = new Busy();
 
-	async function upload(files: FileList) {
-		const added = await action.run(() => uploadAssets(files, folder));
-		if (!added) return;
+	/** Into the open folder, and picked. */
+	async function upload(items: Upload[]) {
+		if (images) items = items.filter(i => i.file.type.startsWith('image/'));
+		if (!multiple) items = items.slice(0, 1);
+		// a dropped folder's files go into the open one
+		items = items.map(i => ({ ...i, dir: [] }));
+		const added = await uploads.run(items, folder);
 		library = [...added, ...library];
 		for (const a of added) onpick(a);
 	}
+
+	const drag = new FileDrag(upload, () => true);
 
 	const what = $derived(
 		images
@@ -91,14 +98,14 @@
 	);
 </script>
 
-<Flyout title="Choose {what}" {onclose} narrow>
+<Flyout title="Choose {what}" {onclose}>
 	{#snippet actions()}
 		<UploadButton
-			onfiles={upload}
+			onfiles={f => upload(fromInput(f))}
 			{multiple}
 			accept={images ? 'image/*' : undefined}
 		>
-			{action.busy ? 'Uploading…' : 'Upload'}
+			{uploads.active ? 'Uploading…' : 'Upload'}
 		</UploadButton>
 		<button type="button" class="primary" onclick={onclose}>Done</button>
 	{/snippet}
@@ -106,7 +113,16 @@
 		<SearchInput bind:value={search} placeholder="Search files" />
 	</div>
 	{#if action.error}<p class="error">{action.error}</p>{/if}
-	<div class="library" class:flat={!folders.length}>
+	<div
+		class="library"
+		class:flat={!folders.length}
+		role="region"
+		aria-label="Files"
+		ondragenter={drag.dragenter}
+		ondragleave={drag.dragleave}
+		ondragover={drag.dragover}
+		ondrop={drag.drop}
+	>
 		{#if folders.length}
 			<FolderTree
 				{folders}
@@ -114,7 +130,10 @@
 				onselect={select}
 			/>
 		{/if}
-		<div class="card">
+		<div class="card files">
+			{#if drag.over}
+				<DropOverlay label="Drop to upload" />
+			{/if}
 			<AssetGrid
 				assets={library}
 				{selected}
@@ -133,6 +152,11 @@
 <style lang="scss">
 	.search {
 		margin: 1rem 0 0.75rem;
+	}
+
+	.files {
+		position: relative;
+		min-height: 15rem;
 	}
 
 	.library {

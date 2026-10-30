@@ -1,8 +1,3 @@
-<script lang="ts" module>
-	/** What an asset tile carries when it is dragged: the asset ids. */
-	export const ASSETS_DRAG = 'application/x-zipp-assets';
-</script>
-
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import {
@@ -12,6 +7,7 @@
 		updateFolder,
 		type Folder,
 	} from './api';
+	import { ASSETS_DRAG, fromDrop, type Upload } from './uploads.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 
@@ -40,7 +36,7 @@
 		/** after a folder was added, renamed or deleted */
 		onchange?: (folder?: Folder) => void;
 		onmove?: (ids: number[], folder: number | null) => void;
-		onupload?: (files: FileList, folder: number | null) => void;
+		onupload?: (items: Upload[], folder: number | null) => void;
 	} = $props();
 
 	const parentOf = (id: number) =>
@@ -189,19 +185,18 @@
 	function dragover(e: DragEvent, id: number | null) {
 		if (!editable || !canDrop(e)) return;
 		e.preventDefault();
-		e.stopPropagation();
 		over = id ?? 'top';
 	}
 
 	function drop(e: DragEvent, id: number | null) {
 		over = null;
 		if (!editable || !canDrop(e)) return;
+		// the page's drop sees it was taken
 		e.preventDefault();
-		e.stopPropagation();
 		const data = e.dataTransfer!;
 		const ids = data.getData(ASSETS_DRAG);
 		if (ids) onmove?.(JSON.parse(ids), id);
-		else if (data.files.length) onupload?.(data.files, id);
+		else fromDrop(data).then(items => onupload?.(items, id));
 	}
 
 	function focus(el: HTMLInputElement) {
@@ -415,6 +410,7 @@
 	}
 
 	.row:hover .menu,
+	.row.active .menu,
 	.row:focus-within .menu,
 	.menu:has(:global([aria-expanded='true'])) {
 		opacity: 1;

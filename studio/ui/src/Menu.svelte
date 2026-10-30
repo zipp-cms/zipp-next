@@ -4,6 +4,8 @@
 		icon: string;
 		/** a link, or what a click does */
 		href?: string;
+		/** the link downloads, with this filename */
+		download?: string;
 		onclick?: () => void;
 		danger?: boolean;
 	};
@@ -39,9 +41,10 @@
 				<a
 					class="popup-item"
 					href={item.href}
-					target={item.href.startsWith('/admin')
+					target={item.href.startsWith('/admin') || item.download
 						? undefined
 						: '_blank'}
+					download={item.download}
 					role="menuitem"
 					onclick={() => (open = false)}
 				>

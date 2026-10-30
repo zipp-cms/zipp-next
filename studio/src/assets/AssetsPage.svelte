@@ -25,10 +25,13 @@
 	import { untrack } from 'svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import {
+		assetUrl,
+		assetUsage,
+		deleteAsset,
 		folderRows,
 		listAssets,
 		moveAssets,
-		uploadAssets,
+		updateAsset,
 		type Asset,
 		type Folder,
 	} from './api';
@@ -39,7 +42,16 @@
 	import AssetDetail from './AssetDetail.svelte';
 	import SearchInput, { SEARCH_DELAY_MS } from 'zipp-ui/SearchInput.svelte';
 	import { Busy } from '../core/busy.svelte';
+	import DropOverlay from './DropOverlay.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
+	import type { MenuItem } from 'zipp-ui/Menu.svelte';
+	import { plural } from '../core/format';
+	import {
+		FileDrag,
+		fromInput,
+		uploads,
+		type Upload,
+	} from './uploads.svelte';
 
 	let {
 		schema,
@@ -64,7 +76,7 @@
 	);
 	let search = $state('');
 	let error = $state('');
-	const uploading = new Busy();
+	const action = new Busy();
 	let current = $state<Asset | null>(null);
 
 	/** The assets of the folder, a search looks in all of them. */
@@ -99,7 +111,7 @@
 	}
 
 	async function move(ids: number[], to: number | null) {
-		await uploading.run(() => moveAssets(ids, to));
+		await action.run(() => moveAssets(ids, to));
 		load();
 		loadFolders();
 	}
@@ -116,20 +128,90 @@
 		return () => clearTimeout(wait);
 	});
 
-	async function upload(files: FileList | null, into = folder) {
-		if (!files?.length) return;
-		await uploading.run(() => uploadAssets(files, into));
+	/** Files, or folders with theirs, into a folder of the tree. */
+	async function upload(items: Upload[], into = folder) {
+		if (!items.length) return;
+		const made = items.some(i => i.dir.length);
+		// the new folders show while the files go up
+		const run = uploads.run(items, into);
+		if (made) setTimeout(loadFolders, 500);
+		await run;
 		load();
 		loadFolders();
 	}
+
+	// files dropped anywhere on the page but on a folder go into the open one
+	const drag = new FileDrag(
+		items => upload(items),
+		() => canEdit,
+	);
 
 	function open(a: Asset) {
 		current = a;
 	}
 
-	function ondrop(e: DragEvent) {
-		e.preventDefault();
-		if (canEdit) upload(e.dataTransfer?.files ?? null);
+	async function rename(a: Asset, filename: string): Promise<boolean> {
+		const saved = await action.run(() =>
+			updateAsset(a.id, {
+				title: a.title,
+				alt: a.alt,
+				focalX: a.focalX,
+				focalY: a.focalY,
+				filename,
+				edits: a.edits,
+			}),
+		);
+		if (saved) assets = assets.map(x => (x.id === a.id ? saved : x));
+		return !!saved;
+	}
+
+	async function remove(a: Asset) {
+		const n = (await assetUsage(a.id).catch(() => [])).length;
+		const used = n
+			? ` It is used in ${plural(n, 'entry', 'entries')}.`
+			: '';
+		if (!confirm(`Delete ${a.filename}?${used}`)) return;
+		await action.run(() => deleteAsset(a.id));
+		load();
+		loadFolders();
+	}
+
+	function menu(a: Asset, startRename: () => void): MenuItem[] {
+		const items: MenuItem[] = [
+			{ label: 'Open', icon: 'view', onclick: () => open(a) },
+		];
+		if (canEdit)
+			items.push({ label: 'Rename', icon: 'edit', onclick: startRename });
+		items.push(
+			{
+				label: 'Download',
+				icon: 'download',
+				href: assetUrl(a, false, true),
+				download: a.filename,
+			},
+			{
+				label: 'Copy URL',
+				icon: 'copy-url',
+				onclick: () =>
+					navigator.clipboard.writeText(
+						location.origin + assetUrl(a),
+					),
+			},
+		);
+		if (canEdit && a.folderId !== null)
+			items.push({
+				label: 'Move to Files',
+				icon: 'file',
+				onclick: () => move([a.id], null),
+			});
+		if (canDelete)
+			items.push({
+				label: 'Delete',
+				icon: 'delete',
+				danger: true,
+				onclick: () => remove(a),
+			});
+		return items;
 	}
 </script>
 
@@ -137,21 +219,34 @@
 	class="page"
 	role="region"
 	aria-label="Assets"
-	ondragover={e => e.preventDefault()}
-	{ondrop}
+	ondragenter={drag.dragenter}
+	ondragleave={drag.dragleave}
+	ondragover={drag.dragover}
+	ondrop={drag.drop}
 >
 	<PageTop title="Assets">
 		{#snippet actions()}
 			{#if canEdit}
-				<UploadButton onfiles={upload} multiple primary>
-					{uploading.busy ? 'Uploading…' : 'Upload'}
+				<UploadButton
+					onfiles={f => upload(fromInput(f))}
+					directory
+					icon="folder-plus"
+				>
+					Upload folder
+				</UploadButton>
+				<UploadButton
+					onfiles={f => upload(fromInput(f))}
+					multiple
+					primary
+				>
+					{uploads.active ? 'Uploading…' : 'Upload'}
 				</UploadButton>
 			{/if}
 		{/snippet}
 	</PageTop>
 
-	{#if error || uploading.error}
-		<p class="error">{error || uploading.error}</p>
+	{#if error || action.error}
+		<p class="error">{error || action.error}</p>
 	{/if}
 
 	<div class="library">
@@ -168,7 +263,10 @@
 			/>
 		</aside>
 
-		<div class="card">
+		<div class="card files">
+			{#if drag.over}
+				<DropOverlay label="Drop to upload into {path || 'Files'}" />
+			{/if}
 			<div class="top">
 				<h2>{search ? 'In all folders' : path || 'Files'}</h2>
 				<SearchInput bind:value={search} placeholder="Search files" />
@@ -177,6 +275,8 @@
 				{assets}
 				onpick={open}
 				draggable={canEdit}
+				{menu}
+				onrename={rename}
 				empty={search
 					? 'Nothing found'
 					: folder === null
@@ -230,6 +330,11 @@
 		@include max-tablet {
 			grid-template-columns: 1fr;
 		}
+	}
+
+	.files {
+		position: relative;
+		min-height: 20rem;
 	}
 
 	.folders {
