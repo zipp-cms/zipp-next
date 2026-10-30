@@ -1,5 +1,4 @@
 use axum::extract::State;
-use axum::http::HeaderMap;
 use axum::{Json, Router};
 
 use super::api::*;
@@ -11,7 +10,7 @@ use crate::auth::{
 	set_password_hash,
 };
 use crate::content::FieldError;
-use crate::error::{Error, Result};
+use crate::error::Error;
 
 async fn list_route(
 	State(state): State<AppState>,
@@ -21,25 +20,12 @@ async fn list_route(
 	Ok(Json(list(&state.db.conn())?))
 }
 
-/// An admin, or the user themself.
-fn admin_or_self(auth: &Authed, id: i64) -> Result<()> {
-	match auth.admin() || auth.user_id == id {
-		true => Ok(()),
-		false => Err(Error::Forbidden),
-	}
-}
-
-/// The session of the request, it stays when the others end.
-fn own_token(headers: &HeaderMap) -> Option<&str> {
-	headers.get("session-token").and_then(|t| t.to_str().ok())
-}
-
 async fn get_route(
 	State(state): State<AppState>,
 	auth: Authed,
 	Req(req): Req<GetReq>,
 ) -> ApiResult<GetReq> {
-	admin_or_self(&auth, req.id)?;
+	auth.check_self(req.id)?;
 	Ok(Json(get(&state.db.conn(), req.id)?))
 }
 
@@ -63,10 +49,9 @@ async fn create_route(
 async fn update_route(
 	State(state): State<AppState>,
 	auth: Authed,
-	headers: HeaderMap,
 	Req(req): Req<UpdateReq>,
 ) -> ApiResult<UpdateReq> {
-	admin_or_self(&auth, req.id)?;
+	auth.check_self(req.id)?;
 	let own = auth.user_id == req.id;
 	let current = get(&state.db.conn(), req.id)?;
 	if own && req.role != current.user.role {
@@ -97,14 +82,18 @@ async fn update_route(
 		None => None,
 	};
 	let conn = state.db.conn();
-	update(&conn, req.id, &req.email, &req.name)?;
+	// all of it or nothing
+	let tx = conn.unchecked_transaction()?;
+	update(&tx, req.id, &req.email, &req.name)?;
 	if !own {
-		set_role(&conn, req.id, req.role.as_deref())?;
+		set_role(&tx, req.id, req.role.as_deref())?;
 	}
 	if let Some(hash) = hash {
-		let keep = if own { own_token(&headers) } else { None };
-		set_password_hash(&conn, req.id, &hash, keep)?;
+		// the own session stays when the others end
+		let keep = own.then_some(auth.token.as_str());
+		set_password_hash(&tx, req.id, &hash, keep)?;
 	}
+	tx.commit()?;
 	Ok(Json(get(&conn, req.id)?))
 }
 
@@ -123,11 +112,10 @@ async fn delete_route(
 async fn end_sessions_route(
 	State(state): State<AppState>,
 	auth: Authed,
-	headers: HeaderMap,
 	Req(req): Req<EndSessionsReq>,
 ) -> ApiResult<EndSessionsReq> {
-	admin_or_self(&auth, req.id)?;
-	let keep = own_token(&headers).filter(|_| auth.user_id == req.id);
+	auth.check_self(req.id)?;
+	let keep = (auth.user_id == req.id).then_some(auth.token.as_str());
 	end_sessions(&state.db.conn(), req.id, keep)?;
 	Ok(Json(()))
 }

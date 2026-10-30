@@ -34,11 +34,19 @@ pub fn search(
 	};
 	let sql = format!(
 		"SELECT {COLUMNS} FROM assets
-		WHERE filename LIKE ?1 AND (?2 IS NULL OR kind = ?2)
+		WHERE filename LIKE ?1 ESCAPE '\\' AND (?2 IS NULL OR kind = ?2)
 		AND (?3 OR folder_id IS ?4) {ends}
 		ORDER BY id DESC LIMIT 200"
 	);
-	let search = format!("%{search}%");
+	// `%` and `_` in the search are themselves
+	let escaped: String = search
+		.chars()
+		.flat_map(|c| match c {
+			'\\' | '%' | '_' => vec!['\\', c],
+			c => vec![c],
+		})
+		.collect();
+	let search = format!("%{escaped}%");
 	let mut values: Vec<Box<dyn rusqlite::ToSql>> = vec![
 		Box::new(search),
 		Box::new(kind.map(String::from)),
@@ -117,8 +125,7 @@ pub fn update(
 		],
 	)?;
 	if filename != old.filename {
-		fs::rename(dir.join(&old.filename), dir.join(&filename))
-			.map_err(|e| Error::Internal(e.to_string()))?;
+		fs::rename(dir.join(&old.filename), dir.join(&filename))?;
 	}
 	if let Err(e) = tx.commit() {
 		// back to the name the row still has
@@ -177,9 +184,8 @@ pub fn replace(
 	let up = inspect(filename, data)?;
 
 	let dir = asset_dir(files, id);
-	let internal = |e: std::io::Error| Error::Internal(e.to_string());
 	let tmp = dir.join(format!(".replace{}", rand::random::<u32>()));
-	fs::write(&tmp, data).map_err(internal)?;
+	fs::write(&tmp, data)?;
 
 	// the row first, the new file goes in before the commit; the old one
 	// only goes when both worked
@@ -201,7 +207,7 @@ pub fn replace(
 	let moved = updated
 		.map_err(Error::from)
 		.and_then(|_| {
-			fs::rename(&tmp, dir.join(&up.filename)).map_err(internal)
+			fs::rename(&tmp, dir.join(&up.filename)).map_err(Error::from)
 		})
 		.and_then(|_| tx.commit().map_err(Error::from));
 	if let Err(e) = moved {

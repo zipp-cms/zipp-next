@@ -17,14 +17,13 @@ use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::http::{self, header};
 use axum::response::Response;
-use rusqlite::params;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tower::ServiceExt;
 
 use crate::api::{Request, has_query, path_of};
-use crate::db::{Db, now};
+use crate::db::Db;
 use crate::error::{Error, Result};
 use crate::schema::Schema;
 use crate::{AppState, graphql, migrate, server};
@@ -112,13 +111,9 @@ impl TestServer {
 		let n = self.users.fetch_add(1, Ordering::Relaxed);
 		let email = format!("{}{n}@test.ch", role.unwrap_or("admin"));
 		let conn = self.state.db.conn();
-		conn.execute(
-			"INSERT INTO users (email, password_hash, role, created_at)
-			VALUES (?1, ?2, ?3, ?4)",
-			params![email, password_hash(), role, now()],
-		)
-		.unwrap();
-		let user_id = conn.last_insert_rowid();
+		let user_id =
+			crate::users::create(&conn, &email, "", password_hash(), role)
+				.unwrap();
 		let token = crate::auth::new_session(&conn, user_id).unwrap().token;
 		Client {
 			app: self.app.clone(),

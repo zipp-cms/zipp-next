@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 use std::marker::PhantomData;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock, PoisonError};
 
 use axum::extract::{FromRef, FromRequestParts, RawPathParams};
 use axum::http::HeaderMap;
@@ -42,15 +42,23 @@ static FAILS: Mutex<BTreeMap<String, (u32, i64)>> = Mutex::new(BTreeMap::new());
 static DUMMY_HASH: OnceLock<String> = OnceLock::new();
 
 /// Extractor that only succeeds with a valid `session-token` header.
+#[non_exhaustive]
 pub struct Authed {
 	pub user_id: i64,
 	/// `None` is an admin
 	pub role: Option<String>,
+	/// the session of the request
+	pub token: String,
 }
 
 impl Authed {
 	pub fn admin(&self) -> bool {
 		self.role.is_none()
+	}
+
+	/// An admin, or the user `id` themself.
+	pub fn check_self(&self, id: i64) -> Result<()> {
+		allowed(self.admin() || self.user_id == id)
 	}
 
 	fn role<'a>(&self, schema: &'a Schema) -> Option<&'a Role> {
@@ -112,11 +120,17 @@ where
 	async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self> {
 		let db = Db::from_ref(state);
 		let conn = db.conn();
+		let token =
+			token_of(&parts.headers)?.ok_or(Error::MissingSessionToken)?;
 		let Some(user_id) = session(&conn, &parts.headers)? else {
 			return Err(Error::MissingSessionToken);
 		};
 		let role = role_of(&conn, user_id)?;
-		Ok(Self { user_id, role })
+		Ok(Self {
+			user_id,
+			role,
+			token: token.into(),
+		})
 	}
 }
 
@@ -236,14 +250,21 @@ impl FromRequestParts<AppState> for AiAccess {
 /// The user of a request, `None` without a token. Public routes use it to
 /// show unpublished entries to editors.
 pub fn session(conn: &Connection, headers: &HeaderMap) -> Result<Option<i64>> {
-	let Some(token) = headers.get("session-token") else {
+	let Some(token) = token_of(headers)? else {
 		return Ok(None);
 	};
-	let token = token.to_str().map_err(|_| Error::InvalidSessionToken)?;
 
 	match get_session(conn, token)? {
 		Some(s) if s.expires_at > now() => Ok(Some(s.user_id)),
 		_ => Err(Error::InvalidSessionToken),
+	}
+}
+
+/// The token of a request, its `session-token` header.
+pub(crate) fn token_of(headers: &HeaderMap) -> Result<Option<&str>> {
+	match headers.get("session-token") {
+		Some(t) => t.to_str().map(Some).map_err(|_| Error::InvalidSessionToken),
+		None => Ok(None),
 	}
 }
 
@@ -306,19 +327,20 @@ pub fn add_user(
 ) -> Result<()> {
 	let hash = bcrypt::hash(password, COST)
 		.map_err(|e| Error::Internal(e.to_string()))?;
-	conn.execute(
-		"INSERT INTO users (email, password_hash, role, created_at)
-		VALUES (?1, ?2, ?3, ?4)
-		ON CONFLICT (email) DO UPDATE SET password_hash = ?2, role = ?3",
-		params![email, hash, role, now()],
-	)?;
+	let id: Option<i64> = conn
+		.query_row("SELECT id FROM users WHERE email = ?1", [email], |r| {
+			r.get(0)
+		})
+		.optional()?;
+	let id = match id {
+		Some(id) => {
+			crate::users::set_role(conn, id, role)?;
+			id
+		}
+		None => crate::users::create(conn, email, "", &hash, role)?,
+	};
 	// a new password logs out everywhere
-	conn.execute(
-		"DELETE FROM sessions WHERE user_id =
-		(SELECT id FROM users WHERE email = ?1)",
-		[email],
-	)?;
-	Ok(())
+	set_password_hash(conn, id, &hash, None)
 }
 
 /// The user of a login, after the password was checked; bcrypt takes a
@@ -345,12 +367,7 @@ pub async fn login(db: &Db, email: &str, password: &str) -> Result<i64> {
 			.get_or_init(|| bcrypt::hash("not a password", COST).unwrap());
 		(0, dummy.clone())
 	});
-	let password = password.to_string();
-	let ok = tokio::task::spawn_blocking(move || {
-		bcrypt::verify(password, &hash).unwrap_or(false)
-	})
-	.await
-	.map_err(|e| Error::Internal(e.to_string()))?;
+	let ok = verify(password, hash).await?;
 	if !ok || !known {
 		failed(email);
 		return Err(Error::LoginIncorrect);
@@ -400,9 +417,18 @@ pub fn end_sessions(
 /// workers and not with the database locked.
 pub async fn hash_password(password: String) -> Result<String> {
 	tokio::task::spawn_blocking(move || bcrypt::hash(password, COST))
-		.await
-		.map_err(|e| Error::Internal(e.to_string()))?
+		.await?
 		.map_err(|e| Error::Internal(e.to_string()))
+}
+
+/// Whether a password has the hash; like hashing, on a blocking thread.
+async fn verify(password: &str, hash: String) -> Result<bool> {
+	let password = password.to_string();
+	let ok = tokio::task::spawn_blocking(move || {
+		bcrypt::verify(password, &hash).unwrap_or(false)
+	})
+	.await?;
+	Ok(ok)
 }
 
 /// Whether the password is the one of the user, see [`hash_password`].
@@ -416,12 +442,7 @@ pub async fn password_matches(
 		[user_id],
 		|r| r.get(0),
 	)?;
-	let password = password.to_string();
-	tokio::task::spawn_blocking(move || {
-		bcrypt::verify(password, &hash).unwrap_or(false)
-	})
-	.await
-	.map_err(|e| Error::Internal(e.to_string()))
+	verify(password, hash).await
 }
 
 /// A new password: the user is logged out everywhere, except in `keep`.
@@ -440,12 +461,14 @@ pub fn set_password_hash(
 
 /// Whether the email may try again, see [`MAX_FAILS`].
 fn may_try(email: &str) -> bool {
-	let mut fails = FAILS.lock().unwrap();
+	let mut fails = FAILS.lock().unwrap_or_else(PoisonError::into_inner);
 	fails.retain(|_, (_, first)| *first + FAIL_WINDOW_MS > now());
-	fails.get(email).is_none_or(|(n, _)| *n < MAX_FAILS)
+	let email = email.to_lowercase();
+	fails.get(&email).is_none_or(|(n, _)| *n < MAX_FAILS)
 }
 
+/// A wrong password, the email in any case counts as one.
 fn failed(email: &str) {
-	let mut fails = FAILS.lock().unwrap();
-	fails.entry(email.to_string()).or_insert((0, now())).0 += 1;
+	let mut fails = FAILS.lock().unwrap_or_else(PoisonError::into_inner);
+	fails.entry(email.to_lowercase()).or_insert((0, now())).0 += 1;
 }

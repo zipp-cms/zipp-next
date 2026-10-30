@@ -13,6 +13,7 @@ fn roles_allow_levels() {
 	let user = |role: Option<&str>| Authed {
 		user_id: 1,
 		role: role.map(Into::into),
+		token: String::new(),
 	};
 
 	let editor = user(Some("editor"));

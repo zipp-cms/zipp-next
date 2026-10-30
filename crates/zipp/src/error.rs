@@ -80,6 +80,20 @@ impl IntoResponse for Error {
 	}
 }
 
+/// A file that couldn't be read or written is the server's problem.
+impl From<std::io::Error> for Error {
+	fn from(e: std::io::Error) -> Self {
+		Self::Internal(e.to_string())
+	}
+}
+
+/// Work on a blocking thread that panicked.
+impl From<tokio::task::JoinError> for Error {
+	fn from(e: tokio::task::JoinError) -> Self {
+		Self::Internal(e.to_string())
+	}
+}
+
 impl From<rusqlite::Error> for Error {
 	fn from(e: rusqlite::Error) -> Self {
 		match e {

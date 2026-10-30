@@ -3,7 +3,9 @@ use axum::http::HeaderMap;
 use axum::{Json, Router};
 
 use super::api::*;
-use super::{Session, end_session, login, new_session, renew_session};
+use super::{
+	Session, end_session, login, new_session, renew_session, token_of,
+};
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::error::Error;
@@ -37,10 +39,7 @@ async fn session_route(
 	headers: HeaderMap,
 	Req(_): Req<SessionReq>,
 ) -> ApiResult<SessionReq> {
-	let token = headers
-		.get("session-token")
-		.and_then(|t| t.to_str().ok())
-		.ok_or(Error::MissingSessionToken)?;
+	let token = token_of(&headers)?.ok_or(Error::MissingSessionToken)?;
 	let conn = state.db.conn();
 	let session = renew_session(&conn, token)?;
 	Ok(Json(authenticated(&conn, session)?))
@@ -51,8 +50,7 @@ async fn logout_route(
 	headers: HeaderMap,
 	Req(_): Req<LogoutReq>,
 ) -> ApiResult<LogoutReq> {
-	if let Some(token) = headers.get("session-token") {
-		let token = token.to_str().unwrap_or_default();
+	if let Some(token) = token_of(&headers)? {
 		end_session(&state.db.conn(), token)?;
 	}
 	Ok(Json(()))

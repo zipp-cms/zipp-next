@@ -103,11 +103,15 @@ pub fn refresh_uris(
 					WHERE entry_id = ?2 AND site = ?3",
 					params![uri, id, site.handle],
 				)
-				.map_err(|_| {
-					Error::Request(format!(
-						"the uri /{} is already used",
-						uri.clone().unwrap_or_default()
-					))
+				.map_err(|e| match e.sqlite_error_code() {
+					// the unique index of uris
+					Some(rusqlite::ErrorCode::ConstraintViolation) => {
+						Error::Request(format!(
+							"the uri /{} is already used",
+							uri.clone().unwrap_or_default()
+						))
+					}
+					_ => e.into(),
 				})?;
 			}
 			uris.insert(id, uri);

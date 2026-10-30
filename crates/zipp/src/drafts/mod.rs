@@ -195,7 +195,9 @@ pub fn put_draft(
 		return Err(Error::Request(format!("unknown site {site}")));
 	}
 	let entry = get_entry(conn, id, site)?;
-	let comp = schema.entry_type(&entry.ty).unwrap();
+	let comp = schema.entry_type(&entry.ty).ok_or_else(|| {
+		Error::Internal(format!("{} is no type of the schema", entry.ty))
+	})?;
 
 	let current = get_draft(conn, id)?;
 	match (&current, base) {

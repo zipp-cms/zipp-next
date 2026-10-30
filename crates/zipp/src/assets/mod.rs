@@ -42,8 +42,8 @@ mod transform;
 
 pub use edits::{Canvas, Crop, Edits, Resize};
 pub use folders::{
-	Folder, create_folder, delete_folder, folders, move_assets, top_count,
-	update_folder,
+	Folder, check_folder, create_folder, delete_folder, folders, move_assets,
+	top_count, update_folder,
 };
 pub use manage::{
 	AssetChange, InFolder, Usage, delete, replace, search, update, usage,

@@ -77,12 +77,11 @@ async fn transformed(
 			tokio::task::spawn_blocking(move || {
 				generate(&a, &original, &t, &o)
 			})
-			.await
-			.map_err(|e| Error::Internal(e.to_string()))??;
+			.await??;
 		}
 	}
 
-	let data = fs::read(out).map_err(|e| Error::Internal(e.to_string()))?;
+	let data = fs::read(out)?;
 	Ok(file_response(asset.output_mime(), data))
 }
 
@@ -129,7 +128,7 @@ pub(super) async fn upload(
 ) -> Result<Json<Vec<Asset>>> {
 	// the folder is there, before a file is stored
 	if let Some(f) = params.folder {
-		move_assets(&state.db.conn(), &[], Some(f))?;
+		check_folder(&state.db.conn(), Some(f))?;
 	}
 	let mut assets = vec![];
 	while let Some(field) = multipart

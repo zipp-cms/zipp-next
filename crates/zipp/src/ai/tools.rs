@@ -349,20 +349,16 @@ fn tool_create_entry(t: &Ctx, input: &Value) -> ToolResult {
 /// Images and files for the fields that hold them.
 fn tool_list_assets(t: &Ctx, input: &Value) -> ToolResult {
 	t.auth.check_assets(t.schema, Access::View)?;
-	let conn = t.conn;
-
-	let search = format!("%{}%", input["search"].as_str().unwrap_or_default());
-	let mut stmt = conn.prepare(
-		"SELECT id, filename, kind, alt FROM assets
-			WHERE filename LIKE ?1 ORDER BY id DESC LIMIT 200",
-	)?;
-	let rows = stmt.query_map([search], |r| {
-		Ok(
-			json!({ "id": r.get::<_, i64>(0)?, "filename": r.get::<_, String>(1)?,
-				"kind": r.get::<_, String>(2)?, "alt": r.get::<_, String>(3)? }),
-		)
-	})?;
-	let out: Vec<Value> = rows.collect::<rusqlite::Result<_>>()?;
+	let search = input["search"].as_str().unwrap_or_default();
+	let all = crate::assets::InFolder::All;
+	let assets = crate::assets::search(t.conn, search, None, all, &[])?;
+	let out: Vec<Value> = assets
+		.into_iter()
+		.map(|a| {
+			json!({ "id": a.id, "filename": a.filename, "kind": a.kind,
+				"alt": a.alt })
+		})
+		.collect();
 	Ok((json!(out), None))
 }
 

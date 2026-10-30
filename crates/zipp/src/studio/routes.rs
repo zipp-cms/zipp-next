@@ -60,17 +60,7 @@ async fn field_module(
 	Path(file): Path<String>,
 ) -> Response {
 	let name = file.strip_suffix(".js").unwrap_or(&file);
-	match state.schema.field_types.get(name) {
-		Some(t) => (
-			[
-				(header::CONTENT_TYPE, "text/javascript"),
-				(header::CACHE_CONTROL, "no-cache"),
-			],
-			t.studio().js,
-		)
-			.into_response(),
-		None => StatusCode::NOT_FOUND.into_response(),
-	}
+	module(state.schema.field_types.get(name).map(|t| t.studio().js))
 }
 
 /// The studio module of a plugin, see [`PluginStudio`](crate::PluginStudio).
@@ -80,17 +70,20 @@ async fn plugin_module(
 ) -> Response {
 	let name = file.strip_suffix(".js").unwrap_or(&file);
 	let studio = state.schema.plugins.get(name).and_then(|p| p.studio());
-	match studio {
-		Some(s) => (
-			[
-				(header::CONTENT_TYPE, "text/javascript"),
-				(header::CACHE_CONTROL, "no-cache"),
-			],
-			s.js,
-		)
-			.into_response(),
-		None => StatusCode::NOT_FOUND.into_response(),
-	}
+	module(studio.map(|s| s.js))
+}
+
+/// An ES module of another crate, asked again on every load: it changes
+/// with the crate, not with a hash in its name.
+fn module(js: Option<&'static str>) -> Response {
+	let Some(js) = js else {
+		return StatusCode::NOT_FOUND.into_response();
+	};
+	let headers = [
+		(header::CONTENT_TYPE, "text/javascript"),
+		(header::CACHE_CONTROL, "no-cache"),
+	];
+	(headers, js).into_response()
 }
 
 pub fn routes() -> Router<AppState> {

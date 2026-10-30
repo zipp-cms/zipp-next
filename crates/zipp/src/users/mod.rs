@@ -103,10 +103,15 @@ pub fn check(
 	} else if taken {
 		error("email", "Another user has this email");
 	}
-	if password.is_some_and(|p| p.chars().count() < 8) {
-		error("password", "At least 8 characters");
+	if let Some(e) = password.and_then(password_error) {
+		error("password", e);
 	}
 	Ok(errors)
+}
+
+/// What is wrong with a new password, the studio's and the cli's rule.
+pub fn password_error(password: &str) -> Option<&'static str> {
+	(password.chars().count() < 8).then_some("At least 8 characters")
 }
 
 /// A new user with a password's hash, see `auth::hash_password`.

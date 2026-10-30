@@ -255,7 +255,7 @@ async fn folders_hold_assets() {
 	let delete = DeleteFolderReq { id: events.id };
 	assert_eq!(author.call(&delete).await.unwrap_err(), Error::Forbidden);
 	let err = editor.call(&delete).await.unwrap_err();
-	assert!(matches!(err, Error::Request(_)));
+	assert!(matches!(err, Error::Conflict(_)));
 	let out = MoveReq {
 		ids: vec![a.id],
 		folder_id: None,
@@ -317,4 +317,19 @@ async fn a_file_named_like_the_transforms() {
 		let (status, body) = get(&ts.anonymous(), &a.url(None)).await;
 		assert_eq!((status, body), (StatusCode::OK, png(4, 4)));
 	}
+}
+
+#[tokio::test]
+async fn search_takes_percent_and_underscore_as_they_are() {
+	let ts = TestServer::new(site_with_roles());
+	let editor = ts.user(Some("editor"));
+	upload(&editor, "a_b.png", &png(2, 2)).await.unwrap();
+	upload(&editor, "axb.png", &png(2, 2)).await.unwrap();
+	let find = |s: &str| ListReq {
+		search: Some(s.into()),
+		..Default::default()
+	};
+	let found = editor.call(&find("a_b")).await.unwrap();
+	assert_eq!(found.len(), 1, "{found:?}");
+	assert!(editor.call(&find("%")).await.unwrap().is_empty());
 }

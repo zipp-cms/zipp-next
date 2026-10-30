@@ -109,7 +109,7 @@ pub(crate) fn app(state: AppState, routes: Router<AppState>) -> Router {
 			CorsLayer::new()
 				.allow_origin(cors::Any)
 				.allow_methods([Method::GET, Method::POST])
-				.allow_headers([header::CONTENT_TYPE]),
+				.allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]),
 		)
 		.layer(TraceLayer::new_for_http())
 		.with_state(state)

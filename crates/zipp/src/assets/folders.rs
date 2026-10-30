@@ -82,7 +82,8 @@ fn check_name(
 	Ok(name.into())
 }
 
-fn check_parent(conn: &Connection, parent: Option<i64>) -> Result<()> {
+/// That the folder exists, `None` is the top.
+pub fn check_folder(conn: &Connection, parent: Option<i64>) -> Result<()> {
 	match parent {
 		Some(p) => folder(conn, p).map(|_| ()),
 		None => Ok(()),
@@ -94,7 +95,7 @@ pub fn create_folder(
 	parent: Option<i64>,
 	name: &str,
 ) -> Result<Folder> {
-	check_parent(conn, parent)?;
+	check_folder(conn, parent)?;
 	let name = check_name(conn, parent, name, None)?;
 	conn.execute(
 		"INSERT INTO asset_folders (parent_id, name, created_at)
@@ -112,7 +113,7 @@ pub fn update_folder(
 	name: &str,
 ) -> Result<Folder> {
 	folder(conn, id)?;
-	check_parent(conn, parent)?;
+	check_folder(conn, parent)?;
 	let all = folders(conn)?;
 	let mut at = parent;
 	while let Some(p) = at {
@@ -139,7 +140,7 @@ pub fn delete_folder(conn: &Connection, id: i64) -> Result<()> {
 		|r| r.get(0),
 	)?;
 	if f.assets > 0 || folders_in > 0 {
-		return Err(Error::Request(format!("{} isn't empty", f.name)));
+		return Err(Error::Conflict(format!("{} isn't empty", f.name)));
 	}
 	conn.execute("DELETE FROM asset_folders WHERE id = ?1", [id])?;
 	Ok(())
@@ -151,7 +152,7 @@ pub fn move_assets(
 	ids: &[i64],
 	folder_id: Option<i64>,
 ) -> Result<()> {
-	check_parent(conn, folder_id)?;
+	check_folder(conn, folder_id)?;
 	for id in ids {
 		let n = conn.execute(
 			"UPDATE assets SET folder_id = ?1 WHERE id = ?2",

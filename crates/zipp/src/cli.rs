@@ -155,8 +155,8 @@ pub(super) fn add_user(
 		.read_line(&mut password)
 		.map_err(|e| e.to_string())?;
 	let password = password.trim_end_matches(['\n', '\r']);
-	if password.len() < 8 {
-		return Err("The password needs at least 8 characters".into());
+	if let Some(e) = crate::users::password_error(password) {
+		return Err(format!("The password: {e}"));
 	}
 
 	let db = Db::open(db_path).map_err(|e| e.to_string())?;
