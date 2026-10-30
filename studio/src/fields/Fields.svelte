@@ -94,7 +94,9 @@
 				<input
 					id={path}
 					type="checkbox"
-					bind:checked={values[field.handle]}
+					checked={values[field.handle] ?? false}
+					onchange={e =>
+						(values[field.handle] = e.currentTarget.checked)}
 				/>
 			{:else if field.kind === 'text' && field.multiline}
 				<textarea
