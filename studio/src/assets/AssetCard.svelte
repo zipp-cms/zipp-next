@@ -37,6 +37,7 @@
 
 <div
 	class="item"
+	data-menu-area
 	class:selected
 	class:typed={asset.kind !== 'image' && !handle}
 >

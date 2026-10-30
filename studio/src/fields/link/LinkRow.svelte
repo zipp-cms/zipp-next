@@ -47,7 +47,7 @@
 	</span>
 {/snippet}
 
-<div class="link-row">
+<div class="link-row" data-menu-area>
 	{@render handle?.()}
 	{#if onedit}
 		<button

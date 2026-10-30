@@ -201,6 +201,7 @@
 			class="row"
 			class:types
 			data-sort
+			data-menu-area
 			class:sort-dragging={sort.moving(i)}
 			role="listitem"
 		>

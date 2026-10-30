@@ -5,10 +5,12 @@
 	/**
 	 * A box under the button that opens it: menus, pickers, the block
 	 * menu. A click outside or Escape closes it, its first input gets the
-	 * focus. `trigger` renders the button with what toggles it.
+	 * focus. `trigger` renders the button with what toggles it. With `at`
+	 * it opens at that point of the window instead (a right click).
 	 */
 	let {
 		open = $bindable(false),
+		at = $bindable(null),
 		align = 'start',
 		width,
 		trigger,
@@ -23,6 +25,7 @@
 		trigger: Snippet<[{ toggle: () => void; open: boolean }]>;
 		children: Snippet;
 		label?: string;
+		at?: { x: number; y: number } | null;
 	} = $props();
 
 	let root = $state<HTMLElement>();
@@ -30,6 +33,20 @@
 
 	const toggle = () => (open = !open);
 	const close = () => (open = false);
+
+	// the next open is under the button again
+	$effect(() => {
+		if (!open) at = null;
+	});
+
+	/** At the point, moved in where it would leave the window. */
+	function place(node: HTMLElement, p: { x: number; y: number }) {
+		const r = node.getBoundingClientRect();
+		const x = Math.min(p.x, innerWidth - r.width - 8);
+		const y = p.y + r.height > innerHeight - 8 ? p.y - r.height : p.y;
+		node.style.left = `${Math.max(x, 8)}px`;
+		node.style.top = `${Math.max(y, 8)}px`;
+	}
 
 	function onpointerdown(e: PointerEvent) {
 		if (open && !root?.contains(e.target as Node)) close();
@@ -45,16 +62,30 @@
 <div class="popover" bind:this={root}>
 	{@render trigger({ toggle, open })}
 	{#if open}
-		<div
-			class="popup {align}"
-			role="dialog"
-			aria-label={label}
-			style:width
-			bind:this={box}
-			use:layer={close}
-		>
-			{@render children()}
-		</div>
+		{#if at}
+			<div
+				class="popup at"
+				role="dialog"
+				aria-label={label}
+				style:width
+				bind:this={box}
+				use:layer={close}
+				use:place={at}
+			>
+				{@render children()}
+			</div>
+		{:else}
+			<div
+				class="popup {align}"
+				role="dialog"
+				aria-label={label}
+				style:width
+				bind:this={box}
+				use:layer={close}
+			>
+				{@render children()}
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -69,6 +100,12 @@
 		flex-direction: column;
 		gap: 2px;
 		max-width: 90vw;
+	}
+
+	// at the pointer, over everything of the page
+	.at {
+		position: fixed;
+		z-index: calc(var(--z-overlay) + 1);
 	}
 
 	.start {

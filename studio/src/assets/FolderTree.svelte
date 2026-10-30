@@ -275,6 +275,7 @@
 				class:over={over === f.id}
 				style:--depth={depth}
 				data-folder={f.name}
+				data-menu-area
 				role="presentation"
 				ondragover={e => dragover(e, f.id)}
 				ondragleave={() => (over = null)}

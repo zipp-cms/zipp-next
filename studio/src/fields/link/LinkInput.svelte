@@ -86,7 +86,7 @@
 </script>
 
 {#if !filled && !editing}
-	<div class="link-input empty" class:required>
+	<div class="link-input empty" class:required data-menu-area>
 		{@render handle?.()}
 		<span class="message">
 			{required ? 'Required – no link yet.' : 'No link yet.'}
