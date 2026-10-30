@@ -18,9 +18,13 @@ export type Entry = {
 
 export type EntryRef = {
 	id: number;
+	section: string;
 	type: string;
 	title: string;
 	slug: string;
+	uri: string | null;
+	/** in the site */
+	published: boolean;
 };
 
 export type Refs = Record<number, EntryRef>;

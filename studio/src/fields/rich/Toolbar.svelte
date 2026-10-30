@@ -4,8 +4,8 @@
 	import type { Refs } from '../../entries/api';
 	import Icon from '../../ui/Icon.svelte';
 	import Popover from '../../ui/Popover.svelte';
-	import LinkInput from '../LinkInput.svelte';
-	import { BUTTON_LINKS } from '../link';
+	import LinkEditor from '../link/LinkEditor.svelte';
+	import { BUTTON_LINKS, opensInNewTab } from '../link/link';
 	import {
 		insertBlock,
 		insertButtons,
@@ -112,7 +112,7 @@
 		</button>
 	{/if}
 	{#if opts.links}
-		<Popover bind:open={linking} width="24.5rem" label="Link">
+		<Popover bind:open={linking} width="34rem" label="Link">
 			{#snippet trigger({ toggle })}
 				<button
 					type="button"
@@ -120,32 +120,20 @@
 					title="Link"
 					onclick={() => openLink(toggle)}
 				>
-					<Icon name="external" size={14} />
+					<Icon name="link" size={14} />
 				</button>
 			{/snippet}
 			<div class="link">
-				<LinkInput
+				<LinkEditor
 					{schema}
 					{refs}
 					{link}
 					to={BUTTON_LINKS}
+					newTab={opensInNewTab(schema, link, true)}
 					onchange={l => (link = l)}
+					ondone={() => applyLink($state.snapshot(link))}
+					onremove={() => applyLink({ type: 'url', value: null })}
 				/>
-				<div class="actions">
-					<button
-						type="button"
-						onclick={() => applyLink({ type: 'url', value: null })}
-					>
-						Remove link
-					</button>
-					<button
-						type="button"
-						class="primary"
-						onclick={() => applyLink($state.snapshot(link))}
-					>
-						Apply
-					</button>
-				</div>
 			</div>
 		</Popover>
 	{/if}
@@ -238,13 +226,6 @@
 	}
 
 	.link {
-		padding: 0.5rem;
-
-		.actions {
-			display: flex;
-			justify-content: flex-end;
-			gap: 0.5rem;
-			margin-top: 0.625rem;
-		}
+		padding: 0.75rem;
 	}
 </style>

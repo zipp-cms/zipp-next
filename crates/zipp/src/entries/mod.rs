@@ -92,6 +92,22 @@ pub struct EntryRef {
 	pub title: String,
 	pub slug: String,
 	pub uri: Option<String>,
+	/// in the site
+	pub published: bool,
+}
+
+/// An [`EntryRef`] of `e.id, e.section, e.type, s.title, s.slug, s.uri,
+/// s.published`.
+fn entry_ref(r: &rusqlite::Row) -> rusqlite::Result<EntryRef> {
+	Ok(EntryRef {
+		id: r.get(0)?,
+		section: r.get(1)?,
+		ty: r.get(2)?,
+		title: r.get(3)?,
+		slug: r.get(4)?,
+		uri: r.get(5)?,
+		published: r.get(6)?,
+	})
 }
 
 const COLUMNS: &str = "e.id, e.section, e.type, s.site, s.title, s.slug, \
@@ -191,7 +207,8 @@ pub fn refs(
 ) -> Result<BTreeMap<i64, EntryRef>> {
 	let marks = vec!["?"; ids.len()].join(", ");
 	let sql = format!(
-		"SELECT DISTINCT e.id, e.section, e.type, s.title, s.slug, s.uri
+		"SELECT DISTINCT e.id, e.section, e.type, s.title, s.slug, s.uri,
+			s.published
 		FROM entry_relations r
 		JOIN entries e ON e.id = r.target_id
 		JOIN entry_sites s ON s.entry_id = e.id AND s.site = r.site
@@ -205,16 +222,7 @@ pub fn refs(
 	let mut stmt = conn.prepare(&sql)?;
 	let mut params = vec![rusqlite::types::Value::Text(site.into())];
 	params.extend(ids.iter().map(|i| rusqlite::types::Value::Integer(*i)));
-	let rows = stmt.query_map(params_from_iter(params), |r| {
-		Ok(EntryRef {
-			id: r.get(0)?,
-			section: r.get(1)?,
-			ty: r.get(2)?,
-			title: r.get(3)?,
-			slug: r.get(4)?,
-			uri: r.get(5)?,
-		})
-	})?;
+	let rows = stmt.query_map(params_from_iter(params), entry_ref)?;
 
 	let mut out = BTreeMap::new();
 	for r in rows {
@@ -232,23 +240,14 @@ pub fn refs_of(
 ) -> Result<BTreeMap<i64, EntryRef>> {
 	let marks = vec!["?"; ids.len()].join(", ");
 	let sql = format!(
-		"SELECT e.id, e.section, e.type, s.title, s.slug, s.uri
+		"SELECT e.id, e.section, e.type, s.title, s.slug, s.uri, s.published
 		FROM entries e JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?
 		WHERE e.id IN ({marks})"
 	);
 	let mut stmt = conn.prepare(&sql)?;
 	let mut params = vec![rusqlite::types::Value::Text(site.into())];
 	params.extend(ids.iter().map(|i| rusqlite::types::Value::Integer(*i)));
-	let rows = stmt.query_map(params_from_iter(params), |r| {
-		Ok(EntryRef {
-			id: r.get(0)?,
-			section: r.get(1)?,
-			ty: r.get(2)?,
-			title: r.get(3)?,
-			slug: r.get(4)?,
-			uri: r.get(5)?,
-		})
-	})?;
+	let rows = stmt.query_map(params_from_iter(params), entry_ref)?;
 	let mut out = BTreeMap::new();
 	for r in rows {
 		let r = r?;

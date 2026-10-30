@@ -2,7 +2,7 @@
 	import type { FieldOf, Schema, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
-	import NavItems from './NavItems.svelte';
+	import NavItems from './link/NavItems.svelte';
 
 	/** A menu: links with their own label and the links under them. */
 	let {

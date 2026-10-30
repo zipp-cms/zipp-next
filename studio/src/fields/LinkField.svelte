@@ -2,7 +2,7 @@
 	import type { FieldOf, Schema, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
-	import LinkInput from './LinkInput.svelte';
+	import LinkInput from './link/LinkInput.svelte';
 
 	/** A link field of an entry or block, see LinkInput. */
 	let {
@@ -29,5 +29,6 @@
 	to={field.to}
 	labels={field.labels}
 	newTab={field.newTab}
+	required={field.required}
 	onchange={l => (values[field.handle] = l)}
 />

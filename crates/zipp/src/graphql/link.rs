@@ -53,6 +53,11 @@ pub(super) fn resolve_link(
 		}
 	};
 
+	// a section of the page, instead of the url's own
+	let url = match link["anchor"].as_str().filter(|a| !a.is_empty()) {
+		Some(a) => format!("{}#{a}", url.split('#').next().unwrap_or_default()),
+		None => url,
+	};
 	let new_tab = link["newTab"].as_bool().unwrap_or(new_tab && external);
 	Ok(Some(GqlValue::from_json(serde_json::json!({
 		"type": ty,

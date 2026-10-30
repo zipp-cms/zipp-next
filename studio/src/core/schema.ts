@@ -9,6 +9,8 @@ export type Link = {
 	newTab?: boolean;
 	/** a file to download instead of opening it */
 	download?: boolean;
+	/** a section of the target page, `kontakt` for `#kontakt` */
+	anchor?: string;
 };
 
 /** An item of a navigation: a link and the items under it. */

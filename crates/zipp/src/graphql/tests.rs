@@ -400,6 +400,10 @@ async fn resolves_links() {
 				json!({ "type": "entry", "value": about.id, "newTab": true }),
 			),
 			("d", json!({ "type": "email", "value": "hi@x.ch" })),
+			(
+				"e",
+				json!({ "type": "entry", "value": about.id, "anchor": "team" }),
+			),
 		] {
 			let fields = json!({ "ticket": link });
 			save(&conn, &s, None, input("events", "event", title, fields))
@@ -433,6 +437,9 @@ async fn resolves_links() {
 				"defaultLabel": "About", "target": "_blank" }),
 			json!({ "type": "email", "url": "mailto:hi@x.ch", "label": null,
 				"defaultLabel": "hi@x.ch", "target": null }),
+			// a section of the page
+			json!({ "type": "entry", "url": "https://x.ch/about#team", "label": null,
+				"defaultLabel": "About", "target": null }),
 		]
 	);
 }

@@ -275,7 +275,8 @@ pub(crate) fn safe_url(u: &str) -> bool {
 }
 
 /// `{ "type": "url", "value": "https://…", "label": "…", "newTab": true }`,
-/// value is the id for an entry or an asset.
+/// value is the id for an entry or an asset; entries and urls may have
+/// an `anchor`, a section of the page (`kontakt` for `#kontakt`).
 pub(crate) fn check_link(
 	to: &[LinkKind],
 	label: bool,
@@ -314,6 +315,7 @@ pub(crate) fn check_link(
 			"type" | "value" | "newTab" => true,
 			// a file to download instead of opening it
 			"download" => kind == LinkKind::Asset,
+			"anchor" => matches!(kind, LinkKind::Entry | LinkKind::Url),
 			"label" => label,
 			_ => false,
 		};
@@ -326,6 +328,13 @@ pub(crate) fn check_link(
 	}
 	if link.get("newTab").is_some_and(|t| !t.is_boolean()) {
 		return Err("newTab must be true or false".into());
+	}
+	let anchor = link.get("anchor").map(|a| a.as_str().unwrap_or("#"));
+	if anchor.is_some_and(|a| {
+		!a.chars()
+			.all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+	}) {
+		return Err("an anchor is letters, digits, - and _, without #".into());
 	}
 	Ok(())
 }

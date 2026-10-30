@@ -7,7 +7,7 @@
 	import Fields from './Fields.svelte';
 	import ItemActions from '../ui/ItemActions.svelte';
 	import ItemCard from '../ui/ItemCard.svelte';
-	import { blockSummary, focus } from './blocks.svelte';
+	import { blockMissing, blockSummary, focus } from './blocks.svelte';
 	import { inserted, isFull, moved, removed } from '../core/list';
 	import { componentOf } from '../core/schema';
 
@@ -121,7 +121,12 @@
 			id="block-{path}-{i}"
 		>
 			{#snippet summary()}
-				{blockSummary(comp, block.fields)}
+				{@const missing = blockMissing(comp, block.fields)}
+				{#if missing}
+					<span class="missing">{missing}</span>
+				{:else}
+					{blockSummary(comp, block.fields, refs)}
+				{/if}
 			{/snippet}
 			{#snippet actions()}
 				<ItemActions
@@ -171,5 +176,9 @@
 		span {
 			margin-right: auto;
 		}
+	}
+
+	.missing {
+		color: var(--danger);
 	}
 </style>

@@ -45,7 +45,7 @@
 		>
 			{#if changed}<span class="dot" title="Changed"></span>{/if}
 			<span class="kind">{kind}</span>
-			{#if summary && !shown}
+			{#if summary}
 				<span class="summary truncate">{@render summary()}</span>
 			{/if}
 			{#if invalid}

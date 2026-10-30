@@ -66,6 +66,17 @@ fn checks_links() {
 		"can't link to email"
 	);
 	assert!(check_link(&to, false, &ok).unwrap_err().contains("label"));
+
+	// a section of the page, not of an email
+	let anchor =
+		link(json!({ "type": "entry", "value": 1, "anchor": "anfahrt" }));
+	assert!(check_link(&to, true, &anchor).is_ok());
+	let hash = link(json!({ "type": "entry", "value": 1, "anchor": "#a b" }));
+	assert!(check_link(&to, true, &hash).unwrap_err().contains("anchor"));
+	let to = [LinkKind::Email];
+	let mail =
+		link(json!({ "type": "email", "value": "a@b.ch", "anchor": "x" }));
+	assert!(check_link(&to, true, &mail).unwrap_err().contains("anchor"));
 }
 
 #[test]

@@ -144,7 +144,12 @@
 	{/if}
 
 	{#each outlines as o (o.field.handle)}
-		<BlockOutline {schema} field={o.field} blocks={o.blocks} />
+		<BlockOutline
+			{schema}
+			field={o.field}
+			blocks={o.blocks}
+			refs={ed.refs}
+		/>
 	{/each}
 
 	{#if !isNew && multiSite && may.edit}

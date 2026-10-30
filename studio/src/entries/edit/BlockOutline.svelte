@@ -1,20 +1,28 @@
 <script lang="ts">
 	import type { Block, Field, Schema } from '../../core/schema';
-	import { blockSummary, showBlock } from '../../fields/blocks.svelte';
+	import {
+		blockMissing,
+		blockSummary,
+		showBlock,
+	} from '../../fields/blocks.svelte';
 	import { componentName, componentOf } from '../../core/schema';
+	import type { Refs } from '../api';
 
 	/** The blocks of a field as a list; a click opens one and goes there. */
 	let {
 		schema,
 		field,
 		blocks,
-	}: { schema: Schema; field: Field; blocks: Block[] } = $props();
+		refs,
+	}: { schema: Schema; field: Field; blocks: Block[]; refs: Refs } = $props();
 </script>
 
 <nav class="card outline" aria-label="Outline of {field.label}">
 	<h3>Outline · {field.label}</h3>
 	<ol class="plain">
 		{#each blocks as b, i (i)}
+			{@const comp = componentOf(schema, b.type)}
+			{@const missing = blockMissing(comp, b.fields)}
 			<li>
 				<button
 					type="button"
@@ -23,8 +31,10 @@
 				>
 					<span class="n">{String(i + 1).padStart(2, '0')}</span>
 					<span class="name">{componentName(schema, b.type)}</span>
-					<span class="note truncate">
-						{blockSummary(componentOf(schema, b.type), b.fields)}
+					<span class="note truncate" class:missing>
+						{missing
+							? 'Missing'
+							: blockSummary(comp, b.fields, refs)}
 					</span>
 				</button>
 			</li>
@@ -70,5 +80,9 @@
 	.note {
 		font-size: var(--fs-xs);
 		text-align: right;
+	}
+
+	.missing {
+		color: var(--danger);
 	}
 </style>

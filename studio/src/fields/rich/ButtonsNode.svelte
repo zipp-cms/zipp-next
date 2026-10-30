@@ -2,11 +2,11 @@
 	import { untrack } from 'svelte';
 	import type { Link, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
-	import LinkInput from '../LinkInput.svelte';
+	import LinkInput from '../link/LinkInput.svelte';
 	import EmbedCard from './EmbedCard.svelte';
 	import AddButton from '../../ui/AddButton.svelte';
 	import ItemActions from '../../ui/ItemActions.svelte';
-	import { BUTTON_LINKS, linkLabel, linkTarget } from '../link';
+	import { BUTTON_LINKS, linkLabel, linkTarget } from '../link/link';
 	import { moved, removed } from '../../core/list';
 	import { synced } from '../../core/synced.svelte';
 
