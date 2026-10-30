@@ -18,7 +18,7 @@
 	import { canAssets } from './access';
 	import { time } from './format';
 	import Icon from './Icon.svelte';
-	import ImageEditor from './ImageEditor.svelte';
+	import ImageEditor from './image/ImageEditor.svelte';
 	import Thumb from './Thumb.svelte';
 	import { closeFlyout } from './flyout.svelte';
 	import { entryPath } from '../route.svelte';
