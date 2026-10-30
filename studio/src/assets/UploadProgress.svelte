@@ -9,7 +9,7 @@
 	);
 </script>
 
-{#if uploads.files}
+{#if uploads.files || uploads.errors.length}
 	<div class="progress card" role="status" aria-live="polite">
 		<div class="head">
 			<strong>

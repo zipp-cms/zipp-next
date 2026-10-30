@@ -41,23 +41,32 @@
 
 	/** At the point, moved in where it would leave the window. */
 	function place(node: HTMLElement, p: { x: number; y: number }) {
-		const r = node.getBoundingClientRect();
-		const x = Math.min(p.x, innerWidth - r.width - 8);
-		const y = p.y + r.height > innerHeight - 8 ? p.y - r.height : p.y;
-		node.style.left = `${Math.max(x, 8)}px`;
-		node.style.top = `${Math.max(y, 8)}px`;
+		const set = (p: { x: number; y: number }) => {
+			const r = node.getBoundingClientRect();
+			const x = Math.min(p.x, innerWidth - r.width - 8);
+			const y = p.y + r.height > innerHeight - 8 ? p.y - r.height : p.y;
+			node.style.left = `${Math.max(x, 8)}px`;
+			node.style.top = `${Math.max(y, 8)}px`;
+		};
+		set(p);
+		// another right click while it is open
+		return { update: set };
 	}
 
-	function onpointerdown(e: PointerEvent) {
-		if (open && !root?.contains(e.target as Node)) close();
-	}
+	// a click outside closes it, listened to only while it is open
+	$effect(() => {
+		if (!open) return;
+		const onpointerdown = (e: PointerEvent) => {
+			if (!root?.contains(e.target as Node)) close();
+		};
+		window.addEventListener('pointerdown', onpointerdown);
+		return () => window.removeEventListener('pointerdown', onpointerdown);
+	});
 
 	$effect(() => {
 		if (open) box?.querySelector<HTMLElement>('input')?.focus();
 	});
 </script>
-
-<svelte:window {onpointerdown} />
 
 <div class="popover" bind:this={root}>
 	{@render trigger({ toggle, open })}

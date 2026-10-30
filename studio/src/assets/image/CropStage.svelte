@@ -37,9 +37,12 @@
 	const background = $derived(edits.background ?? 'transparent');
 
 	let view = $state<HTMLCanvasElement>();
+	// drawn again only when it turns or flips, not with every move of
+	// the crop (edits is a new object then): a primitive stops the effect
+	const turn = $derived(`${edits.rotate}|${edits.flipH}|${edits.flipV}`);
 	$effect(() => {
-		void [edits.rotate, edits.flipH, edits.flipV];
-		if (view) drawTurned(view, img, edits);
+		void turn;
+		if (view) untrack(() => drawTurned(view!, img, edits));
 	});
 
 	let area = $state({ w: 0, h: 0 });

@@ -77,6 +77,23 @@
 			onTransaction: () => queueMicrotask(() => tick++),
 		});
 		last.changed(trimmed(editor.getJSON()));
+
+		// read only as long as a fieldset around it is disabled (a
+		// conflict, a role), a fieldset can change after the start
+		const readonly = () => !!el.closest('fieldset[disabled]');
+		const watch = new MutationObserver(() =>
+			editor?.setEditable(!readonly()),
+		);
+		for (
+			let f = el.closest('fieldset');
+			f;
+			f = f.parentElement?.closest('fieldset') ?? null
+		)
+			watch.observe(f, {
+				attributes: true,
+				attributeFilter: ['disabled'],
+			});
+		return () => watch.disconnect();
 	});
 
 	// content that changes from outside (load, restore) goes into the editor

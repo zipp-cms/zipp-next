@@ -36,15 +36,20 @@ export class Chat {
 		this.savedView = saved?.view ?? null;
 	}
 
+	/** Keeps the chat for this tab; a full storage only loses that. */
 	save(view: string) {
-		sessionStorage.setItem(
-			KEY,
-			JSON.stringify({
-				messages: $state.snapshot(this.messages),
-				lines: $state.snapshot(this.lines),
-				view,
-			}),
-		);
+		try {
+			sessionStorage.setItem(
+				KEY,
+				JSON.stringify({
+					messages: $state.snapshot(this.messages),
+					lines: $state.snapshot(this.lines),
+					view,
+				}),
+			);
+		} catch {
+			sessionStorage.removeItem(KEY);
+		}
 	}
 
 	/**

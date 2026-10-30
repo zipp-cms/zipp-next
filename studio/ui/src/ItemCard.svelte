@@ -50,7 +50,7 @@
 			disabled={!collapsible}
 			onclick={toggle}
 		>
-			{#if changed}<span class="dot" title="Changed"></span>{/if}
+			{#if changed}<span class="changed-dot" title="Changed"></span>{/if}
 			<span class="kind">{@render kindIcon?.()}{kind}</span>
 			{#if summary}
 				<span class="summary truncate">{@render summary()}</span>

@@ -52,7 +52,9 @@
 		<EntryHead title={doc.title} {changed} />
 		{#if !single}
 			<p class="slug">
-				{#if changed.has('slug')}<span class="dot"></span>{/if}Slug:
+				{#if changed.has('slug')}<span
+						class="changed-dot"
+					></span>{/if}Slug:
 				<code>{doc.slug}</code>
 			</p>
 		{/if}

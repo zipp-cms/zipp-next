@@ -74,7 +74,7 @@ export class Sortable {
 		return this.o.depths().length > 1;
 	}
 
-	/** Whether row `i` is dragged, itself or with the row above it. */
+	/** Whether row `i` is dragged: the row itself or one under it. */
 	moving(i: number): boolean {
 		const from = this.dragging;
 		if (from === null) return false;
@@ -96,13 +96,13 @@ export class Sortable {
 			}
 			ev.preventDefault();
 			this.over(ev, from, ev.clientX - x0);
-			scrollNear(ev.clientY);
+			scrollNear(this.o.container(), ev.clientY);
 		};
 		const end = (ev: PointerEvent) => {
 			window.removeEventListener('pointermove', move);
 			window.removeEventListener('pointerup', end);
 			window.removeEventListener('pointercancel', end);
-			window.removeEventListener('keydown', key);
+			window.removeEventListener('keydown', key, true);
 			const drop = this.drop;
 			this.dragging = null;
 			this.line = null;
@@ -112,16 +112,19 @@ export class Sortable {
 			setTimeout(() => (this.dragged = false));
 			if (drop && ev.type === 'pointerup') this.o.onmove(from, drop);
 		};
-		// Escape drops nothing
+		// Escape drops nothing, and only that: the flyout or popup the
+		// list is in stays (they close on Escape too, see layers)
 		const key = (ev: KeyboardEvent) => {
-			if (ev.key !== 'Escape') return;
+			if (ev.key !== 'Escape' || !moving) return;
+			ev.preventDefault();
+			ev.stopImmediatePropagation();
 			this.drop = null;
 			end(new PointerEvent('pointercancel'));
 		};
 		window.addEventListener('pointermove', move);
 		window.addEventListener('pointerup', end);
 		window.addEventListener('pointercancel', end);
-		window.addEventListener('keydown', key);
+		window.addEventListener('keydown', key, true);
 	}
 
 	/** The drop of a pointer over the rows, and its line. */
@@ -150,7 +153,11 @@ export class Sortable {
 			if (best < 0) return;
 			const r = rect(others[best]);
 			const after = e.clientX > r.left + r.width / 2;
-			this.drop = { index: best + (after ? 1 : 0), depth: 0 };
+			const last = others.length - (this.o.keepLast?.() ?? 0);
+			this.drop = {
+				index: Math.min(best + (after ? 1 : 0), last),
+				depth: 0,
+			};
 			this.line = {
 				top: r.top - box.top,
 				left: (after ? r.right + 3 : r.left - 5) - box.left,
@@ -243,10 +250,35 @@ export class Sortable {
 }
 
 /** Scrolls the page when the pointer is near its top or bottom. */
-function scrollNear(y: number) {
-	const edge = 48;
-	if (y < edge) window.scrollBy(0, -12);
-	else if (y > window.innerHeight - edge) window.scrollBy(0, 12);
+/** How near the edge a drag scrolls, and how far each move. */
+const SCROLL_EDGE = 48;
+const SCROLL_STEP = 12;
+
+/** Scrolls what the list is in (a flyout's body, or the page) near its edges. */
+function scrollNear(list: HTMLElement | undefined, y: number) {
+	const box = scroller(list);
+	const top = box ? box.getBoundingClientRect().top : 0;
+	const bottom = box ? box.getBoundingClientRect().bottom : innerHeight;
+	const by =
+		y < top + SCROLL_EDGE
+			? -SCROLL_STEP
+			: y > bottom - SCROLL_EDGE
+				? SCROLL_STEP
+				: 0;
+	if (by) (box ?? window).scrollBy(0, by);
+}
+
+/** The element that scrolls around `el`, none: the page. */
+function scroller(el: HTMLElement | undefined): HTMLElement | null {
+	for (let at = el?.parentElement; at; at = at.parentElement) {
+		const y = getComputedStyle(at).overflowY;
+		if (
+			(y === 'auto' || y === 'scroll') &&
+			at.scrollHeight > at.clientHeight
+		)
+			return at;
+	}
+	return null;
 }
 
 /** A list with the item `from` dropped at `drop.index`. */

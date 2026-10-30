@@ -43,7 +43,7 @@ export class SitePreview {
 			if (!this.origins.has(e.origin)) return;
 			if (e.data?.type === 'zipp:location' && this.ofSite(e.data.url)) {
 				this.bridge = true;
-				this.view = e.data.url;
+				this.view = withoutToken(e.data.url);
 			}
 		};
 		window.addEventListener('message', onMessage);
@@ -94,5 +94,20 @@ export class SitePreview {
 		if (!this.frame || !src) return;
 		this.bridge = false;
 		this.frame.src = src;
+	}
+}
+
+/**
+ * The url without the preview's token: it shows in the bar, goes to the
+ * AI and into the session storage; a site's bridge may leave it on.
+ */
+function withoutToken(url: string): string {
+	try {
+		const u = new URL(url);
+		u.searchParams.delete('token');
+		u.searchParams.delete('x-craft-live-preview');
+		return u.toString();
+	} catch {
+		return url;
 	}
 }

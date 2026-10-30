@@ -127,7 +127,7 @@
 								onclick={toggle}
 							>
 								<span
-									class="dot"
+									class="changed-dot"
 									class:live={entry.published}
 									title={entry.published
 										? 'Published'
@@ -328,7 +328,7 @@
 		}
 	}
 
-	.dot {
+	.changed-dot {
 		width: 0.5rem;
 		height: 0.5rem;
 		flex-shrink: 0;

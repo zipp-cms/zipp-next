@@ -116,7 +116,7 @@
 					{o.label}
 				{/snippet}
 			</Segmented>
-			<span class="sep"></span>
+			<span class="toolbar-sep"></span>
 			<button
 				type="button"
 				class="icon"
@@ -189,7 +189,7 @@
 				</label>
 			{/if}
 			{#if outside}
-				<span class="sep"></span>
+				<span class="toolbar-sep"></span>
 				<BackgroundPicker bind:edits />
 			{/if}
 		</div>

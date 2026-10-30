@@ -381,7 +381,7 @@ button {
 }
 
 // a field the draft changes
-.dot {
+.changed-dot {
 	display: inline-block;
 	width: 0.4375rem;
 	height: 0.4375rem;
@@ -431,7 +431,7 @@ label.stacked {
 }
 
 // the line between groups of a toolbar
-.sep {
+.toolbar-sep {
 	align-self: center;
 	width: 1px;
 	height: 1.125rem;

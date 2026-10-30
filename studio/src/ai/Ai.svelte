@@ -84,7 +84,12 @@
 		e.preventDefault();
 	}
 
-	$effect(() => chat.save(preview.view));
+	// kept when an answer is done or the page changes, not with every
+	// word of the answer
+	$effect(() => {
+		const view = preview.view;
+		if (!chat.busy) untrack(() => chat.save(view));
+	});
 
 	async function send(e: Event) {
 		e.preventDefault();

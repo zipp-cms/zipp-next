@@ -151,7 +151,8 @@
 			<FolderTree
 				{folders}
 				{top}
-				current={search ? -1 : folder}
+				current={folder}
+				searching={!!search}
 				onselect={select}
 			/>
 		{/if}

@@ -67,7 +67,7 @@
 					/>
 					<span>
 						{#if ed.changed.has('published')}<span
-								class="dot"
+								class="changed-dot"
 							></span>{/if}
 						Published in {schema.sites.find(
 							s => s.handle === ed.site,
@@ -91,7 +91,7 @@
 					<label>
 						<span>
 							{#if ed.changed.has('slug')}<span
-									class="dot"
+									class="changed-dot"
 								></span>{/if}Slug
 						</span>
 						<input

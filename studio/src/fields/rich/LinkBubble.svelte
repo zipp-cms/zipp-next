@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { safeUrl } from '../../core/markdown';
 	import type { Editor } from '@tiptap/core';
 	import { untrack } from 'svelte';
 	import type { Link, Schema } from '../../core/schema';
@@ -110,7 +111,8 @@
 				: l.type === 'phone'
 					? `tel:${v}`
 					: v + (l.anchor ? `#${l.anchor}` : '');
-		window.open(href, '_blank', 'noopener');
+		// a draft may have any url, only the web and the site open
+		if (safeUrl(href)) window.open(href, '_blank', 'noopener');
 	}
 
 	function onkeydown(e: KeyboardEvent) {

@@ -28,6 +28,15 @@
 	}: { preview: SitePreview; resizing?: boolean } = $props();
 
 	let frame: HTMLIFrameElement;
+
+	/** The address readable, as it is when it can't be decoded. */
+	const shown = $derived.by(() => {
+		try {
+			return decodeURI(preview.view);
+		} catch {
+			return preview.view;
+		}
+	});
 	$effect(() => preview.start(frame));
 
 	const saved = localStorage.getItem(DEVICE_KEY) as Device | null;
@@ -56,8 +65,8 @@
 		>
 			<Icon name="reload" size={15} />
 		</button>
-		<span class="url" title={decodeURI(preview.view)}>
-			{decodeURI(preview.view)}
+		<span class="url" title={shown}>
+			{shown}
 		</span>
 		<Segmented
 			options={devices}

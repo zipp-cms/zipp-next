@@ -13,7 +13,7 @@
 
 <label class="head">
 	<span class="label">
-		{#if changed.has('title')}<span class="dot"></span>{/if}Title
+		{#if changed.has('title')}<span class="changed-dot"></span>{/if}Title
 		<span class="req">*</span>
 	</span>
 	<input placeholder="Title" bind:value={title} />

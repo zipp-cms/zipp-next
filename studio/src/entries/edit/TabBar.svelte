@@ -32,7 +32,10 @@
 	{#snippet item({ value })}
 		{@const tab = tabs.find(t => t.name === value)!}
 		{@const errs = count(tab, Object.keys(errors))}
-		{#if count(tab, changed)}<span class="dot" title="Changed"></span>{/if}
+		{#if count(tab, changed)}<span
+				class="changed-dot"
+				title="Changed"
+			></span>{/if}
 		{value}
 		{#if errs}
 			<span class="errors" title="{errs} errors">{errs}</span>
@@ -41,7 +44,7 @@
 </Segmented>
 
 <style lang="scss">
-	.dot {
+	.changed-dot {
 		margin: 0;
 	}
 

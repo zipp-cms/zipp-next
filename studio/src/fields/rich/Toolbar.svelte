@@ -76,7 +76,7 @@
 				<option value={level}>Heading {level}</option>
 			{/each}
 		</select>
-		<span class="sep"></span>
+		<span class="toolbar-sep"></span>
 	{/if}
 	<button
 		type="button"
@@ -139,7 +139,7 @@
 		</Popover>
 	{/if}
 	{#if opts.buttons || blockTypes.length}
-		<span class="sep"></span>
+		<span class="toolbar-sep"></span>
 		<Popover bind:open={inserting} width="12.25rem" label="Insert">
 			{#snippet trigger({ toggle })}
 				<button type="button" class="insert" onclick={toggle}>

@@ -9,13 +9,17 @@ export type Upload = { file: File; dir: string[] };
 
 /** The files of the file dialog, a chosen folder with its subfolders. */
 export function fromInput(files: FileList): Upload[] {
-	return [...files]
-		.filter(f => !f.name.startsWith('.'))
-		.map(file => ({
-			file,
-			// `Photos/Events/a.jpg` of a folder, empty for files
-			dir: file.webkitRelativePath.split('/').slice(0, -1),
-		}));
+	return (
+		[...files]
+			// `Photos/Events/a.jpg` of a folder, `a.jpg` of files
+			.map(file => ({
+				file,
+				parts: (file.webkitRelativePath || file.name).split('/'),
+			}))
+			// hidden files and folders stay home, like in a drop
+			.filter(({ parts }) => !parts.some(p => p.startsWith('.')))
+			.map(({ file, parts }) => ({ file, dir: parts.slice(0, -1) }))
+	);
 }
 
 /**
@@ -74,7 +78,10 @@ export function acceptOf(allowed: Allowed): string | undefined {
 
 /** The folders of a path like `Photos/Events`, for `Upload.dir`. */
 export function pathDirs(path: string | undefined): string[] {
-	return (path ?? '').split('/').filter(n => n.trim());
+	return (path ?? '')
+		.split('/')
+		.map(n => n.trim())
+		.filter(n => n);
 }
 
 /** How many files go up at the same time. */
@@ -168,6 +175,12 @@ class Uploads {
 		clearTimeout(this.hide);
 		if (!this.active) this.reset();
 	}
+
+	/** A problem before any file went up, like a folder it can't read. */
+	report(message: string) {
+		this.errors.push(message);
+		this.finished = !this.active;
+	}
 }
 
 export const uploads = new Uploads();
@@ -184,22 +197,32 @@ async function makeFolders(
 	const paths = [...new Set(items.map(i => i.dir.join('/')))].filter(p => p);
 	if (!paths.length) return ids;
 
-	const { folders } = await listFolders();
+	let { folders } = await listFolders();
+	const find = (parent: number | null, name: string) =>
+		folders.find(
+			f =>
+				f.parentId === parent &&
+				f.name.toLowerCase() === name.toLowerCase(),
+		);
 	for (const path of paths) {
-		const parts = path.split('/');
+		// the server trims names, a name with spaces around is the same
+		const parts = path.split('/').map(n => n.trim());
 		for (let i = 1; i <= parts.length; i++) {
 			const here = parts.slice(0, i).join('/');
 			if (ids.has(here)) continue;
 			const parent = ids.get(parts.slice(0, i - 1).join('/')) ?? null;
 			const name = parts[i - 1];
-			let f = folders.find(
-				f =>
-					f.parentId === parent &&
-					f.name.toLowerCase() === name.toLowerCase(),
-			);
+			let f = find(parent, name);
 			if (!f) {
-				f = await createFolder(parent, name);
-				folders.push(f);
+				try {
+					f = await createFolder(parent, name);
+					folders.push(f);
+				} catch (e) {
+					// another upload made it meanwhile
+					folders = (await listFolders()).folders;
+					f = find(parent, name);
+					if (!f) throw e;
+				}
 			}
 			ids.set(here, f.id);
 		}
@@ -250,7 +273,9 @@ export class FileDrag {
 		this.stop();
 		if (took || !this.files(e)) return;
 		e.preventDefault();
-		fromDrop(e.dataTransfer!).then(this.ondrop);
+		fromDrop(e.dataTransfer!)
+			.then(this.ondrop)
+			.catch(err => uploads.report(`The drop: ${err.message ?? err}`));
 	};
 
 	private stop() {

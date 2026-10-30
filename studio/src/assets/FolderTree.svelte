@@ -7,7 +7,12 @@
 		updateFolder,
 		type Folder,
 	} from './api';
-	import { ASSETS_DRAG, fromDrop, type Upload } from './uploads.svelte';
+	import {
+		ASSETS_DRAG,
+		fromDrop,
+		uploads,
+		type Upload,
+	} from './uploads.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import { ROOT } from './api';
@@ -21,6 +26,7 @@
 	let {
 		folders,
 		current,
+		searching = false,
 		onselect,
 		editable = false,
 		deletable = false,
@@ -32,6 +38,8 @@
 		folders: Folder[];
 		/** null: the top */
 		current: number | null;
+		/** a search looks in all folders: none is shown as open */
+		searching?: boolean;
 		onselect: (id: number | null) => void;
 		editable?: boolean;
 		deletable?: boolean;
@@ -200,7 +208,12 @@
 		const data = e.dataTransfer!;
 		const ids = data.getData(ASSETS_DRAG);
 		if (ids) onmove?.(JSON.parse(ids), id);
-		else fromDrop(data).then(items => onupload?.(items, id));
+		else
+			fromDrop(data)
+				.then(items => onupload?.(items, id))
+				.catch(err =>
+					uploads.report(`The drop: ${err.message ?? err}`),
+				);
 	}
 
 	function focus(el: HTMLInputElement) {
@@ -244,7 +257,7 @@
 
 	<div
 		class="row"
-		class:active={current === null}
+		class:active={!searching && current === null}
 		class:over={over === 'top'}
 		role="presentation"
 		ondragover={e => dragover(e, null)}
@@ -271,7 +284,7 @@
 		{:else}
 			<div
 				class="row"
-				class:active={current === f.id}
+				class:active={!searching && current === f.id}
 				class:over={over === f.id}
 				style:--depth={depth}
 				data-folder={f.name}

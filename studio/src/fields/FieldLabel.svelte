@@ -31,7 +31,7 @@
 <label for={path}>
 	<span class="name">
 		{#if changed}<span
-				class="dot"
+				class="changed-dot"
 				title="Changed"
 			></span>{/if}{field.label}{#if field.required}<span class="req">
 				*
@@ -67,7 +67,7 @@
 		color: var(--text);
 	}
 
-	.dot {
+	.changed-dot {
 		margin-right: 0.25rem;
 	}
 

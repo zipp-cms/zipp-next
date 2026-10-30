@@ -31,6 +31,8 @@
 		const area = button?.closest<HTMLElement>('[data-menu-area]');
 		if (!area) return;
 		const oncontextmenu = (e: MouseEvent) => {
+			// another menu of the same area took it, the first one wins
+			if (e.defaultPrevented) return;
 			// a text field keeps the browser's menu (paste, spelling)
 			if (
 				(e.target as Element).closest(
@@ -67,7 +69,7 @@
 				<Icon name="more" size={16} />
 			</button>
 		{/snippet}
-		{#each items as item (item.label)}
+		{#each items as item, i (i)}
 			{#if item.href}
 				<a
 					class="popup-item"
