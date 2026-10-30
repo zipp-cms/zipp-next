@@ -24,7 +24,7 @@ export type SortableOptions = {
 	/** the depth of each row */
 	depths: () => number[];
 	/** how deep a row may go, 0 for a list */
-	maxDepth?: number;
+	maxDepth?: () => number;
 	/** rows side by side that wrap, like images */
 	grid?: () => boolean;
 	/** pixels of one level */
@@ -156,7 +156,7 @@ export class Sortable {
 		const want = depths[from] + Math.round(dx / indent);
 		const max = Math.min(
 			k > 0 ? odepths[k - 1] + 1 : 0,
-			(this.o.maxDepth ?? 0) - below,
+			(this.o.maxDepth?.() ?? 0) - below,
 		);
 		const min = k < others.length ? odepths[k] : 0;
 		const depth = Math.max(min, Math.min(want, max));
@@ -208,7 +208,7 @@ export class Sortable {
 					? null
 					: { index: at(end(parent)), depth: d - 1 };
 			case 'in':
-				return sibBefore < 0 || d + 1 + below > (this.o.maxDepth ?? 0)
+				return sibBefore < 0 || d + 1 + below > (this.o.maxDepth?.() ?? 0)
 					? null
 					: // where it is, the rows before it stay
 						{ index: from, depth: d + 1 };

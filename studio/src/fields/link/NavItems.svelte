@@ -1,18 +1,19 @@
 <script lang="ts">
-	import NavItems from './NavItems.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import DragHandle from 'zipp-ui/DragHandle.svelte';
+	import SortLine from 'zipp-ui/SortLine.svelte';
+	import { Sortable, placeIn, type Drop } from 'zipp-ui/sortable';
 	import LinkAdd from './LinkAdd.svelte';
 	import LinkEditor from './LinkEditor.svelte';
 	import LinkRow from './LinkRow.svelte';
 	import { hasTarget, linkSummary, opensInNewTab } from './link';
-	import { inserted, moved, removed, replaced } from '../../core/list';
 	import type { Link, LinkKind, NavItem, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
 
 	/**
-	 * A level of a navigation: a row per link, its settings under it while
-	 * editing, the items under it indented, up to `depth` levels. An item
-	 * moves under the one above it and out again.
+	 * The links of a navigation as rows in one card, the ones under a link
+	 * indented, up to `depth` levels: a row per link, its settings under it
+	 * while editing. The handle moves a link, also a level up or down.
 	 */
 	let {
 		schema,
@@ -21,20 +22,77 @@
 		to,
 		depth,
 		onchange,
-		onoutdent,
 	}: {
 		schema: Schema;
 		refs: Refs;
 		items: NavItem[];
 		to: LinkKind[];
-		/** the levels from here down */
+		/** the levels */
 		depth: number;
 		onchange: (items: NavItem[]) => void;
-		/** an item of this level moves out, next to its parent */
-		onoutdent?: (i: number) => void;
 	} = $props();
 
+	type Row = { item: NavItem; depth: number; path: number[] };
+
+	/** The tree as rows, a link before the ones under it. */
+	function flatten(list: NavItem[], d = 0, path: number[] = []): Row[] {
+		return list.flatMap((item, i) => [
+			{ item, depth: d, path: [...path, i] },
+			...flatten(item.children ?? [], d + 1, [...path, i]),
+		]);
+	}
+
+	const rows = $derived(flatten(items));
+	// the row whose settings are open
 	let editing = $state<number | null>(null);
+
+	/** A copy of the items to change, with the rows of the copy. */
+	function copy(): [NavItem[], Row[]] {
+		const next = $state.snapshot(items) as NavItem[];
+		return [next, flatten(next)];
+	}
+
+	/** The list a row is in, of its parent or the top. */
+	function siblings(list: NavItem[], path: number[]): NavItem[] {
+		let level = list;
+		for (const i of path.slice(0, -1)) level = level[i].children!;
+		return level;
+	}
+
+	/** Takes `item` out of its list, an empty list of children goes. */
+	function take(list: NavItem[], row: Row) {
+		const sibs = siblings(list, row.path);
+		sibs.splice(row.path.at(-1)!, 1);
+		if (!sibs.length && row.path.length > 1) {
+			delete siblings(list, row.path.slice(0, -1))[row.path.at(-2)!]
+				.children;
+		}
+	}
+
+	function move(from: number, drop: Drop) {
+		const [next, copied] = copy();
+		const to = placeIn(
+			rows.map(r => r.depth),
+			from,
+			drop,
+		);
+		const item = copied[from].item;
+		const parent = to.parent === null ? null : copied[to.parent].item;
+		take(next, copied[from]);
+		const list = parent ? (parent.children ??= []) : next;
+		list.splice(to.index, 0, item);
+		editing = null;
+		onchange(next);
+	}
+
+	let list = $state<HTMLElement>();
+	const sort = new Sortable({
+		container: () => list,
+		depths: () => rows.map(r => r.depth),
+		maxDepth: () => depth - 1,
+		indent: 36,
+		onmove: move,
+	});
 
 	/** The link of an item, without its children. */
 	function linkOf(item: NavItem): Link {
@@ -43,192 +101,122 @@
 	}
 
 	function setLink(i: number, link: Link) {
-		const children = items[i].children;
-		onchange(
-			replaced(items, i, { ...link, ...(children ? { children } : {}) }),
-		);
-	}
-
-	function setChildren(i: number, children: NavItem[]) {
-		const { children: _, ...item } = items[i];
-		onchange(
-			replaced(items, i, children.length ? { ...item, children } : item),
-		);
-	}
-
-	/** The levels of an item with the ones under it. */
-	const levels = (item: NavItem): number =>
-		1 + Math.max(0, ...(item.children ?? []).map(levels));
-
-	/** Under the item above, if the levels allow it. */
-	const canIndent = (i: number) =>
-		i > 0 && depth > 1 && levels(items[i]) < depth;
-
-	function indent(i: number) {
-		const parent = items[i - 1];
-		const next = replaced(items, i - 1, {
-			...parent,
-			children: [...(parent.children ?? []), items[i]],
-		});
-		editing = null;
-		onchange(removed(next, i));
-	}
-
-	/** A child of item `i` moves out, right after it. */
-	function outdent(i: number, child: number) {
-		const children = items[i].children ?? [];
-		const { children: _, ...parent } = items[i];
-		const rest = removed(children, child);
-		const next = replaced(
-			items,
-			i,
-			rest.length ? { ...parent, children: rest } : parent,
-		);
-		onchange(inserted(next, children[child], i + 1));
-	}
-
-	function move(i: number, by: number) {
-		onchange(moved(items, i, by));
-		if (editing === i) editing = i + by;
+		const [next, copied] = copy();
+		const children = copied[i].item.children;
+		const sibs = siblings(next, copied[i].path);
+		sibs[copied[i].path.at(-1)!] = {
+			...link,
+			...(children ? { children } : {}),
+		};
+		onchange(next);
 	}
 
 	function remove(i: number) {
-		const what = items[i].children?.length
+		const what = rows[i].item.children?.length
 			? ' with the links under it'
 			: '';
-		if (hasTarget(items[i]) && !confirm(`Remove the link${what}?`)) return;
+		if (hasTarget(rows[i].item) && !confirm(`Remove the link${what}?`))
+			return;
+		const [next, copied] = copy();
+		take(next, copied[i]);
 		editing = null;
-		onchange(removed(items, i));
+		onchange(next);
 	}
 
 	function add(type: LinkKind) {
-		// the new one's place, before the items change
-		const at = items.length;
-		onchange(inserted(items, { type, value: null }));
+		// the new one's row, before the items change
+		const at = rows.length;
+		onchange([...items, { type, value: null }]);
 		editing = at;
 	}
 </script>
 
-<div class="items" class:nested={!!onoutdent}>
-	{#each items as item, i (i)}
-		{@const link = linkOf(item)}
+<div class="items" bind:this={list}>
+	{#each rows as row, i (row.path.join('.'))}
+		{@const link = linkOf(row.item)}
 		{@const newTab = opensInNewTab(schema, link, true)}
-		<div class="item" class:editing={editing === i}>
-			<LinkRow {link} summary={linkSummary(schema, link, refs)} {newTab}>
-				{#snippet actions()}
-					{#if onoutdent}
-						<button
-							type="button"
-							class="icon"
-							title="Move out a level"
-							onclick={() => onoutdent(i)}
-						>
-							<Icon name="outdent" size={15} />
-						</button>
-					{:else if depth > 1}
-						<button
-							type="button"
-							class="icon"
-							title="Move under the link above"
-							disabled={!canIndent(i)}
-							onclick={() => indent(i)}
-						>
-							<Icon name="indent" size={15} />
-						</button>
-					{/if}
-					<button
-						type="button"
-						class="icon"
-						title="Move up"
-						disabled={i === 0}
-						onclick={() => move(i, -1)}
-					>
-						<Icon name="arrow-up" size={15} />
-					</button>
-					<button
-						type="button"
-						class="icon"
-						title="Move down"
-						disabled={i === items.length - 1}
-						onclick={() => move(i, 1)}
-					>
-						<Icon name="arrow-down" size={15} />
-					</button>
-					<button
-						type="button"
-						class="icon"
-						class:on={editing === i}
-						title="Edit the link"
-						onclick={() => (editing = editing === i ? null : i)}
-					>
-						<Icon name="edit" size={15} />
-					</button>
-					<button
-						type="button"
-						class="icon remove"
-						title="Remove the link"
-						onclick={() => remove(i)}
-					>
-						<Icon name="delete" size={15} />
-					</button>
-				{/snippet}
-			</LinkRow>
-		</div>
-		{#if editing === i}
-			<div class="panel">
-				<LinkEditor
-					{schema}
-					{refs}
+		<div
+			data-sort
+			class="row"
+			class:sort-dragging={sort.moving(i)}
+			style:margin-left="{row.depth * 2.25}rem"
+		>
+			<div
+				class="item"
+				class:editing={editing === i}
+				class:child={row.depth}
+			>
+				<LinkRow
 					{link}
-					{to}
-					labels
+					summary={linkSummary(schema, link, refs)}
 					{newTab}
-					onchange={l => setLink(i, l)}
-					ondone={() => (editing = null)}
-				/>
+				>
+					{#snippet handle()}
+						<DragHandle
+							sortable={sort}
+							index={i}
+							label="Move the link"
+						/>
+					{/snippet}
+					{#snippet actions()}
+						<button
+							type="button"
+							class="icon"
+							class:on={editing === i}
+							title="Edit the link"
+							onclick={() => (editing = editing === i ? null : i)}
+						>
+							<Icon name="edit" size={15} />
+						</button>
+						<button
+							type="button"
+							class="icon remove"
+							title="Remove the link"
+							onclick={() => remove(i)}
+						>
+							<Icon name="delete" size={15} />
+						</button>
+					{/snippet}
+				</LinkRow>
 			</div>
-		{/if}
-		{#if item.children?.length}
-			<NavItems
-				{schema}
-				{refs}
-				items={item.children}
-				{to}
-				depth={depth - 1}
-				onchange={children => setChildren(i, children)}
-				onoutdent={child => outdent(i, child)}
-			/>
-		{/if}
+			{#if editing === i}
+				<div class="panel">
+					<LinkEditor
+						{schema}
+						{refs}
+						{link}
+						{to}
+						labels
+						{newTab}
+						onchange={l => setLink(i, l)}
+						ondone={() => (editing = null)}
+					/>
+				</div>
+			{/if}
+		</div>
 	{/each}
+	<SortLine sortable={sort} />
 </div>
 
-{#if !onoutdent}
-	<div class="add">
-		<LinkAdd {to} onadd={add} />
-		<span class="note">
-			{depth > 1 ? `Up to ${depth} levels` : 'One level'}
-		</span>
-	</div>
-{/if}
+<div class="add">
+	<LinkAdd {to} onadd={add} />
+	<span class="note">
+		{depth > 1 ? `Up to ${depth} levels` : 'One level'}
+	</span>
+</div>
 
 <style lang="scss">
 	// all levels in one card
-	.items:not(.nested) {
+	.items {
+		position: relative;
 		padding: 0.375rem;
 		border: 1px solid var(--line);
 		border-radius: var(--radius-lg);
 		background: var(--surface);
 
-		&:empty {
+		&:not(:has(.row)) {
 			display: none;
 		}
-	}
-
-	// the level under a link: indented, with a line
-	.nested {
-		margin-left: 1.5rem;
-		padding-left: 0.75rem;
-		border-left: 2px solid var(--line);
 	}
 
 	.item {
@@ -237,6 +225,12 @@
 
 		&.editing {
 			background: var(--surface-2);
+		}
+
+		// a link under another: a line on its left
+		&.child {
+			border-left: 2px solid var(--line);
+			border-radius: 0 var(--radius) var(--radius) 0;
 		}
 	}
 

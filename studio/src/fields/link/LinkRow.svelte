@@ -13,16 +13,20 @@
 		link,
 		summary,
 		newTab,
+		handle,
 		actions,
 	}: {
 		link: Link;
 		summary: { title: string; sub: string; mono: boolean };
 		newTab: boolean;
+		/** the DragHandle, on the left */
+		handle?: Snippet;
 		actions: Snippet;
 	} = $props();
 </script>
 
 <div class="link-row">
+	{@render handle?.()}
 	<span class="kind" class:entry={link.type === 'entry'}>
 		<Icon name={LINK_ICONS[link.type]} size={16} />
 	</span>
