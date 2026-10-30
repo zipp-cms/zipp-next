@@ -23,7 +23,8 @@ pub struct Folder {
 pub fn folders(conn: &Connection) -> Result<Vec<Folder>> {
 	let mut stmt = conn.prepare(
 		"SELECT id, parent_id, name,
-			(SELECT COUNT(*) FROM assets a WHERE a.folder_id = f.id)
+			(SELECT COUNT(*) FROM assets a
+				WHERE a.folder_id = f.id AND a.deleted_at IS NULL)
 		FROM asset_folders f ORDER BY name COLLATE NOCASE",
 	)?;
 	let all = stmt
@@ -42,7 +43,8 @@ pub fn folders(conn: &Connection) -> Result<Vec<Folder>> {
 /// How many assets are in no folder, on the top.
 pub fn top_count(conn: &Connection) -> Result<i64> {
 	let n = conn.query_row(
-		"SELECT COUNT(*) FROM assets WHERE folder_id IS NULL",
+		"SELECT COUNT(*) FROM assets
+		WHERE folder_id IS NULL AND deleted_at IS NULL",
 		[],
 		|r| r.get(0),
 	)?;
@@ -142,6 +144,11 @@ pub fn delete_folder(conn: &Connection, id: i64) -> Result<()> {
 	if f.assets > 0 || folders_in > 0 {
 		return Err(Error::Conflict(format!("{} isn't empty", f.name)));
 	}
+	// assets of it in the trash come back on the top
+	conn.execute(
+		"UPDATE assets SET folder_id = NULL WHERE folder_id = ?1",
+		[id],
+	)?;
 	conn.execute("DELETE FROM asset_folders WHERE id = ?1", [id])?;
 	Ok(())
 }
@@ -155,7 +162,8 @@ pub fn move_assets(
 	check_folder(conn, folder_id)?;
 	for id in ids {
 		let n = conn.execute(
-			"UPDATE assets SET folder_id = ?1 WHERE id = ?2",
+			"UPDATE assets SET folder_id = ?1
+			WHERE id = ?2 AND deleted_at IS NULL",
 			params![folder_id, id],
 		)?;
 		if n == 0 {

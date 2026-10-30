@@ -11,9 +11,11 @@ pub(super) fn check_parent(
 		));
 	}
 	let parent_section: Option<String> = conn
-		.query_row("SELECT section FROM entries WHERE id = ?1", [parent], |r| {
-			r.get(0)
-		})
+		.query_row(
+			"SELECT section FROM entries WHERE id = ?1 AND deleted_at IS NULL",
+			[parent],
+			|r| r.get(0),
+		)
 		.optional()?;
 	if parent_section.as_ref() != Some(&section.handle) {
 		return Err(Error::Request(format!(
@@ -58,10 +60,10 @@ pub fn refresh_uris(
 	let mut stmt = conn.prepare(
 		"WITH RECURSIVE tree(id, depth) AS (
 			SELECT id, 0 FROM entries
-			WHERE section = ?1 AND parent_id IS NULL
+			WHERE section = ?1 AND parent_id IS NULL AND deleted_at IS NULL
 			UNION ALL
 			SELECT e.id, t.depth + 1 FROM entries e JOIN tree t
-			ON e.parent_id = t.id
+			ON e.parent_id = t.id WHERE e.deleted_at IS NULL
 		)
 		SELECT t.id, e.parent_id, s.slug, s.uri, e.type, s.fields FROM tree t
 		JOIN entries e ON e.id = t.id
@@ -160,7 +162,7 @@ pub fn move_entry(
 	let tx = conn.unchecked_transaction()?;
 	let mut stmt = tx.prepare(
 		"SELECT id FROM entries WHERE section = ?1 AND parent_id IS ?2
-		AND id != ?3 ORDER BY position",
+		AND id != ?3 AND deleted_at IS NULL ORDER BY position",
 	)?;
 	let mut siblings = stmt
 		.query_map(params![section.handle, parent, id], |r| r.get(0))?

@@ -334,7 +334,7 @@ impl Query {
 	/// are the entries, `s` their row of the site.
 	pub fn from_where(&self) -> (String, Vec<Value>) {
 		let mut joins = String::new();
-		let mut conds = vec!["1 = 1".to_string()];
+		let mut conds = vec!["e.deleted_at IS NULL".to_string()];
 		let mut join_params = vec![Value::Text(self.site.clone())];
 		let mut params = vec![];
 

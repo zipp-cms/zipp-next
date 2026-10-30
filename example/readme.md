@@ -21,6 +21,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Drafts | change any field | the orange *Unpublished changes*, the website stays as it is until **Publish** |
 | Preview | an entry with a draft → **Preview** | the website with your draft, for a day |
 | What changed | the orange dots | fields that differ from the live version, also inside blocks |
+| Trash | delete a page or an asset → Trash in the navigation | it is gone from the website, **Restore** brings it back with the pages below it; after 30 days it is deleted for good |
 | Revisions | Options → Revisions | what each one changed; click to look, **Restore** to go back |
 | Two editors at once | log in twice | the second one is told instead of overwriting the first |
 | Blocks | Pages → Über uns → Content | text, images, button, upcoming events |

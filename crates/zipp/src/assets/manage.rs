@@ -34,7 +34,7 @@ pub fn search(
 	};
 	let sql = format!(
 		"SELECT {COLUMNS} FROM assets
-		WHERE filename LIKE ?1 ESCAPE '\\' AND (?2 IS NULL OR kind = ?2)
+		WHERE deleted_at IS NULL AND filename LIKE ?1 ESCAPE '\\' AND (?2 IS NULL OR kind = ?2)
 		AND (?3 OR folder_id IS ?4) {ends}
 		ORDER BY id DESC LIMIT 200"
 	);
@@ -242,7 +242,8 @@ pub fn usage(conn: &Connection, primary: &str, id: i64) -> Result<Vec<Usage>> {
 		(SELECT title FROM entry_sites s WHERE s.entry_id = e.id
 			ORDER BY s.site = ?2 DESC LIMIT 1)
 		FROM asset_relations r JOIN entries e ON e.id = r.entry_id
-		WHERE r.asset_id = ?1 GROUP BY e.id ORDER BY e.id",
+		WHERE r.asset_id = ?1 AND e.deleted_at IS NULL
+		GROUP BY e.id ORDER BY e.id",
 	)?;
 	let found = stmt
 		.query_map(params![id, primary], |r| {
@@ -259,7 +260,7 @@ pub fn usage(conn: &Connection, primary: &str, id: i64) -> Result<Vec<Usage>> {
 	Ok(found)
 }
 
-/// Deletes an asset and its files.
+/// Deletes an asset and its files for good, see [`crate::trash`].
 pub fn delete(conn: &Connection, files: &FsPath, id: i64) -> Result<()> {
 	if conn.execute("DELETE FROM assets WHERE id = ?1", [id])? == 0 {
 		return Err(Error::NotFound);

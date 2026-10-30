@@ -102,7 +102,7 @@
 	onDestroy(() => ed.flush());
 
 	async function remove() {
-		if (!confirm(`Delete ${ed.title} in all sites?`)) return;
+		if (!confirm(`Move ${ed.title} to the trash?`)) return;
 		if (!(await ed.remove())) return;
 		if (onclose) onclose();
 		else go(sectionPath(ed.sec));

@@ -2,10 +2,15 @@ import type { MenuItem } from 'zipp-ui/Menu.svelte';
 import { plural } from '../core/format';
 import { assetUrl, type Asset } from './api';
 
-/** Asks before deleting, saying where it is used (`n` entries). */
+/**
+ * Asks before moving it to the trash, saying where it is used (`n`
+ * entries): there it is gone until it is restored.
+ */
 export function confirmDelete(a: Asset, n: number): boolean {
-	const used = n ? ` It is used in ${plural(n, 'entry', 'entries')}.` : '';
-	return confirm(`Delete ${a.filename}?${used}`);
+	const used = n
+		? ` It is used in ${plural(n, 'entry', 'entries')}, they lose it until it is restored.`
+		: '';
+	return confirm(`Move ${a.filename} to the trash?${used}`);
 }
 
 /** The full url of an asset, to paste somewhere. */

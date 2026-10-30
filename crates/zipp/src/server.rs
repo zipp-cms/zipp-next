@@ -74,6 +74,7 @@ pub(super) async fn serve(
 		..AppState::new(db, schema, gql, files)
 	};
 	tokio::spawn(watch_dates(state.clone()));
+	tokio::spawn(empty_trash(state.clone()));
 	let app = app(state, routes);
 
 	let listener = tokio::net::TcpListener::bind(&listen)
@@ -93,6 +94,7 @@ pub(crate) fn app(state: AppState, routes: Router<AppState>) -> Router {
 		.merge(drafts::routes())
 		.merge(ai::routes())
 		.merge(assets::api_routes())
+		.merge(trash::routes())
 		.merge(graphql::routes());
 	let mut app = Router::new()
 		.merge(assets::file_routes())
@@ -134,6 +136,18 @@ async fn watch_dates(state: AppState) {
 				last = now;
 			}
 			Err(e) => tracing::warn!("dates of entries: {e}"),
+		}
+	}
+}
+
+/// Deletes what is in the trash for too long, at the start and hourly.
+async fn empty_trash(state: AppState) {
+	let mut tick = tokio::time::interval(std::time::Duration::from_secs(3600));
+	loop {
+		tick.tick().await;
+		if let Err(e) = crate::trash::purge_old(&state.db.conn(), &state.files)
+		{
+			tracing::warn!("emptying the trash: {e}");
 		}
 	}
 }

@@ -56,7 +56,7 @@
 	{/snippet}
 	{#snippet actions()}
 		{#if may.delete}
-			<button class="icon" onclick={onremove} title="Delete in all sites">
+			<button class="icon" onclick={onremove} title="Move to the trash">
 				<Icon name="delete" />
 			</button>
 		{/if}

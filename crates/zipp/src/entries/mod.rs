@@ -174,7 +174,7 @@ pub fn get_entry(conn: &Connection, id: i64, site: &str) -> Result<Entry> {
 	let sql = format!(
 		"SELECT {COLUMNS} FROM entries e
 		JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?2
-		WHERE e.id = ?1"
+		WHERE e.id = ?1 AND e.deleted_at IS NULL"
 	);
 	Ok(conn.query_row(&sql, params![id, site], from_row)?)
 }
@@ -231,7 +231,7 @@ pub fn dated_between(
 		"SELECT e.id, e.section FROM entries e
 		WHERE ((e.post_date > ?1 AND e.post_date <= ?2)
 			OR (e.expiry_date > ?1 AND e.expiry_date <= ?2))
-		AND EXISTS (SELECT 1 FROM entry_sites s
+		AND e.deleted_at IS NULL AND EXISTS (SELECT 1 FROM entry_sites s
 			WHERE s.entry_id = e.id AND s.published = 1)",
 	)?;
 	let rows =
@@ -239,7 +239,8 @@ pub fn dated_between(
 	Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
-/// Deletes an entry in all sites, in a structure also its children.
+/// Deletes an entry for good in all sites, in a structure also its
+/// children; the studio moves it to the trash ([`crate::trash`]).
 pub fn delete(conn: &Connection, schema: &Schema, id: i64) -> Result<()> {
 	let section: String = conn.query_row(
 		"SELECT section FROM entries WHERE id = ?1",
@@ -270,7 +271,7 @@ pub fn refs(
 		FROM entry_relations r
 		JOIN entries e ON e.id = r.target_id
 		JOIN entry_sites s ON s.entry_id = e.id AND s.site = r.site
-		WHERE r.site = ? AND r.entry_id IN ({}) {}",
+		WHERE r.site = ? AND e.deleted_at IS NULL AND r.entry_id IN ({}) {}",
 		marks(ids.len()),
 		if published_only {
 			format!("AND s.published = 1 AND {LIVE_DATES}")
@@ -290,7 +291,7 @@ pub fn refs_of(
 	let sql = format!(
 		"SELECT e.id, e.section, e.type, s.title, s.slug, s.uri, s.published
 		FROM entries e JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?
-		WHERE e.id IN ({})",
+		WHERE e.deleted_at IS NULL AND e.id IN ({})",
 		marks(ids.len())
 	);
 	refs_by(conn, &sql, site, ids)
@@ -351,7 +352,7 @@ pub fn published_per_site(
 
 pub fn section_of(conn: &Connection, id: i64) -> Result<String> {
 	Ok(conn.query_row(
-		"SELECT section FROM entries WHERE id = ?1",
+		"SELECT section FROM entries WHERE id = ?1 AND deleted_at IS NULL",
 		[id],
 		|r| r.get(0),
 	)?)

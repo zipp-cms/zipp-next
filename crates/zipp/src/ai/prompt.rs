@@ -83,7 +83,7 @@ pub(super) fn describe_view(state: &AppState, url: Option<&str>) -> String {
 		.query_row(
 			"SELECT e.id, e.section, s.title FROM entries e
 			JOIN entry_sites s ON s.entry_id = e.id
-			WHERE s.site = ?1 AND s.uri = ?2",
+			WHERE s.site = ?1 AND s.uri = ?2 AND e.deleted_at IS NULL",
 			rusqlite::params![site, uri],
 			|r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
 		)

@@ -172,15 +172,39 @@ fn version(edits: &Option<Edits>, focal_x: f64, focal_y: f64) -> String {
 }
 
 pub fn get_asset(conn: &Connection, id: i64) -> Result<Asset> {
-	let sql = format!("SELECT {COLUMNS} FROM assets WHERE id = ?1");
+	let sql = format!(
+		"SELECT {COLUMNS} FROM assets WHERE id = ?1 AND deleted_at IS NULL"
+	);
 	Ok(conn.query_row(&sql, [id], from_row)?)
+}
+
+/// The assets in the trash, the last deleted first.
+pub(crate) fn trashed(
+	conn: &Connection,
+) -> Result<Vec<crate::trash::TrashedAsset>> {
+	let mut stmt = conn.prepare(&format!(
+		"SELECT {COLUMNS}, deleted_at,
+			(SELECT email FROM users WHERE id = deleted_by)
+		FROM assets WHERE deleted_at IS NOT NULL
+		ORDER BY deleted_at DESC, id DESC"
+	))?;
+	let rows = stmt.query_map([], |r| {
+		Ok(crate::trash::TrashedAsset {
+			asset: from_row(r)?,
+			deleted_at: r.get(15)?,
+			deleted_by: r.get(16)?,
+		})
+	})?;
+	Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
 /// The assets of these ids in the same order, missing ones are left out.
 pub fn get_many(conn: &Connection, ids: &[i64]) -> Result<Vec<Asset>> {
 	let mut out = vec![];
 	for id in ids {
-		let sql = format!("SELECT {COLUMNS} FROM assets WHERE id = ?1");
+		let sql = format!(
+			"SELECT {COLUMNS} FROM assets WHERE id = ?1 AND deleted_at IS NULL"
+		);
 		if let Some(a) = conn.query_row(&sql, [id], from_row).optional()? {
 			out.push(a);
 		}

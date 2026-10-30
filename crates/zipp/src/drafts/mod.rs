@@ -58,8 +58,9 @@ const MAX_REVISIONS: i64 = 50;
 /// The content of an entry in one site.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SiteDoc {
-	/// the entry type, the same in every site: a draft can change it
-	#[serde(rename = "type")]
+	/// the entry type, the same in every site: a draft can change it;
+	/// left out (empty) in [`put_draft`] it stays
+	#[serde(rename = "type", default)]
 	pub ty: String,
 	pub title: String,
 	pub slug: String,
@@ -187,7 +188,7 @@ fn store_draft(
 ///
 /// The type is that of every site: another type of the section changes
 /// it in all of them, their fields converted (see [`convert`]). The
-/// editor sends `content` already converted.
+/// editor sends `content` already converted; without a type it stays.
 ///
 /// `base` is the version of the draft the editor started from (its
 /// `updated_at`, `None` without a draft). If someone else changed the
@@ -198,7 +199,7 @@ pub fn put_draft(
 	schema: &Schema,
 	id: i64,
 	site: &str,
-	content: SiteDoc,
+	mut content: SiteDoc,
 	base: Option<i64>,
 	user_id: Option<i64>,
 ) -> Result<Draft> {
@@ -206,6 +207,11 @@ pub fn put_draft(
 		return Err(Error::Request(format!("unknown site {site}")));
 	}
 	let entry = get_entry(conn, id, site)?;
+	let current = get_draft(conn, id)?;
+	if content.ty.is_empty() {
+		let drafted = current.as_ref().and_then(|d| d.doc.values().next());
+		content.ty = drafted.map_or(entry.ty.clone(), |sd| sd.ty.clone());
+	}
 	let section = schema.get_section(&entry.section).ok_or_else(|| {
 		Error::Internal(format!("{} is no section", entry.section))
 	})?;
@@ -219,7 +225,6 @@ pub fn put_draft(
 			))
 		})?;
 
-	let current = get_draft(conn, id)?;
 	match (&current, base) {
 		(Some(d), _) if Some(d.updated_at) != base && d.user_id != user_id => {
 			let who = d.user.clone().unwrap_or_else(|| "someone".into());

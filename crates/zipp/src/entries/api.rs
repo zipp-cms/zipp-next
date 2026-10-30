@@ -72,6 +72,7 @@ pub struct MoveReq {
 
 request!(MoveReq, POST "/entries/{id}/move" => ());
 
+/// Moves an entry to the trash, in a structure with its children.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteReq {
 	pub id: i64,

@@ -4,6 +4,7 @@
 	import {
 		canAi,
 		canAssets,
+		canTrash,
 		hasAgent,
 		isAdmin,
 		visibleNav,
@@ -17,7 +18,8 @@
 
 	/**
 	 * The sidebar: the site, the groups of the schema's navigation with
-	 * the sections of the open one, assets, AI, Setup, users, who is
+	 * the sections of the open one, assets, AI, Setup, users, the trash,
+	 * who is
 	 * logged in.
 	 */
 	let { schema, onlogout }: { schema: Schema; onlogout: () => void } =
@@ -26,7 +28,9 @@
 	// the first part of the path: entries, assets, setup…
 	const page = $derived(current.path.split('/')[2] ?? '');
 	// the pages that aren't a group of the nav
-	const other = $derived(['assets', 'ai', 'users', 'setup'].includes(page));
+	const other = $derived(
+		['assets', 'ai', 'users', 'setup', 'trash'].includes(page),
+	);
 	// only the sections the role may see
 	const groups = $derived(visibleNav(schema));
 	// the group of the section on screen
@@ -108,6 +112,12 @@
 			<a class="item" href="/admin/users" class:active={page === 'users'}>
 				<Icon name="users" />
 				Users
+			</a>
+		{/if}
+		{#if canTrash(schema)}
+			<a class="item" href="/admin/trash" class:active={page === 'trash'}>
+				<Icon name="delete" />
+				Trash
 			</a>
 		{/if}
 	</nav>

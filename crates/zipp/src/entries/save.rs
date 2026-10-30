@@ -296,11 +296,14 @@ pub(super) fn check_relations(
 
 	for rel in relations(schema, comp, fields) {
 		let (sql, what) = match rel.target {
-			Target::Entries(_) => {
-				("SELECT type FROM entries WHERE id = ?1", "entry")
-			}
+			Target::Entries(_) => (
+				"SELECT type FROM entries
+					WHERE id = ?1 AND deleted_at IS NULL",
+				"entry",
+			),
 			Target::Assets { .. } => (
-				"SELECT kind || ' ' || filename FROM assets WHERE id = ?1",
+				"SELECT kind || ' ' || filename FROM assets
+				WHERE id = ?1 AND deleted_at IS NULL",
 				"asset",
 			),
 		};

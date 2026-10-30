@@ -44,6 +44,16 @@ export function canAssets(schema: Schema, need: Access): boolean {
 	return isAdmin(schema) || enough(role(schema)?.assets, need);
 }
 
+/** Whether the user may delete anything, what the trash shows. */
+export function canTrash(schema: Schema): boolean {
+	const r = role(schema);
+	return (
+		isAdmin(schema) ||
+		enough(r?.assets, 'delete') ||
+		Object.values(r?.sections ?? {}).some(a => enough(a, 'delete'))
+	);
+}
+
 export function canAi(schema: Schema): boolean {
 	return isAdmin(schema) || !!role(schema)?.ai;
 }

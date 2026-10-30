@@ -34,6 +34,7 @@ pub struct UpdateReq {
 
 request!(UpdateReq, PUT "/assets/{id}" => Asset);
 
+/// Moves an asset to the trash.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteReq {
 	pub id: i64,

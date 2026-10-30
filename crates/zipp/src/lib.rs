@@ -21,6 +21,7 @@ mod server;
 mod studio;
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
+pub mod trash;
 mod typescript;
 mod users;
 

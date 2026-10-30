@@ -326,6 +326,20 @@ fn a_draft_changes_the_type() {
 	let changes = &revisions(&conn, e.id).unwrap()[0].changes;
 	assert!(changes.iter().any(|c| c.field == "type"));
 
+	// a script that leaves the type out keeps it
+	let d = put_draft(
+		&conn,
+		&s,
+		e.id,
+		"de",
+		site_doc("", "J", json!({})),
+		None,
+		None,
+	)
+	.unwrap();
+	assert_eq!(d.doc["de"].ty, "concert");
+	discard(&conn, e.id).unwrap();
+
 	// only a type of the section
 	let bad = site_doc("page", "Jazz", json!({}));
 	let err = put_draft(&conn, &s, e.id, "de", bad, None, None).unwrap_err();

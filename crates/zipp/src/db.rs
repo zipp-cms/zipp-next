@@ -20,7 +20,10 @@ const MIGRATIONS: &[&str] = &[r#"
 		updated_at INTEGER NOT NULL,
 		-- live from (set when first published) and until, in all sites
 		post_date INTEGER,
-		expiry_date INTEGER
+		expiry_date INTEGER,
+		-- in the trash since, see trash/: gone for everything else
+		deleted_at INTEGER,
+		deleted_by INTEGER REFERENCES users(id) ON DELETE SET NULL
 	);
 	CREATE INDEX entries_section ON entries(section);
 	CREATE INDEX entries_parent ON entries(parent_id);
@@ -117,7 +120,10 @@ const MIGRATIONS: &[&str] = &[r#"
 		edits TEXT,
 		uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
 		-- NULL: on the top, in no folder
-		folder_id INTEGER REFERENCES asset_folders(id)
+		folder_id INTEGER REFERENCES asset_folders(id),
+		-- in the trash since, see trash/: gone for everything else
+		deleted_at INTEGER,
+		deleted_by INTEGER REFERENCES users(id) ON DELETE SET NULL
 	);
 	CREATE INDEX assets_folder ON assets(folder_id);
 

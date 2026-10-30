@@ -4,6 +4,7 @@ import { registerAuth } from '../auth/routes';
 import { inLayout } from '../core/router.svelte';
 import { registerEntries } from '../entries/routes';
 import { registerSetup } from '../setup/routes';
+import { registerTrash } from '../trash/routes';
 import { registerUsers } from '../users/routes';
 import { Shell } from './layouts';
 
@@ -21,4 +22,5 @@ export function registerRoutes() {
 	registerSetup();
 	registerAi();
 	registerUsers();
+	registerTrash();
 }

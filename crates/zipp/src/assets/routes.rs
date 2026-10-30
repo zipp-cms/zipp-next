@@ -235,10 +235,11 @@ pub(super) async fn usage_route(
 
 pub(super) async fn delete_route(
 	State(state): State<AppState>,
-	_access: AssetAccess<Delete>,
+	access: AssetAccess<Delete>,
 	Req(req): Req<DeleteReq>,
 ) -> ApiResult<DeleteReq> {
-	delete(&state.db.conn(), &state.files, req.id)?;
+	let user = Some(access.auth.user_id);
+	crate::trash::trash_asset(&state.db.conn(), req.id, user)?;
 	Ok(Json(()))
 }
 

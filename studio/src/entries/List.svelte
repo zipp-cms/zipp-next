@@ -161,7 +161,7 @@
 		const also = below
 			? ` The ${below === 1 ? 'entry' : `${below} entries`} below it too.`
 			: '';
-		if (!confirm(`Delete ${e.title} in all sites?${also}`)) return;
+		if (!confirm(`Move ${e.title} to the trash?${also}`)) return;
 		try {
 			await deleteEntry(e.id);
 			load();

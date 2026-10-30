@@ -18,6 +18,18 @@ Pending and Expired), type and parent, copying the content
 from another site, and the revisions. A global (a single without a page)
 has no title and only the copying and revisions there.
 
+## Trash
+
+Like Craft's, deleting an entry (in a structure with the entries below
+it) or an asset moves it to the trash: it is gone for the studio, the
+website and GraphQL, relations to it are left out, its uris are free.
+The Trash page (for who may delete something, a role sees what it may
+delete) restores it, with its children and at the end of its
+siblings; a restored entry whose uri was taken meanwhile gets `-2` on
+its slug. "Delete for good" and "Empty trash" delete it, anything older
+than 30 days (`trash::KEEP_DAYS`) goes on its own. The api is the same:
+`DELETE /entries/{id}` trashes, `/trash` lists, restores and purges.
+
 ## The content model in the studio
 
 Everyone sees it read only under

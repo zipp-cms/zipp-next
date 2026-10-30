@@ -95,7 +95,8 @@ async fn delete_route(
 	access: EntryAccess<Delete>,
 	Req(req): Req<DeleteReq>,
 ) -> ApiResult<DeleteReq> {
-	delete(&state.db.conn(), &state.schema, req.id)?;
+	let user = Some(access.auth.user_id);
+	crate::trash::trash_entry(&state.db.conn(), &state.schema, req.id, user)?;
 	state.changed(req.id, &access.section, ChangeKind::Deleted);
 	Ok(Json(()))
 }
