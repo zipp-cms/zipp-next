@@ -13,7 +13,14 @@
 		sortable,
 		index,
 		label = 'Move',
-	}: { sortable: Sortable; index: number; label?: string } = $props();
+	}: {
+		sortable: Sortable;
+		/** its row, or how to find it when it changes, like in a rich text */
+		index: number | (() => number);
+		label?: string;
+	} = $props();
+
+	const at = () => (typeof index === 'function' ? index() : index);
 
 	let open = $state(false);
 
@@ -31,14 +38,14 @@
 	};
 	// the moves there are, `in` and `out` only in a tree
 	const steps = $derived(
-		open ? STEPS.filter(([s]) => sortable.stepDrop(index, s)) : [],
+		open ? STEPS.filter(([s]) => sortable.stepDrop(at(), s)) : [],
 	);
 
 	function onkeydown(e: KeyboardEvent) {
 		const step = KEYS[e.key];
 		if (!step) return;
 		e.preventDefault();
-		sortable.step(index, step);
+		sortable.step(at(), step);
 	}
 </script>
 
@@ -51,7 +58,7 @@
 			aria-label={label}
 			aria-expanded={open}
 			style:touch-action="none"
-			onpointerdown={e => sortable.start(e, index)}
+			onpointerdown={e => sortable.start(e, at())}
 			onclick={() => !sortable.dragged && (open = !open)}
 			{onkeydown}
 		>
@@ -65,7 +72,7 @@
 			role="menuitem"
 			onclick={() => {
 				open = false;
-				sortable.step(index, step);
+				sortable.step(at(), step);
 			}}
 		>
 			<Icon name={icon} size={14} />

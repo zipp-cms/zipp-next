@@ -19,7 +19,8 @@
 </script>
 
 <!-- not part of the text: the editor doesn't place the cursor in it -->
-<div class="embed" contenteditable="false">
+<!-- data-sort: its handle shows with the pointer on it -->
+<div class="embed" contenteditable="false" data-sort>
 	{#if editable}
 		<button
 			type="button"

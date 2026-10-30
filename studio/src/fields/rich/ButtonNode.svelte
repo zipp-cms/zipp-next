@@ -3,6 +3,8 @@
 	import type { Refs } from '../../entries/api';
 	import LinkInput from '../link/LinkInput.svelte';
 	import NodeFrame from './NodeFrame.svelte';
+	import DragHandle from 'zipp-ui/DragHandle.svelte';
+	import type { Sortable } from 'zipp-ui/sortable';
 	import { BUTTON_LINKS } from '../link/link';
 
 	/**
@@ -17,6 +19,8 @@
 		update,
 		remove,
 		insertLine,
+		sortable,
+		index,
 	}: {
 		attrs: { link: Link };
 		schema: Schema;
@@ -25,6 +29,8 @@
 		update: (attrs: Record<string, unknown>) => void;
 		remove: () => void;
 		insertLine: (where: 'before' | 'after') => void;
+		sortable?: Sortable;
+		index: () => number;
 	} = $props();
 </script>
 
@@ -39,6 +45,12 @@
 			onchange={link => update({ link })}
 			onremove={remove}
 			removeTitle="Remove the button"
-		/>
+		>
+			{#snippet handle()}
+				{#if editable && sortable}
+					<DragHandle {sortable} {index} label="Move the button" />
+				{/if}
+			{/snippet}
+		</LinkInput>
 	</fieldset>
 </NodeFrame>

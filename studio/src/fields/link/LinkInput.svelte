@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import type { Link, LinkKind, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
 	import Icon from 'zipp-ui/Icon.svelte';
@@ -24,6 +25,7 @@
 		onchange,
 		onremove,
 		removeTitle = 'Remove',
+		handle,
 	}: {
 		schema: Schema;
 		refs: Refs;
@@ -39,6 +41,8 @@
 		/** removes what holds the link, like a button of a rich text */
 		onremove?: () => void;
 		removeTitle?: string;
+		/** a DragHandle on the left, like a button of a rich text */
+		handle?: Snippet;
 	} = $props();
 
 	let editing = $state(false);
@@ -82,7 +86,8 @@
 
 {#if !filled && !editing}
 	<div class="link-input empty" class:required>
-		<span>
+		{@render handle?.()}
+		<span class="message">
 			{required ? 'Required – no link yet.' : 'No link yet.'}
 		</span>
 		<span class="end">
@@ -94,7 +99,7 @@
 	<div class="link-input" class:editing>
 		{#if filled}
 			<div class="row">
-				<LinkRow {link} {summary} {newTab}>
+				<LinkRow {link} {summary} {newTab} {handle}>
 					{#snippet actions()}
 						<button
 							type="button"
@@ -173,6 +178,10 @@
 		color: var(--danger);
 	}
 
+	.message {
+		flex: 1;
+	}
+
 	.end {
 		display: flex;
 		align-items: center;
@@ -183,7 +192,6 @@
 	.empty {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
 		gap: 1rem;
 		flex-wrap: wrap;
 		padding: 0.625rem 0.625rem 0.625rem 1rem;

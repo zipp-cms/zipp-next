@@ -4,6 +4,8 @@
 	import type { Refs } from '../../entries/api';
 	import Fields from '../Fields.svelte';
 	import EmbedCard from './EmbedCard.svelte';
+	import DragHandle from 'zipp-ui/DragHandle.svelte';
+	import type { Sortable } from 'zipp-ui/sortable';
 	import { blockSummary } from '../blocks.svelte';
 	import { synced } from '../../core/synced.svelte';
 	import { componentOf } from '../../core/schema';
@@ -20,6 +22,8 @@
 		update,
 		remove,
 		insertLine,
+		sortable,
+		index,
 	}: {
 		attrs: { id: string | null; type: string; fields: Values };
 		schema: Schema;
@@ -28,6 +32,8 @@
 		update: (attrs: Record<string, unknown>) => void;
 		remove: () => void;
 		insertLine: (where: 'before' | 'after') => void;
+		sortable?: Sortable;
+		index: () => number;
 	} = $props();
 
 	const comp = $derived(componentOf(schema, attrs.type));
@@ -50,6 +56,11 @@
 	onremove={remove}
 	oninsert={insertLine}
 >
+	{#snippet handle()}
+		{#if editable && sortable}
+			<DragHandle {sortable} {index} label="Move the block" />
+		{/if}
+	{/snippet}
 	{#snippet preview()}
 		{blockSummary(comp, fields.value) || 'Empty'}
 	{/snippet}

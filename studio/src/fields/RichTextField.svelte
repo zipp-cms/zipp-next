@@ -7,7 +7,9 @@
 	import { editedSite } from '../core/editing';
 	import { Last } from '../core/synced.svelte';
 	import Toolbar from './rich/Toolbar.svelte';
-	import { EMPTY, createEditor, trimmed } from './rich/editor';
+	import { EMPTY, createEditor, moveNode, trimmed } from './rich/editor';
+	import { Sortable } from 'zipp-ui/sortable';
+	import SortLine from 'zipp-ui/SortLine.svelte';
 
 	/**
 	 * Rich text with TipTap. The toolbar has only what the schema allows
@@ -44,8 +46,19 @@
 		schema.sites.find(s => s.handle === edited)?.language ?? '',
 	);
 
+	// moving buttons and blocks: the nodes of the text are the rows
+	const sort = new Sortable({
+		container: () => el,
+		rows: () =>
+			editor ? ([...editor.view.dom.children] as HTMLElement[]) : [],
+		depths: () =>
+			editor ? Array(editor.state.doc.childCount).fill(0) : [],
+		onmove: (from, drop) => editor && moveNode(editor, from, drop.index),
+	});
+
 	onMount(() => {
 		editor = createEditor({
+			sortable: sort,
 			element: el,
 			opts,
 			schema,
@@ -77,7 +90,7 @@
 	{#if editor?.isEditable}
 		<Toolbar {editor} {tick} {opts} {blockTypes} {schema} {refs} />
 	{/if}
-	<div class="editor" bind:this={el}></div>
+	<div class="editor" bind:this={el}><SortLine sortable={sort} /></div>
 </div>
 
 <style lang="scss">
@@ -93,6 +106,7 @@
 	}
 
 	.editor {
+		position: relative;
 		padding: 0.25rem 0.75rem;
 		min-height: 5.25rem;
 

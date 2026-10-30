@@ -4,6 +4,7 @@ import { Placeholder } from '@tiptap/extensions';
 import type { FieldOf, Link, Schema } from '../../core/schema';
 import type { Refs } from '../../entries/api';
 import { Block, Button, ZippLink } from './extensions.svelte';
+import type { Sortable } from 'zipp-ui/sortable';
 
 /** What a rich text field allows: its field. */
 export type RichOptions = Omit<FieldOf<'richText'>, 'kind'>;
@@ -38,8 +39,15 @@ export function createEditor(o: {
 	content: unknown;
 	onChange: (doc: unknown) => void;
 	onTransaction: () => void;
+	/** moves the buttons and blocks of the text */
+	sortable: Sortable;
 }): Editor {
 	const { opts } = o;
+	const nodeOptions = {
+		schema: o.schema,
+		refs: () => o.refs,
+		sortable: () => o.sortable,
+	};
 	return new Editor({
 		element: o.element,
 		editable: o.editable,
@@ -69,8 +77,8 @@ export function createEditor(o: {
 					editor.isEmpty ? 'Write …' : 'Continue writing …',
 				showOnlyCurrent: false,
 			}),
-			Button.configure({ schema: o.schema, refs: () => o.refs }),
-			Block.configure({ schema: o.schema, refs: () => o.refs }),
+			Button.configure(nodeOptions),
+			Block.configure(nodeOptions),
 		],
 		onUpdate: ({ editor }) => o.onChange(trimmed(editor.getJSON())),
 		onTransaction: o.onTransaction,
@@ -80,6 +88,24 @@ export function createEditor(o: {
 }
 
 const chain = (editor: Editor) => editor.chain().focus();
+
+/**
+ * Moves the node `from` of the text before the node `to` of the text
+ * without it (its count: to the end); one step to undo.
+ */
+export function moveNode(editor: Editor, from: number, to: number) {
+	const { state } = editor;
+	const start = (doc: typeof state.doc, i: number) => {
+		let pos = 0;
+		for (let k = 0; k < i; k++) pos += doc.child(k).nodeSize;
+		return pos;
+	};
+	const node = state.doc.child(from);
+	const at = start(state.doc, from);
+	const tr = state.tr.delete(at, at + node.nodeSize);
+	tr.insert(start(tr.doc, to), node);
+	editor.view.dispatch(tr.scrollIntoView());
+}
 
 /** Sets the link of the selection, an empty one removes it. */
 export function setLink(editor: Editor, link: Link) {

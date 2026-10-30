@@ -2,6 +2,7 @@ import { Mark, Node, type NodeViewRendererProps } from '@tiptap/core';
 import { mount, unmount, type Component } from 'svelte';
 import type { Schema } from '../../core/schema';
 import type { Refs } from '../../entries/api';
+import type { Sortable } from 'zipp-ui/sortable';
 import BlockNode from './BlockNode.svelte';
 import ButtonNode from './ButtonNode.svelte';
 
@@ -31,7 +32,12 @@ export const ZippLink = Mark.create({
  * `refs` as a function: TipTap copies plain objects of the options, the
  * node views need the entry's own, where picked entries go.
  */
-type Options = { schema: Schema; refs: () => Refs };
+type Options = {
+	schema: Schema;
+	refs: () => Refs;
+	/** moves the nodes of the text, see RichTextField */
+	sortable: () => Sortable | undefined;
+};
 
 /**
  * A node edited by a Svelte component outside of the text: it gets the
@@ -48,6 +54,9 @@ function svelteView(component: Component<any>, options: Options) {
 			attrs: node.attrs,
 			schema: options.schema,
 			refs: options.refs(),
+			sortable: options.sortable(),
+			// its place among the nodes of the text, it changes with them
+			index: () => editor.state.doc.resolve(getPos() ?? 0).index(),
 			editable: editor.isEditable,
 			update: (attrs: Record<string, unknown>) => {
 				const pos = getPos();
@@ -101,9 +110,14 @@ export const Button = Node.create<Options>({
 	name: 'button',
 	group: 'block',
 	atom: true,
-	draggable: true,
+	// moved by its DragHandle, not by the browser's drag and drop
+	draggable: false,
 	addOptions() {
-		return { schema: null as any, refs: () => ({}) };
+		return {
+			schema: null as any,
+			refs: () => ({}),
+			sortable: () => undefined,
+		};
 	},
 	addAttributes() {
 		return { link: { default: { type: 'entry', value: null } } };
@@ -128,9 +142,14 @@ export const Block = Node.create<Options>({
 	name: 'embed',
 	group: 'block',
 	atom: true,
-	draggable: true,
+	// moved by its DragHandle, not by the browser's drag and drop
+	draggable: false,
 	addOptions() {
-		return { schema: null as any, refs: () => ({}) };
+		return {
+			schema: null as any,
+			refs: () => ({}),
+			sortable: () => undefined,
+		};
 	},
 	addAttributes() {
 		return {

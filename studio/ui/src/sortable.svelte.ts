@@ -21,6 +21,8 @@ type Line = { top: number; left: number; width: number; height: number };
 export type SortableOptions = {
 	/** the element around the rows, they have `data-sort` in order */
 	container: () => HTMLElement | undefined;
+	/** the rows when they can't have `data-sort`, like a rich text's */
+	rows?: () => HTMLElement[];
 	/** the depth of each row */
 	depths: () => number[];
 	/** how deep a row may go, 0 for a list */
@@ -53,8 +55,16 @@ export class Sortable {
 	constructor(private o: SortableOptions) {}
 
 	private rows(): HTMLElement[] {
+		if (this.o.rows) return this.o.rows();
 		const c = this.o.container();
-		return c ? [...c.querySelectorAll<HTMLElement>('[data-sort]')] : [];
+		if (!c) return [];
+		// its own rows, not those of a list in a row (a block's fields)
+		return [...c.querySelectorAll<HTMLElement>('[data-sort]')].filter(
+			el => {
+				const outer = el.parentElement?.closest('[data-sort]');
+				return !outer || !c.contains(outer);
+			},
+		);
 	}
 
 	/** Whether row `i` is dragged, itself or with the row above it. */
@@ -208,7 +218,8 @@ export class Sortable {
 					? null
 					: { index: at(end(parent)), depth: d - 1 };
 			case 'in':
-				return sibBefore < 0 || d + 1 + below > (this.o.maxDepth?.() ?? 0)
+				return sibBefore < 0 ||
+					d + 1 + below > (this.o.maxDepth?.() ?? 0)
 					? null
 					: // where it is, the rows before it stay
 						{ index: from, depth: d + 1 };

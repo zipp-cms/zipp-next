@@ -12,6 +12,7 @@
 		onremove,
 		oninsert,
 		preview,
+		handle,
 		children,
 	}: {
 		/** the name of the block */
@@ -22,12 +23,14 @@
 		/** an empty line before or after, the cursor goes there */
 		oninsert: (where: 'before' | 'after') => void;
 		preview: Snippet;
+		/** the DragHandle, at the start of the head */
+		handle?: Snippet;
 		children: Snippet;
 	} = $props();
 </script>
 
 <NodeFrame {editable} {oninsert}>
-	<ItemCard {kind} bind:open={editing} summary={preview}>
+	<ItemCard {kind} bind:open={editing} summary={preview} {handle}>
 		{#snippet actions()}
 			{#if editable}
 				<ItemActions {onremove} />
