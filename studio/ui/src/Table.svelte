@@ -16,6 +16,10 @@
 		href,
 		id,
 		empty = 'Nothing yet',
+		detail,
+		open,
+		ontoggle,
+		widths,
 	}: {
 		rows: T[];
 		key: (row: T) => string | number;
@@ -26,11 +30,18 @@
 		/** the id of a row, to link to it */
 		id?: (row: T) => string;
 		empty?: string;
+		/** what a row shows under it while it is open, a click opens it */
+		detail?: Snippet<[T]>;
+		open?: (row: T) => boolean;
+		ontoggle?: (row: T) => void;
+		/** of the columns, so tables one under the other line up */
+		widths?: string[];
 	} = $props();
 
-	function open(e: MouseEvent, r: T) {
-		if (!href || (e.target as Element).closest('a, button, input, select'))
-			return;
+	function click(e: MouseEvent, r: T) {
+		if ((e.target as Element).closest('a, button, input, select')) return;
+		if (ontoggle) return ontoggle(r);
+		if (!href) return;
 		const url = href(r);
 		if (e.metaKey || e.ctrlKey) return void window.open(url, '_blank');
 		const row = e.currentTarget as HTMLElement;
@@ -40,7 +51,12 @@
 	}
 </script>
 
-<table class:links={!!href}>
+<table class:links={!!href || !!ontoggle} class:fixed={!!widths}>
+	{#if widths}
+		<colgroup>
+			{#each widths as w, i (i)}<col style:width={w} />{/each}
+		</colgroup>
+	{/if}
 	{#if columns.length}
 		<thead>
 			<tr>
@@ -50,9 +66,18 @@
 	{/if}
 	<tbody>
 		{#each rows as r, i (key(r))}
-			<tr id={id?.(r)} onclick={e => open(e, r)}>
+			<tr
+				id={id?.(r)}
+				aria-expanded={ontoggle ? !!open?.(r) : undefined}
+				onclick={e => click(e, r)}
+			>
 				{@render row(r, i)}
 			</tr>
+			{#if detail && open?.(r)}
+				<tr class="detail">
+					<td colspan={columns.length || 1}>{@render detail(r)}</td>
+				</tr>
+			{/if}
 		{:else}
 			<tr>
 				<td class="empty" colspan={columns.length || 1}>{empty}</td>
@@ -67,6 +92,10 @@
 	table {
 		width: 100%;
 		border-collapse: collapse;
+
+		&.fixed {
+			table-layout: fixed;
+		}
 	}
 
 	th,
@@ -95,17 +124,28 @@
 		transition: background 0.3s;
 	}
 
+	// the open row and what it shows, as one
+	tbody tr[aria-expanded='true'],
+	.detail {
+		background: var(--surface-2);
+	}
+
+	.detail :global(td) {
+		border-top: none;
+		padding: 0.25rem 0.5rem 0.75rem;
+	}
+
 	.empty {
 		color: var(--muted);
 	}
 
 	// a row that opens what it shows
-	.links tbody tr {
+	.links tbody tr:not(.detail) {
 		cursor: pointer;
 	}
 
 	@include hover {
-		.links tbody tr:hover {
+		.links tbody tr:not(.detail):hover {
 			background: var(--hover);
 		}
 	}
