@@ -15,9 +15,32 @@ use zipp_button_group::{ButtonGroup, button_group};
 use zipp_seo::{Seo, SeoDefaults, seo_field};
 
 fn schema() -> Schema {
-	let body = || {
-		Field::blocks("body", ["heading", "text", "image", "button", "events"])
+	// like the crelte tutorial: a page starts with its intro, the content
+	// is blocks
+	let intro = || {
+		vec![
+			Field::rich_text("intro").links().translatable(),
+			Field::images("hero").max(1),
+		]
+	};
+	let content = || {
+		Field::blocks("content", ["text", "images", "button", "events"])
 			.translatable()
+	};
+	// for search engines the intro is the description, the hero the image
+	let from_intro = || {
+		SeoDefaults::new()
+			.description_from("intro")
+			.image_from("hero")
+	};
+	// the tabs of a page and an article, like Craft's field layout
+	let tabs = |intro: Vec<Field>, content: Vec<Field>| {
+		let mut tabs = vec![("Intro", intro)];
+		if !content.is_empty() {
+			tabs.push(("Content", content));
+		}
+		tabs.push(("SEO", vec![seo_field("seo")]));
+		tabs
 	};
 
 	Schema::new()
@@ -25,19 +48,26 @@ fn schema() -> Schema {
 		.field_type(ButtonGroup)
 		.site("de", "Deutsch", "de-CH")
 		.site("en", "English", "en")
-		// the home page is the page of type home in the structure
+		// the pages like the crelte tutorial: the home page is the page of
+		// type home, the news page lists the articles
 		.section(
-			Section::structure("pages", ["home", "page"])
+			Section::structure("pages", ["home", "page", "news"])
 				.uri("{parent.uri}/{slug}")
 				.uri_of("home", ""),
 		)
+		.section(Section::channel("news", ["article"]).uri("news/{slug}"))
+		// no pages: the news page filters by them
+		.section(Section::structure("categories", ["category"]))
 		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
 		// globals: singles without a url
 		.section(Section::single("header", "header"))
 		.section(Section::single("footer", "footer"))
 		// the readme of the demo, a page of the studio from this repo
 		.doc("readme", "Readme", include_str!("../../readme.md"))
-		.nav("Content", ["readme", "pages", "events"])
+		.nav(
+			"Content",
+			["readme", "pages", "news", "categories", "events"],
+		)
 		.nav(
 			"Settings",
 			["header", "footer", "translations", "seoSettings"],
@@ -53,18 +83,10 @@ fn schema() -> Schema {
 						.title_pattern("{title} – Veranstaltungen | {siteName}")
 						.description_from("description"),
 				)
-				.entry_type(
-					"page",
-					SeoDefaults::new()
-						.description_from("intro")
-						.image_from("hero"),
-				)
-				.entry_type(
-					"home",
-					SeoDefaults::new()
-						.description_from("intro")
-						.image_from("hero"),
-				),
+				.entry_type("home", from_intro())
+				.entry_type("page", from_intro())
+				.entry_type("news", from_intro())
+				.entry_type("article", from_intro()),
 		)
 		// roles of studio users, a user without one is an admin
 		.role(
@@ -73,6 +95,7 @@ fn schema() -> Schema {
 					["pages", "header", "footer", "translations"],
 					Access::Publish,
 				)
+				.sections(["news", "categories"], Access::Delete)
 				.section("events", Access::Delete)
 				.assets(Access::Delete)
 				.ai(),
@@ -80,6 +103,8 @@ fn schema() -> Schema {
 		.role(
 			Role::new("author", "Author")
 				.section("events", Access::Edit)
+				.section("news", Access::Edit)
+				.section("categories", Access::View)
 				.section("pages", Access::View)
 				.assets(Access::Edit),
 		)
@@ -94,50 +119,28 @@ fn schema() -> Schema {
 				),
 				("events.none", "Keine Veranstaltungen"),
 				("events.soldOut", "Ausverkauft"),
+				("news.all", "Alle"),
+				("news.none", "Noch keine Neuigkeiten"),
 			],
 		)
 		.transform(Transform::new("hero").width(1600).height(700).crop())
 		.transform(Transform::new("small").width(600))
 		.transform(Transform::new("medium").width(1200))
 		.transform(Transform::new("thumb").width(160).height(120).crop())
-		// tabs in the editor, like Craft's field layout
+		.entry_tabs("home", "Home", tabs(intro(), vec![content()]))
+		.entry_tabs("page", "Page", tabs(intro(), vec![content()]))
+		// the page of the news: its intro, then the articles
+		.entry_tabs("news", "News", tabs(intro(), vec![]))
 		.entry_tabs(
-			"home",
-			"Home",
-			[
-				(
-					"Content",
-					vec![
-						Field::images("hero").max(1),
-						Field::text("intro")
-							.multiline()
-							.max(300)
-							.translatable(),
-						body(),
-					],
-				),
-				("SEO", vec![seo_field("seo")]),
-			],
+			"article",
+			"Article",
+			tabs(
+				[intro(), vec![Field::relation("categories", ["category"])]]
+					.concat(),
+				vec![content()],
+			),
 		)
-		// tabs in the editor, like Craft's field layout
-		.entry_tabs(
-			"page",
-			"Page",
-			[
-				(
-					"Content",
-					vec![
-						Field::images("hero").max(1),
-						Field::text("intro")
-							.multiline()
-							.max(300)
-							.translatable(),
-						body(),
-					],
-				),
-				("SEO", vec![seo_field("seo")]),
-			],
-		)
+		.entry("category", "Category", [])
 		.entry(
 			"event",
 			"Event",
@@ -212,26 +215,21 @@ fn schema() -> Schema {
 			],
 		)
 		.block(
-			"heading",
-			"Heading",
-			[Field::text("text").required().max(80)],
-		)
-		.block(
 			"text",
 			"Text",
-			[Field::rich_text("content")
+			[Field::rich_text("text")
 				.required()
-				.headings([3])
+				.headings([2, 3])
 				.lists()
 				.links()
 				.buttons()
-				.embed(["image"])],
+				.embed(["images"])],
 		)
 		.block(
-			"image",
-			"Image",
+			"images",
+			"Images",
 			[
-				Field::images("image").required().max(1),
+				Field::images("images").required(),
 				Field::text("caption").max(200),
 				// three options: buttons in the studio
 				Field::dropdown(

@@ -15,13 +15,47 @@ fragment Hero on Asset {
 	alt
 }
 
-fragment Body on Block {
-	typeHandle
-	... on heading_Block {
-		text
+# a page starts with its intro, like the crelte tutorial
+fragment Intro on Entry {
+	title
+	... on home_Entry {
+		intro {
+			html
+		}
+		hero {
+			...Hero
+		}
 	}
+	... on page_Entry {
+		intro {
+			html
+		}
+		hero {
+			...Hero
+		}
+	}
+	... on news_Entry {
+		intro {
+			html
+		}
+		hero {
+			...Hero
+		}
+	}
+	... on article_Entry {
+		intro {
+			html
+		}
+		hero {
+			...Hero
+		}
+	}
+}
+
+fragment Content on Block {
+	typeHandle
 	... on text_Block {
-		content {
+		text {
 			chunks {
 				... on Html {
 					html
@@ -34,20 +68,20 @@ fragment Body on Block {
 						target
 					}
 				}
-				... on image_Block {
+				... on images_Block {
 					caption
 					width
-					image {
+					images {
 						...Image
 					}
 				}
 			}
 		}
 	}
-	... on image_Block {
+	... on images_Block {
 		caption
 		width
-		image {
+		images {
 			...Image
 		}
 	}
@@ -73,26 +107,29 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 		sectionHandle
 		typeHandle
 		title
+		...Intro
 		... on home_Entry {
-			intro
-			hero {
-				...Hero
-			}
-			body {
-				...Body
+			content {
+				...Content
 			}
 		}
 		... on page_Entry {
-			intro
-			hero {
-				...Hero
-			}
-			body {
-				...Body
+			content {
+				...Content
 			}
 			children {
 				title
 				url
+			}
+		}
+		... on article_Entry {
+			postDate
+			categories {
+				id
+				title
+			}
+			content {
+				...Content
 			}
 		}
 		... on event_Entry {

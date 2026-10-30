@@ -3,11 +3,11 @@
 
 	// rich text in chunks: html, rows of buttons and embedded images; zipp
 	// removes empty paragraphs, the spacing is * + * without margin hacks
-	let { content } = $props();
+	let { text } = $props();
 </script>
 
 <div class="rt">
-	{#each content?.chunks ?? [] as chunk, i (i)}
+	{#each text?.chunks ?? [] as chunk, i (i)}
 		{#if chunk.html}
 			<div class="html">{@html chunk.html}</div>
 		{:else if chunk.buttons}
@@ -18,9 +18,9 @@
 					</a>
 				{/each}
 			</div>
-		{:else if chunk.image}
+		{:else if chunk.images}
 			<figure>
-				{#each chunk.image as img (img.url)}<Img {img} />{/each}
+				{#each chunk.images as img (img.url)}<Img {img} />{/each}
 				{#if chunk.caption}<figcaption>{chunk.caption}</figcaption>{/if}
 			</figure>
 		{/if}

@@ -3,7 +3,9 @@
 crelte's default template, pointed at the example cms instead of Craft.
 Templates are `<sectionHandle>-<typeHandle>`, blocks live in
 `components/content` and the events block loads its list with its own
-`loadData`.
+`loadData`. Pages and articles start with `components/Intro.svelte`, the
+news page (`pages-news`) lists the articles like the crelte tutorial and
+filters them with `?category=<id>`.
 
 ```sh
 cp craft/.env.example craft/.env

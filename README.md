@@ -17,22 +17,23 @@ fn schema() -> Schema {
 	Schema::new()
 		.site("de", "Deutsch", "de-CH")
 		.site("en", "English", "en")
-		.section(Section::single("home", "page").uri(""))
-		.section(Section::structure("pages", ["page"]).uri("{parent.uri}/{slug}"))
+		.section(
+			Section::structure("pages", ["page"]).uri("{parent.uri}/{slug}"),
+		)
 		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
-		.entry("page", "Page", [
-			Field::text("intro").multiline().translatable(),
-			Field::blocks("body", ["heading", "button"]).translatable(),
+		// tabs like Craft's field layout: the intro, then the blocks
+		.entry_tabs("page", "Page", [
+			("Intro", vec![Field::rich_text("intro").links().translatable()]),
+			("Content", vec![Field::blocks("content", ["text", "images"])]),
 		])
 		.entry("event", "Event", [
 			Field::text("date").required().indexed(),
 			Field::text("city").required().indexed(),
 		])
-		.block("heading", "Heading", [Field::text("text").required()])
-		.block("button", "Button", [
-			Field::text("label").required(),
-			Field::relation("link", ["page", "event"]).max(1),
+		.block("text", "Text", [
+			Field::rich_text("text").headings([2, 3]).lists().links(),
 		])
+		.block("images", "Images", [Field::images("images").required()])
 }
 
 fn main() {

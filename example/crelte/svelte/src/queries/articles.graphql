@@ -1,0 +1,36 @@
+# the news page: the articles, of one category with `?category=<id>`,
+# like the crelte tutorial
+query ($categories: [QueryArgument], $siteId: [QueryArgument]) {
+	articles: entries(
+		section: "news"
+		categories: $categories
+		siteId: $siteId
+		orderBy: "postDate DESC"
+	) {
+		title
+		url
+		postDate
+		... on article_Entry {
+			intro {
+				html
+			}
+			hero {
+				url(transform: "thumb")
+				alt
+			}
+			categories {
+				id
+				title
+			}
+		}
+	}
+	# in the order of the tree in the studio
+	categories: entries(
+		section: "categories"
+		siteId: $siteId
+		order: "structure"
+	) {
+		id
+		title
+	}
+}

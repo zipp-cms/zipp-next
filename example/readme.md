@@ -11,7 +11,8 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 
 | Feature | Where in the studio | What to look for |
 |---|---|---|
-| Sections: single, channel, structure | Settings → Header, Footer · Events · Pages | a single opens its entry, a channel is a list, a structure a tree |
+| Sections: single, channel, structure | Settings → Header, Footer · News, Events · Pages, Categories | a single opens its entry, a channel is a list, a structure a tree |
+| Like the crelte tutorial | Pages, News, Categories | pages and articles start with the **Intro** tab (a rich text intro, an image), the blocks are in **Content**; the news page on the website lists the articles and filters them by category (`?category=`) |
 | The home page in the tree | Pages → Willkommen | the entry type `home` gets the uri `/` (`uri_of`) |
 | Drag and drop | Pages | drag the handle before a title: before, after or into a page |
 | Sites and languages | the language switch top right | titles, slugs and text per site; fields marked *all sites* are shared |
@@ -21,21 +22,21 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | What changed | the orange dots | fields that differ from the live version, also inside blocks |
 | Revisions | Options → Revisions | what each one changed; click to look, **Restore** to go back |
 | Two editors at once | log in twice | the second one is told instead of overwriting the first |
-| Blocks | Pages → Über uns → Body | heading, text, image, button, upcoming events |
-| Rich text | the Text block | headings, lists, links, a **row of buttons** and an **image** inside the text |
+| Blocks | Pages → Über uns → Content | text, images, button, upcoming events |
+| Rich text | the Intro tab · the Text block | the intro only with links; the block also with headings, lists, a **row of buttons** and **images** inside the text |
 | Links | a Button block | entry, URL, email, phone or file; external ones open in a new tab |
 | Group | a page → SEO | fields of another component under one name |
 | Markdown | Events → Description | written as markdown, the website gets it as html |
 | Navigation, table, checkboxes | Settings → Header, Footer · Events → Für wen | a menu with a second level, footer links as rows, some of the options |
-| Dropdown | Image block → Width (3 options: buttons), Events → Sprache (5: a select) | the website sizes the image, filters events by language |
+| Dropdown | Images block → Width (3 options: buttons), Events → Sprache (5: a select) | the website sizes the image, filters events by language |
 | A field type of another crate | Events → Genre | `crates/zipp-button-group`: Craft's button group with a color per option, its own editor and GraphQL type |
 | Boolean, number, indexed fields | Events | *sold out*, price; the website filters and sorts by them |
-| Relations | Events → More info, Header → navigation | the website gets the linked entries with their fields |
+| Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them |
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |
 | Globals | Settings → Header, Footer | singles without a url, crelte reads them like Craft's globals |
 | Translations | Settings → Translations | the keys come from the code, editors only translate |
 | SEO | Settings → SEO, a page → SEO | the search result preview; on the website title, meta, JSON-LD, `/sitemap.xml` and `/robots.txt` from the npm package `meierlabs-seo` (the demo is noindex) |
-| Roles | Users (admins) | log in as `second@meierlabs.dev` (Author): only events, as drafts someone else publishes; pages read only |
+| Roles | Users (admins) | log in as `second@meierlabs.dev` (Author): only events and news, as drafts someone else publishes; pages and categories read only |
 | AI chat | AI in the top bar | ask for anything, also a new event; it writes drafts, stays on your page when the change shows there and opens another page when not |
 
 ## On the website

@@ -5,21 +5,17 @@
 
 	/** @type {import('crelte').LoadData} */
 	export const loadData = {
-		blocks: (cr, entry) => loadContentData(cr, entry.body),
+		blocks: (cr, entry) => loadContentData(cr, entry.content),
 	};
 </script>
 
 <script>
-	import Img from '@/components/Img.svelte';
+	import Intro from '@/components/Intro.svelte';
 
 	let { entry, blocks } = $props();
 </script>
 
-{#each entry.hero as img (img.url)}
-	<Img {img} />
-{/each}
-<h1>{entry.title}</h1>
-{#if entry.intro}<p class="intro">{entry.intro}</p>{/if}
+<Intro {entry} />
 <Content {blocks} />
 
 {#if entry.children.length}

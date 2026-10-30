@@ -461,6 +461,10 @@
                 "label": "Section Pages"
               },
               {
+                "value": "section:news",
+                "label": "Section News"
+              },
+              {
                 "value": "section:events",
                 "label": "Section Events"
               },
@@ -471,6 +475,14 @@
               {
                 "value": "type:page",
                 "label": "Entry type Page"
+              },
+              {
+                "value": "type:news",
+                "label": "Entry type News"
+              },
+              {
+                "value": "type:article",
+                "label": "Entry type Article"
               },
               {
                 "value": "type:event",
@@ -653,6 +665,14 @@
               [
                 "events.soldOut",
                 "Ausverkauft"
+              ],
+              [
+                "news.all",
+                "Alle"
+              ],
+              [
+                "news.none",
+                "Noch keine Neuigkeiten"
               ]
             ]
           }
@@ -667,6 +687,19 @@
         "entry": true,
         "fields": [
           {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
             "handle": "hero",
             "label": "Hero",
             "required": false,
@@ -677,26 +710,15 @@
             "max": 1
           },
           {
-            "handle": "intro",
-            "label": "Intro",
-            "required": false,
-            "indexed": false,
-            "translatable": true,
-            "kind": "text",
-            "max": 300,
-            "multiline": true
-          },
-          {
-            "handle": "body",
-            "label": "Body",
+            "handle": "content",
+            "label": "Content",
             "required": false,
             "indexed": false,
             "translatable": true,
             "kind": "blocks",
             "types": [
-              "heading",
               "text",
-              "image",
+              "images",
               "button",
               "events"
             ],
@@ -716,11 +738,16 @@
         ],
         "tabs": [
           {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
             "name": "Content",
             "fields": [
-              "hero",
-              "intro",
-              "body"
+              "content"
             ]
           },
           {
@@ -740,6 +767,19 @@
         "entry": true,
         "fields": [
           {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
             "handle": "hero",
             "label": "Hero",
             "required": false,
@@ -750,26 +790,15 @@
             "max": 1
           },
           {
-            "handle": "intro",
-            "label": "Intro",
-            "required": false,
-            "indexed": false,
-            "translatable": true,
-            "kind": "text",
-            "max": 300,
-            "multiline": true
-          },
-          {
-            "handle": "body",
-            "label": "Body",
+            "handle": "content",
+            "label": "Content",
             "required": false,
             "indexed": false,
             "translatable": true,
             "kind": "blocks",
             "types": [
-              "heading",
               "text",
-              "image",
+              "images",
               "button",
               "events"
             ],
@@ -789,11 +818,16 @@
         ],
         "tabs": [
           {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
             "name": "Content",
             "fields": [
-              "hero",
-              "intro",
-              "body"
+              "content"
             ]
           },
           {
@@ -803,6 +837,166 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "news",
+        "name": "News",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "article",
+        "name": "Article",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "categories",
+            "label": "Categories",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "category"
+            ],
+            "max": null
+          },
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "text",
+              "images",
+              "button",
+              "events"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero",
+              "categories"
+            ]
+          },
+          {
+            "name": "Content",
+            "fields": [
+              "content"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "category",
+        "name": "Category",
+        "entry": true,
+        "fields": []
       }
     },
     {
@@ -1027,8 +1221,8 @@
     {
       "op": "addComponent",
       "component": {
-        "handle": "heading",
-        "name": "Heading",
+        "handle": "text",
+        "name": "Text",
         "entry": false,
         "fields": [
           {
@@ -1037,35 +1231,16 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": 80,
-            "multiline": false
-          }
-        ]
-      }
-    },
-    {
-      "op": "addComponent",
-      "component": {
-        "handle": "text",
-        "name": "Text",
-        "entry": false,
-        "fields": [
-          {
-            "handle": "content",
-            "label": "Content",
-            "required": true,
-            "indexed": false,
-            "translatable": false,
             "kind": "richText",
             "headings": [
+              2,
               3
             ],
             "lists": true,
             "links": true,
             "buttons": true,
             "blocks": [
-              "image"
+              "images"
             ]
           }
         ]
@@ -1074,19 +1249,19 @@
     {
       "op": "addComponent",
       "component": {
-        "handle": "image",
-        "name": "Image",
+        "handle": "images",
+        "name": "Images",
         "entry": false,
         "fields": [
           {
-            "handle": "image",
-            "label": "Image",
+            "handle": "images",
+            "label": "Images",
             "required": true,
             "indexed": false,
             "translatable": false,
             "kind": "assets",
             "images": true,
-            "max": 1
+            "max": null
           },
           {
             "handle": "caption",
@@ -1194,12 +1369,37 @@
         "kind": "structure",
         "types": [
           "home",
-          "page"
+          "page",
+          "news"
         ],
         "uri": "{parent.uri}/{slug}",
         "type_uris": {
           "home": ""
         }
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "news",
+        "name": "News",
+        "kind": "channel",
+        "types": [
+          "article"
+        ],
+        "uri": "news/{slug}"
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "categories",
+        "name": "Categories",
+        "kind": "structure",
+        "types": [
+          "category"
+        ],
+        "uri": null
       }
     },
     {
@@ -1283,12 +1483,31 @@
         "kind": "structure",
         "types": [
           "home",
-          "page"
+          "page",
+          "news"
         ],
         "uri": "{parent.uri}/{slug}",
         "type_uris": {
           "home": ""
         }
+      },
+      {
+        "handle": "news",
+        "name": "News",
+        "kind": "channel",
+        "types": [
+          "article"
+        ],
+        "uri": "news/{slug}"
+      },
+      {
+        "handle": "categories",
+        "name": "Categories",
+        "kind": "structure",
+        "types": [
+          "category"
+        ],
+        "uri": null
       },
       {
         "handle": "events",
@@ -1790,6 +2009,10 @@
                 "label": "Section Pages"
               },
               {
+                "value": "section:news",
+                "label": "Section News"
+              },
+              {
                 "value": "section:events",
                 "label": "Section Events"
               },
@@ -1800,6 +2023,14 @@
               {
                 "value": "type:page",
                 "label": "Entry type Page"
+              },
+              {
+                "value": "type:news",
+                "label": "Entry type News"
+              },
+              {
+                "value": "type:article",
+                "label": "Entry type Article"
               },
               {
                 "value": "type:event",
@@ -1976,6 +2207,14 @@
               [
                 "events.soldOut",
                 "Ausverkauft"
+              ],
+              [
+                "news.all",
+                "Alle"
+              ],
+              [
+                "news.none",
+                "Noch keine Neuigkeiten"
               ]
             ]
           }
@@ -1987,6 +2226,19 @@
         "entry": true,
         "fields": [
           {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
             "handle": "hero",
             "label": "Hero",
             "required": false,
@@ -1997,26 +2249,15 @@
             "max": 1
           },
           {
-            "handle": "intro",
-            "label": "Intro",
-            "required": false,
-            "indexed": false,
-            "translatable": true,
-            "kind": "text",
-            "max": 300,
-            "multiline": true
-          },
-          {
-            "handle": "body",
-            "label": "Body",
+            "handle": "content",
+            "label": "Content",
             "required": false,
             "indexed": false,
             "translatable": true,
             "kind": "blocks",
             "types": [
-              "heading",
               "text",
-              "image",
+              "images",
               "button",
               "events"
             ],
@@ -2036,11 +2277,16 @@
         ],
         "tabs": [
           {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
             "name": "Content",
             "fields": [
-              "hero",
-              "intro",
-              "body"
+              "content"
             ]
           },
           {
@@ -2057,6 +2303,19 @@
         "entry": true,
         "fields": [
           {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
             "handle": "hero",
             "label": "Hero",
             "required": false,
@@ -2067,26 +2326,15 @@
             "max": 1
           },
           {
-            "handle": "intro",
-            "label": "Intro",
-            "required": false,
-            "indexed": false,
-            "translatable": true,
-            "kind": "text",
-            "max": 300,
-            "multiline": true
-          },
-          {
-            "handle": "body",
-            "label": "Body",
+            "handle": "content",
+            "label": "Content",
             "required": false,
             "indexed": false,
             "translatable": true,
             "kind": "blocks",
             "types": [
-              "heading",
               "text",
-              "image",
+              "images",
               "button",
               "events"
             ],
@@ -2106,11 +2354,16 @@
         ],
         "tabs": [
           {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
             "name": "Content",
             "fields": [
-              "hero",
-              "intro",
-              "body"
+              "content"
             ]
           },
           {
@@ -2120,6 +2373,157 @@
             ]
           }
         ]
+      },
+      {
+        "handle": "news",
+        "name": "News",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ]
+      },
+      {
+        "handle": "article",
+        "name": "Article",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "categories",
+            "label": "Categories",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "category"
+            ],
+            "max": null
+          },
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "text",
+              "images",
+              "button",
+              "events"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero",
+              "categories"
+            ]
+          },
+          {
+            "name": "Content",
+            "fields": [
+              "content"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ]
+      },
+      {
+        "handle": "category",
+        "name": "Category",
+        "entry": true,
+        "fields": []
       },
       {
         "handle": "event",
@@ -2332,8 +2736,8 @@
         ]
       },
       {
-        "handle": "heading",
-        "name": "Heading",
+        "handle": "text",
+        "name": "Text",
         "entry": false,
         "fields": [
           {
@@ -2342,50 +2746,34 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": 80,
-            "multiline": false
-          }
-        ]
-      },
-      {
-        "handle": "text",
-        "name": "Text",
-        "entry": false,
-        "fields": [
-          {
-            "handle": "content",
-            "label": "Content",
-            "required": true,
-            "indexed": false,
-            "translatable": false,
             "kind": "richText",
             "headings": [
+              2,
               3
             ],
             "lists": true,
             "links": true,
             "buttons": true,
             "blocks": [
-              "image"
+              "images"
             ]
           }
         ]
       },
       {
-        "handle": "image",
-        "name": "Image",
+        "handle": "images",
+        "name": "Images",
         "entry": false,
         "fields": [
           {
-            "handle": "image",
-            "label": "Image",
+            "handle": "images",
+            "label": "Images",
             "required": true,
             "indexed": false,
             "translatable": false,
             "kind": "assets",
             "images": true,
-            "max": 1
+            "max": null
           },
           {
             "handle": "caption",
@@ -2501,6 +2889,8 @@
         "sections": [
           "readme",
           "pages",
+          "news",
+          "categories",
           "events"
         ]
       },

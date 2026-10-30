@@ -8,8 +8,8 @@ How frontends read the content.
 schema: every entry type is `<handle>_Entry`, every block
 `<handle>_Block`, like Craft. Relations resolve to entries with their
 fields, so one query loads a page with everything it shows:
-`entry(uri: "about/team", site: "en") { title ... on page_Entry { body
-{ ... on button_Block { label link { title uri } } } } }`. `entries`
+`entry(uri: "about/team", site: "en") { title ... on page_Entry {
+content { ... on images_Block { images { url alt } } } } }`. `entries`
 and `entryCount` take the same filters as the rest api (`where: [{
 field: "city", value: "Bern" }]`). Without a session only published
 entries show.
