@@ -14,6 +14,7 @@
 		type Schema,
 	} from '../api';
 	import Flyout from './Flyout.svelte';
+	import UploadButton from './UploadButton.svelte';
 	import { canAssets } from './access';
 	import { time } from './format';
 	import Icon from './Icon.svelte';
@@ -119,7 +120,7 @@
 		ondeleted();
 	}
 
-	async function replace(files: FileList | null) {
+	async function replace(files: FileList) {
 		const file = files?.[0];
 		if (!file) return;
 		busy = true;
@@ -245,13 +246,9 @@
 						{copied ? 'Copied' : 'Copy URL'}
 					</button>
 					{#if canEdit}
-						<label class="light replace">
-							<Icon name="replace" size={14} /> Replace file
-							<input
-								type="file"
-								onchange={e => replace(e.currentTarget.files)}
-							/>
-						</label>
+						<UploadButton onfiles={replace} icon="replace">
+							Replace file
+						</UploadButton>
 					{/if}
 				</div>
 			</div>
@@ -360,16 +357,6 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 6px;
-	}
-
-	.replace {
-		flex-direction: row;
-		align-items: center;
-		cursor: pointer;
-
-		input {
-			display: none;
-		}
 	}
 
 	h3 {

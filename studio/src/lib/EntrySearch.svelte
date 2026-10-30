@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { listEntries, type EntryRef, type Schema } from '../api';
 	import { site } from '../route.svelte';
-	import Icon from './Icon.svelte';
+	import AddButton from './AddButton.svelte';
+	import Popover from './Popover.svelte';
+	import SearchList from './SearchList.svelte';
+	import { componentName } from './schema';
 
 	/**
 	 * Chooses entries for relations and links: a button that opens the
@@ -27,10 +30,8 @@
 	let search = $state('');
 	let found = $state<EntryRef[]>([]);
 	let loading = $state(false);
-	let input = $state<HTMLInputElement>();
 
-	const typeName = (t: string) =>
-		schema.components.find(c => c.handle === t)?.name ?? t;
+	const typeName = (t: string) => componentName(schema, t);
 	// "Choose Seite" with one type, "Choose entry" with several
 	const what = $derived(types.length === 1 ? typeName(types[0]) : 'entry');
 
@@ -53,130 +54,42 @@
 
 	const shown = $derived(found.filter(e => !exclude.includes(e.id)));
 
-	function toggle() {
-		open = !open;
-		search = '';
-		if (open) setTimeout(() => input?.focus());
-	}
-
 	function pick(e: EntryRef) {
 		onpick(e);
 		if (!multiple) open = false;
 	}
-
-	function onkeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') open = false;
-		if (e.key === 'Enter' && shown.length) {
-			e.preventDefault();
-			pick(shown[0]);
-		}
-	}
 </script>
 
-<div class="picker">
-	<button type="button" class="choose" onclick={toggle} aria-expanded={open}>
-		<Icon name="add" size={14} />
-		Choose {what}
-	</button>
-	{#if open}
-		<div class="popup" role="dialog" aria-label="Choose {what}">
-			<span class="field">
-				<Icon name="search" size={14} />
-				<input
-					bind:this={input}
-					placeholder="Search {types.map(typeName).join(', ')}"
-					bind:value={search}
-					{onkeydown}
-				/>
-			</span>
-			<div class="results">
-				{#each shown as e (e.id)}
-					<button type="button" onclick={() => pick(e)}>
-						<span class="title truncate">{e.title}</span>
-						<span class="note type">{typeName(e.type)}</span>
-					</button>
-				{:else}
-					<p class="muted empty">
-						{loading ? 'Loading…' : 'Nothing found'}
-					</p>
-				{/each}
-			</div>
-			{#if multiple}
-				<div class="foot">
-					<button type="button" onclick={() => (open = false)}>
-						Done
-					</button>
-				</div>
-			{/if}
+<Popover bind:open width="26rem" label="Choose {what}">
+	{#snippet trigger({ toggle, open })}
+		<AddButton onclick={() => ((search = ''), toggle())} expanded={open}>
+			Choose {what}
+		</AddButton>
+	{/snippet}
+	<SearchList
+		items={shown}
+		bind:search
+		{loading}
+		placeholder="Search {types.map(typeName).join(', ')}"
+		key={e => e.id}
+		onpick={pick}
+	>
+		{#snippet item(e)}
+			<span class="truncate">{e.title}</span>
+			<span class="note type">{typeName(e.type)}</span>
+		{/snippet}
+	</SearchList>
+	{#if multiple}
+		<div class="foot">
+			<button type="button" onclick={() => (open = false)}>Done</button>
 		</div>
 	{/if}
-</div>
+</Popover>
 
-<style lang="scss">
-	.picker {
-		position: relative;
-	}
-
-	.choose {
-		border-style: dashed;
-		color: var(--accent);
-	}
-
-	.popup {
-		position: absolute;
-		z-index: 20;
-		top: 100%;
-		left: 0;
-		width: min(26rem, 90vw);
-		margin-top: 4px;
-		padding: 6px;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-pop);
-	}
-
-	.field {
-		position: relative;
-		display: flex;
-		align-items: center;
-		color: var(--subtle);
-
-		:global(.icon) {
-			position: absolute;
-			left: 9px;
-		}
-
-		input {
-			padding-left: 30px;
-		}
-	}
-
-	.results {
-		display: flex;
-		flex-direction: column;
-		max-height: 18rem;
-		margin-top: 6px;
-		overflow-y: auto;
-
-		button {
-			display: flex;
-			align-items: baseline;
-			gap: 10px;
-			width: 100%;
-			border: none;
-			font-weight: 400;
-			text-align: left;
-		}
-	}
-
+<style>
 	.type {
 		margin-left: auto;
 		flex-shrink: 0;
-	}
-
-	.empty {
-		margin: 6px 8px;
 	}
 
 	.foot {

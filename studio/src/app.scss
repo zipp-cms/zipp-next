@@ -399,6 +399,32 @@ ul.plain {
 	box-shadow: var(--shadow-pop);
 }
 
+// a line in a popup: a menu item, a search result
+.popup-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 6px 10px;
+	border: none;
+	border-radius: var(--radius);
+	background: none;
+	color: var(--text);
+	font-size: var(--fs-md);
+	font-weight: 500;
+	text-align: left;
+	text-decoration: none;
+
+	&:hover:not(:disabled) {
+		color: var(--text);
+		background: var(--hover);
+	}
+
+	&.danger {
+		color: var(--danger);
+	}
+}
+
 // actions that show when the pointer is over their row, always on touch
 .reveal {
 	opacity: 0;

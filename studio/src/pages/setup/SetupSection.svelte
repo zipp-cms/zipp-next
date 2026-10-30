@@ -106,7 +106,7 @@
 						<dt>Pages</dt>
 						<dd>
 							only entries with <code>{section.uri_if}</code>
-							 on
+							on
 						</dd>
 					{/if}
 					<dt>Navigation</dt>

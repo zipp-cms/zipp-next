@@ -3,7 +3,8 @@
 	import { canAssets } from '../lib/access';
 	import AssetGrid from '../lib/AssetGrid.svelte';
 	import AssetDetail from '../lib/AssetDetail.svelte';
-	import Icon from '../lib/Icon.svelte';
+	import SearchInput from '../lib/SearchInput.svelte';
+	import UploadButton from '../lib/UploadButton.svelte';
 
 	let { schema }: { schema: Schema } = $props();
 	const canEdit = $derived(canAssets(schema, 'edit'));
@@ -15,8 +16,11 @@
 	let current = $state<Asset | null>(null);
 
 	function load() {
-		listAssets({ search })
-			.then(a => (assets = a))
+		const q = search;
+		listAssets({ search: q })
+			.then(a => {
+				if (q === search) assets = a;
+			})
 			.catch(e => (error = e.message));
 	}
 
@@ -55,15 +59,9 @@
 	<div class="page-top">
 		<h1>Assets</h1>
 		{#if canEdit}
-			<label class="upload">
-				<Icon name="add" />
+			<UploadButton onfiles={upload} multiple primary>
 				{uploading ? 'Uploading…' : 'Upload'}
-				<input
-					type="file"
-					multiple
-					onchange={e => upload(e.currentTarget.files)}
-				/>
-			</label>
+			</UploadButton>
 		{/if}
 	</div>
 
@@ -71,7 +69,7 @@
 
 	<div class="card">
 		<div class="search">
-			<input placeholder="Search files" bind:value={search} />
+			<SearchInput bind:value={search} placeholder="Search files" />
 		</div>
 		<AssetGrid {assets} onpick={open} />
 	</div>
@@ -104,34 +102,12 @@
 		min-height: 80vh;
 	}
 
-	// looks like the main button, it is a label for the file input
-	.upload {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		padding: 6px 12px;
-		font-size: var(--fs-md);
-		font-weight: 500;
-		cursor: pointer;
-		border-radius: var(--radius);
-		background: var(--accent);
-		color: white;
-
-		&:hover {
-			background: var(--accent-hover);
-		}
-
-		input {
-			display: none;
-		}
-	}
-
 	.search {
 		display: flex;
 		justify-content: flex-end;
 		margin-bottom: 16px;
 
-		input {
+		:global(.search) {
 			width: 340px;
 		}
 	}

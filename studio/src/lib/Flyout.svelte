@@ -1,34 +1,45 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Icon from './Icon.svelte';
+	import { layer } from './layers';
 
 	/**
-	 * A panel from the right over the page, Escape or the backdrop close
-	 * it. Its bar has Done, or the buttons of `actions`.
+	 * The panel from the right over the page, for an entry, an asset or
+	 * the asset library. Escape or the backdrop close it; its bar has Done,
+	 * or the buttons of `actions`.
 	 */
 	let {
 		title,
 		onclose,
 		actions,
 		children,
+		narrow = false,
 	}: {
 		title: string;
 		onclose: () => void;
 		actions?: Snippet;
 		children: Snippet;
+		/** for a list to choose from, not a whole page */
+		narrow?: boolean;
 	} = $props();
 
-	function onkeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') onclose();
-	}
+	let panel = $state<HTMLElement>();
+	$effect(() => panel?.focus());
 </script>
 
-<svelte:window {onkeydown} />
-
 <div class="backdrop" role="presentation" onclick={onclose}></div>
-<div class="flyout" role="dialog" aria-modal="true" aria-label={title}>
+<div
+	class="flyout"
+	class:narrow
+	role="dialog"
+	aria-modal="true"
+	aria-label={title}
+	tabindex="-1"
+	bind:this={panel}
+	use:layer={onclose}
+>
 	<div class="bar">
-		<strong>{title}</strong>
+		<strong class="truncate">{title}</strong>
 		{#if actions}
 			<div class="actions">{@render actions()}</div>
 		{:else}
@@ -45,8 +56,8 @@
 	.backdrop {
 		position: fixed;
 		inset: 0;
-		z-index: 40;
-		background: rgba(16, 24, 40, 0.35);
+		z-index: var(--z-overlay);
+		background: var(--backdrop);
 	}
 
 	.flyout {
@@ -54,13 +65,18 @@
 		top: 0;
 		right: 0;
 		bottom: 0;
-		z-index: 41;
+		z-index: var(--z-overlay);
 		display: flex;
 		flex-direction: column;
 		width: min(1040px, 92vw);
 		background: var(--bg);
-		box-shadow: -8px 0 32px rgba(16, 24, 40, 0.18);
+		box-shadow: var(--shadow-flyout);
+		outline: none;
 		animation: slide 0.18s ease-out;
+	}
+
+	.narrow {
+		width: min(760px, 92vw);
 	}
 
 	@keyframes slide {
@@ -75,6 +91,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 12px;
+		min-height: 48px;
 		padding: 8px 16px;
 		background: var(--surface);
 		border-bottom: 1px solid var(--line);

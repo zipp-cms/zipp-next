@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { listAssets, uploadAssets, type Asset } from '../api';
 	import AssetGrid from './AssetGrid.svelte';
+	import Flyout from './Flyout.svelte';
+	import SearchInput from './SearchInput.svelte';
+	import UploadButton from './UploadButton.svelte';
 
-	/** The asset library in a popup, to pick assets or upload new ones. */
+	/** The asset library in a flyout, to pick assets or upload new ones. */
 	let {
 		images,
 		multiple,
@@ -22,78 +25,52 @@
 	let search = $state('');
 
 	$effect(() => {
-		const params: Record<string, string> = { search };
+		const q = search;
+		const params: Record<string, string> = { search: q };
 		if (images) params.kind = 'image';
-		listAssets(params).then(a => (library = a));
+		listAssets(params).then(a => {
+			if (q === search) library = a;
+		});
 	});
 
-	async function upload(files: FileList | null) {
-		if (!files?.length) return;
+	async function upload(files: FileList) {
 		const added = await uploadAssets(files);
 		library = [...added, ...library];
 		for (const a of added) onpick(a);
 	}
+
+	const what = $derived(
+		images
+			? multiple
+				? 'images'
+				: 'an image'
+			: multiple
+				? 'files'
+				: 'a file',
+	);
 </script>
 
-<div class="overlay" role="presentation" onclick={onclose}>
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<div
-		class="panel"
-		role="dialog"
-		tabindex="-1"
-		onclick={e => e.stopPropagation()}
-	>
-		<header>
-			<input placeholder="Search files" bind:value={search} />
-			<label class="upload">
-				Upload
-				<input
-					type="file"
-					{multiple}
-					accept={images ? 'image/*' : undefined}
-					onchange={e => upload(e.currentTarget.files)}
-				/>
-			</label>
-			<button class="primary" onclick={onclose}>Done</button>
-		</header>
+<Flyout title="Choose {what}" {onclose} narrow>
+	{#snippet actions()}
+		<UploadButton
+			onfiles={upload}
+			{multiple}
+			accept={images ? 'image/*' : undefined}
+		>
+			Upload
+		</UploadButton>
+		<button type="button" class="primary" onclick={onclose}>Done</button>
+	{/snippet}
+	<div class="search">
+		<SearchInput bind:value={search} placeholder="Search files" />
+	</div>
+	<div class="card">
 		<AssetGrid assets={library} {selected} {onpick} />
 	</div>
-</div>
+</Flyout>
 
-<style lang="scss">
-	.overlay {
-		position: fixed;
-		inset: 0;
-		z-index: 10;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: rgba(0, 0, 0, 0.6);
-	}
-	.panel {
-		width: min(52rem, 94vw);
-		height: min(40rem, 90vh);
-		overflow: auto;
-		padding: 1rem;
-		background: var(--surface);
-		box-shadow: var(--shadow);
-
-		header {
-			display: flex;
-			gap: 0.5rem;
-			margin-bottom: 1rem;
-		}
-	}
-	.upload {
-		cursor: pointer;
-		padding: 0.45rem 0.9rem;
-		border: 1px solid var(--text);
-		border-radius: var(--radius-sm);
-		font-size: var(--fs-base);
-		white-space: nowrap;
-
-		input {
-			display: none;
-		}
+<style>
+	.search {
+		margin: 16px 0 12px;
 	}
 </style>
