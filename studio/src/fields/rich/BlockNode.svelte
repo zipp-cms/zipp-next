@@ -4,6 +4,7 @@
 	import type { Refs } from '../../entries/api';
 	import Fields from '../Fields.svelte';
 	import EmbedCard from './EmbedCard.svelte';
+	import { rememberOpen, wasOpen } from '../opened';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import type { Sortable } from 'zipp-ui/sortable';
 	import { blockSummary } from '../blocks.svelte';
@@ -44,8 +45,17 @@
 		() => attrs.fields,
 		f => update({ ...attrs, fields: f }),
 	);
+	// as it was in this browser, else a new one opens
 	let editing = $state(
-		untrack(() => !Object.keys(attrs.fields ?? {}).length),
+		untrack(
+			() => wasOpen(attrs.id) ?? !Object.keys(attrs.fields ?? {}).length,
+		),
+	);
+	$effect(() =>
+		rememberOpen(
+			untrack(() => attrs.id),
+			editing,
+		),
 	);
 </script>
 

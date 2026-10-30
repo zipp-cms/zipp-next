@@ -109,7 +109,7 @@
 
 <style lang="scss">
 	.bar {
-		margin-top: 0.5rem;
+		margin-top: 0.875rem;
 	}
 
 	// between two blocks, it shows when the pointer is near
@@ -118,12 +118,12 @@
 		z-index: var(--z-raised);
 		display: flex;
 		justify-content: center;
-		height: 0.625rem;
-		margin: -1px 0;
+		height: 0;
 	}
 
+	// in the middle of the space above, between two blocks
 	.insert {
-		margin-top: -0.375rem;
+		transform: translateY(calc(-50% - 0.375rem));
 		padding: 2px;
 		border-radius: 50%;
 		color: var(--accent);

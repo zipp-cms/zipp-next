@@ -11,6 +11,7 @@
 	import SortLine from 'zipp-ui/SortLine.svelte';
 	import { Sortable, moved } from 'zipp-ui/sortable';
 	import { blockMissing, blockSummary, focus } from './blocks.svelte';
+	import { rememberOpen, wasOpen } from './opened';
 	import { inserted, isFull, removed } from '../core/list';
 	import { componentOf } from '../core/schema';
 
@@ -52,12 +53,18 @@
 		return keys.get(b)!;
 	}
 
-	// a long list starts closed, a new block opens
+	// as it was in this browser, else a long list starts closed; a new
+	// block opens
 	let open = $state<Record<number, boolean>>({});
 	const startOpen = untrack(() => blocks.length <= 2);
+	const isOpen = (b: Block) => open[key(b)] ?? wasOpen(b.id) ?? startOpen;
+	function setOpen(b: Block, to: boolean) {
+		open[key(b)] = to;
+		rememberOpen(b.id, to);
+	}
 
 	function setAll(to: boolean) {
-		for (const b of blocks) open[key(b)] = to;
+		for (const b of blocks) setOpen(b, to);
 	}
 
 	/** Inserts a block and opens it: the one in the state, a proxy. */
@@ -87,7 +94,7 @@
 		// only when asked, not when the blocks change later
 		const b = untrack(() => blocks[focus.index]);
 		if (!b) return;
-		open[key(b)] = true;
+		setOpen(b, true);
 		setTimeout(() =>
 			document
 				.getElementById(`block-${path}-${focus.index}`)
@@ -122,13 +129,10 @@
 		{#if i > 0 && !full}
 			<BlockMenu {types} inline onpick={t => add(t, i)} />
 		{/if}
-		<div data-sort class:sort-dragging={sort.dragging === i}>
+		<div class="block" data-sort class:sort-dragging={sort.dragging === i}>
 			<ItemCard
 				kind={comp?.name ?? block.type}
-				bind:open={
-					() => open[key(block)] ?? startOpen,
-					v => (open[key(block)] = v)
-				}
+				bind:open={() => isOpen(block), v => setOpen(block, v)}
 				invalid={hasError(i)}
 				changed={changed.has(`${path}.${i}`)}
 				id="block-{path}-{i}"
@@ -179,14 +183,21 @@
 </div>
 
 <style lang="scss">
+	// the space between blocks like between the cards of the sidebar,
+	// the + to add one in its middle
 	.blocks {
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		gap: 0.375rem;
+	}
+
+	.block + .block,
+	.block + :global(.inline) {
+		margin-top: 0.75rem;
 	}
 
 	.tools {
+		margin-bottom: 0.375rem;
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
