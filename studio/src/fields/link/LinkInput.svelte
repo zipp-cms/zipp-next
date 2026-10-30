@@ -97,35 +97,34 @@
 		</span>
 	</div>
 {:else}
+	<!-- the row stays while editing, also without a target (another kind) -->
 	<div class="link-input" class:editing>
-		{#if filled}
-			<div class="row">
-				<LinkRow
-					{link}
-					{summary}
-					{newTab}
-					{handle}
-					{editing}
-					onedit={() => (editing = !editing)}
-					menu={[
-						{
-							label: 'Edit',
-							icon: 'edit',
-							onclick: () => (editing = true),
+		<div class="row">
+			<LinkRow
+				{link}
+				{summary}
+				{newTab}
+				{handle}
+				{editing}
+				onedit={() => (editing = !editing)}
+				menu={[
+					{
+						label: 'Edit',
+						icon: 'edit',
+						onclick: () => (editing = true),
+					},
+					{
+						label: 'Remove link',
+						icon: 'unlink',
+						onclick: () => {
+							editing = false;
+							onchange({ type: link.type, value: null });
 						},
-						{
-							label: 'Remove link',
-							icon: 'unlink',
-							onclick: () => {
-								editing = false;
-								onchange({ type: link.type, value: null });
-							},
-						},
-						...removeItem,
-					]}
-				/>
-			</div>
-		{/if}
+					},
+					...removeItem,
+				]}
+			/>
+		</div>
 		{#if editing}
 			<div class="panel">
 				<LinkEditor
@@ -164,9 +163,7 @@
 		border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 		background: var(--surface-2);
 
-		.row + & {
-			border-top: 1px solid var(--line);
-		}
+		border-top: 1px solid var(--line);
 	}
 
 	.message {

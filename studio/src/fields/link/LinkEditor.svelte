@@ -67,10 +67,17 @@
 		onchange(next);
 	}
 
-	/** Another kind of link starts empty, its label stays. */
+	// the target of each kind while it is open: trying another kind and
+	// coming back doesn't lose the one chosen
+	const byKind: Partial<Record<LinkKind, Link>> = {};
+
+	/** Another kind of link: its target from before, else empty; the label stays. */
 	function setType(type: LinkKind) {
 		const { label } = link;
-		onchange({ type, value: null, ...(label ? { label } : {}) });
+		byKind[link.type] = $state.snapshot(link) as Link;
+		const back = byKind[type];
+		const { label: _, ...target } = back ?? { type, value: null };
+		onchange({ ...target, ...(label ? { label } : {}) });
 	}
 
 	function pickEntry(e: EntryRef) {
