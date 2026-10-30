@@ -5,8 +5,11 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 use zipp::db::Db;
 use zipp::entries::{EntryInput, save};
+use zipp::error::Error;
 use zipp::graphql::{SiteUrls, build, ext};
+use zipp::testing::TestServer;
 use zipp::{Field, Schema, Section};
+use zipp_seo::api::DefaultsReq;
 use zipp_seo::{Seo, SeoDefaults, seo_field};
 
 fn input(section: &str, ty: &str, title: &str, fields: Value) -> EntryInput {
@@ -22,7 +25,8 @@ fn input(section: &str, ty: &str, title: &str, fields: Value) -> EntryInput {
 	}
 }
 
-fn site() -> Schema {
+/// The site as its crate builds it, before [`Cms`](zipp::Cms) finishes it.
+fn schema() -> Schema {
 	Schema::new()
 		.site("de", "Deutsch", "de-CH")
 		.site("en", "English", "en")
@@ -46,7 +50,10 @@ fn site() -> Schema {
 				)
 				.entry_type("page", SeoDefaults::new().title_from("intro")),
 		)
-		.finish()
+}
+
+fn site() -> Schema {
+	schema().finish()
 }
 
 #[tokio::test]
@@ -183,4 +190,30 @@ fn checks_what_the_site_sets_up() {
 	let e = wrong.check().unwrap_err();
 	assert!(e.contains("seo: unknown section nope"), "{e}");
 	assert!(site().plugin_of::<Seo>().is_some());
+}
+
+#[tokio::test]
+async fn defaults_for_the_studio() {
+	let ts = TestServer::new(schema());
+	let id = {
+		let conn = ts.state.db.conn();
+		let intro = json!({ "intro": "Unser Team" });
+		let page = input("pages", "page", "Team", intro);
+		save(&conn, &ts.state.schema, None, page).unwrap().id
+	};
+	let defaults = ts
+		.admin()
+		.call(&DefaultsReq { id, site: None })
+		.await
+		.unwrap();
+	assert_eq!(defaults["title"], "Unser Team");
+
+	let wrong = DefaultsReq {
+		id,
+		site: Some("fr".into()),
+	};
+	let err = ts.admin().call(&wrong).await.unwrap_err();
+	assert!(matches!(err, Error::Request(_)));
+	let err = ts.anonymous().call(&wrong).await.unwrap_err();
+	assert_eq!(err, Error::MissingSessionToken);
 }

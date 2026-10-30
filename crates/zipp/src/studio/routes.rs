@@ -1,21 +1,15 @@
-//! The studio, built from `studio/` of the repository into
-//! `crates/zipp/studio` (`npm run build`), so a site needs no npm.
-
 use axum::extract::{Path, State};
 use axum::http::{StatusCode, Uri, header};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 
-use serde::Serialize;
-
+use super::Files;
+use super::api::*;
 use crate::AppState;
+use crate::api::{ApiResult, ApiRouter, Req};
 use crate::auth::Authed;
-use crate::schema::Schema;
-
-#[derive(rust_embed::Embed)]
-#[folder = "studio/"]
-struct Files;
+use crate::users::email_of;
 
 async fn file(State(state): State<AppState>, uri: Uri) -> Response {
 	let path = uri.path().trim_start_matches('/');
@@ -107,65 +101,12 @@ pub fn routes() -> Router<AppState> {
 		.fallback(file)
 }
 
-/// A plugin of the studio, its module is `/_plugins/<name>.js`.
-#[derive(Debug, Serialize)]
-struct PluginResp {
-	name: String,
-	data: serde_json::Value,
-}
-
-/// A doc of the code, as html.
-#[derive(Debug, Serialize)]
-struct DocResp {
-	handle: String,
-	name: String,
-	html: String,
-}
-
-#[derive(Debug, Serialize)]
-struct AiModel {
-	id: String,
-	name: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct SchemaResp {
-	#[serde(flatten)]
-	schema: Schema,
-	/// for the preview button of the studio
-	site_urls: crate::graphql::SiteUrls,
-	/// the models of the AI chat, none if it is off
-	ai_models: Vec<AiModel>,
-	docs: Vec<DocResp>,
-	/// the roles, the studio shows what the user's may do
-	roles: Vec<crate::schema::Role>,
-	/// sites not on the website yet
-	offline: Vec<String>,
-	/// the plugins with a studio module and its data
-	plugins: Vec<PluginResp>,
-	/// development mode, see `serve --dev`
-	dev: bool,
-	me: Me,
-}
-
-/// The logged in user, `role: None` is an admin.
-#[derive(Debug, Serialize)]
-struct Me {
-	id: i64,
-	email: String,
-	role: Option<String>,
-}
-
 async fn schema_route(
 	State(state): State<AppState>,
 	auth: Authed,
-) -> crate::error::Result<Json<SchemaResp>> {
-	let email = state.db.conn().query_row(
-		"SELECT email FROM users WHERE id = ?1",
-		[auth.user_id],
-		|r| r.get(0),
-	)?;
+	Req(_): Req<SchemaReq>,
+) -> ApiResult<SchemaReq> {
+	let email = email_of(&state.db.conn(), auth.user_id)?;
 	Ok(Json(SchemaResp {
 		roles: state.schema.roles.clone(),
 		offline: state.schema.offline.clone(),
@@ -215,5 +156,5 @@ async fn schema_route(
 
 /// What the studio loads first: the schema and its settings.
 pub fn api_routes() -> Router<AppState> {
-	Router::new().route("/schema", get(schema_route))
+	Router::new().api::<SchemaReq, _>(schema_route)
 }

@@ -111,7 +111,7 @@ impl Harness for ClaudeCode {
 			.lines()
 			.filter_map(|l| serde_json::from_str::<Value>(l).ok())
 			.filter_map(|v| v["session_id"].as_str().map(String::from))
-			.last()
+			.next_back()
 	}
 }
 

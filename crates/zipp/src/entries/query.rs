@@ -470,6 +470,17 @@ impl Query {
 	}
 }
 
+/// Whether an entry type has a relation field of this handle, so
+/// `entries` can filter by it.
+pub fn relation_field(schema: &Schema, handle: &str) -> bool {
+	schema.components.iter().filter(|c| c.entry).any(|c| {
+		c.fields.iter().any(|f| {
+			f.handle == handle
+				&& matches!(f.kind, crate::schema::FieldKind::Relation { .. })
+		})
+	})
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -541,15 +552,4 @@ mod tests {
 		assert_eq!(q.uri.as_deref(), Some("about"));
 		assert_eq!(q.order_by(), "ORDER BY t.sort ASC, e.id ASC");
 	}
-}
-
-/// Whether an entry type has a relation field of this handle, so
-/// `entries` can filter by it.
-pub fn relation_field(schema: &Schema, handle: &str) -> bool {
-	schema.components.iter().filter(|c| c.entry).any(|c| {
-		c.fields.iter().any(|f| {
-			f.handle == handle
-				&& matches!(f.kind, crate::schema::FieldKind::Relation { .. })
-		})
-	})
 }

@@ -3,6 +3,7 @@
 //! edited in the studio and read by any frontend over the api.
 
 pub mod ai;
+pub mod api;
 pub mod assets;
 pub mod auth;
 mod cli;
@@ -18,6 +19,8 @@ pub mod plugin;
 pub mod schema;
 mod server;
 mod studio;
+#[cfg(any(test, feature = "testing"))]
+pub mod testing;
 pub mod typescript;
 pub mod users;
 

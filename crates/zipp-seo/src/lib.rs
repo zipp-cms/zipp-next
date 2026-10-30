@@ -32,6 +32,7 @@ use serde::{Deserialize, Serialize};
 
 use zipp::{Choice, Field, FieldKind, Schema, Section};
 
+pub mod api;
 mod graphql;
 mod plugin;
 mod resolve;

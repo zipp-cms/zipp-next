@@ -5,9 +5,12 @@ edition = "2024"
 description = "A zipp plugin for development: the studio's AI chat hands everything to a coding agent"
 
 [dependencies]
-rusqlite = "0.37"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }
 tokio = { version = "1.45", features = ["rt-multi-thread", "fs", "sync", "time"] }
 tokio-stream = "0.1"
 zipp = { path = "../zipp" }
+
+[dev-dependencies]
+tokio = { version = "1.45", features = ["rt-multi-thread", "macros"] }
+zipp = { path = "../zipp", features = ["testing"] }

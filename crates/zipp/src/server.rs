@@ -76,8 +76,19 @@ pub(super) async fn serve(
 		ai,
 		hooks: Arc::new(hooks),
 	};
-	let api = Router::new()
-		.nest("/auth", auth::routes())
+	let app = app(state, routes);
+
+	let listener = tokio::net::TcpListener::bind(&listen)
+		.await
+		.map_err(|e| e.to_string())?;
+	info!("listening on {listen}");
+	axum::serve(listener, app).await.map_err(|e| e.to_string())
+}
+
+/// zipp's routes, the plugins' and the site's, under the state.
+pub(crate) fn app(state: AppState, routes: Router<AppState>) -> Router {
+	let mut api = Router::new()
+		.merge(auth::routes())
 		.merge(studio::api_routes())
 		.merge(entries::routes())
 		.merge(users::routes())
@@ -85,21 +96,18 @@ pub(super) async fn serve(
 		.merge(ai::routes())
 		.merge(assets::api_routes())
 		.merge(graphql::routes());
-	let app = Router::new()
+	let mut app = Router::new()
 		.merge(assets::file_routes())
 		.merge(routes)
 		.merge(studio::routes());
 	// the plugins': under /api for the studio, others for the website
-	let mut api = api;
-	let mut app = app;
 	for p in &state.schema.plugins.0 {
 		api = api.merge(p.api_routes());
 		app = app.merge(p.routes(&state.schema));
 	}
-	let app = app.nest("/api", api);
 
 	// frontends on other domains read the content, graphql is a POST
-	let app = app
+	app.nest("/api", api)
 		.layer(
 			CorsLayer::new()
 				.allow_origin(cors::Any)
@@ -107,11 +115,5 @@ pub(super) async fn serve(
 				.allow_headers([header::CONTENT_TYPE]),
 		)
 		.layer(TraceLayer::new_for_http())
-		.with_state(state);
-
-	let listener = tokio::net::TcpListener::bind(&listen)
-		.await
-		.map_err(|e| e.to_string())?;
-	info!("listening on {listen}");
-	axum::serve(listener, app).await.map_err(|e| e.to_string())
+		.with_state(state)
 }

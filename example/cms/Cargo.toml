@@ -8,3 +8,7 @@ serde_json = "1.0"
 zipp = { path = "../../crates/zipp" }
 zipp-button-group = { path = "../../crates/zipp-button-group" }
 zipp-seo = { path = "../../crates/zipp-seo" }
+
+[dev-dependencies]
+tokio = { version = "1.45", features = ["rt-multi-thread", "macros"] }
+zipp = { path = "../../crates/zipp", features = ["testing"] }

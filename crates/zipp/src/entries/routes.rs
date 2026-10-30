@@ -1,21 +1,13 @@
+use super::api::*;
 use super::*;
+use crate::api::{ApiResult, ApiRouter, Req};
+use crate::auth::{Delete, EntryAccess, Publish, View};
 
-#[derive(Debug, Serialize)]
-pub(super) struct ListResp {
-	entries: Vec<Entry>,
-	total: i64,
-	relations: BTreeMap<i64, EntryRef>,
-	/// whether each entry is published, per site
-	published: BTreeMap<i64, BTreeMap<String, bool>>,
-	/// the entries with unpublished changes
-	drafts: Vec<i64>,
-}
-
-pub(super) async fn list_route(
+async fn list_route(
 	State(state): State<AppState>,
 	auth: Authed,
-	QueryParams(params): QueryParams<Vec<(String, String)>>,
-) -> Result<Json<ListResp>> {
+	Req(ListReq(params)): Req<ListReq>,
+) -> ApiResult<ListReq> {
 	let conn = state.db.conn();
 	let q = Query::parse(&state.schema, &params).map_err(Error::Request)?;
 	if let Some(section) = &q.section {
@@ -39,40 +31,27 @@ pub(super) async fn list_route(
 	}))
 }
 
-#[derive(Debug, Deserialize)]
-pub(super) struct SiteParam {
-	site: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct EntryResp {
-	entry: Entry,
-	relations: BTreeMap<i64, EntryRef>,
-}
-
-pub(super) async fn get_route(
+async fn get_route(
 	State(state): State<AppState>,
-	auth: Authed,
-	Path(id): Path<i64>,
-	QueryParams(p): QueryParams<SiteParam>,
-) -> Result<Json<EntryResp>> {
+	_access: EntryAccess<View>,
+	Req(req): Req<GetReq>,
+) -> ApiResult<GetReq> {
 	let conn = state.db.conn();
-	auth.check(&state.schema, &section_of(&conn, id)?, Access::View)?;
-	let site = p
+	let site = req
 		.site
 		.unwrap_or_else(|| state.schema.primary_site().handle.clone());
 
-	let entry = get_entry(&conn, id, &site)?;
-	let relations = refs(&conn, &[id], &site, false)?;
+	let entry = get_entry(&conn, req.id, &site)?;
+	let relations = refs(&conn, &[req.id], &site, false)?;
 
 	Ok(Json(EntryResp { entry, relations }))
 }
 
-pub(super) async fn create_route(
+async fn create_route(
 	State(state): State<AppState>,
 	auth: Authed,
-	Json(mut input): Json<EntryInput>,
-) -> Result<Json<Entry>> {
+	Req(CreateReq(mut input)): Req<CreateReq>,
+) -> ApiResult<CreateReq> {
 	auth.check(&state.schema, &input.section, Access::Edit)?;
 	// published only by who may publish
 	input.published &= auth.can(&state.schema, &input.section, Access::Publish);
@@ -86,70 +65,50 @@ pub(super) async fn create_route(
 	Ok(Json(entry))
 }
 
-/// Saves the live entry directly, without a draft (the api of scripts).
-pub(super) async fn update_route(
+/// Live at once, like publishing.
+async fn update_route(
 	State(state): State<AppState>,
-	auth: Authed,
-	Path(id): Path<i64>,
-	Json(input): Json<EntryInput>,
-) -> Result<Json<Entry>> {
+	access: EntryAccess<Publish>,
+	Req(req): Req<UpdateReq>,
+) -> ApiResult<UpdateReq> {
 	let entry = {
 		let conn = state.db.conn();
-		// live at once, like publishing
-		auth.check(&state.schema, &section_of(&conn, id)?, Access::Publish)?;
-		let entry = save(&conn, &state.schema, Some(id), input)?;
-		record_revision(&conn, id, Some(auth.user_id))?;
+		let entry = save(&conn, &state.schema, Some(req.id), req.input)?;
+		record_revision(&conn, req.id, Some(access.auth.user_id))?;
 		entry
 	};
-	state.changed(id, &entry.section, ChangeKind::Saved);
+	state.changed(req.id, &entry.section, ChangeKind::Saved);
 	Ok(Json(entry))
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(super) struct MoveReq {
-	parent_id: Option<i64>,
-	index: usize,
+async fn move_route(
+	State(state): State<AppState>,
+	access: EntryAccess<Publish>,
+	Req(req): Req<MoveReq>,
+) -> ApiResult<MoveReq> {
+	let conn = state.db.conn();
+	move_entry(&conn, &state.schema, req.id, req.parent_id, req.index)?;
+	drop(conn);
+	state.changed(req.id, &access.section, ChangeKind::Moved);
+	Ok(Json(()))
 }
 
-pub(super) async fn move_route(
+async fn delete_route(
 	State(state): State<AppState>,
-	auth: Authed,
-	Path(id): Path<i64>,
-	Json(req): Json<MoveReq>,
-) -> Result<()> {
-	let section = {
-		let conn = state.db.conn();
-		auth.check(&state.schema, &section_of(&conn, id)?, Access::Publish)?;
-		move_entry(&conn, &state.schema, id, req.parent_id, req.index)?;
-		section_of(&conn, id)?
-	};
-	state.changed(id, &section, ChangeKind::Moved);
-	Ok(())
-}
-
-pub(super) async fn delete_route(
-	State(state): State<AppState>,
-	auth: Authed,
-	Path(id): Path<i64>,
-) -> Result<()> {
-	let section = {
-		let conn = state.db.conn();
-		let section = section_of(&conn, id)?;
-		auth.check(&state.schema, &section, Access::Delete)?;
-		delete(&conn, &state.schema, id)?;
-		section
-	};
-	state.changed(id, &section, ChangeKind::Deleted);
-	Ok(())
+	access: EntryAccess<Delete>,
+	Req(req): Req<DeleteReq>,
+) -> ApiResult<DeleteReq> {
+	delete(&state.db.conn(), &state.schema, req.id)?;
+	state.changed(req.id, &access.section, ChangeKind::Deleted);
+	Ok(Json(()))
 }
 
 pub fn routes() -> Router<AppState> {
 	Router::new()
-		.route("/entries", get(list_route).post(create_route))
-		.route(
-			"/entries/{id}",
-			get(get_route).put(update_route).delete(delete_route),
-		)
-		.route("/entries/{id}/move", post(move_route))
+		.api::<ListReq, _>(list_route)
+		.api::<GetReq, _>(get_route)
+		.api::<CreateReq, _>(create_route)
+		.api::<UpdateReq, _>(update_route)
+		.api::<MoveReq, _>(move_route)
+		.api::<DeleteReq, _>(delete_route)
 }

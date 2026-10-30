@@ -1,0 +1,355 @@
+//! Logins, sessions and what a user may do. A handler says who may call
+//! it with its extractor: [`Authed`] any user, [`Admin`], [`EntryAccess`]
+//! and [`AssetAccess`] a level of a role, [`AiAccess`] the AI chat.
+
+use std::collections::BTreeMap;
+use std::marker::PhantomData;
+use std::sync::{Mutex, OnceLock};
+
+use axum::extract::{FromRef, FromRequestParts, RawPathParams};
+use axum::http::HeaderMap;
+use axum::http::request::Parts;
+use rusqlite::{Connection, OptionalExtension, params};
+
+use crate::AppState;
+use crate::db::{Db, now, random_token};
+use crate::error::{Error, Result};
+use crate::schema::{Access, Role, Schema};
+
+pub mod api;
+#[cfg(test)]
+mod api_tests;
+mod routes;
+#[cfg(test)]
+mod tests;
+
+pub use routes::routes;
+
+/// bcrypt's work, small in tests so they stay fast.
+const COST: u32 = if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST };
+const SESSION_DURATION_MS: i64 = 1000 * 60 * 60 * 24 * 30;
+/// Wrong passwords of an email before it has to wait.
+const MAX_FAILS: u32 = 10;
+const FAIL_WINDOW_MS: i64 = 1000 * 60 * 15;
+
+/// Failed logins per email: count and the time of the first one.
+static FAILS: Mutex<BTreeMap<String, (u32, i64)>> = Mutex::new(BTreeMap::new());
+
+/// A hash to verify against for unknown emails, so they take as long.
+static DUMMY_HASH: OnceLock<String> = OnceLock::new();
+
+/// Extractor that only succeeds with a valid `session-token` header.
+pub struct Authed {
+	pub user_id: i64,
+	/// `None` is an admin
+	pub role: Option<String>,
+}
+
+impl Authed {
+	pub fn admin(&self) -> bool {
+		self.role.is_none()
+	}
+
+	fn role<'a>(&self, schema: &'a Schema) -> Option<&'a Role> {
+		schema.get_role(self.role.as_deref()?)
+	}
+
+	/// Whether the user may do `need` in a section.
+	pub fn can(&self, schema: &Schema, section: &str, need: Access) -> bool {
+		self.admin()
+			|| self
+				.role(schema)
+				.and_then(|r| r.sections.get(section))
+				.is_some_and(|a| *a >= need)
+	}
+
+	pub fn can_assets(&self, schema: &Schema, need: Access) -> bool {
+		self.admin()
+			|| self
+				.role(schema)
+				.and_then(|r| r.assets)
+				.is_some_and(|a| a >= need)
+	}
+
+	pub fn can_ai(&self, schema: &Schema) -> bool {
+		self.admin() || self.role(schema).is_some_and(|r| r.ai)
+	}
+
+	/// [`Authed::can`] as an error, for a section that comes with the
+	/// request.
+	pub fn check(
+		&self,
+		schema: &Schema,
+		section: &str,
+		need: Access,
+	) -> Result<()> {
+		allowed(self.can(schema, section, need))
+	}
+
+	/// [`Authed::can_assets`] as an error, where no extractor checks it.
+	pub fn check_assets(&self, schema: &Schema, need: Access) -> Result<()> {
+		allowed(self.can_assets(schema, need))
+	}
+}
+
+fn allowed(ok: bool) -> Result<()> {
+	match ok {
+		true => Ok(()),
+		false => Err(Error::Forbidden),
+	}
+}
+
+impl<S> FromRequestParts<S> for Authed
+where
+	S: Send + Sync,
+	Db: FromRef<S>,
+{
+	type Rejection = Error;
+
+	async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self> {
+		let db = Db::from_ref(state);
+		let conn = db.conn();
+		let Some(user_id) = session(&conn, &parts.headers)? else {
+			return Err(Error::MissingSessionToken);
+		};
+		let role = role_of(&conn, user_id)?;
+		Ok(Self { user_id, role })
+	}
+}
+
+/// The levels of [`Access`] as types, for the extractors.
+pub trait Level: Send + Sync + 'static {
+	const ACCESS: Access;
+}
+
+pub struct View;
+pub struct Edit;
+pub struct Publish;
+pub struct Delete;
+
+impl Level for View {
+	const ACCESS: Access = Access::View;
+}
+impl Level for Edit {
+	const ACCESS: Access = Access::Edit;
+}
+impl Level for Publish {
+	const ACCESS: Access = Access::Publish;
+}
+impl Level for Delete {
+	const ACCESS: Access = Access::Delete;
+}
+
+/// A user without a role.
+pub struct Admin(pub Authed);
+
+impl FromRequestParts<AppState> for Admin {
+	type Rejection = Error;
+
+	async fn from_request_parts(
+		parts: &mut Parts,
+		state: &AppState,
+	) -> Result<Self> {
+		let auth = Authed::from_request_parts(parts, state).await?;
+		allowed(auth.admin())?;
+		Ok(Self(auth))
+	}
+}
+
+/// A user who may do `L` in the section of the entry `{id}` of the path.
+pub struct EntryAccess<L> {
+	pub auth: Authed,
+	pub id: i64,
+	pub section: String,
+	level: PhantomData<L>,
+}
+
+impl<L: Level> FromRequestParts<AppState> for EntryAccess<L> {
+	type Rejection = Error;
+
+	async fn from_request_parts(
+		parts: &mut Parts,
+		state: &AppState,
+	) -> Result<Self> {
+		let auth = Authed::from_request_parts(parts, state).await?;
+		let params = RawPathParams::from_request_parts(parts, state)
+			.await
+			.map_err(|e| Error::Request(e.to_string()))?;
+		let id = params
+			.iter()
+			.find(|(k, _)| *k == "id")
+			.and_then(|(_, v)| v.parse().ok())
+			.ok_or(Error::NotFound)?;
+
+		let section = crate::entries::section_of(&state.db.conn(), id)?;
+		auth.check(&state.schema, &section, L::ACCESS)?;
+		Ok(Self {
+			auth,
+			id,
+			section,
+			level: PhantomData,
+		})
+	}
+}
+
+/// A user who may do `L` with assets.
+pub struct AssetAccess<L> {
+	pub auth: Authed,
+	level: PhantomData<L>,
+}
+
+impl<L: Level> FromRequestParts<AppState> for AssetAccess<L> {
+	type Rejection = Error;
+
+	async fn from_request_parts(
+		parts: &mut Parts,
+		state: &AppState,
+	) -> Result<Self> {
+		let auth = Authed::from_request_parts(parts, state).await?;
+		allowed(auth.can_assets(&state.schema, L::ACCESS))?;
+		Ok(Self {
+			auth,
+			level: PhantomData,
+		})
+	}
+}
+
+/// A user who may use the AI chat; it sees every draft.
+pub struct AiAccess(pub Authed);
+
+impl FromRequestParts<AppState> for AiAccess {
+	type Rejection = Error;
+
+	async fn from_request_parts(
+		parts: &mut Parts,
+		state: &AppState,
+	) -> Result<Self> {
+		let auth = Authed::from_request_parts(parts, state).await?;
+		allowed(auth.can_ai(&state.schema))?;
+		Ok(Self(auth))
+	}
+}
+
+/// The user of a request, `None` without a token. Public routes use it to
+/// show unpublished entries to editors.
+pub fn session(conn: &Connection, headers: &HeaderMap) -> Result<Option<i64>> {
+	let Some(token) = headers.get("session-token") else {
+		return Ok(None);
+	};
+	let token = token.to_str().map_err(|_| Error::InvalidSessionToken)?;
+
+	let row: Option<(i64, i64)> = conn
+		.query_row(
+			"SELECT user_id, created_at FROM sessions WHERE token = ?1",
+			[token],
+			|r| Ok((r.get(0)?, r.get(1)?)),
+		)
+		.optional()?;
+	match row {
+		Some((user_id, created)) if created + SESSION_DURATION_MS > now() => {
+			Ok(Some(user_id))
+		}
+		_ => Err(Error::InvalidSessionToken),
+	}
+}
+
+/// The role of a user, `None` is an admin.
+pub fn role_of(conn: &Connection, user_id: i64) -> Result<Option<String>> {
+	Ok(conn.query_row(
+		"SELECT role FROM users WHERE id = ?1",
+		[user_id],
+		|r| r.get(0),
+	)?)
+}
+
+/// Adds a user or sets a new password and role, `None` is an admin.
+pub fn add_user(
+	conn: &Connection,
+	email: &str,
+	password: &str,
+	role: Option<&str>,
+) -> Result<()> {
+	let hash = bcrypt::hash(password, COST)
+		.map_err(|e| Error::Internal(e.to_string()))?;
+	conn.execute(
+		"INSERT INTO users (email, password_hash, role, created_at)
+		VALUES (?1, ?2, ?3, ?4)
+		ON CONFLICT (email) DO UPDATE SET password_hash = ?2, role = ?3",
+		params![email, hash, role, now()],
+	)?;
+	// a new password logs out everywhere
+	conn.execute(
+		"DELETE FROM sessions WHERE user_id =
+		(SELECT id FROM users WHERE email = ?1)",
+		[email],
+	)?;
+	Ok(())
+}
+
+/// The user of a login, after the password was checked; bcrypt takes a
+/// while: not with the database locked, not on the async workers, and as
+/// long for unknown emails.
+pub async fn login(db: &Db, email: &str, password: &str) -> Result<i64> {
+	if !may_try(email) {
+		return Err(Error::Request(
+			"Too many wrong passwords, try again in 15 minutes".into(),
+		));
+	}
+	let user: Option<(i64, String)> = db
+		.conn()
+		.query_row(
+			"SELECT id, password_hash FROM users WHERE email = ?1",
+			[email],
+			|r| Ok((r.get(0)?, r.get(1)?)),
+		)
+		.optional()?;
+
+	let known = user.is_some();
+	let (user_id, hash) = user.unwrap_or_else(|| {
+		let dummy = DUMMY_HASH
+			.get_or_init(|| bcrypt::hash("not a password", COST).unwrap());
+		(0, dummy.clone())
+	});
+	let password = password.to_string();
+	let ok = tokio::task::spawn_blocking(move || {
+		bcrypt::verify(password, &hash).unwrap_or(false)
+	})
+	.await
+	.map_err(|e| Error::Internal(e.to_string()))?;
+	if !ok || !known {
+		failed(email);
+		return Err(Error::LoginIncorrect);
+	}
+	Ok(user_id)
+}
+
+/// A new session of a user, its token. Old sessions go.
+pub fn new_session(conn: &Connection, user_id: i64) -> Result<String> {
+	conn.execute(
+		"DELETE FROM sessions WHERE created_at < ?1",
+		[now() - SESSION_DURATION_MS],
+	)?;
+	let token = random_token();
+	conn.execute(
+		"INSERT INTO sessions (token, user_id, created_at) VALUES (?1, ?2, ?3)",
+		params![token, user_id, now()],
+	)?;
+	Ok(token)
+}
+
+pub fn end_session(conn: &Connection, token: &str) -> Result<()> {
+	conn.execute("DELETE FROM sessions WHERE token = ?1", [token])?;
+	Ok(())
+}
+
+/// Whether the email may try again, see [`MAX_FAILS`].
+fn may_try(email: &str) -> bool {
+	let mut fails = FAILS.lock().unwrap();
+	fails.retain(|_, (_, first)| *first + FAIL_WINDOW_MS > now());
+	fails.get(email).is_none_or(|(n, _)| *n < MAX_FAILS)
+}
+
+fn failed(email: &str) {
+	let mut fails = FAILS.lock().unwrap();
+	fails.entry(email.to_string()).or_insert((0, now())).0 += 1;
+}

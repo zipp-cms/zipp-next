@@ -14,21 +14,22 @@
 
 use std::collections::BTreeMap;
 
-use axum::extract::{Path, State};
-use axum::routing::{get, post};
+use axum::extract::State;
 use axum::{Json, Router};
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::AppState;
-use crate::auth::Authed;
 use crate::content::{FieldError, share};
 use crate::db::now;
 use crate::entries::{EntryInput, check, get_entry, write};
 use crate::error::{Error, Result};
 use crate::schema::Schema;
 
+pub mod api;
+#[cfg(test)]
+mod api_tests;
 mod preview;
 mod revisions;
 mod routes;
@@ -66,7 +67,7 @@ pub struct SiteDoc {
 /// The content of an entry in every site, by site handle.
 pub type Doc = BTreeMap<String, SiteDoc>;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Draft {
 	pub doc: Doc,

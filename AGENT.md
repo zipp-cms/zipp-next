@@ -20,20 +20,34 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   with `cargo clippy --all-targets`. Svelte and TypeScript use prettier
   (tabs, single quotes) and `npm run check`.
 - Use blank lines to separate logical steps inside functions.
-- Tests are small, offline unit tests next to the code (`#[cfg(test)] mod
-  tests`). Database tests use `Db::memory()`.
+- Tests are small and offline: unit tests of an area's functions in its
+  `tests.rs` (database tests use `Db::memory()`), and every request of
+  the api in its `api_tests.rs` through `testing::TestServer`, with each
+  role that may and may not (`Error::Forbidden`). Tests run on the real
+  SQL, no mocks.
+- Permissions are in a handler's signature: `Admin`, `EntryAccess<Publish>`,
+  `AssetAccess<Edit>`, `AiAccess`; `Authed::check` only where the section
+  comes with the request (creating, lists).
 - Commits: a short imperative subject in plain words, then a body that
   says what changed and why.
 
 ## Layout
 
 - `crates/zipp/src`: one folder per area (`schema`, `content`, `entries`,
-  `drafts`, `graphql`, `migrate`, `assets`, `ai`, `craft` for the
-  import), each with a `mod.rs` for its types and core functions, files
-  for the parts, `routes.rs` for the HTTP handlers and `tests.rs` when
-  the tests are long. Types that several files of a folder use stay in
-  its `mod.rs`. `lib.rs` is the
-  public api, `cli.rs` the commands, `server.rs` the router.
+  `drafts`, `graphql`, `migrate`, `assets`, `auth`, `users`, `studio`,
+  `ai`, `craft` for the import). An area with an api has the same files:
+  - `mod.rs`: its types and its functions on `&Connection` (the SQL),
+    files for bigger parts (`entries/save.rs`, `assets/manage.rs`);
+    types that several files of a folder use stay in `mod.rs`;
+  - `api.rs`: the requests and responses, each request `request!(Req,
+    METHOD "/path/{id}" => Resp)` (see `api.rs` and docs/extending.md);
+  - `routes.rs`: the handlers: who may (an extractor of `auth`), the
+    request (`Req<..>`), a call of the functions, the answer; no SQL;
+    added with `.api::<Req, _>(handler)`;
+  - `tests.rs` and `api_tests.rs`, see above.
+  `lib.rs` is the public api, `cli.rs` the commands, `server.rs` the
+  router, `testing.rs` the test server. Plugin crates have the same
+  files.
 - `studio/src`: `api/` (one file per area, `index.ts` re-exports),
   `pages/` (`edit/` for the editor), `fields/` (one component per field
   kind), `lib/` (shared components and helpers). Shared styles are in
@@ -75,7 +89,8 @@ What the owner decided, so it doesn't get asked again:
 
 ## Before a commit
 
-- `cargo fmt`, `cargo clippy --all-targets`, `cargo test`, and in
+- `cargo fmt`, `cargo clippy --workspace --all-targets --features
+  zipp/testing`, `cargo test --workspace`, and in
   `studio/` `npx prettier --write src` and `npx svelte-check`.
 - A change of the studio: `npm run build` in `studio/` and commit the
   embedded build in `crates/zipp/studio`.

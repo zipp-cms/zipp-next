@@ -17,7 +17,7 @@ use axum::Router;
 use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post, put};
+use axum::routing::{get, post};
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
 use image::{ImageFormat, ImageReader};
@@ -25,18 +25,22 @@ use rusqlite::{Connection, OptionalExtension, Row, params};
 use serde::{Deserialize, Serialize};
 
 use crate::AppState;
-use crate::auth::Authed;
 use crate::db::now;
 use crate::error::{Error, Result};
 use crate::schema::Transform;
 
+pub mod api;
+#[cfg(test)]
+mod api_tests;
 mod edits;
+mod manage;
 mod routes;
 #[cfg(test)]
 pub(crate) mod tests;
 mod transform;
 
 pub use edits::{Canvas, Crop, Edits, Resize};
+pub use manage::{AssetChange, Usage, delete, replace, search, update, usage};
 
 pub use routes::api_routes;
 #[cfg(test)]
@@ -46,7 +50,7 @@ pub use transform::crop_rect;
 pub use transform::transform_size;
 use transform::*;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Asset {
 	pub id: i64,

@@ -798,6 +798,7 @@ name = "example-cms"
 version = "0.1.0"
 dependencies = [
  "serde_json",
+ "tokio",
  "zipp",
  "zipp-button-group",
  "zipp-seo",
@@ -3373,10 +3374,12 @@ dependencies = [
  "rust-embed",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "soe-llms",
  "thiserror",
  "tokio",
  "tokio-stream",
+ "tower",
  "tower-http",
  "tracing",
  "tracing-subscriber",
@@ -3386,7 +3389,6 @@ dependencies = [
 name = "zipp-agent"
 version = "0.1.0"
 dependencies = [
- "rusqlite",
  "serde",
  "serde_json",
  "tokio",

@@ -43,7 +43,7 @@ use serde_json::Value;
 
 use crate::AppState;
 use crate::assets::{Asset, get_many};
-use crate::auth::session;
+use crate::auth::{role_of, session};
 use crate::db::Db;
 use crate::drafts::{Preview, get_draft, preview};
 use crate::entries::{Entry, list};
@@ -53,6 +53,8 @@ use crate::query::Query;
 use crate::richtext::{self, Chunk};
 use crate::schema::{FieldKind, Schema};
 
+#[cfg(test)]
+mod api_tests;
 mod asset;
 mod entry;
 pub mod ext;
@@ -300,11 +302,7 @@ async fn graphql(
 		// only admins see every draft and unpublished entry, a role only
 		// some sections: it reads GraphQL like a frontend
 		let editor = match session(&conn, &headers)? {
-			Some(user) => conn.query_row(
-				"SELECT role IS NULL FROM users WHERE id = ?1",
-				[user],
-				|r| r.get::<_, bool>(0),
-			)?,
+			Some(user) => role_of(&conn, user)?.is_none(),
 			None => false,
 		};
 		// private like Craft's: frontends send the token, the studio its

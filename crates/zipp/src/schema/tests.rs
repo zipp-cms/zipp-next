@@ -57,9 +57,29 @@ pub fn site() -> Schema {
 		)
 }
 
+/// [`site`] with the roles of the example: an editor publishes pages
+/// and deletes events, an author only edits events.
+pub fn site_with_roles() -> Schema {
+	site()
+		.role(
+			Role::new("editor", "Editor")
+				.sections(["home", "pages"], Access::Publish)
+				.section("events", Access::Delete)
+				.assets(Access::Delete)
+				.ai(),
+		)
+		.role(
+			Role::new("author", "Author")
+				.section("events", Access::Edit)
+				.section("pages", Access::View)
+				.assets(Access::Edit),
+		)
+}
+
 #[test]
 fn site_is_valid() {
 	site().check().unwrap();
+	site_with_roles().check().unwrap();
 }
 
 #[test]

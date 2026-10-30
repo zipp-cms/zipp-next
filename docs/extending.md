@@ -48,8 +48,9 @@ A plugin is a crate that adds a whole feature, turned on with one line:
   field of the same handle keeps its own) and of the root. Resolvers use
   `zipp::graphql::ext` for the request's data and entries loaded with the
   rights of who asks, so previews show drafts.
-- `api_routes` under `/api` for the studio (`Authed` checks the session),
-  `routes` for the website, like sitemaps the frontend proxies.
+- `api_routes` under `/api` for the studio, made like zipp's own (see
+  [The rest api](#the-rest-api)), `routes` for the website, like sitemaps
+  the frontend proxies.
 - `studio`: an ES module served as `/_plugins/<name>.js` with data for it;
   `sectionSetup(target, { schema, section, data, host })` adds a card to
   the setup page of a section.
@@ -70,6 +71,57 @@ The agent is a `Harness`: it builds the command for a message and turns
 the lines of its output into the chat's events (text, step, error), so
 `Agent::with(...)` can run another coding agent than Claude Code
 (`Agent::new()`).
+
+## The rest api
+
+Every request of the studio's api is a type that knows its method, path
+and response, so a path is written once:
+
+```rust
+#[derive(Serialize, Deserialize)]
+pub struct DefaultsReq {
+	pub id: i64,
+	pub site: Option<String>,
+}
+
+request!(DefaultsReq, GET "/entries/{id}/seo" => Value);
+
+async fn defaults(
+	State(state): State<AppState>,
+	_access: EntryAccess<View>,
+	Req(req): Req<DefaultsReq>,
+) -> ApiResult<DefaultsReq> { ... }
+
+Router::new().api::<DefaultsReq, _>(defaults)
+```
+
+Path params like `{id}` are fields of the request, the other fields are
+the query of a `GET` or `DELETE` and the JSON body of the others. Who may
+call a handler is its first extractor: `Authed` any user, `Admin`,
+`EntryAccess<View | Edit | Publish | Delete>` a level in the section of
+the entry `{id}`, `AssetAccess<...>` a level for assets, `AiAccess` the
+AI chat. Errors are `zipp::error::Error`, sent as `{ message, error: {
+type, detail } }` with its status code. Uploads, files, GraphQL and
+streams stay plain axum routes.
+
+## Tests
+
+With the feature `testing`, `zipp::testing::TestServer` runs the whole
+cms on an in-memory database; requests go through the router without a
+port, as an admin, a role or anonymous:
+
+```rust
+let ts = TestServer::new(schema());
+let author = ts.user(Some("author"));
+let jazz = author.call(&CreateReq(event)).await.unwrap();
+let err = author.call(&PublishReq { id: jazz.id }).await.unwrap_err();
+assert_eq!(err, Error::Forbidden);
+```
+
+`ts.routes(...)` adds the site's routes, `ts.dev()` development mode,
+`client.send(...)` any request and `client.upload(...)` files. The
+example (`example/cms/src/tests.rs`) and the plugins test themselves this
+way.
 
 ## Types for the rest api
 

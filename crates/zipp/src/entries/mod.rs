@@ -5,8 +5,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use axum::extract::{Path, Query as QueryParams, State};
-use axum::routing::{get, post};
+use axum::extract::State;
 use axum::{Json, Router};
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 use serde::{Deserialize, Serialize};
@@ -24,6 +23,9 @@ use crate::schema::Access;
 use crate::schema::{Schema, Section, SectionKind};
 use crate::{AppState, ChangeKind};
 
+pub mod api;
+#[cfg(test)]
+mod api_tests;
 pub mod query;
 mod routes;
 mod save;
@@ -40,7 +42,7 @@ pub use structure::move_entry;
 pub use structure::refresh_uris;
 use structure::*;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Entry {
 	pub id: i64,
@@ -59,7 +61,7 @@ pub struct Entry {
 	pub updated_at: i64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EntryInput {
 	pub section: String,
@@ -81,7 +83,7 @@ pub struct EntryInput {
 }
 
 /// What a relation id points to, sent next to the entries.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntryRef {
 	pub id: i64,
 	pub section: String,

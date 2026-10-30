@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Revision {
 	pub id: i64,
@@ -11,7 +11,7 @@ pub struct Revision {
 }
 
 /// A field (or title, slug, published) that changed, and in which sites.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FieldChange {
 	pub field: String,
 	pub sites: Vec<String>,

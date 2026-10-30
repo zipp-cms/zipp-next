@@ -1,4 +1,8 @@
+use super::api::*;
 use super::*;
+use crate::api::{ApiResult, ApiRouter, Req};
+use crate::auth::{AssetAccess, Delete, Edit, View};
+use crate::schema::Access;
 
 pub(super) fn transform_by_name(
 	state: &AppState,
@@ -103,12 +107,12 @@ pub(super) fn file_response(mime: &str, data: Vec<u8>) -> Response {
 pub(super) static GENERATING: tokio::sync::Semaphore =
 	tokio::sync::Semaphore::const_new(2);
 
+/// `POST /assets`, multipart: the files of the upload.
 pub(super) async fn upload(
 	State(state): State<AppState>,
-	auth: Authed,
+	AssetAccess { auth, .. }: AssetAccess<Edit>,
 	mut multipart: Multipart,
 ) -> Result<Json<Vec<Asset>>> {
-	auth.check_assets(&state.schema, crate::schema::Access::Edit)?;
 	let mut assets = vec![];
 	while let Some(field) = multipart
 		.next_field()
@@ -132,136 +136,14 @@ pub(super) async fn upload(
 	Ok(Json(assets))
 }
 
-#[derive(Debug, Deserialize)]
-pub(super) struct ListParams {
-	search: Option<String>,
-	ids: Option<String>,
-	kind: Option<String>,
-}
-
-pub(super) async fn list(
+/// `POST /assets/{id}/file`, multipart: another file for the asset.
+pub(super) async fn replace_route(
 	State(state): State<AppState>,
-	auth: Authed,
-	Query(p): Query<ListParams>,
-) -> Result<Json<Vec<Asset>>> {
-	auth.check_assets(&state.schema, crate::schema::Access::View)?;
-	let conn = state.db.conn();
-	if let Some(ids) = p.ids {
-		let ids: Vec<i64> =
-			ids.split(',').filter_map(|i| i.parse().ok()).collect();
-		return Ok(Json(get_many(&conn, &ids)?));
-	}
-
-	let sql = format!(
-		"SELECT {COLUMNS} FROM assets
-		WHERE filename LIKE ?1 AND (?2 IS NULL OR kind = ?2)
-		ORDER BY id DESC LIMIT 200"
-	);
-	let search = format!("%{}%", p.search.unwrap_or_default());
-	let mut stmt = conn.prepare(&sql)?;
-	let assets = stmt
-		.query_map(params![search, p.kind], from_row)?
-		.collect::<rusqlite::Result<_>>()?;
-	Ok(Json(assets))
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(super) struct UpdateReq {
-	/// unchanged when missing
-	title: Option<String>,
-	alt: String,
-	focal_x: f64,
-	focal_y: f64,
-	/// a new name, unchanged when missing
-	filename: Option<String>,
-	/// the image editor's, none resets to the original
-	#[serde(default)]
-	edits: Option<Edits>,
-}
-
-pub(super) async fn update(
-	State(state): State<AppState>,
-	auth: Authed,
-	Path(id): Path<i64>,
-	Json(req): Json<UpdateReq>,
-) -> Result<Json<Asset>> {
-	auth.check_assets(&state.schema, crate::schema::Access::Edit)?;
-	let conn = state.db.conn();
-	let old = get_asset(&conn, id)?;
-	let (fx, fy) = (req.focal_x.clamp(0.0, 1.0), req.focal_y.clamp(0.0, 1.0));
-	let edits = req.edits.filter(|e| !e.is_empty());
-	if let Some(e) = &edits {
-		if old.kind != "image" {
-			return Err(Error::Request("only images can be edited".into()));
-		}
-		e.check().map_err(Error::Request)?;
-		let (ow, oh) = (
-			old.original_width.unwrap_or(1),
-			old.original_height.unwrap_or(1),
-		);
-		let (w, h) = e.size(ow, oh);
-		// a crop past the image is made before a resize makes it smaller
-		let crop = Edits {
-			resize: None,
-			canvas: None,
-			..e.clone()
-		};
-		let (cw, ch) = crop.size(ow, oh);
-		if u64::from(w) * u64::from(h) > MAX_PIXELS
-			|| u64::from(cw) * u64::from(ch) > MAX_PIXELS
-		{
-			return Err(Error::Request(
-				"the edited image is bigger than 40 megapixels".into(),
-			));
-		}
-	}
-	let dir = state.files.join(id.to_string());
-	// a new name: the file moves, its transforms are made again
-	let filename = match req.filename.as_deref().map(clean_filename) {
-		Some(name) if name != old.filename => {
-			if dir.join(&name).exists() {
-				return Err(Error::Request(format!("{name} exists already")));
-			}
-			fs::rename(dir.join(&old.filename), dir.join(&name))
-				.map_err(|e| Error::Internal(e.to_string()))?;
-			name
-		}
-		_ => old.filename.clone(),
-	};
-	let json = edits.as_ref().map(|e| serde_json::to_string(e).unwrap());
-	conn.execute(
-		"UPDATE assets SET title = IFNULL(?1, title), alt = ?2, focal_x = ?3,
-		focal_y = ?4, filename = ?5, edits = ?6 WHERE id = ?7",
-		params![
-			req.title.as_deref().map(str::trim),
-			req.alt,
-			fx,
-			fy,
-			filename,
-			json,
-			id
-		],
-	)?;
-	if (old.focal_x, old.focal_y) != (fx, fy)
-		|| old.edits != edits
-		|| old.filename != filename
-	{
-		let _ = fs::remove_dir_all(dir.join("t"));
-	}
-	Ok(Json(get_asset(&conn, id)?))
-}
-
-/// Another file for the asset, like Craft's replace file: where it is
-/// used stays, the edits and the focal point start new.
-pub(super) async fn replace(
-	State(state): State<AppState>,
-	auth: Authed,
+	_access: AssetAccess<Edit>,
 	Path(id): Path<i64>,
 	mut multipart: Multipart,
 ) -> Result<Json<Asset>> {
-	auth.check_assets(&state.schema, crate::schema::Access::Edit)?;
-	let old = get_asset(&state.db.conn(), id)?;
+	get_asset(&state.db.conn(), id)?;
 	let field = multipart
 		.next_field()
 		.await
@@ -272,116 +154,69 @@ pub(super) async fn replace(
 		.bytes()
 		.await
 		.map_err(|e| Error::Request(e.to_string()))?;
-	let up = inspect(&name, &data)?;
-
-	let dir = state.files.join(id.to_string());
-	let internal = |e: std::io::Error| Error::Internal(e.to_string());
-	let tmp = dir.join(format!(".replace{}", rand::random::<u32>()));
-	fs::write(&tmp, &data).map_err(internal)?;
-	if old.filename != up.filename {
-		let _ = fs::remove_file(dir.join(&old.filename));
-	}
-	fs::rename(&tmp, dir.join(&up.filename)).map_err(internal)?;
-	let _ = fs::remove_dir_all(dir.join("t"));
-
-	let conn = state.db.conn();
-	conn.execute(
-		"UPDATE assets SET filename = ?1, kind = ?2, mime = ?3, size = ?4,
-		width = ?5, height = ?6, edits = NULL, focal_x = 0.5, focal_y = 0.5
-		WHERE id = ?7",
-		params![
-			up.filename,
-			up.kind,
-			up.mime,
-			data.len(),
-			up.width,
-			up.height,
-			id
-		],
-	)?;
-	Ok(Json(get_asset(&conn, id)?))
+	let asset = replace(&state.db.conn(), &state.files, id, &name, &data)?;
+	Ok(Json(asset))
 }
 
-/// An entry that uses an asset.
-#[derive(Debug, Serialize)]
-pub(super) struct Usage {
-	id: i64,
-	section: String,
-	#[serde(rename = "type")]
-	ty: String,
-	title: String,
-	/// the sites it is used in
-	sites: Vec<String>,
-}
-
-/// The entries that use an asset, as published.
-pub(super) async fn usage(
+pub(super) async fn list_route(
 	State(state): State<AppState>,
-	auth: Authed,
-	Path(id): Path<i64>,
-) -> Result<Json<Vec<Usage>>> {
-	auth.check_assets(&state.schema, crate::schema::Access::View)?;
+	_access: AssetAccess<View>,
+	Req(req): Req<ListReq>,
+) -> ApiResult<ListReq> {
 	let conn = state.db.conn();
+	if let Some(ids) = req.ids {
+		let ids: Vec<i64> =
+			ids.split(',').filter_map(|i| i.parse().ok()).collect();
+		return Ok(Json(get_many(&conn, &ids)?));
+	}
+	let search_for = req.search.unwrap_or_default();
+	Ok(Json(search(&conn, &search_for, req.kind.as_deref())?))
+}
+
+pub(super) async fn update_route(
+	State(state): State<AppState>,
+	_access: AssetAccess<Edit>,
+	Req(req): Req<UpdateReq>,
+) -> ApiResult<UpdateReq> {
+	let conn = state.db.conn();
+	Ok(Json(update(&conn, &state.files, req.id, req.change)?))
+}
+
+pub(super) async fn usage_route(
+	State(state): State<AppState>,
+	AssetAccess { auth, .. }: AssetAccess<View>,
+	Req(req): Req<UsageReq>,
+) -> ApiResult<UsageReq> {
 	let primary = &state.schema.primary_site().handle;
-	let mut stmt = conn.prepare(
-		"SELECT e.id, e.section, e.type, group_concat(DISTINCT r.site),
-		(SELECT title FROM entry_sites s WHERE s.entry_id = e.id
-			ORDER BY s.site = ?2 DESC LIMIT 1)
-		FROM asset_relations r JOIN entries e ON e.id = r.entry_id
-		WHERE r.asset_id = ?1 GROUP BY e.id ORDER BY e.id",
-	)?;
-	let found = stmt
-		.query_map(params![id, primary], |r| {
-			let sites: String = r.get(3)?;
-			Ok(Usage {
-				id: r.get(0)?,
-				section: r.get(1)?,
-				ty: r.get(2)?,
-				sites: sites.split(',').map(String::from).collect(),
-				title: r.get(4)?,
-			})
-		})?
-		.collect::<rusqlite::Result<Vec<_>>>()?;
+	let found = usage(&state.db.conn(), primary, req.id)?;
 	// only what the role may see
 	Ok(Json(
 		found
 			.into_iter()
-			.filter(|u| {
-				auth.can(&state.schema, &u.section, crate::schema::Access::View)
-			})
+			.filter(|u| auth.can(&state.schema, &u.section, Access::View))
 			.collect(),
 	))
 }
 
-pub(super) async fn delete(
+pub(super) async fn delete_route(
 	State(state): State<AppState>,
-	auth: Authed,
-	Path(id): Path<i64>,
-) -> Result<()> {
-	auth.check_assets(&state.schema, crate::schema::Access::Delete)?;
-	let conn = state.db.conn();
-	if conn.execute("DELETE FROM assets WHERE id = ?1", [id])? == 0 {
-		return Err(Error::NotFound);
-	}
-	let _ = fs::remove_dir_all(state.files.join(id.to_string()));
-	Ok(())
+	_access: AssetAccess<Delete>,
+	Req(req): Req<DeleteReq>,
+) -> ApiResult<DeleteReq> {
+	delete(&state.db.conn(), &state.files, req.id)?;
+	Ok(Json(()))
 }
 
 /// The api, under `/api`.
 pub fn api_routes() -> Router<AppState> {
+	let big = || DefaultBodyLimit::max(200 * 1024 * 1024);
 	Router::new()
-		.route(
-			"/assets",
-			get(list)
-				.post(upload)
-				.layer(DefaultBodyLimit::max(200 * 1024 * 1024)),
-		)
-		.route("/assets/{id}", put(update).delete(delete))
-		.route(
-			"/assets/{id}/file",
-			post(replace).layer(DefaultBodyLimit::max(200 * 1024 * 1024)),
-		)
-		.route("/assets/{id}/usage", get(usage))
+		.route("/assets", post(upload).layer(big()))
+		.route("/assets/{id}/file", post(replace_route).layer(big()))
+		.api::<ListReq, _>(list_route)
+		.api::<UpdateReq, _>(update_route)
+		.api::<DeleteReq, _>(delete_route)
+		.api::<UsageReq, _>(usage_route)
 }
 
 /// The files, under `/assets`.

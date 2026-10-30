@@ -1,13 +1,13 @@
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::content::FieldError;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, thiserror::Error, Clone, Serialize)]
+#[derive(Debug, thiserror::Error, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "detail", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Error {
 	#[error("Email or password incorrect")]

@@ -302,6 +302,9 @@ async fn events(State(state): State<AppState>) -> Result<impl IntoResponse> {
 	))
 }
 
+#[cfg(test)]
+mod tests;
+
 fn main() {
 	Cms::new(schema(), zipp::migrations!())
 		.routes(Router::new().route("/events.json", get(events)))

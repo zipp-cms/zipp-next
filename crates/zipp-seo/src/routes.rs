@@ -1,36 +1,26 @@
 //! What the studio's SEO field shows as placeholders.
 
-use serde::Deserialize;
-use serde_json::Value;
-use zipp::axum::extract::{Path, Query as Params, State};
-use zipp::axum::routing::get;
-use zipp::axum::{Json, Router};
-
 use zipp::AppState;
+use zipp::api::{ApiResult, ApiRouter, Req};
 use zipp::assets::get_asset;
-use zipp::auth::Authed;
+use zipp::auth::{EntryAccess, View};
+use zipp::axum::extract::State;
+use zipp::axum::{Json, Router};
 use zipp::drafts::draft_or_live;
 use zipp::entries::get_entry;
-use zipp::error::{Error, Result};
-use zipp::schema::Access;
+use zipp::error::Error;
 
+use crate::api::DefaultsReq;
 use crate::resolve::{EntryPage, Page, defaults_for_entry};
 use crate::sitemap::load_globals;
 
-#[derive(Debug, Deserialize)]
-struct SiteParam {
-	site: Option<String>,
-}
-
-/// The defaults of an entry as the editor sees it, its draft first.
 async fn defaults_route(
 	State(state): State<AppState>,
-	auth: Authed,
-	Path(id): Path<i64>,
-	Params(p): Params<SiteParam>,
-) -> Result<Json<Value>> {
-	let schema = &state.schema;
-	let site = p
+	_access: EntryAccess<View>,
+	Req(req): Req<DefaultsReq>,
+) -> ApiResult<DefaultsReq> {
+	let (schema, id) = (&state.schema, req.id);
+	let site = req
 		.site
 		.unwrap_or_else(|| schema.primary_site().handle.clone());
 	let site_def = schema
@@ -38,7 +28,6 @@ async fn defaults_route(
 		.ok_or_else(|| Error::Request(format!("unknown site {site}")))?;
 	let conn = state.db.conn();
 	let mut entry = get_entry(&conn, id, &site)?;
-	auth.check(schema, &entry.section, Access::View)?;
 	if let (doc, true) = draft_or_live(&conn, id)?
 		&& let Some(sd) = doc.get(&site)
 	{
@@ -72,5 +61,5 @@ async fn defaults_route(
 }
 
 pub fn routes() -> Router<AppState> {
-	Router::new().route("/entries/{id}/seo", get(defaults_route))
+	Router::new().api::<DefaultsReq, _>(defaults_route)
 }

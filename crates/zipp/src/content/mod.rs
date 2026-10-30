@@ -2,7 +2,7 @@
 //! is a list of `{ "id", "type", "fields" }` and a relation a list of ids.
 
 use rand::Rng;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::schema::{
@@ -23,7 +23,7 @@ pub(crate) use validate::safe_url;
 pub use validate::validate;
 pub(crate) use validate::validate_fields;
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FieldError {
 	/// `body.0.label`: field handles and block positions
 	pub path: String,

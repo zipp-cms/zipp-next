@@ -44,6 +44,13 @@
       SQL in entries.rs, auth.rs and query.rs; the index tables stay the
       same in both
 
+## Structure (2026-10-30)
+
+- [x] The rest api as typed requests (`request!`, `Req`, `.api::<R, _>`),
+      permissions as extractors, the SQL out of the handlers
+- [x] `testing::TestServer`: every request tested over HTTP with each role,
+      on the real SQL; the example and the plugins use it too
+
 ## Slice 3: what real sites need
 
 - [x] Navigation groups, globals as singles, preview button, status per site

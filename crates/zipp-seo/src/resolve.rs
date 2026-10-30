@@ -181,7 +181,7 @@ pub(crate) fn first(
 	defaults: &[Level],
 	f: impl Fn(&Level) -> Option<&String>,
 ) -> Option<String> {
-	defaults.iter().find_map(|d| f(d)).cloned()
+	defaults.iter().find_map(f).cloned()
 }
 
 /// Whether a section belongs into the sitemap: not left out, or one of
