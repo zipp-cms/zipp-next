@@ -12,15 +12,18 @@
 	<div class="bar">
 		<span class="url truncate">{decodeURI(preview.view)}</span>
 		<button class="link" onclick={() => preview.refresh()}>Reload</button>
-		<a
-			href={preview.withToken(preview.view)}
-			target="_blank"
-			rel="noreferrer"
-		>
-			Open
-		</a>
+		{#if preview.token}
+			<a
+				href={preview.withToken(preview.view)}
+				target="_blank"
+				rel="noreferrer"
+			>
+				Open
+			</a>
+		{/if}
 	</div>
-	<iframe bind:this={frame} src={preview.src} title="Website"></iframe>
+	<!-- its src is set by the preview, see `load` -->
+	<iframe bind:this={frame} title="Website"></iframe>
 </section>
 
 <style lang="scss">

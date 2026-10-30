@@ -1,5 +1,5 @@
 import type { Component, Values } from '../core/schema';
-import { plural } from '../core/list';
+import { plural } from '../core/format';
 
 /**
  * A block the outline of the editor asks to show: the path of its blocks

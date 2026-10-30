@@ -34,7 +34,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import SearchInput, { SEARCH_DELAY_MS } from '../ui/SearchInput.svelte';
-	import { plural } from '../core/list';
 	import SiteBadges from './SiteBadges.svelte';
 	import PageTop from '../ui/PageTop.svelte';
 	import { can, sectionCrumbs } from '../core/access';
@@ -42,7 +41,7 @@
 	import { deleteEntry, listEntries, moveEntry, type Entry } from './api';
 	import Menu, { type MenuItem } from '../ui/Menu.svelte';
 	import Icon from '../ui/Icon.svelte';
-	import { date } from '../core/format';
+	import { date, plural } from '../core/format';
 	import { depth, dropTo, dropWhere, isBelow, type Where } from './tree';
 	import { componentName, sectionOf } from '../core/schema';
 

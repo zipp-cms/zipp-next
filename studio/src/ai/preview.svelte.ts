@@ -10,10 +10,9 @@ import { sitePreviewToken } from '../entries/drafts';
 export class SitePreview {
 	/** the page the frame shows, without the token */
 	view = $state('');
-	/** the src of the frame, only set to open the site or without bridge */
-	src = $state('');
 	error = $state('');
-	private token = '';
+	/** without it the website shows no drafts, nothing loads before */
+	token = $state('');
 	private bridge = false;
 	private frame: HTMLIFrameElement | null = null;
 	private readonly bases: string[];
@@ -35,7 +34,7 @@ export class SitePreview {
 		sitePreviewToken()
 			.then(t => {
 				this.token = t;
-				this.src = this.withToken(this.view);
+				this.load(this.view);
 			})
 			.catch(e => (this.error = e.message));
 
@@ -62,7 +61,7 @@ export class SitePreview {
 
 	/** A page with the token, in crelte's live preview mode. */
 	withToken(url: string): string {
-		if (!url) return '';
+		if (!url || !this.token) return '';
 		const u = new URL(url);
 		u.searchParams.set('token', this.token);
 		u.searchParams.set('x-craft-live-preview', '1');
@@ -73,7 +72,7 @@ export class SitePreview {
 	open(url: string) {
 		if (!this.ofSite(url)) return;
 		this.view = url;
-		if (!this.bridge) return void (this.src = this.withToken(url));
+		if (!this.bridge) return this.load(url);
 		// to the website only, the url has the token
 		this.frame?.contentWindow?.postMessage(
 			{ type: 'zipp:open', url: this.withToken(url) },
@@ -81,8 +80,19 @@ export class SitePreview {
 		);
 	}
 
-	/** Shows the changes: setting src loads the page again. */
+	/** Shows the changes: the page loads again. */
 	refresh() {
-		if (this.frame) this.frame.src = this.withToken(this.view);
+		this.load(this.view);
+	}
+
+	/**
+	 * Loads a page in the frame, the only place that sets its src. The
+	 * page may have no bridge, until it says so.
+	 */
+	private load(url: string) {
+		const src = this.withToken(url);
+		if (!this.frame || !src) return;
+		this.bridge = false;
+		this.frame.src = src;
 	}
 }

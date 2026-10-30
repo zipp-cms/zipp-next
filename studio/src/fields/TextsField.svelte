@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { FieldOf, Schema, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
-	import { site } from '../core/router.svelte';
+	import { editedSite } from '../core/editing';
 
 	/**
 	 * The texts of the frontend: the keys come from the code with the text
@@ -15,8 +15,12 @@
 	}: { schema: Schema; field: FieldOf<'texts'>; values: Values } = $props();
 
 	const keys = $derived(field.keys);
-	const primary = $derived(site.current === schema.sites[0].handle);
+	const edited = editedSite();
+	const primary = $derived(edited === schema.sites[0].handle);
 	const texts = $derived(valueOf(values, field) ?? {});
+	// the key whose text was just emptied: it stays empty while typing,
+	// not the code's text again under the cursor
+	let cleared = $state<string | null>(null);
 
 	function set(key: string, text: string) {
 		values[field.handle] = { ...texts, [key]: text };
@@ -33,14 +37,18 @@
 					<!-- the primary site has the code's text as value -->
 					<input
 						class:empty={!own && !primary}
-						value={primary ? own || fallback : own}
+						value={primary
+							? own || (cleared === key ? '' : fallback)
+							: own}
 						placeholder={primary
 							? fallback
 							: `Not translated: ${fallback}`}
 						oninput={e => {
 							const v = e.currentTarget.value;
+							cleared = v === '' ? key : null;
 							set(key, primary && v === fallback ? '' : v);
 						}}
+						onblur={() => (cleared = null)}
 					/>
 				</td>
 			</tr>

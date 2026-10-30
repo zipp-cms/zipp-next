@@ -1,4 +1,5 @@
 import { getContext, setContext } from 'svelte';
+import { site } from './router.svelte';
 
 /**
  * What an editor edits, for the fields in it: a custom field tells its
@@ -15,4 +16,12 @@ export function setEditing(e: Editing) {
 /** The editor around a field, none outside of one (Setup's preview). */
 export function getEditing(): Editing | undefined {
 	return getContext(KEY);
+}
+
+/**
+ * The site a field edits: its editor's, which stays when the studio
+ * switches; outside of an editor the studio's.
+ */
+export function editedSite(): string {
+	return getEditing()?.site ?? site.current;
 }

@@ -19,3 +19,8 @@ export function fileSize(bytes: number): string {
 		return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 	return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
+
+/** `1 entry`, `3 entries`. */
+export function plural(n: number, one: string, many: string): string {
+	return `${n} ${n === 1 ? one : many}`;
+}

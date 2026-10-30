@@ -3,7 +3,7 @@
 	import { depth } from '../entries/tree';
 	import SiteBadges from '../entries/SiteBadges.svelte';
 	import { entryUrl, navGroups, type Schema } from '../core/schema';
-	import { listEntries, type Entry } from '../entries/api';
+	import type { EntryList } from '../entries/api';
 	import { accessOf, isAdmin } from '../core/access';
 	import PluginCards from './PluginCards.svelte';
 	import { componentOf, sectionOf } from '../core/schema';
@@ -13,7 +13,11 @@
 	 * (entry types, urls per site, who may do what, cards of plugins), its entries as a
 	 * short list on the side, linking to the editor.
 	 */
-	let { schema, handle }: { schema: Schema; handle: string } = $props();
+	let {
+		schema,
+		handle,
+		list,
+	}: { schema: Schema; handle: string; list: EntryList } = $props();
 
 	const section = $derived(sectionOf(schema, handle));
 	const types = $derived(
@@ -33,29 +37,8 @@
 	// an admin sees every role, a role only itself
 	const roles = $derived(visibleRoles(schema));
 
-	let entries = $state<Entry[]>([]);
-	let published = $state<Record<number, Record<string, boolean>>>({});
-	let drafts = $state<number[]>([]);
-	let total = $state(0);
-	let error = $state('');
-
-	$effect(() => {
-		if (!section) return;
-		const params: Record<string, string> = {
-			section: handle,
-			site: schema.sites[0].handle,
-			limit: '1000',
-		};
-		if (section.kind === 'structure') params.order = 'structure';
-		listEntries(params)
-			.then(r => {
-				entries = r.entries;
-				published = r.published;
-				drafts = r.drafts;
-				total = r.total;
-			})
-			.catch(e => (error = e.message));
-	});
+	// the first entries in the primary site, see Setup's loadProps
+	const { entries, published, drafts, total } = $derived(list);
 
 	const KINDS = {
 		single: 'Single: exactly one entry',
@@ -230,7 +213,6 @@
 			<h2>
 				Entries <span class="muted">{total}</span>
 			</h2>
-			{#if error}<p class="error">{error}</p>{/if}
 			<ul class="plain">
 				{#each entries as e (e.id)}
 					<li style:padding-left="{depth(entries, e) * 12}px">

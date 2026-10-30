@@ -18,8 +18,8 @@
 <script lang="ts">
 	import type { FieldOf, Values } from '../core/schema';
 	import { host } from './host.svelte';
-	import { getEditing } from '../core/editing';
-	import { site } from '../core/router.svelte';
+	import { getEditing, editedSite } from '../core/editing';
+	import { Last } from '../core/synced.svelte';
 
 	/**
 	 * A field of a type of another crate: zipp serves its module, which
@@ -31,6 +31,9 @@
 		$props();
 
 	const editing = getEditing();
+	const site = editedSite();
+	// the value as the plugin sent it or got it, not given back to it
+	const last = new Last();
 
 	let target: HTMLElement;
 	let mounted = $state.raw<Mounted | null>(null);
@@ -40,9 +43,12 @@
 		return {
 			field: $state.snapshot(field),
 			value: $state.snapshot(values[field.handle]) ?? null,
-			onchange: (v: unknown) => (values[field.handle] = v),
+			onchange: (v: unknown) => {
+				last.changed(v);
+				values[field.handle] = v;
+			},
 			entryId: editing?.entryId ?? null,
-			site: editing?.site ?? site.current,
+			site,
 			host,
 		};
 	}
@@ -53,7 +59,9 @@
 		load(field.type)
 			.then(mod => {
 				if (gone) return;
-				m = mod.mount(target, current());
+				const props = current();
+				last.changed(props.value);
+				m = mod.mount(target, props);
 				mounted = m;
 			})
 			.catch(e => (error = `${field.type}: ${e.message}`));
@@ -63,10 +71,11 @@
 		};
 	});
 
-	// changes from outside, like a restored revision
+	// changes from outside, like a restored revision; what the plugin
+	// sent itself doesn't go back, it could send it again and again
 	$effect(() => {
 		const p = current();
-		mounted?.update(p);
+		if (mounted && last.changed(p.value)) mounted.update(p);
 	});
 </script>
 

@@ -31,6 +31,8 @@
 	} = $props();
 
 	const comp = $derived(componentOf(schema, attrs.type));
+	// the ids of its inputs, unique with several blocks in the text
+	const uid = $props.id();
 	// changes from the text (undo) come in, changes of the fields go out
 	const fields = synced(
 		() => attrs.fields,
@@ -59,7 +61,7 @@
 				values={fields.value}
 				errors={{}}
 				{refs}
-				prefix="rt."
+				prefix="{uid}."
 			/>
 		</fieldset>
 	{/if}

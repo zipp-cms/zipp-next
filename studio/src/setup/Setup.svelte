@@ -1,5 +1,31 @@
+<script module lang="ts">
+	import type { Schema as SchemaT } from '../core/schema';
+	import { listEntries } from '../entries/api';
+
+	/** A section of its own: its first entries come with the page. */
+	export async function loadProps(props: {
+		schema: SchemaT;
+		tab?: string;
+		handle?: string;
+	}) {
+		if (props.tab !== 'sections' || !props.handle) return {};
+		const section = props.schema.sections.find(
+			s => s.handle === props.handle,
+		);
+		if (!section) throw new Error(`There is no section ${props.handle}`);
+		const params: Record<string, string> = {
+			section: section.handle,
+			site: props.schema.sites[0].handle,
+			limit: '1000',
+		};
+		if (section.kind === 'structure') params.order = 'structure';
+		return { list: await listEntries(params) };
+	}
+</script>
+
 <script lang="ts">
 	import type { Schema } from '../core/schema';
+	import type { EntryList } from '../entries/api';
 	import PageTop from '../ui/PageTop.svelte';
 	import { SETUP_TABS } from '../shell/nav';
 	import { componentOf, sectionOf } from '../core/schema';
@@ -18,7 +44,14 @@
 		schema,
 		tab = 'sections',
 		handle = null,
-	}: { schema: Schema; tab?: string; handle?: string | null } = $props();
+		list,
+	}: {
+		schema: Schema;
+		tab?: string;
+		handle?: string | null;
+		/** the entries of a section, see `loadProps` */
+		list?: EntryList;
+	} = $props();
 
 	const component = $derived(
 		handle ? componentOf(schema, handle) : undefined,
@@ -44,8 +77,8 @@
 
 <PageTop {crumbs} note="Read only, the content model is code" />
 
-{#if tab === 'sections' && handle}
-	<SetupSection {schema} {handle} />
+{#if tab === 'sections' && handle && list}
+	<SetupSection {schema} {handle} {list} />
 {:else if tab === 'sections'}
 	<SectionsTab {schema} />
 {:else if (tab === 'types' || tab === 'blocks') && handle}

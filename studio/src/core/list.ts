@@ -28,10 +28,6 @@ export function isFull(count: number, max: number | null): boolean {
 	return max !== null && count >= max;
 }
 
-export function plural(n: number, one: string, many: string): string {
-	return `${n} ${n === 1 ? one : many}`;
-}
-
 /** A copy of plain JSON, also of Svelte's state proxies. */
 export function clone<T>(v: T): T {
 	return JSON.parse(JSON.stringify(v));

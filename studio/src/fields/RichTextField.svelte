@@ -4,7 +4,7 @@
 	import type { FieldOf, Schema, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
-	import { site } from '../core/router.svelte';
+	import { editedSite } from '../core/editing';
 	import { Last } from '../core/synced.svelte';
 	import Toolbar from './rich/Toolbar.svelte';
 	import { EMPTY, createEditor, trimmed } from './rich/editor';
@@ -38,6 +38,11 @@
 	let tick = $state(0);
 	// the content as last sent or received, to not send it back
 	const last = new Last();
+	// for the spell check of the browser
+	const edited = editedSite();
+	const language = $derived(
+		schema.sites.find(s => s.handle === edited)?.language ?? '',
+	);
 
 	onMount(() => {
 		editor = createEditor({
@@ -46,9 +51,7 @@
 			schema,
 			refs,
 			editable: !el.closest('fieldset[disabled]'),
-			language:
-				schema.sites.find(s => s.handle === site.current)?.language ??
-				'',
+			language,
 			// a plain copy, TipTap doesn't take Svelte's proxies
 			content: $state.snapshot(values[field.handle]),
 			onChange: doc => {

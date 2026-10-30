@@ -7,10 +7,9 @@
 	import { AssetForm } from './assetForm.svelte';
 	import Flyout from '../ui/Flyout.svelte';
 	import { closeFlyout } from '../core/flyout.svelte';
-	import { fileSize, time } from '../core/format';
+	import { fileSize, time, plural } from '../core/format';
 	import Icon from '../ui/Icon.svelte';
 	import ImageEditor from './image/ImageEditor.svelte';
-	import { plural } from '../core/list';
 	import { sectionName } from '../core/schema';
 	import Thumb from './Thumb.svelte';
 	import UploadButton from '../ui/UploadButton.svelte';
