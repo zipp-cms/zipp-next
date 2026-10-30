@@ -1,3 +1,5 @@
+<img src="studio/src/logo/full.svg" alt="zipp" width="200">
+
 # Zipp
 
 A headless cms where the content model is code.
