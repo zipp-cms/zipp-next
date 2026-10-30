@@ -25,7 +25,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
-		margin-bottom: 18px;
+		margin-bottom: 1.125rem;
 	}
 
 	.label {
@@ -41,7 +41,7 @@
 	}
 
 	input {
-		padding: 4px 0 8px;
+		padding: 0.25rem 0 0.5rem;
 		font-size: var(--fs-title);
 		font-weight: 700;
 		line-height: 1.25;

@@ -44,7 +44,7 @@
 	.background {
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: 0.25rem;
 	}
 
 	.on {
@@ -70,13 +70,13 @@
 	}
 
 	.swatch {
-		width: 14px;
-		height: 14px;
+		width: 0.875rem;
+		height: 0.875rem;
 		border-radius: var(--radius-sm);
 		box-shadow: inset 0 0 0 1px var(--border-strong);
 
 		&.checkerboard {
-			--check: 3.5px;
+			--check: 0.2188rem;
 			--check-color: var(--border-strong);
 		}
 	}

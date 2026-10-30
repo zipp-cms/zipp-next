@@ -73,7 +73,7 @@
 
 <style lang="scss">
 	.item-card {
-		scroll-margin-top: 64px;
+		scroll-margin-top: 4rem;
 
 		&.invalid {
 			border-color: var(--danger);
@@ -84,8 +84,8 @@
 		display: flex;
 		align-items: center;
 		gap: 2px;
-		min-height: 38px;
-		padding: 0 6px 0 4px;
+		min-height: 2.375rem;
+		padding: 0 0.375rem 0 0.25rem;
 	}
 
 	.open > .head {
@@ -95,10 +95,10 @@
 	.toggle {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: 0.5rem;
 		flex: 1;
 		min-width: 0;
-		padding: 6px;
+		padding: 0.375rem;
 
 		&:disabled {
 			opacity: 1;
@@ -108,7 +108,7 @@
 
 	.kind {
 		flex-shrink: 0;
-		padding: 1px 7px;
+		padding: 1px 0.4375rem;
 		border-radius: var(--radius-sm);
 		background: var(--accent-soft);
 		color: var(--accent);
@@ -127,6 +127,6 @@
 	}
 
 	.body {
-		padding: 14px 14px 16px;
+		padding: 0.875rem 0.875rem 1rem;
 	}
 </style>

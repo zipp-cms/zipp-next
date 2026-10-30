@@ -38,13 +38,13 @@
 <style lang="scss">
 	.layout {
 		display: grid;
-		grid-template-columns: 232px minmax(0, 1fr);
+		grid-template-columns: 14.5rem minmax(0, 1fr);
 		min-height: 100vh;
 	}
 
 	main {
 		min-width: 0;
-		padding: 0 var(--page-pad) 32px;
+		padding: 0 var(--page-pad) 2rem;
 	}
 
 	.wide {

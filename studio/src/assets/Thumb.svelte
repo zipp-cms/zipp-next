@@ -43,9 +43,9 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 8px;
+		gap: 0.5rem;
 		height: 100%;
-		padding: 10px;
+		padding: 0.625rem;
 		color: var(--subtle);
 	}
 
@@ -58,12 +58,12 @@
 
 	.ext {
 		position: absolute;
-		top: 6px;
-		left: 6px;
-		padding: 0 5px;
+		top: 0.375rem;
+		left: 0.375rem;
+		padding: 0 0.3125rem;
 		font-size: var(--fs-2xs);
 		font-weight: 600;
-		line-height: 16px;
+		line-height: 1rem;
 		color: var(--text-2);
 		background: rgba(255, 255, 255, 0.88);
 		border-radius: var(--radius-sm);

@@ -101,13 +101,13 @@
 	.assets {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: 0.375rem;
 	}
 
 	.images {
 		flex-direction: row;
 		flex-wrap: wrap;
-		gap: 12px;
+		gap: 0.75rem;
 		align-items: flex-start;
 	}
 
@@ -115,8 +115,8 @@
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		gap: 4px;
-		width: 120px;
+		gap: 0.25rem;
+		width: 7.5rem;
 	}
 
 	.open {
@@ -139,8 +139,8 @@
 	// over the top of the image
 	.on-tile {
 		position: absolute;
-		top: 4px;
-		right: 4px;
+		top: 0.25rem;
+		right: 0.25rem;
 		border-radius: var(--radius);
 		background: var(--surface);
 		box-shadow: var(--shadow);

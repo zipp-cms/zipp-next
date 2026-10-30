@@ -124,10 +124,10 @@
 	.search {
 		display: flex;
 		justify-content: flex-end;
-		margin-bottom: 16px;
+		margin-bottom: 1rem;
 
 		:global(.search) {
-			width: 340px;
+			width: 21.25rem;
 		}
 	}
 </style>

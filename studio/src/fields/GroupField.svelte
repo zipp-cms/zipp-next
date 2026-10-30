@@ -53,6 +53,6 @@
 <style>
 	/* a white box like an open block, its fields on the left */
 	.group {
-		padding: 14px;
+		padding: 0.875rem;
 	}
 </style>

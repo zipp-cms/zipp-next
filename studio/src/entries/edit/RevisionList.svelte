@@ -51,7 +51,7 @@
 			display: flex;
 			justify-content: space-between;
 			align-items: center;
-			padding: 6px 0;
+			padding: 0.375rem 0;
 			border-bottom: 1px solid var(--line);
 		}
 	}
@@ -72,6 +72,6 @@
 	}
 
 	.by {
-		margin-left: 8px;
+		margin-left: 0.5rem;
 	}
 </style>

@@ -92,7 +92,7 @@
 	h2 {
 		display: flex;
 		align-items: baseline;
-		gap: 10px;
+		gap: 0.625rem;
 	}
 
 	.gql {
@@ -100,7 +100,7 @@
 	}
 
 	li {
-		padding: 5px 0;
+		padding: 0.3125rem 0;
 		border-top: 1px solid var(--line);
 	}
 </style>

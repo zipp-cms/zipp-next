@@ -131,8 +131,8 @@
 
 	.add {
 		display: grid;
-		gap: 10px;
-		max-width: 420px;
-		margin-top: 20px;
+		gap: 0.625rem;
+		max-width: 26.25rem;
+		margin-top: 1.25rem;
 	}
 </style>

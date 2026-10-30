@@ -44,7 +44,7 @@
 	.title {
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
-		margin-bottom: 30px;
+		gap: 0.625rem;
+		margin-bottom: 1.875rem;
 	}
 </style>

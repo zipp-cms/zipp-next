@@ -56,25 +56,25 @@
 		inset: 0;
 		display: grid;
 		place-items: center;
-		padding: 16px;
+		padding: 1rem;
 		background: var(--bg);
 	}
 
 	form {
 		display: flex;
 		flex-direction: column;
-		gap: 16px;
-		width: min(360px, 100%);
-		padding: 28px;
+		gap: 1rem;
+		width: min(22.5rem, 100%);
+		padding: 1.75rem;
 	}
 
 	.logo {
-		width: 120px;
-		margin: -8px 0 -4px -6px;
+		width: 7.5rem;
+		margin: -0.5rem 0 -0.25rem -0.375rem;
 	}
 
 	button {
 		justify-content: center;
-		padding: 8px 12px;
+		padding: 0.5rem 0.75rem;
 	}
 </style>

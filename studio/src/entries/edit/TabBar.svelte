@@ -46,14 +46,14 @@
 	}
 
 	.errors {
-		min-width: 18px;
-		padding: 0 5px;
+		min-width: 1.125rem;
+		padding: 0 0.3125rem;
 		border-radius: 999px;
 		background: var(--danger);
 		color: var(--on-accent);
 		font-size: var(--fs-xs);
 		font-weight: 600;
-		line-height: 17px;
+		line-height: 1.0625rem;
 		text-align: center;
 	}
 </style>

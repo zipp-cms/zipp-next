@@ -70,35 +70,35 @@
 
 <style>
 	.seo {
-		margin-bottom: 20px;
+		margin-bottom: 1.25rem;
 		overflow-x: auto;
 	}
 
 	table {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 14px;
+		font-size: 0.875rem;
 	}
 
 	th {
-		padding: 6px 8px;
+		padding: 0.375rem 0.5rem;
 		text-align: left;
 		font-weight: 600;
 	}
 
 	td {
-		padding: 6px 8px;
+		padding: 0.375rem 0.5rem;
 		border-top: 1px solid var(--line);
 		vertical-align: top;
 	}
 
 	code {
-		font-size: 13px;
+		font-size: 0.8125rem;
 		color: var(--muted);
 	}
 
 	.muted {
 		color: var(--muted);
-		font-size: 14px;
+		font-size: 0.875rem;
 	}
 </style>

@@ -6,10 +6,11 @@
 		eager: true,
 	}) as Record<string, string>;
 
+	/** `size` in px at the browser's default font size, it grows with it */
 	let { name, size = 16 }: { name: string; size?: number } = $props();
 </script>
 
-<span class="icon" style:width="{size}px" style:height="{size}px">
+<span class="icon" style:width="{size / 16}rem" style:height="{size / 16}rem">
 	{@html icons[`./icons/${name}.svg`]}
 </span>
 

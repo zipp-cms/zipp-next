@@ -64,7 +64,7 @@
 <style lang="scss">
 	.embed {
 		position: relative;
-		margin: 12px 0;
+		margin: 0.75rem 0;
 		font-size: var(--fs-base);
 		line-height: 1.45;
 		white-space: normal;
@@ -76,7 +76,7 @@
 		left: 50%;
 		z-index: var(--z-raised);
 		gap: 3px;
-		padding: 1px 8px;
+		padding: 1px 0.5rem;
 		font-size: var(--fs-xs);
 		color: var(--accent);
 		border-color: var(--border);

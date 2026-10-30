@@ -139,7 +139,7 @@
 <style lang="scss">
 	.split {
 		display: grid;
-		grid-template-columns: minmax(320px, 420px) 1fr;
+		grid-template-columns: minmax(20rem, 26.25rem) 1fr;
 		height: 100%;
 	}
 
@@ -154,7 +154,7 @@
 	.log {
 		flex: 1;
 		overflow-y: auto;
-		padding: 0 16px;
+		padding: 0 1rem;
 	}
 
 	.hint {
@@ -163,25 +163,25 @@
 	}
 
 	.msg {
-		margin: 12px 0;
-		padding: 10px 12px;
+		margin: 0.75rem 0;
+		padding: 0.625rem 0.75rem;
 		border-radius: var(--radius-sm);
 		line-height: 1.45;
 		overflow-wrap: anywhere;
 
 		&.user {
-			margin-left: 32px;
+			margin-left: 2rem;
 			background: var(--text);
 			color: var(--surface);
 			white-space: pre-wrap;
 		}
 
 		&.ai {
-			margin-right: 32px;
+			margin-right: 2rem;
 			background: var(--input);
 
 			:global(p) {
-				margin: 0 0 8px;
+				margin: 0 0 0.5rem;
 			}
 
 			:global(p:last-child) {
@@ -197,8 +197,8 @@
 	.action {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		margin: 8px 0;
+		gap: 0.625rem;
+		margin: 0.5rem 0;
 		font-size: var(--fs-base);
 		color: var(--muted);
 
@@ -208,8 +208,8 @@
 
 		&::before {
 			content: '';
-			width: 8px;
-			height: 8px;
+			width: 0.5rem;
+			height: 0.5rem;
 			border-radius: 50%;
 			background: var(--changed);
 		}
@@ -217,9 +217,9 @@
 
 	form {
 		display: flex;
-		gap: 8px;
+		gap: 0.5rem;
 		align-items: flex-end;
-		padding: 16px;
+		padding: 1rem;
 
 		textarea {
 			resize: none;

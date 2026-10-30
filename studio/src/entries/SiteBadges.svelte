@@ -51,7 +51,7 @@
 	.sites {
 		display: inline-flex;
 		flex-wrap: wrap;
-		gap: 4px;
+		gap: 0.25rem;
 	}
 
 	button {

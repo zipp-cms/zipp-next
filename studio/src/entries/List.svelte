@@ -213,7 +213,7 @@
 		>
 			<span
 				class="name"
-				style:padding-left="{depth(entries, e) * 1.5}rem"
+				style:padding-left="{depth(entries, e) * 1.3125}rem"
 			>
 				{#if canMove}
 					<span
@@ -270,17 +270,17 @@
 <style lang="scss">
 	// no overflow hidden, the menus of the last rows reach out
 	.list {
-		padding: 0 0 6px;
+		padding: 0 0 0.375rem;
 	}
 
 	.search {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		padding: 10px 14px;
+		gap: 0.75rem;
+		padding: 0.625rem 0.875rem;
 
 		.field {
-			width: 320px;
+			width: 20rem;
 		}
 
 		.total {
@@ -290,15 +290,17 @@
 
 	.row {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 13rem 7rem 2rem;
+		grid-template-columns: minmax(0, 1fr) 11.375rem 6.125rem 1.75rem;
 		align-items: center;
-		gap: 12px;
-		min-height: 44px;
-		padding: 4px 16px;
+		gap: 0.75rem;
+		min-height: 2.75rem;
+		padding: 0.25rem 1rem;
 		border-top: 1px solid var(--line);
 
 		&.types {
-			grid-template-columns: minmax(0, 1fr) 13rem 10rem 7rem 2rem;
+			grid-template-columns:
+				minmax(0, 1fr)
+				11.375rem 8.75rem 6.125rem 1.75rem;
 		}
 
 		&:not(.columns):hover {
@@ -307,7 +309,7 @@
 	}
 
 	.columns {
-		min-height: 32px;
+		min-height: 2rem;
 		color: var(--muted);
 		font-size: var(--fs-xs);
 		font-weight: 600;
@@ -329,7 +331,7 @@
 	.status {
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: 0.25rem;
 		flex-wrap: wrap;
 	}
 
@@ -342,7 +344,7 @@
 	.name {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: 0.5rem;
 		min-width: 0;
 	}
 
@@ -380,7 +382,7 @@
 	@media (max-width: 800px) {
 		.row,
 		.row.types {
-			grid-template-columns: minmax(0, 1fr) auto 2rem;
+			grid-template-columns: minmax(0, 1fr) auto 1.75rem;
 		}
 
 		.hide-small {

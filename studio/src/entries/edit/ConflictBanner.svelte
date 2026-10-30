@@ -30,9 +30,9 @@
 	.conflict {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		margin-bottom: 16px;
-		padding: 10px 14px;
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+		padding: 0.625rem 0.875rem;
 		color: var(--warn);
 		background: var(--warn-soft);
 		border: 1px solid var(--warn-line);

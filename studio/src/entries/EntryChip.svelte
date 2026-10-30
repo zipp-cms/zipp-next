@@ -43,6 +43,6 @@
 	// the type on the line of the title
 	.open {
 		align-items: baseline;
-		padding: 4px 0;
+		padding: 0.25rem 0;
 	}
 </style>

@@ -36,8 +36,8 @@
 	.bar {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		padding: 8px 16px;
+		gap: 0.75rem;
+		padding: 0.5rem 1rem;
 		background: var(--surface);
 		font-size: var(--fs-base);
 

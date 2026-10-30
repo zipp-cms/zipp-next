@@ -93,12 +93,12 @@
 	}
 
 	.editor {
-		padding: 4px 12px;
-		min-height: 6rem;
+		padding: 0.25rem 0.75rem;
+		min-height: 5.25rem;
 
 		:global(.tiptap) {
 			outline: none;
-			min-height: 5rem;
+			min-height: 4.375rem;
 		}
 
 		// the invitation to write: in an empty text, else only at the end

@@ -69,7 +69,7 @@
 
 {#if inline}
 	<div class="inline" class:open>
-		<Popover bind:open align="center" width="16rem" label="Add a block">
+		<Popover bind:open align="center" width="14rem" label="Add a block">
 			{#snippet trigger({ toggle: t })}
 				<button
 					type="button"
@@ -92,7 +92,7 @@
 			</button>
 		{/each}
 		{#if rest.length}
-			<Popover bind:open width="16rem" label="More blocks">
+			<Popover bind:open width="14rem" label="More blocks">
 				{#snippet trigger({ toggle: t })}
 					<button type="button" onclick={() => toggle(t)}>
 						More
@@ -110,7 +110,7 @@
 	.bar {
 		display: inline-flex;
 		flex-wrap: wrap;
-		margin-top: 8px;
+		margin-top: 0.5rem;
 		border: 1px solid var(--border-strong);
 		border-radius: var(--radius);
 		background: var(--surface);
@@ -133,12 +133,12 @@
 		z-index: var(--z-raised);
 		display: flex;
 		justify-content: center;
-		height: 10px;
+		height: 0.625rem;
 		margin: -1px 0;
 	}
 
 	.insert {
-		margin-top: -6px;
+		margin-top: -0.375rem;
 		padding: 2px;
 		border-radius: 50%;
 		color: var(--accent);

@@ -73,9 +73,9 @@
 	.viewing {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		margin-bottom: 24px;
-		padding: 12px 16px;
+		gap: 0.75rem;
+		margin-bottom: 1.5rem;
+		padding: 0.75rem 1rem;
 		background: var(--input);
 
 		span {
@@ -84,7 +84,7 @@
 	}
 
 	.slug {
-		margin: -14px 0 30px;
+		margin: -0.875rem 0 1.875rem;
 		color: var(--muted);
 		font-size: var(--fs-base);
 	}

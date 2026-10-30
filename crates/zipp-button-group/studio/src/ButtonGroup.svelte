@@ -31,16 +31,16 @@
 	.group {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 6px;
+		gap: 0.375rem;
 	}
 
 	button {
 		display: inline-flex;
 		align-items: center;
-		gap: 8px;
-		padding: 8px 12px;
+		gap: 0.5rem;
+		padding: 0.5rem 0.75rem;
 		font: inherit;
-		font-size: 14px;
+		font-size: 0.875rem;
 		border: 1px solid transparent;
 		border-radius: 2px;
 		background: var(--input, #e9e9ec);
@@ -56,8 +56,8 @@
 	}
 
 	.dot {
-		width: 10px;
-		height: 10px;
+		width: 0.625rem;
+		height: 0.625rem;
 		border-radius: 50%;
 		background: var(--color);
 	}

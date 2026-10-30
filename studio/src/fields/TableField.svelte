@@ -60,12 +60,12 @@
 <style>
 	table {
 		width: 100%;
-		margin-bottom: 6px;
+		margin-bottom: 0.375rem;
 		border-collapse: collapse;
 	}
 
 	th {
-		padding: 0 4px 4px;
+		padding: 0 0.25rem 0.25rem;
 		text-align: left;
 		font-size: var(--fs-md);
 		font-weight: normal;
@@ -73,7 +73,7 @@
 	}
 
 	td {
-		padding: 2px 4px;
+		padding: 2px 0.25rem;
 	}
 
 	.actions {

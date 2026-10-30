@@ -158,13 +158,13 @@
 	.blocks {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: 0.375rem;
 	}
 
 	.tools {
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: 0.25rem;
 		color: var(--muted);
 		font-size: var(--fs-sm);
 

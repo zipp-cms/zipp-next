@@ -40,8 +40,8 @@
 		position: relative;
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		padding: 8px 10px;
+		gap: 0.625rem;
+		padding: 0.5rem 0.625rem;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
 		color: var(--muted);
@@ -50,8 +50,8 @@
 	.mark {
 		display: grid;
 		place-items: center;
-		width: 28px;
-		height: 28px;
+		width: 1.75rem;
+		height: 1.75rem;
 		flex-shrink: 0;
 		border-radius: var(--radius);
 		background: var(--accent);

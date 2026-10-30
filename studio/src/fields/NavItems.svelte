@@ -99,13 +99,13 @@
 	.items {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: 0.375rem;
 	}
 
 	/* the second level indented */
 	.children {
-		margin: 12px 0 0 6px;
-		padding-left: 12px;
+		margin: 0.75rem 0 0 0.375rem;
+		padding-left: 0.75rem;
 		border-left: 2px solid var(--accent-soft);
 	}
 </style>

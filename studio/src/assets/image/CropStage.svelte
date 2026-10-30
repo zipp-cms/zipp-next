@@ -163,8 +163,8 @@
 	// inside the corners, the frame cuts what is outside the image
 	.handle {
 		position: absolute;
-		width: 14px;
-		height: 14px;
+		width: 0.875rem;
+		height: 0.875rem;
 		background: var(--surface);
 		border: 2px solid var(--accent);
 		border-radius: var(--radius-sm);

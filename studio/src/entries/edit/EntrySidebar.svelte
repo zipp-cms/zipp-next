@@ -185,25 +185,25 @@
 <style lang="scss">
 	aside {
 		position: sticky;
-		top: 64px;
+		top: 4rem;
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
-		max-height: calc(100vh - 80px);
+		gap: 0.75rem;
+		max-height: calc(100vh - 5rem);
 		overflow-y: auto;
 	}
 
 	.card {
 		display: flex;
 		flex-direction: column;
-		gap: 14px;
-		padding: 12px;
+		gap: 0.875rem;
+		padding: 0.75rem;
 	}
 
 	label {
 		display: flex;
 		flex-direction: column;
-		gap: 5px;
+		gap: 0.3125rem;
 
 		> span:first-child {
 			font-size: var(--fs-sm);
@@ -214,7 +214,7 @@
 	.switch {
 		flex-direction: row;
 		align-items: center;
-		gap: 8px;
+		gap: 0.5rem;
 
 		> span:first-child {
 			font-size: var(--fs-md);
@@ -228,7 +228,7 @@
 	}
 
 	.sites {
-		margin-top: -6px;
+		margin-top: -0.375rem;
 	}
 
 	.value {
@@ -240,7 +240,7 @@
 	}
 
 	h3 {
-		margin: 0 0 -6px;
+		margin: 0 0 -0.375rem;
 		font-size: var(--fs-sm);
 		font-weight: 600;
 	}

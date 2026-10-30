@@ -81,6 +81,6 @@
 
 <style>
 	.search {
-		margin: 16px 0 12px;
+		margin: 1rem 0 0.75rem;
 	}
 </style>

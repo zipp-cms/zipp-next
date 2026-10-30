@@ -174,15 +174,15 @@
 	.link {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 0.5rem;
 	}
 
 	.row {
 		display: flex;
-		gap: 8px;
+		gap: 0.5rem;
 
 		select {
-			width: 8rem;
+			width: 7rem;
 			flex-shrink: 0;
 		}
 	}
@@ -195,7 +195,7 @@
 	.check {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: 0.5rem;
 		color: var(--muted);
 	}
 </style>

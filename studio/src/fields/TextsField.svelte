@@ -67,8 +67,8 @@
 	}
 
 	.key {
-		width: 12rem;
-		padding-right: 12px;
+		width: 10.5rem;
+		padding-right: 0.75rem;
 		font-family: monospace;
 		font-size: var(--fs-md);
 		color: var(--muted);

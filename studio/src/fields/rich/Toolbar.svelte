@@ -112,7 +112,7 @@
 		</button>
 	{/if}
 	{#if opts.links}
-		<Popover bind:open={linking} width="28rem" label="Link">
+		<Popover bind:open={linking} width="24.5rem" label="Link">
 			{#snippet trigger({ toggle })}
 				<button
 					type="button"
@@ -151,7 +151,7 @@
 	{/if}
 	{#if opts.buttons || blockTypes.length}
 		<span class="sep"></span>
-		<Popover bind:open={inserting} width="14rem" label="Insert">
+		<Popover bind:open={inserting} width="12.25rem" label="Insert">
 			{#snippet trigger({ toggle })}
 				<button type="button" class="insert" onclick={toggle}>
 					<Icon name="add" size={13} />
@@ -188,14 +188,14 @@
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 2px;
-		padding: 3px 4px;
+		padding: 3px 0.25rem;
 		background: var(--surface-2);
 		border-bottom: 1px solid var(--line);
 		border-radius: var(--radius) var(--radius) 0 0;
 
 		> button,
 		> :global(.popover > button) {
-			padding: 3px 7px;
+			padding: 3px 0.4375rem;
 			border: none;
 			background: none;
 			color: var(--text-2);
@@ -214,8 +214,8 @@
 
 	.format {
 		width: auto;
-		height: 28px;
-		padding: 0 6px;
+		height: 1.75rem;
+		padding: 0 0.375rem;
 		font-size: var(--fs-sm);
 		border-color: var(--border);
 		border-radius: var(--radius-sm);
@@ -236,13 +236,13 @@
 	}
 
 	.link {
-		padding: 8px;
+		padding: 0.5rem;
 
 		.actions {
 			display: flex;
 			justify-content: flex-end;
-			gap: 8px;
-			margin-top: 10px;
+			gap: 0.5rem;
+			margin-top: 0.625rem;
 		}
 	}
 </style>

@@ -146,13 +146,13 @@
 <style>
 	.seo {
 		display: grid;
-		gap: 12px;
+		gap: 0.75rem;
 	}
 
 	.preview {
 		display: grid;
 		gap: 2px;
-		padding: 12px 14px;
+		padding: 0.75rem 0.875rem;
 		background: white;
 		border: 1px solid var(--line);
 		border-radius: 2px;
@@ -160,31 +160,31 @@
 	}
 
 	.url {
-		font-size: 13px;
+		font-size: 0.8125rem;
 		color: #4d5156;
 	}
 
 	.title {
-		font-size: 19px;
+		font-size: 1.1875rem;
 		color: #1a0dab;
 	}
 
 	.description {
-		font-size: 14px;
+		font-size: 0.875rem;
 		color: #4d5156;
 	}
 
 	label,
 	.row {
 		display: grid;
-		gap: 6px;
+		gap: 0.375rem;
 	}
 
 	label > span,
 	.row > span {
 		display: flex;
 		justify-content: space-between;
-		font-size: 14px;
+		font-size: 0.875rem;
 	}
 
 	small {

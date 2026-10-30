@@ -219,10 +219,10 @@
 <style lang="scss">
 	.detail {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 280px;
-		gap: 20px;
+		grid-template-columns: minmax(0, 1fr) 17.5rem;
+		gap: 1.25rem;
 		align-items: start;
-		padding-top: 16px;
+		padding-top: 1rem;
 	}
 
 	@media (max-width: 900px) {
@@ -232,26 +232,26 @@
 	}
 
 	.file {
-		width: 240px;
+		width: 15rem;
 	}
 
 	aside {
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
+		gap: 0.75rem;
 	}
 
 	.card {
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
-		padding: 12px;
+		gap: 0.75rem;
+		padding: 0.75rem;
 	}
 
 	dl {
 		display: grid;
 		grid-template-columns: auto 1fr;
-		gap: 4px 12px;
+		gap: 0.25rem 0.75rem;
 		margin: 0;
 		font-size: var(--fs-sm);
 	}
@@ -268,7 +268,7 @@
 	.actions {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 6px;
+		gap: 0.375rem;
 	}
 
 	h3 {
@@ -280,7 +280,7 @@
 	.usage {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: 0.375rem;
 		font-size: var(--fs-md);
 
 		li {

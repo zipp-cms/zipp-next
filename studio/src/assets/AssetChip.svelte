@@ -23,11 +23,11 @@
 
 <style lang="scss">
 	.chip {
-		padding-left: 4px;
+		padding-left: 0.25rem;
 	}
 
 	.thumb {
-		width: 30px;
+		width: 1.875rem;
 		flex-shrink: 0;
 	}
 </style>

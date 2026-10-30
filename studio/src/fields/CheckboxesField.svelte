@@ -34,12 +34,12 @@
 	.options {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 8px 20px;
+		gap: 0.5rem 1.25rem;
 	}
 
 	label {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		gap: 0.375rem;
 	}
 </style>

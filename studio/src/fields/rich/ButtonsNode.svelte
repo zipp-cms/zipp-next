@@ -96,14 +96,14 @@
 	.buttons {
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
+		gap: 0.625rem;
 	}
 
 	.item {
 		display: flex;
-		gap: 8px;
+		gap: 0.5rem;
 		align-items: flex-start;
-		padding-bottom: 10px;
+		padding-bottom: 0.625rem;
 		border-bottom: 1px solid var(--line);
 
 		> :global(:first-child) {

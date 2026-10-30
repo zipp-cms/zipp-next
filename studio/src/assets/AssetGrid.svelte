@@ -39,8 +39,8 @@
 <style lang="scss">
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-		gap: 16px;
+		grid-template-columns: repeat(auto-fill, minmax(8.75rem, 1fr));
+		gap: 1rem;
 	}
 
 	.tile {
@@ -48,7 +48,7 @@
 		display: flex;
 		flex-direction: column;
 		align-items: stretch;
-		gap: 6px;
+		gap: 0.375rem;
 		padding: 0;
 		border: none;
 		border-radius: var(--radius-lg);
@@ -80,12 +80,12 @@
 
 	.check {
 		position: absolute;
-		top: 6px;
-		right: 6px;
+		top: 0.375rem;
+		right: 0.375rem;
 		display: grid;
 		place-items: center;
-		width: 22px;
-		height: 22px;
+		width: 1.375rem;
+		height: 1.375rem;
 		border-radius: 50%;
 		background: var(--accent);
 		color: var(--on-accent);

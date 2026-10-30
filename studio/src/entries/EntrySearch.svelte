@@ -67,7 +67,7 @@
 	}
 </script>
 
-<Popover bind:open width="26rem" label="Choose {what}">
+<Popover bind:open width="22.75rem" label="Choose {what}">
 	{#snippet trigger({ toggle, open })}
 		<AddButton onclick={() => ((search = ''), toggle())} expanded={open}>
 			Choose {what}
@@ -102,7 +102,7 @@
 	.foot {
 		display: flex;
 		justify-content: flex-end;
-		padding-top: 6px;
+		padding-top: 0.375rem;
 		border-top: 1px solid var(--line);
 	}
 </style>

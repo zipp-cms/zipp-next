@@ -233,7 +233,7 @@
 	}
 
 	.global {
-		margin-bottom: 18px;
+		margin-bottom: 1.125rem;
 		font-size: var(--fs-title);
 		line-height: 1.25;
 		font-weight: 700;
@@ -243,8 +243,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 12px;
-		margin-bottom: 18px;
+		gap: 0.75rem;
+		margin-bottom: 1.125rem;
 	}
 
 	.layout-link {

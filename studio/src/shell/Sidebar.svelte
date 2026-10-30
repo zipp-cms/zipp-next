@@ -120,9 +120,9 @@
 		top: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
+		gap: 0.75rem;
 		height: 100vh;
-		padding: 12px 10px;
+		padding: 0.75rem 0.625rem;
 		overflow-y: auto;
 		background: var(--surface);
 		border-right: 1px solid var(--line);
@@ -136,7 +136,7 @@
 
 	hr {
 		width: 100%;
-		margin: 8px 0;
+		margin: 0.5rem 0;
 		border: none;
 		border-top: 1px solid var(--line);
 	}
@@ -144,8 +144,8 @@
 	.item {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		padding: 7px 10px;
+		gap: 0.625rem;
+		padding: 0.4375rem 0.625rem;
 		border-radius: var(--radius);
 		color: var(--text-2);
 		font-weight: 500;
@@ -166,11 +166,11 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1px;
-		margin: 2px 0 6px 18px;
-		padding-left: 8px;
+		margin: 2px 0 0.375rem 1.125rem;
+		padding-left: 0.5rem;
 
 		a {
-			padding: 5px 10px;
+			padding: 0.3125rem 0.625rem;
 			border-radius: var(--radius);
 			color: var(--muted);
 			font-size: var(--fs-md);

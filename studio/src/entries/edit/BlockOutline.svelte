@@ -36,8 +36,8 @@
 	.outline {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
-		padding: 12px;
+		gap: 0.5rem;
+		padding: 0.75rem;
 	}
 
 	h3 {
@@ -48,11 +48,11 @@
 
 	.block {
 		display: grid;
-		grid-template-columns: 22px auto minmax(0, 1fr);
+		grid-template-columns: 1.375rem auto minmax(0, 1fr);
 		align-items: baseline;
-		gap: 6px;
+		gap: 0.375rem;
 		width: 100%;
-		padding: 5px 4px;
+		padding: 0.3125rem 0.25rem;
 		font-weight: 400;
 	}
 

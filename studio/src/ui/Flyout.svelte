@@ -68,7 +68,7 @@
 		z-index: var(--z-overlay);
 		display: flex;
 		flex-direction: column;
-		width: min(1040px, 92vw);
+		width: min(65rem, 92vw);
 		background: var(--bg);
 		box-shadow: var(--shadow-flyout);
 		outline: none;
@@ -76,12 +76,12 @@
 	}
 
 	.narrow {
-		width: min(760px, 92vw);
+		width: min(47.5rem, 92vw);
 	}
 
 	@keyframes slide {
 		from {
-			transform: translateX(40px);
+			transform: translateX(2.5rem);
 			opacity: 0;
 		}
 	}
@@ -90,16 +90,16 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 12px;
-		min-height: 48px;
-		padding: 8px 16px;
+		gap: 0.75rem;
+		min-height: 3rem;
+		padding: 0.5rem 1rem;
 		background: var(--surface);
 		border-bottom: 1px solid var(--line);
 	}
 
 	.actions {
 		display: flex;
-		gap: 8px;
+		gap: 0.5rem;
 	}
 
 	/* the page inside scrolls, its top bar sticks to this */

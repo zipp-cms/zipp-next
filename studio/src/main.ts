@@ -28,7 +28,7 @@ session
 	.catch(e => {
 		const p = document.createElement('p');
 		p.className = 'error';
-		p.style.padding = '24px';
+		p.style.padding = '1.5rem';
 		p.textContent = `zipp can't be reached (${e.message}), reload the page to try again.`;
 		document.getElementById('app')!.append(p);
 	});

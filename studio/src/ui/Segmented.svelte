@@ -54,8 +54,8 @@
 		border-radius: var(--radius-lg);
 
 		button {
-			gap: 6px;
-			padding: 5px 12px;
+			gap: 0.375rem;
+			padding: 0.3125rem 0.75rem;
 			border: none;
 			border-radius: var(--radius);
 			background: none;

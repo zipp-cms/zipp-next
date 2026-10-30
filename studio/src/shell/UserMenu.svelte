@@ -28,19 +28,19 @@
 	.me {
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: 0.25rem;
 		margin-top: auto;
-		padding-top: 12px;
+		padding-top: 0.75rem;
 		border-top: 1px solid var(--line);
 	}
 
 	a {
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		gap: 0.625rem;
 		flex: 1;
 		min-width: 0;
-		padding: 4px 6px;
+		padding: 0.25rem 0.375rem;
 		border-radius: var(--radius);
 		color: inherit;
 		text-decoration: none;
@@ -53,8 +53,8 @@
 	.avatar {
 		display: grid;
 		place-items: center;
-		width: 28px;
-		height: 28px;
+		width: 1.75rem;
+		height: 1.75rem;
 		flex-shrink: 0;
 		border-radius: 50%;
 		background: var(--accent-soft);

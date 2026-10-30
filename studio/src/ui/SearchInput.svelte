@@ -32,12 +32,12 @@
 
 		:global(.icon) {
 			position: absolute;
-			left: 10px;
+			left: 0.625rem;
 			pointer-events: none;
 		}
 
 		input {
-			padding-left: 32px;
+			padding-left: 2rem;
 		}
 	}
 </style>

@@ -215,7 +215,7 @@
 			</h2>
 			<ul class="plain">
 				{#each entries as e (e.id)}
-					<li style:padding-left="{depth(entries, e) * 12}px">
+					<li style:padding-left="{depth(entries, e) * 0.75}rem">
 						<a href="/admin/entries/{handle}/{e.id}">{e.title}</a>
 						{#if drafts.includes(e.id)}
 							<span
@@ -244,8 +244,8 @@
 <style>
 	dl {
 		display: grid;
-		grid-template-columns: 140px 1fr;
-		gap: 8px 16px;
+		grid-template-columns: 8.75rem 1fr;
+		gap: 0.5rem 1rem;
 		margin: 0;
 	}
 
@@ -260,8 +260,8 @@
 	li {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		padding: 5px 0;
+		gap: 0.375rem;
+		padding: 0.3125rem 0;
 		border-top: 1px solid var(--line);
 	}
 

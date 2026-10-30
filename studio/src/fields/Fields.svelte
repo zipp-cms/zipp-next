@@ -59,18 +59,18 @@
 	.fields {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: 0.375rem;
 
 		.value {
-			margin-bottom: 14px;
+			margin-bottom: 0.875rem;
 		}
 	}
 
 	// inside a block: the label on the left, compact
 	.nested {
 		display: grid;
-		grid-template-columns: 130px minmax(0, 1fr);
-		gap: 10px 20px;
+		grid-template-columns: 8.125rem minmax(0, 1fr);
+		gap: 0.625rem 1.25rem;
 		align-items: center;
 
 		.value {
@@ -78,20 +78,20 @@
 		}
 
 		// at the top of tall fields like blocks or rich text, the first
-		// line of a field is 34px high
+		// line of a field is 2.125rem high
 		> :global(label) {
 			align-self: start;
 			flex-direction: column;
 			align-items: flex-start;
 			gap: 1px;
-			padding-top: 7px;
+			padding-top: 0.4375rem;
 		}
 	}
 
 	@media (max-width: 800px) {
 		.nested {
 			grid-template-columns: 1fr;
-			gap: 6px;
+			gap: 0.375rem;
 		}
 	}
 </style>

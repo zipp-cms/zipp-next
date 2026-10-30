@@ -60,7 +60,7 @@
 	label {
 		display: flex;
 		align-items: baseline;
-		gap: 6px;
+		gap: 0.375rem;
 		flex-wrap: wrap;
 		font-size: var(--fs-md);
 		font-weight: 600;
@@ -68,7 +68,7 @@
 	}
 
 	.dot {
-		margin-right: 4px;
+		margin-right: 0.25rem;
 	}
 
 	.translated {

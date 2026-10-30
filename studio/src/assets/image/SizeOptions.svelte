@@ -86,10 +86,10 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: flex-end;
-		gap: 10px;
+		gap: 0.625rem;
 	}
 
 	input[type='number'] {
-		width: 7rem;
+		width: 6.125rem;
 	}
 </style>

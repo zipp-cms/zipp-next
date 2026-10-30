@@ -38,7 +38,7 @@
 
 <style>
 	.card {
-		max-width: 900px;
-		padding: 24px 32px;
+		max-width: 56.25rem;
+		padding: 1.5rem 2rem;
 	}
 </style>

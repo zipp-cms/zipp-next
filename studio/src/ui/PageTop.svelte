@@ -41,35 +41,35 @@
 		z-index: var(--z-bar);
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: 0.5rem;
 		flex-wrap: wrap;
-		min-height: 48px;
-		padding: 8px 16px;
+		min-height: 3rem;
+		padding: 0.5rem 1rem;
 		background: var(--surface);
 		border-bottom: 1px solid var(--line);
 	}
 
 	.bleed {
-		margin: 0 calc(-1 * var(--page-pad)) 20px;
-		padding: 8px var(--page-pad);
+		margin: 0 calc(-1 * var(--page-pad)) 1.25rem;
+		padding: 0.5rem var(--page-pad);
 	}
 
 	h1 {
 		min-width: 0;
 		font-size: var(--fs-lg);
-		line-height: 20px;
+		line-height: 1.25rem;
 	}
 
 	.state {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		gap: 0.375rem;
 	}
 
 	.actions {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: 0.5rem;
 		margin-left: auto;
 	}
 </style>

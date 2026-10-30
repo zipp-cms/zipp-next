@@ -18,7 +18,7 @@
 	.crumbs {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		gap: 0.375rem;
 		min-width: 0;
 		font-size: var(--fs-md);
 	}

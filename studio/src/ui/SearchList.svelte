@@ -48,8 +48,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
-		max-height: 18rem;
-		margin-top: 4px;
+		max-height: 15.75rem;
+		margin-top: 0.25rem;
 		overflow-y: auto;
 	}
 </style>

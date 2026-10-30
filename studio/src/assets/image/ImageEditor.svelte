@@ -245,7 +245,7 @@
 	.editor {
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
+		gap: 0.625rem;
 	}
 
 	.tools,
@@ -253,11 +253,11 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 4px;
+		gap: 0.25rem;
 	}
 
 	.tools {
-		padding: 4px;
+		padding: 0.25rem;
 		background: var(--surface);
 		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
@@ -281,7 +281,7 @@
 	.stage {
 		display: grid;
 		place-items: center;
-		padding: 16px;
+		padding: 1rem;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
 
@@ -311,9 +311,9 @@
 
 	.point {
 		position: absolute;
-		width: 1.4rem;
-		height: 1.4rem;
-		margin: -0.7rem 0 0 -0.7rem;
+		width: 1.225rem;
+		height: 1.225rem;
+		margin: -0.6125rem 0 0 -0.6125rem;
 		border: 3px solid white;
 		border-radius: 50%;
 		box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);

@@ -64,7 +64,7 @@
 	}
 
 	.popup {
-		top: calc(100% + 4px);
+		top: calc(100% + 0.25rem);
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
