@@ -9,7 +9,11 @@ import { mount as svelteMount, unmount, type Component } from 'svelte';
 export type FieldProps<V = unknown> = {
 	/** the field of the schema: handle, label, type, options, … */
 	field: { handle: string; label: string; type: string; options: unknown };
-	/** null while there is none */
+	/**
+	 * null while there is none. Changed elsewhere (a restore) it comes
+	 * with `update`; what the editor sends with `onchange` it shows
+	 * itself, the studio doesn't send it back (`fieldModule` does that).
+	 */
 	value: V | null;
 	onchange(value: V | null): void;
 	/** the entry it belongs to, null for one not saved yet */
@@ -60,14 +64,26 @@ export type FieldModule = {
 
 /**
  * The `mount` of a field module from a Svelte component, its props
- * reactive: `export const mount = fieldModule(ButtonGroup);`
+ * reactive: `export const mount = fieldModule(ButtonGroup);`. What the
+ * editor sends with `onchange` is its `value` at once: the studio sends
+ * the value back only when it changes elsewhere (a restore, another
+ * site), not what the editor sent itself.
  */
 export function fieldModule(component: Component<any>): FieldModule['mount'] {
 	return (target, initial) => {
-		const props = $state({ ...initial });
+		// the studio's onchange, the editor gets one that shows the value
+		let send = initial.onchange;
+		const props = $state({
+			...initial,
+			onchange: (v: unknown) => {
+				props.value = v;
+				send(v);
+			},
+		});
 		const app = svelteMount(component, { target, props });
 		return {
-			update(next) {
+			update({ onchange, ...next }) {
+				if (onchange) send = onchange;
 				Object.assign(props, next);
 			},
 			destroy() {
