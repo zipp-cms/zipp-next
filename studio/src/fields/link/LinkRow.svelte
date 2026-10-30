@@ -83,17 +83,11 @@
 	.kind {
 		display: grid;
 		place-items: center;
-		width: 2rem;
-		height: 2rem;
+		width: 1.25rem;
 		flex-shrink: 0;
-		border: 1px solid var(--line);
-		border-radius: var(--radius);
-		background: var(--surface-2);
 		color: var(--muted);
 
 		&.entry {
-			border-color: transparent;
-			background: var(--accent-soft);
 			color: var(--accent);
 		}
 	}

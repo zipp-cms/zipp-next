@@ -90,6 +90,8 @@
 		depths: () => rows.map(r => r.depth),
 		maxDepth: () => depth - 1,
 		indent: 36,
+		// the padding of a row, the levels are indented in it
+		inset: 12,
 		onmove: move,
 	});
 
@@ -138,13 +140,9 @@
 			data-sort
 			class="row"
 			class:sort-dragging={sort.moving(i)}
-			style:margin-left="{row.depth * 2.25}rem"
+			style:--depth={row.depth}
 		>
-			<div
-				class="item"
-				class:editing={editing === i}
-				class:child={row.depth}
-			>
+			<div class="item" class:editing={editing === i}>
 				<LinkRow
 					{link}
 					summary={linkSummary(schema, link, refs)}
@@ -201,10 +199,9 @@
 </div>
 
 <style lang="scss">
-	// all levels in one card
+	// all levels in one card, a line between the links like the Pages list
 	.items {
 		position: relative;
-		padding: 0.375rem;
 		border: 1px solid var(--line);
 		border-radius: var(--radius-lg);
 		background: var(--surface);
@@ -214,23 +211,22 @@
 		}
 	}
 
+	.row + .row {
+		border-top: 1px solid var(--line);
+	}
+
+	// a link under another is indented in its row, the line goes across
 	.item {
-		padding: 0.375rem 0.5rem;
-		border-radius: var(--radius);
+		padding: 0.625rem 0.75rem 0.625rem
+			calc(0.75rem + var(--depth, 0) * 2.25rem);
 
 		&.editing {
 			background: var(--surface-2);
 		}
-
-		// a link under another: a line on its left
-		&.child {
-			border-left: 2px solid var(--line);
-			border-radius: 0 var(--radius) var(--radius) 0;
-		}
 	}
 
 	.panel {
-		margin: 0.25rem 0 0.5rem 2.75rem;
+		margin: 0 0.75rem 0.75rem calc(3.5rem + var(--depth, 0) * 2.25rem);
 		padding: 1rem;
 		border: 1px solid var(--accent);
 		border-radius: var(--radius-lg);
