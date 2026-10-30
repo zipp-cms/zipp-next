@@ -58,7 +58,12 @@ export function setToken(t: string | null) {
 	else localStorage.removeItem('zipp-token');
 }
 
-function send(method: string, path: string, body?: unknown) {
+function send(
+	method: string,
+	path: string,
+	body?: unknown,
+	signal?: AbortSignal,
+) {
 	const headers: Record<string, string> = {};
 	const t = token();
 	if (t) headers['session-token'] = t;
@@ -69,6 +74,7 @@ function send(method: string, path: string, body?: unknown) {
 	return fetch('/api' + path, {
 		method,
 		headers,
+		signal,
 		body:
 			body === undefined || form
 				? (body as FormData)
@@ -76,21 +82,34 @@ function send(method: string, path: string, body?: unknown) {
 	});
 }
 
+/** Whether an error says the session is missing or gone. */
+export function isSessionError(e: ApiError): boolean {
+	return (
+		e.type === 'MISSING_SESSION_TOKEN' || e.type === 'INVALID_SESSION_TOKEN'
+	);
+}
+
 /** The error of a response, a session that is missing or gone logs out. */
 function failed(resp: Response, data: any): ApiError {
+	const err = ApiError.fromJson(resp.status, data, resp.statusText);
 	// a role that may not do something only gets the error
-	const type = data?.error?.type;
-	if (type === 'MISSING_SESSION_TOKEN' || type === 'INVALID_SESSION_TOKEN') {
+	if (isSessionError(err)) {
 		setToken(null);
 		sessionLost();
 	}
-	return ApiError.fromJson(resp.status, data, resp.statusText);
+	return err;
 }
 
 export async function request(method: string, path: string, body?: unknown) {
 	const resp = await send(method, path, body);
 	const text = await resp.text();
-	const data = text ? JSON.parse(text) : null;
+	// an error page of a proxy is no JSON
+	let data = null;
+	try {
+		data = text ? JSON.parse(text) : null;
+	} catch {
+		if (resp.ok) throw new Error(`${path}: the answer is no JSON`);
+	}
 	if (!resp.ok) throw failed(resp, data);
 	return data;
 }
@@ -106,13 +125,25 @@ export async function* stream(
 	method: string,
 	path: string,
 	body?: unknown,
+	signal?: AbortSignal,
 ): AsyncGenerator<StreamEvent> {
-	const resp = await send(method, path, body);
+	const resp = await send(method, path, body, signal);
 	if (!resp.ok || !resp.body)
 		throw failed(resp, await resp.json().catch(() => null));
 
 	// blocks of `field: value` lines, split by an empty line
 	const reader = resp.body.pipeThrough(new TextDecoderStream()).getReader();
+	// leaving the loop early closes the stream
+	try {
+		yield* events(reader);
+	} finally {
+		reader.cancel().catch(() => {});
+	}
+}
+
+async function* events(
+	reader: ReadableStreamDefaultReader<string>,
+): AsyncGenerator<StreamEvent> {
 	let buf = '';
 	for (;;) {
 		const { value, done } = await reader.read();

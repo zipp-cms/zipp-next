@@ -20,6 +20,7 @@
 	import Fields from '../../fields/Fields.svelte';
 	import { can, isAdmin, sectionCrumbs } from '../../core/access';
 	import { EntryEditor } from './entryEditor.svelte';
+	import { setEditing } from '../../core/editing';
 	import { flyout } from '../../core/flyout.svelte';
 	import { time } from '../../core/format';
 	import { componentOf, sectionOf } from '../../core/schema';
@@ -45,6 +46,8 @@
 	// the page is new for another entry or site
 	const ed = untrack(() => editor);
 	const id = ed.id;
+	// the fields in it know their entry, also in the flyout
+	setEditing({ entryId: id, site: ed.site });
 
 	const secDef = $derived(sectionOf(schema, ed.sec));
 	const comp = $derived(componentOf(schema, ed.ty));

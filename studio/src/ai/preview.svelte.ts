@@ -22,7 +22,9 @@ export class SitePreview {
 	constructor(schema: Schema, site: string, view: string | null) {
 		const home = schema.siteUrls[site] ?? '';
 		this.bases = Object.values(schema.siteUrls).filter(Boolean);
-		this.origins = new Set(this.bases.map(b => new URL(b).origin));
+		this.origins = new Set(
+			this.bases.map(b => new URL(b, location.origin).origin),
+		);
 		// from before, it may be of a site that changed
 		this.view = view && this.ofSite(view) ? view : home;
 	}

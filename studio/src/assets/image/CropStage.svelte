@@ -75,6 +75,7 @@
 	}
 
 	function up() {
+		if (!drag) return;
 		drag = null;
 		refit++;
 	}
@@ -117,14 +118,14 @@
 			onpointerdown={e => down(e, 'move')}
 			onpointermove={move}
 			onpointerup={up}
+			onpointercancel={up}
+			onlostpointercapture={up}
 			role="presentation"
 		>
 			{#each ['nw', 'ne', 'sw', 'se'] as const as h (h)}
 				<span
 					class="handle {h}"
 					onpointerdown={e => down(e, h)}
-					onpointermove={move}
-					onpointerup={up}
 					role="presentation"
 				></span>
 			{/each}

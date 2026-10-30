@@ -50,7 +50,13 @@
 			.then(r => {
 				if (q === search) found = r.entries;
 			})
-			.finally(() => (loading = false));
+			.catch(() => {
+				if (q === search) found = [];
+			})
+			// only the newest search ends the loading
+			.finally(() => {
+				if (q === search) loading = false;
+			});
 	});
 
 	const shown = $derived(found.filter(e => !exclude.includes(e.id)));

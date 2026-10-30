@@ -11,7 +11,7 @@
 	import type { Snippet } from 'svelte';
 	import { session } from '../core/session.svelte';
 	import { current, go } from '../core/route.svelte';
-	import { forgetSchema } from '../core/router.svelte';
+	import { endSession } from '../core/router.svelte';
 	import type { Schema } from '../core/schema';
 	import FlyoutHost from './FlyoutHost.svelte';
 	import Sidebar from './Sidebar.svelte';
@@ -24,8 +24,7 @@
 
 	async function onlogout() {
 		await session.logout();
-		forgetSchema();
-		go('/login');
+		endSession();
 	}
 </script>
 

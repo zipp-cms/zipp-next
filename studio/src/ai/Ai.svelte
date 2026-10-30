@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import type { Schema } from '../core/schema';
 	import PageTop from '../ui/PageTop.svelte';
 	import { hasAgent } from '../core/access';
@@ -54,8 +54,12 @@
 	}
 
 	function onkeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' && !e.shiftKey) send(e);
+		// not while an input method composes a character
+		if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) send(e);
 	}
+
+	// leaving the page stops the answer
+	onDestroy(() => chat.stop());
 </script>
 
 <div class="split">

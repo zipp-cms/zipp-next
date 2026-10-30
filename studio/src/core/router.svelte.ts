@@ -1,6 +1,7 @@
 import { Router, type Request, type Route } from 'chuchi';
 import type { Component } from 'svelte';
 import { onSessionLost } from './client';
+import { flyout } from './flyout.svelte';
 import { session, type Session } from './session.svelte';
 import { getSchema, type Schema } from './schema';
 import { site, storeSite } from './site.svelte';
@@ -73,13 +74,17 @@ export function toLogin() {
 let schema: Promise<Schema> | null = null;
 
 function loadSchema(): Promise<Schema> {
-	schema ??= getSchema().then(s => {
+	if (schema) return schema;
+	const loading = getSchema().then(s => {
 		if (!s.sites.some(x => x.handle === site.current))
 			storeSite(s.sites[0].handle);
 		return s;
 	});
-	schema.catch(() => (schema = null));
-	return schema;
+	// a failed load is tried again, unless a newer one runs already
+	loading.catch(() => {
+		if (schema === loading) schema = null;
+	});
+	return (schema = loading);
 }
 
 /** After a logout the next user gets their own schema. */
@@ -140,6 +145,15 @@ export function inLayout(
 
 const escape = (s: string) => s.replace(/[/.]/g, '\\$&');
 
+/** The pages of the app for what has no page: a wrong path, an error. */
+export type Fallbacks = {
+	notFound: () => Promise<{ default: Component<any> }>;
+	/** gets `loadError` */
+	error: () => Promise<{ default: Component<any> }>;
+};
+
+let fallbacks: Fallbacks;
+
 /** The page of a request, its data loaded, or where to go instead. */
 async function resolve(
 	req: Request,
@@ -147,9 +161,10 @@ async function resolve(
 ): Promise<{ page: Page } | { redirect: string }> {
 	// an anchor on the same page is no new page
 	const key = req.pathname + req.url.search + '|' + site.current;
-	const NotFound = (await import('../shell/NotFound.svelte')).default;
-	if (!route)
+	if (!route) {
+		const NotFound = (await fallbacks.notFound()).default;
 		return { page: { layout: null, component: NotFound, props: {}, key } };
+	}
 
 	try {
 		const mod = await route.load(req);
@@ -162,47 +177,66 @@ async function resolve(
 		props = { ...props, ...((await mod.loadProps?.(props, lp)) ?? {}) };
 		if (lp.redirect) return { redirect: lp.redirect };
 		const component = props.loadError
-			? (await import('../shell/ErrorPage.svelte')).default
+			? (await fallbacks.error()).default
 			: mod.default;
 		return {
 			page: { layout: mod.layout ?? null, component, props, key },
 		};
 	} catch (e) {
-		const ErrorPage = (await import('../shell/ErrorPage.svelte')).default;
+		const ErrorPage = (await fallbacks.error()).default;
 		return {
 			page: {
 				layout: null,
 				component: ErrorPage,
-				props: { error: e },
+				props: { loadError: e },
 				key,
 			},
 		};
 	}
 }
 
+/** The session is gone: everything of it, and the login. */
+export function endSession(login = true) {
+	session.invalidate();
+	forgetSchema();
+	flyout.open = null;
+	if (login) toLogin();
+}
+
 /**
  * Starts the router: `onfirst` is called when the first page is ready,
  * to mount the app.
  */
-export function startRouter(onfirst: () => void) {
-	onSessionLost(() => {
-		session.invalidate();
-		forgetSchema();
-		toLogin();
-	});
+export function startRouter(pages: Fallbacks, onfirst: () => void) {
+	fallbacks = pages;
+	onSessionLost(endSession);
 	router.currentRequest.subscribe(req => {
 		if (req) current.path = req.pathname.slice(BASE.length) || '/';
 	});
 	let mounted = false;
+	// the newest request, an older one doesn't redirect anymore
+	let newest = 0;
 	router.onRoute(async (req, route, routing) => {
+		const mine = ++newest;
 		view.loading++;
 		try {
 			const r = await resolve(req, route);
 			if ('redirect' in r) {
-				router.open(r.redirect, {}, { history: 'replace' });
+				if (mine !== newest) return;
+				// the redirect takes the place of the request: a link adds
+				// to the history, the first page and back/forward don't
+				const first = !router.currentRequest.get();
+				const history =
+					first || req.origin === 'pop' ? 'replace' : 'push';
+				router.open(r.redirect, {}, { history });
+				// the request ends, the new one replaced it
+				await routing.dataReady();
+				await routing.domReady();
 				return;
 			}
 			if (await routing.dataReady()) return;
+			// another page: the flyout was of the one before
+			if (view.page && view.page.key !== r.page.key) flyout.open = null;
 			view.page = r.page;
 			if (!mounted) {
 				mounted = true;
@@ -213,18 +247,19 @@ export function startRouter(onfirst: () => void) {
 		}
 		await Promise.resolve();
 		await routing.domReady();
-		markAnchor(req);
+		markAnchor(req, () => mine === newest);
 	});
 	router.initClient();
 }
 
 /** An anchor of the url: scrolled to and marked for a moment. */
-function markAnchor(req: Request) {
+function markAnchor(req: Request, still: () => boolean) {
 	const id = decodeURIComponent(req.url.hash.slice(1));
 	if (!id) return;
 	// the page may still render what the anchor names
 	let tries = 0;
 	const find = () => {
+		if (!still()) return;
 		const el = document.getElementById(id);
 		if (!el) {
 			if (++tries < 30) setTimeout(find, 100);

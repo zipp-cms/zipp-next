@@ -1,4 +1,4 @@
-import { request, setToken, token } from './client';
+import { ApiError, isSessionError, request, setToken, token } from './client';
 
 /** A user of the studio, `role` null is an admin. */
 export type User = { id: number; email: string; role: string | null };
@@ -23,13 +23,17 @@ export class Session {
 		return this.user !== null;
 	}
 
-	/** The session of the stored token, if it is still valid. */
+	/**
+	 * The session of the stored token, if it is still valid. Only a
+	 * session the server doesn't know logs out; when the server can't be
+	 * reached the token stays and the error comes back.
+	 */
 	async init() {
 		if (!token()) return;
 		try {
 			this.set(await request('GET', '/auth/session'));
-		} catch {
-			// gone or ended: the login
+		} catch (e) {
+			if (!(e instanceof ApiError) || !isSessionError(e)) throw e;
 			this.invalidate();
 		}
 	}

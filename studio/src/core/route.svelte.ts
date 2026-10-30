@@ -14,12 +14,6 @@ export function entryPath(section: string, id: number) {
 	return `/entries/${section}/${id}`;
 }
 
-/** The entry the current page edits, if it does. */
-export function currentEntryId(): number | null {
-	const m = current.path.match(/^\/entries\/[^/]+\/(\d+)$/);
-	return m ? Number(m[1]) : null;
-}
-
 /** Another site: the page loads again with its content. */
 export function setSite(handle: string) {
 	storeSite(handle);

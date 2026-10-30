@@ -18,7 +18,8 @@
 <script lang="ts">
 	import type { Field, Values } from '../core/schema';
 	import { host } from './host.svelte';
-	import { currentEntryId, site } from '../core/route.svelte';
+	import { getEditing } from '../core/editing';
+	import { site } from '../core/route.svelte';
 
 	/**
 	 * A field of a type of another crate: zipp serves its module, which
@@ -27,6 +28,8 @@
 	 * site) and the `host` api.
 	 */
 	let { field, values }: { field: Field; values: Values } = $props();
+
+	const editing = getEditing();
 
 	let target: HTMLElement;
 	let mounted = $state.raw<Mounted | null>(null);
@@ -37,8 +40,8 @@
 			field: $state.snapshot(field),
 			value: $state.snapshot(values[field.handle]) ?? null,
 			onchange: (v: unknown) => (values[field.handle] = v),
-			entryId: currentEntryId(),
-			site: site.current,
+			entryId: editing?.entryId ?? null,
+			site: editing?.site ?? site.current,
 			host,
 		};
 	}

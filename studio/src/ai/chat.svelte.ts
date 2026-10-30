@@ -1,5 +1,6 @@
 import { agentEvents, agentForget, agentStart, type AgentEvent } from './agent';
 import { aiChat, type AiAction, type AiMessage } from './api';
+import { ApiError } from '../core/client';
 
 /** what the chat shows, the conversation for the model is apart */
 export type Line =
@@ -29,7 +30,7 @@ export class Chat {
 		/** after a line: the log scrolls down */
 		private readonly onLine: () => void,
 	) {
-		const saved = JSON.parse(sessionStorage.getItem(KEY) ?? 'null');
+		const saved = readSaved();
 		this.messages = saved?.messages ?? [];
 		this.lines = saved?.lines ?? [];
 		this.savedView = saved?.view ?? null;
@@ -67,10 +68,16 @@ export class Chat {
 					: await this.sendModel(this.model, text, view);
 			return { ok: true, after };
 		} catch (e: any) {
+			if (this.abort.signal.aborted) return { ok: true, after: null };
 			this.error = e.message;
-			// the model's conversation didn't get it, it can be sent again
-			if (this.model !== null) this.lines.splice(from);
-			return { ok: this.model === null, after: null };
+			// the model's conversation didn't get it, or the agent didn't
+			// start: it can be sent again
+			const nothing = this.lines.length === from + 1;
+			if (this.model !== null || nothing) {
+				this.lines.splice(from);
+				return { ok: false, after: null };
+			}
+			return { ok: true, after: null };
 		} finally {
 			this.busy = false;
 			this.onLine();
@@ -83,20 +90,27 @@ export class Chat {
 			{ kind: 'user', text } as AiMessage,
 		];
 		const actions: AiAction[] = [];
-		const added = await aiChat(model, sent, view || null, {
-			// the answer as it comes, a new bubble after an action
-			delta: t => {
-				const last = this.lines[this.lines.length - 1];
-				if (last?.who === 'ai') last.text += t;
-				else this.lines.push({ who: 'ai', text: t });
-				this.onLine();
+		const added = await aiChat(
+			model,
+			sent,
+			view || null,
+			{
+				// the answer as it comes, a new bubble after an action
+				delta: t => {
+					const last = this.lines[this.lines.length - 1];
+					if (last?.who === 'ai') last.text += t;
+					else this.lines.push({ who: 'ai', text: t });
+					this.onLine();
+				},
+				action: a => {
+					actions.push(a);
+					if (!a.navigate)
+						this.lines.push({ who: 'action', action: a });
+					this.onLine();
+				},
 			},
-			action: a => {
-				actions.push(a);
-				if (!a.navigate) this.lines.push({ who: 'action', action: a });
-				this.onLine();
-			},
-		});
+			this.abort.signal,
+		);
 		this.messages = [...sent, ...added];
 		// the AI opens a page where the change shows, else this one reloads
 		const nav = actions.findLast(a => a.navigate && a.url);
@@ -132,11 +146,19 @@ export class Chat {
 		// a restart of the cms ends the stream, read on after it
 		for (;;) {
 			try {
-				const err = await agentEvents(id, next, onEvent);
+				const err = await agentEvents(
+					id,
+					next,
+					onEvent,
+					this.abort.signal,
+				);
 				if (err && !this.lines.some(l => l.who === 'ai'))
 					this.error = err;
 				break;
 			} catch (e) {
+				// only a dropped stream is read again, an error of the api
+				// or leaving the page is the end
+				if (e instanceof ApiError || this.abort.signal.aborted) throw e;
 				if (++failures > 120) throw e;
 				await new Promise(r => setTimeout(r, 1000));
 			}
@@ -144,10 +166,26 @@ export class Chat {
 		return changed ? { refresh: true as const } : null;
 	}
 
+	/** Leaving the page: the stream stops. */
+	private abort = new AbortController();
+
+	stop() {
+		this.abort.abort();
+	}
+
 	clear() {
 		this.messages = [];
 		this.lines = [];
 		if (this.model === null)
 			agentForget().catch(e => (this.error = e.message));
+	}
+}
+
+/** The chat kept from before, nothing when it can't be read. */
+function readSaved(): any {
+	try {
+		return JSON.parse(sessionStorage.getItem(KEY) ?? 'null');
+	} catch {
+		return null;
 	}
 }

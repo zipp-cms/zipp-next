@@ -35,12 +35,10 @@ export async function aiChat(
 	messages: AiMessage[],
 	view: string | null,
 	on: AiEvents,
+	signal?: AbortSignal,
 ): Promise<AiMessage[]> {
-	for await (const { data } of stream('POST', '/ai/chat', {
-		model,
-		messages,
-		view,
-	})) {
+	const body = { model, messages, view };
+	for await (const { data } of stream('POST', '/ai/chat', body, signal)) {
 		if (!data) continue;
 		const ev = JSON.parse(data);
 		if (ev.type === 'delta') on.delta(ev.text);

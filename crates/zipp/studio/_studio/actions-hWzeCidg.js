@@ -1,0 +1,1 @@
+import{Z as c,j as o,af as i,l as d,ag as m}from"./index-Ly-qPh-a.js";function j(e,n,f){c(()=>{var r=o(()=>n(e,f==null?void 0:f())||{});if(f&&(r!=null&&r.update)){var s=!1,t={};i(()=>{var a=f();d(a),s&&m(t,a)&&(t=a,r.update(a))}),s=!0}if(r!=null&&r.destroy)return()=>r.destroy()})}export{j as a};

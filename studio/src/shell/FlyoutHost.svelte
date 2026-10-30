@@ -1,58 +1,75 @@
 <script lang="ts">
 	import { listAssets, type Asset } from '../assets/api';
+	import AssetDetail from '../assets/AssetDetail.svelte';
+	import { closeFlyout, flyout } from '../core/flyout.svelte';
+	import { site } from '../core/route.svelte';
 	import { type Schema } from '../core/schema';
 	import Edit from '../entries/edit/Edit.svelte';
-	import AssetDetail from '../assets/AssetDetail.svelte';
-	import Flyout from '../ui/Flyout.svelte';
-	import { closeFlyout, flyout } from '../core/flyout.svelte';
 	import { EntryEditor } from '../entries/edit/entryEditor.svelte';
+	import Flyout from '../ui/Flyout.svelte';
 
-	/** The entry or asset a field opened, over the page. */
+	/**
+	 * The entry or asset a field opened, over the page: loaded when it
+	 * opens, again in another site.
+	 */
 	let { schema }: { schema: Schema } = $props();
 
-	let asset = $state<Asset | null>(null);
-	$effect(() => {
-		const open = flyout.open;
-		asset = null;
-		if (open?.kind !== 'asset') return;
-		listAssets({ ids: String(open.id) }).then(a => (asset = a[0] ?? null));
-	});
+	type Loaded =
+		| { kind: 'entry'; editor: EntryEditor }
+		| { kind: 'asset'; asset: Asset }
+		| { kind: 'error'; message: string };
+	let loaded = $state<Loaded | null>(null);
 
-	let editor = $state<EntryEditor | null>(null);
 	$effect(() => {
 		const open = flyout.open;
-		editor = null;
-		if (open?.kind !== 'entry') return;
-		EntryEditor.open(schema, open.id, null).then(e => {
-			if (flyout.open === open) editor = e;
-		});
+		void site.current;
+		loaded = null;
+		if (!open) return;
+		const load: Promise<Loaded> =
+			open.kind === 'entry'
+				? EntryEditor.open(schema, open.id, null).then(editor => ({
+						kind: 'entry',
+						editor,
+					}))
+				: listAssets({ ids: String(open.id) }).then(([asset]) =>
+						asset
+							? { kind: 'asset', asset }
+							: {
+									kind: 'error',
+									message: 'This file was deleted.',
+								},
+					);
+		load.catch((e): Loaded => ({ kind: 'error', message: e.message }))
+			// only for what is still open
+			.then(l => {
+				if (flyout.open === open) loaded = l;
+			});
 	});
 </script>
 
-{#if flyout.open?.kind === 'entry'}
-	<Flyout title="Entry" onclose={closeFlyout}>
-		{#if editor}
-			{#key editor}
-				<Edit {schema} {editor} onclose={closeFlyout} />
+{#if loaded?.kind === 'asset'}
+	{#key loaded.asset.id}
+		<AssetDetail
+			{schema}
+			asset={loaded.asset}
+			onsaved={closeFlyout}
+			ondeleted={closeFlyout}
+			onclose={closeFlyout}
+		/>
+	{/key}
+{:else if flyout.open}
+	<Flyout
+		title={flyout.open.kind === 'entry' ? 'Entry' : 'File'}
+		onclose={closeFlyout}
+	>
+		{#if loaded?.kind === 'entry'}
+			{#key loaded.editor}
+				<Edit {schema} editor={loaded.editor} onclose={closeFlyout} />
 			{/key}
+		{:else if loaded?.kind === 'error'}
+			<p class="error">{loaded.message}</p>
 		{:else}
 			<p class="empty">Loading…</p>
 		{/if}
 	</Flyout>
-{:else if flyout.open?.kind === 'asset'}
-	{#if asset}
-		{#key asset.id}
-			<AssetDetail
-				{schema}
-				{asset}
-				onsaved={closeFlyout}
-				ondeleted={closeFlyout}
-				onclose={closeFlyout}
-			/>
-		{/key}
-	{:else}
-		<Flyout title="File" onclose={closeFlyout}>
-			<p class="empty">Loading…</p>
-		</Flyout>
-	{/if}
 {/if}

@@ -356,8 +356,17 @@ export class EntryEditor {
 
 	/** The website with the draft, in a new tab. */
 	async preview(url: string) {
-		const token = await previewToken(this.id!);
-		window.open(`${url}?token=${token}`, '_blank');
+		// the tab opens with the click: one opened later is a blocked popup
+		const tab = window.open('', '_blank');
+		try {
+			const token = await previewToken(this.id!);
+			const page = `${url}?token=${token}`;
+			if (tab) tab.location.href = page;
+			else window.open(page, '_blank');
+		} catch (e: any) {
+			tab?.close();
+			this.error = e.message;
+		}
 	}
 
 	/** Deletes the entry in every site; whether it is gone. */

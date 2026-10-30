@@ -10,7 +10,7 @@
 		lp: LoadProps,
 	) {
 		const sec = props.schema.sections.find(s => s.handle === props.section);
-		if (!sec) return;
+		if (!sec) throw new Error(`There is no section ${props.section}`);
 		const first = await list(
 			listParams(sec.kind, props.section, current.current, ''),
 		);

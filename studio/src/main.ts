@@ -16,7 +16,19 @@ registerRoutes();
 session
 	.init()
 	.then(() =>
-		startRouter(() =>
-			mount(App, { target: document.getElementById('app')! }),
+		startRouter(
+			{
+				notFound: () => import('./shell/NotFound.svelte'),
+				error: () => import('./shell/ErrorPage.svelte'),
+			},
+			() => mount(App, { target: document.getElementById('app')! }),
 		),
-	);
+	)
+	// the server can't be reached: the session stays for the next try
+	.catch(e => {
+		const p = document.createElement('p');
+		p.className = 'error';
+		p.style.padding = '24px';
+		p.textContent = `zipp can't be reached (${e.message}), reload the page to try again.`;
+		document.getElementById('app')!.append(p);
+	});

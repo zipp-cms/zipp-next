@@ -34,15 +34,19 @@ export async function agentEvents(
 	id: string,
 	from: number,
 	line: (n: number, event: AgentEvent) => void,
+	signal?: AbortSignal,
 ): Promise<string> {
-	for await (const ev of stream('GET', `/agent/${id}?from=${from}`)) {
+	const path = `/agent/${id}?from=${from}`;
+	for await (const ev of stream('GET', path, undefined, signal)) {
 		if (ev.event === 'done') return ev.data;
-		if (!ev.data) continue;
+		let event: AgentEvent;
 		try {
-			line(Number(ev.id), JSON.parse(ev.data));
+			event = JSON.parse(ev.data);
 		} catch {
 			// not an event
+			continue;
 		}
+		line(Number(ev.id), event);
 	}
 	throw new Error('reconnect');
 }
