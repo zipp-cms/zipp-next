@@ -46,6 +46,7 @@ use crate::assets::{Asset, get_many};
 use crate::auth::{role_of, session};
 use crate::db::Db;
 use crate::drafts::{Preview, get_draft, preview};
+use crate::entries::query::MAX_LIMIT;
 use crate::entries::{Entry, list};
 use crate::error::{Error, Result};
 use crate::field_type::{GraphqlType, Scalar as FieldScalar};

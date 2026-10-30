@@ -47,6 +47,7 @@ fn saves_and_queries() {
 		&s,
 		None,
 		input("pages", "page", "Über uns!", json!({})),
+		None,
 	)
 	.unwrap();
 	assert_eq!(about.slug, "über-uns");
@@ -57,7 +58,7 @@ fn saves_and_queries() {
 			json!({ "city": city, "price": price, "page": [about.id] });
 		let title = format!("{city} {price}");
 		let e = input("events", "event", &title, fields);
-		save(&conn, &s, None, e).unwrap();
+		save(&conn, &s, None, e, None).unwrap();
 	}
 
 	assert_eq!(
@@ -96,13 +97,19 @@ fn sites_share_fields_that_are_not_translatable() {
 	let s = site();
 
 	let fields = json!({ "city": "Bern", "price": 10 });
-	let e = save(&conn, &s, None, input("events", "event", "Konzert", fields))
-		.unwrap();
+	let e = save(
+		&conn,
+		&s,
+		None,
+		input("events", "event", "Konzert", fields),
+		None,
+	)
+	.unwrap();
 
 	let mut en =
 		input("events", "event", "Concert", json!({ "city": "Berne" }));
 	en.site = Some("en".into());
-	save(&conn, &s, Some(e.id), en).unwrap();
+	save(&conn, &s, Some(e.id), en, None).unwrap();
 
 	let de = get_entry(&conn, e.id, "de").unwrap();
 	let en = get_entry(&conn, e.id, "en").unwrap();
@@ -125,18 +132,23 @@ fn structures_build_uris_from_parents() {
 	let conn = db.conn();
 	let s = site();
 
-	let about =
-		save(&conn, &s, None, input("pages", "page", "About", json!({})))
-			.unwrap();
+	let about = save(
+		&conn,
+		&s,
+		None,
+		input("pages", "page", "About", json!({})),
+		None,
+	)
+	.unwrap();
 	let mut team = input("pages", "page", "Team", json!({}));
 	team.parent_id = Some(about.id);
-	let team = save(&conn, &s, None, team).unwrap();
+	let team = save(&conn, &s, None, team, None).unwrap();
 	assert_eq!(team.uri.as_deref(), Some("about/team"));
 
 	// renaming the parent moves the child
 	let mut rename = input("pages", "page", "About", json!({}));
 	rename.slug = "company".into();
-	save(&conn, &s, Some(about.id), rename).unwrap();
+	save(&conn, &s, Some(about.id), rename, None).unwrap();
 	let team = get_entry(&conn, team.id, "de").unwrap();
 	assert_eq!(team.uri.as_deref(), Some("company/team"));
 
@@ -159,29 +171,39 @@ fn rejects_invalid_content() {
 	let conn = db.conn();
 	let s = site();
 
-	let event = save(&conn, &s, None, input("events", "event", "E", json!({})))
-		.unwrap();
+	let event = save(
+		&conn,
+		&s,
+		None,
+		input("events", "event", "E", json!({})),
+		None,
+	)
+	.unwrap();
 	let fields = json!({ "body": [
 		{ "type": "button", "fields": { "label": "Go", "link": [event.id] } }
 	]});
 	let Err(Error::Invalid(errs)) =
-		save(&conn, &s, None, input("pages", "page", "E", fields))
+		save(&conn, &s, None, input("pages", "page", "E", fields), None)
 	else {
 		panic!("should fail");
 	};
 	assert_eq!(errs[0].path, "body.0.link");
 
-	let Err(Error::Invalid(errs)) =
-		save(&conn, &s, None, input("events", "event", "E", json!({})))
-	else {
+	let Err(Error::Invalid(errs)) = save(
+		&conn,
+		&s,
+		None,
+		input("events", "event", "E", json!({})),
+		None,
+	) else {
 		panic!("should fail");
 	};
 	assert_eq!(errs[0].message, "the uri /events/e is already used");
 
 	let wrong = input("events", "page", "P", json!({}));
-	assert!(save(&conn, &s, None, wrong).is_err());
+	assert!(save(&conn, &s, None, wrong, None).is_err());
 	let single = input("home", "page", "Home", json!({}));
-	assert!(save(&conn, &s, None, single).is_err());
+	assert!(save(&conn, &s, None, single, None).is_err());
 }
 
 #[test]
@@ -190,7 +212,7 @@ fn unpublished_are_hidden() {
 	let conn = db.conn();
 	let mut draft = input("pages", "page", "Draft", json!({}));
 	draft.published = false;
-	save(&conn, &site(), None, draft).unwrap();
+	save(&conn, &site(), None, draft, None).unwrap();
 
 	let mut q = query(&[]);
 	assert_eq!(list(&conn, &q).unwrap().1, 1);
@@ -228,12 +250,12 @@ fn asset_fields_take_their_kinds_of_files() {
 		Field::blocks("body", ["text", "button", "form"]).translatable();
 
 	let Err(Error::Invalid(errs)) =
-		save(&conn, &s, None, page(json!({ "pdf": [1, 2] })))
+		save(&conn, &s, None, page(json!({ "pdf": [1, 2] })), None)
 	else {
 		panic!("should fail");
 	};
 	assert_eq!(errs.len(), 1);
 	assert_eq!(errs[0].path, "body.0.pdf");
 	assert_eq!(errs[0].message, "asset 2 is no pdf");
-	save(&conn, &s, None, page(json!({ "pdf": [1] }))).unwrap();
+	save(&conn, &s, None, page(json!({ "pdf": [1] })), None).unwrap();
 }

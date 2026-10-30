@@ -166,6 +166,7 @@ async fn usage_shows_what_the_role_sees() {
 			&ts.state.schema,
 			None,
 			input("events", "event", "Jazz", fields),
+			None,
 		)
 		.unwrap();
 	}
@@ -301,4 +302,19 @@ async fn lists_files_by_extension() {
 	assert_eq!(names(pdf), ["Form.PDF"]);
 	let two = editor.call(&by(".txt, png")).await.unwrap();
 	assert_eq!(names(two), ["a.png", "notes.txt"]);
+}
+
+#[tokio::test]
+async fn a_file_named_like_the_transforms() {
+	let ts = TestServer::new(site_with_roles());
+	let editor = ts.user(Some("editor"));
+	// a file called t, and one that tries the folder of the transforms
+	for name in ["t", ".t"] {
+		let a = upload(&editor, name, &png(4, 4)).await.unwrap();
+		assert_ne!(a.filename, TRANSFORMS);
+		let (status, _) = get(&ts.anonymous(), &a.url(Some("small"))).await;
+		assert_eq!(status, StatusCode::OK, "{}", a.filename);
+		let (status, body) = get(&ts.anonymous(), &a.url(None)).await;
+		assert_eq!((status, body), (StatusCode::OK, png(4, 4)));
+	}
 }

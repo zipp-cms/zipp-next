@@ -190,6 +190,16 @@ pub fn get_many(conn: &Connection, ids: &[i64]) -> Result<Vec<Asset>> {
 
 /// Only letters, digits, dots, dashes and underscores, so the name is a
 /// safe path and url.
+/// The folder of an asset: its file and [`TRANSFORMS`].
+pub fn asset_dir(files: &FsPath, id: i64) -> std::path::PathBuf {
+	files.join(id.to_string())
+}
+
+/// The folder of an asset's transforms, made again when they change. It
+/// starts with a dot, which [`clean_filename`] never leaves, so no file
+/// can take its name.
+pub const TRANSFORMS: &str = ".t";
+
 pub fn clean_filename(name: &str) -> String {
 	let name: String = name
 		.rsplit(['/', '\\'])
@@ -298,7 +308,7 @@ pub fn store(
 	)?;
 	let id = conn.last_insert_rowid();
 
-	let dir = files.join(id.to_string());
+	let dir = asset_dir(files, id);
 	let written = fs::create_dir_all(&dir)
 		.and_then(|_| fs::write(dir.join(&filename), data));
 	if let Err(e) = written {

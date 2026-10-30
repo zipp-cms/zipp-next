@@ -57,9 +57,7 @@ async fn create_route(
 	input.published &= auth.can(&state.schema, &input.section, Access::Publish);
 	let entry = {
 		let conn = state.db.conn();
-		let entry = save(&conn, &state.schema, None, input)?;
-		record_revision(&conn, entry.id, Some(auth.user_id))?;
-		entry
+		save(&conn, &state.schema, None, input, Some(auth.user_id))?
 	};
 	state.changed(entry.id, &entry.section, ChangeKind::Saved);
 	Ok(Json(entry))
@@ -73,9 +71,8 @@ async fn update_route(
 ) -> ApiResult<UpdateReq> {
 	let entry = {
 		let conn = state.db.conn();
-		let entry = save(&conn, &state.schema, Some(req.id), req.input)?;
-		record_revision(&conn, req.id, Some(access.auth.user_id))?;
-		entry
+		let user = Some(access.auth.user_id);
+		save(&conn, &state.schema, Some(req.id), req.input, user)?
 	};
 	state.changed(req.id, &entry.section, ChangeKind::Saved);
 	Ok(Json(entry))

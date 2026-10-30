@@ -91,28 +91,32 @@ async fn seo_like_the_craft_plugin() {
 			}),
 		);
 		settings.site = Some("de".into());
-		save(&conn, &s, Some(id), settings).unwrap();
+		save(&conn, &s, Some(id), settings, None).unwrap();
 		let fields = json!({ "notes": "Ein **schöner** Abend mit Musik." });
 		let e = save(
 			&conn,
 			&s,
 			None,
 			input("events", "event", "Konzert", fields.clone()),
+			None,
 		)
 		.unwrap();
 		let mut en = input("events", "event", "Concert", fields);
 		en.site = Some("en".into());
-		save(&conn, &s, Some(e.id), en).unwrap();
+		save(&conn, &s, Some(e.id), en, None).unwrap();
 		// a page with its own SEO in the field
 		let seo = json!({ "seo": { "title": "Über uns", "robots": "noindex, follow" } });
-		save(&conn, &s, None, input("pages", "page", "About", seo)).unwrap();
+		save(&conn, &s, None, input("pages", "page", "About", seo), None)
+			.unwrap();
 		// the title from a field, like SEOmatic's
 		let intro = json!({ "intro": "Unser Team" });
-		save(&conn, &s, None, input("pages", "page", "Team", intro)).unwrap();
+		save(&conn, &s, None, input("pages", "page", "Team", intro), None)
+			.unwrap();
 		// a value the field doesn't know is refused
 		let bad = json!({ "seo": { "robots": "maybe" } });
 		assert!(
-			save(&conn, &s, None, input("pages", "page", "Bad", bad)).is_err()
+			save(&conn, &s, None, input("pages", "page", "Bad", bad), None)
+				.is_err()
 		);
 	}
 
@@ -199,7 +203,7 @@ async fn defaults_for_the_studio() {
 		let conn = ts.state.db.conn();
 		let intro = json!({ "intro": "Unser Team" });
 		let page = input("pages", "page", "Team", intro);
-		save(&conn, &ts.state.schema, None, page).unwrap().id
+		save(&conn, &ts.state.schema, None, page, None).unwrap().id
 	};
 	let defaults = ts
 		.admin()

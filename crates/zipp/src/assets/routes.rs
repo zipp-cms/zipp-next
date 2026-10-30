@@ -39,7 +39,7 @@ pub(super) async fn serve_original(
 		)
 		.await;
 	}
-	let path = state.files.join(id.to_string()).join(&asset.filename);
+	let path = asset_dir(&state.files, id).join(&asset.filename);
 	let data = fs::read(path).map_err(|_| Error::NotFound)?;
 	Ok(file_response(&asset.mime, data))
 }
@@ -64,15 +64,22 @@ async fn transformed(
 	t: Transform,
 ) -> Result<Response> {
 	let id = asset.id;
-	let dir = state.files.join(id.to_string());
+	let dir = asset_dir(&state.files, id);
 	let original = dir.join(&asset.filename);
-	let out = dir.join("t").join(format!("{name}-{}", asset.filename));
+	let out = dir
+		.join(TRANSFORMS)
+		.join(format!("{name}-{}", asset.filename));
 	if !out.exists() {
 		let _permit = GENERATING.acquire().await.unwrap();
-		let (a, o) = (asset.clone(), out.clone());
-		tokio::task::spawn_blocking(move || generate(&a, &original, &t, &o))
+		// not made already while this one waited
+		if !out.exists() {
+			let (a, o) = (asset.clone(), out.clone());
+			tokio::task::spawn_blocking(move || {
+				generate(&a, &original, &t, &o)
+			})
 			.await
 			.map_err(|e| Error::Internal(e.to_string()))??;
+		}
 	}
 
 	let data = fs::read(out).map_err(|e| Error::Internal(e.to_string()))?;

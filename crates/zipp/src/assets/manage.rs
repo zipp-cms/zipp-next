@@ -88,21 +88,22 @@ pub fn update(
 	if let Some(e) = &edits {
 		check_edits(&old, e)?;
 	}
-	let dir = files.join(id.to_string());
-	// a new name: the file moves, its transforms are made again
+	let dir = asset_dir(files, id);
 	let filename = match change.filename.as_deref().map(clean_filename) {
 		Some(name) if name != old.filename => {
 			if dir.join(&name).exists() {
 				return Err(Error::Request(format!("{name} exists already")));
 			}
-			fs::rename(dir.join(&old.filename), dir.join(&name))
-				.map_err(|e| Error::Internal(e.to_string()))?;
 			name
 		}
 		_ => old.filename.clone(),
 	};
 	let json = edits.as_ref().map(|e| serde_json::to_string(e).unwrap());
-	conn.execute(
+
+	// the row first, the file moves before the commit: when it can't, the
+	// row stays as it was
+	let tx = conn.unchecked_transaction()?;
+	tx.execute(
 		"UPDATE assets SET title = IFNULL(?1, title), alt = ?2, focal_x = ?3,
 		focal_y = ?4, filename = ?5, edits = ?6 WHERE id = ?7",
 		params![
@@ -115,11 +116,22 @@ pub fn update(
 			id
 		],
 	)?;
+	if filename != old.filename {
+		fs::rename(dir.join(&old.filename), dir.join(&filename))
+			.map_err(|e| Error::Internal(e.to_string()))?;
+	}
+	if let Err(e) = tx.commit() {
+		// back to the name the row still has
+		let _ = fs::rename(dir.join(&filename), dir.join(&old.filename));
+		return Err(e.into());
+	}
+
+	// a new name, edits or focal point: the transforms are made again
 	if (old.focal_x, old.focal_y) != (fx, fy)
 		|| old.edits != edits
 		|| old.filename != filename
 	{
-		let _ = fs::remove_dir_all(dir.join("t"));
+		let _ = fs::remove_dir_all(dir.join(TRANSFORMS));
 	}
 	get_asset(conn, id)
 }
@@ -164,17 +176,15 @@ pub fn replace(
 	let old = get_asset(conn, id)?;
 	let up = inspect(filename, data)?;
 
-	let dir = files.join(id.to_string());
+	let dir = asset_dir(files, id);
 	let internal = |e: std::io::Error| Error::Internal(e.to_string());
 	let tmp = dir.join(format!(".replace{}", rand::random::<u32>()));
 	fs::write(&tmp, data).map_err(internal)?;
-	if old.filename != up.filename {
-		let _ = fs::remove_file(dir.join(&old.filename));
-	}
-	fs::rename(&tmp, dir.join(&up.filename)).map_err(internal)?;
-	let _ = fs::remove_dir_all(dir.join("t"));
 
-	conn.execute(
+	// the row first, the new file goes in before the commit; the old one
+	// only goes when both worked
+	let tx = conn.unchecked_transaction()?;
+	let updated = tx.execute(
 		"UPDATE assets SET filename = ?1, kind = ?2, mime = ?3, size = ?4,
 		width = ?5, height = ?6, edits = NULL, focal_x = 0.5, focal_y = 0.5
 		WHERE id = ?7",
@@ -187,7 +197,22 @@ pub fn replace(
 			up.height,
 			id
 		],
-	)?;
+	);
+	let moved = updated
+		.map_err(Error::from)
+		.and_then(|_| {
+			fs::rename(&tmp, dir.join(&up.filename)).map_err(internal)
+		})
+		.and_then(|_| tx.commit().map_err(Error::from));
+	if let Err(e) = moved {
+		let _ = fs::remove_file(&tmp);
+		return Err(e);
+	}
+	if old.filename != up.filename {
+		let _ = fs::remove_file(dir.join(&old.filename));
+	}
+	let _ = fs::remove_dir_all(dir.join(TRANSFORMS));
+
 	get_asset(conn, id)
 }
 
@@ -233,6 +258,6 @@ pub fn delete(conn: &Connection, files: &FsPath, id: i64) -> Result<()> {
 	if conn.execute("DELETE FROM assets WHERE id = ?1", [id])? == 0 {
 		return Err(Error::NotFound);
 	}
-	let _ = fs::remove_dir_all(files.join(id.to_string()));
+	let _ = fs::remove_dir_all(asset_dir(files, id));
 	Ok(())
 }

@@ -27,8 +27,14 @@ fn conflicts_with_others() {
 	let s = site();
 	crate::auth::add_user(&conn, "a@x.ch", "password", None).unwrap();
 	crate::auth::add_user(&conn, "b@x.ch", "password", None).unwrap();
-	let e =
-		save(&conn, &s, None, input("pages", "page", "P", json!({}))).unwrap();
+	let e = save(
+		&conn,
+		&s,
+		None,
+		input("pages", "page", "P", json!({})),
+		None,
+	)
+	.unwrap();
 
 	// a starts a draft, b still has the live entry open
 	let a = put_draft(
@@ -96,8 +102,14 @@ fn drafts_stay_until_published() {
 	let conn = db.conn();
 	let s = site();
 	let fields = json!({ "city": "Bern", "price": 10 });
-	let e = save(&conn, &s, None, input("events", "event", "Konzert", fields))
-		.unwrap();
+	let e = save(
+		&conn,
+		&s,
+		None,
+		input("events", "event", "Konzert", fields),
+		None,
+	)
+	.unwrap();
 
 	// en changes its title and the shared price
 	let en = site_doc("Concert", json!({ "city": "Bern", "price": 12 }));
@@ -112,7 +124,8 @@ fn drafts_stay_until_published() {
 	assert_eq!(live.uri.as_deref(), Some("events/concert"));
 	assert_eq!(get_entry(&conn, e.id, "de").unwrap().fields["price"], 12);
 	assert!(get_draft(&conn, e.id).unwrap().is_none());
-	assert_eq!(revisions(&conn, e.id).unwrap().len(), 1);
+	// the one of creating it, the one of publishing
+	assert_eq!(revisions(&conn, e.id).unwrap().len(), 2);
 }
 
 #[test]
@@ -120,8 +133,14 @@ fn publish_checks_every_site_first() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();
 	let s = site();
-	let e = save(&conn, &s, None, input("events", "event", "E", json!({})))
-		.unwrap();
+	let e = save(
+		&conn,
+		&s,
+		None,
+		input("events", "event", "E", json!({})),
+		None,
+	)
+	.unwrap();
 
 	put_draft(
 		&conn,
@@ -161,6 +180,7 @@ fn revisions_know_what_changed() {
 		&s,
 		None,
 		input("pages", "page", "P", json!({ "intro": "a" })),
+		None,
 	)
 	.unwrap();
 	record_revision(&conn, e.id, None).unwrap();
@@ -182,8 +202,14 @@ fn restores_a_revision_into_the_draft() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();
 	let s = site();
-	let e = save(&conn, &s, None, input("pages", "page", "One", json!({})))
-		.unwrap();
+	let e = save(
+		&conn,
+		&s,
+		None,
+		input("pages", "page", "One", json!({})),
+		None,
+	)
+	.unwrap();
 	record_revision(&conn, e.id, None).unwrap();
 	put_draft(
 		&conn,
@@ -214,8 +240,14 @@ fn tokens_show_the_draft() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();
 	let s = site();
-	let e = save(&conn, &s, None, input("pages", "page", "Live", json!({})))
-		.unwrap();
+	let e = save(
+		&conn,
+		&s,
+		None,
+		input("pages", "page", "Live", json!({})),
+		None,
+	)
+	.unwrap();
 	let token = create_token(&conn, e.id).unwrap();
 	assert_eq!(
 		entry_doc(preview(&conn, &token).unwrap())["de"].title,

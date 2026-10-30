@@ -92,6 +92,8 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 						[
 							("parent", e.id.to_string()),
 							("order", "structure".into()),
+							// all of them, not the first page of a list
+							("limit", MAX_LIMIT.to_string()),
 						],
 					);
 					let children = load(&ctx, &params)?;
@@ -184,7 +186,14 @@ pub(super) fn content_field(
 					}
 					let list: Vec<String> =
 						ids.iter().map(i64::to_string).collect();
-					let params = site_params(&site, [("ids", list.join(","))]);
+					// all of them, not the first page of a list
+					let params = site_params(
+						&site,
+						[
+							("ids", list.join(",")),
+							("limit", ids.len().to_string()),
+						],
+					);
 					let mut entries = load(&ctx, &params)?;
 					// in the order of the field
 					entries

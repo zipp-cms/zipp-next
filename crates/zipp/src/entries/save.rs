@@ -1,17 +1,20 @@
 use super::*;
 
 /// Creates an entry in all sites, or updates it in one site when `id` is
-/// given. Shared fields are copied to the other sites. Section and type
-/// of an entry can't change.
+/// given, with a revision of who did it (`None`: the system). Shared
+/// fields are copied to the other sites. Section and type of an entry
+/// can't change.
 pub fn save(
 	conn: &Connection,
 	schema: &Schema,
 	id: Option<i64>,
 	input: EntryInput,
+	user_id: Option<i64>,
 ) -> Result<Entry> {
 	let c = check(conn, schema, id, input)?;
 	let tx = conn.unchecked_transaction()?;
 	let id = write(&tx, schema, &c)?;
+	record_revision(&tx, id, user_id)?;
 	tx.commit()?;
 	get_entry(conn, id, &c.site)
 }
@@ -302,21 +305,16 @@ pub fn reindex(
 	ty: &str,
 	fields: &Value,
 ) -> Result<()> {
+	for table in ["entry_values", "entry_relations", "asset_relations"] {
+		conn.execute(
+			&format!("DELETE FROM {table} WHERE entry_id = ?1 AND site = ?2"),
+			params![id, site],
+		)?;
+	}
+	// a type the schema doesn't know any more has nothing to index
 	let Some(comp) = schema.get(ty) else {
 		return Ok(());
 	};
-	conn.execute(
-		"DELETE FROM entry_values WHERE entry_id = ?1 AND site = ?2",
-		params![id, site],
-	)?;
-	conn.execute(
-		"DELETE FROM entry_relations WHERE entry_id = ?1 AND site = ?2",
-		params![id, site],
-	)?;
-	conn.execute(
-		"DELETE FROM asset_relations WHERE entry_id = ?1 AND site = ?2",
-		params![id, site],
-	)?;
 
 	for v in index_values(comp, fields) {
 		conn.execute(

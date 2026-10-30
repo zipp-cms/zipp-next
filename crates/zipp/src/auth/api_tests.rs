@@ -33,6 +33,9 @@ async fn logs_in_and_out() {
 		.unwrap_err();
 	assert_eq!(err, Error::LoginIncorrect);
 
+	// the email in any case
+	anon.call(&login("A@X.ch", "password1")).await.unwrap();
+
 	// the session and its user, for 30 days
 	let auth = anon.call(&login("a@x.ch", "password1")).await.unwrap();
 	assert_eq!(auth.user.email, "a@x.ch");

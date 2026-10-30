@@ -315,6 +315,7 @@ fn tool_create_entry(t: &Ctx, input: &Value) -> ToolResult {
 			parent_id: input["parent_id"].as_i64(),
 			fields: input.get("fields").cloned().unwrap_or(json!({})),
 		},
+		Some(t.user_id),
 	)?;
 	for s in &schema.sites {
 		let base = get_draft(conn, entry.id)?.map(|d| d.updated_at);

@@ -1,14 +1,14 @@
 use std::path::Path;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::Connection;
 
 /// Tables of zipp itself, every entry is applied once, tracked with
-/// `PRAGMA user_version`. Only ever append to this list. Changes of the
-/// content model are schema migrations (`migrate.rs`), not these.
-const MIGRATIONS: &[&str] = &[
-	r#"
+/// `PRAGMA user_version`. While zipp is not live the first one is changed
+/// in place (see AGENT.md), after that only append. Changes of the
+/// content model are schema migrations (`migrate/`), not these.
+const MIGRATIONS: &[&str] = &[r#"
 	CREATE TABLE entries (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		section TEXT NOT NULL,
@@ -85,6 +85,14 @@ const MIGRATIONS: &[&str] = &[
 		expires_at INTEGER NOT NULL
 	);
 
+	-- folders of assets, only in the studio
+	CREATE TABLE asset_folders (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		parent_id INTEGER REFERENCES asset_folders(id),
+		name TEXT NOT NULL,
+		created_at INTEGER NOT NULL
+	);
+
 	-- uploaded files, the file is files/<id>/<filename>
 	CREATE TABLE assets (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,34 +109,16 @@ const MIGRATIONS: &[&str] = &[
 		-- 0 to 1 from the left and the top
 		focal_x REAL NOT NULL DEFAULT 0.5,
 		focal_y REAL NOT NULL DEFAULT 0.5,
-		created_at INTEGER NOT NULL
+		created_at INTEGER NOT NULL,
+		-- the image editor's, JSON
+		edits TEXT,
+		uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+		-- NULL: on the top, in no folder
+		folder_id INTEGER REFERENCES asset_folders(id)
 	);
+	CREATE INDEX assets_folder ON assets(folder_id);
 
-	CREATE TABLE users (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		email TEXT NOT NULL UNIQUE,
-		password_hash TEXT NOT NULL,
-		-- a role of the schema, NULL is an admin
-		role TEXT,
-		created_at INTEGER NOT NULL
-	);
-
-	CREATE TABLE sessions (
-		token TEXT PRIMARY KEY,
-		user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-		created_at INTEGER NOT NULL
-	);
-
-	CREATE TABLE schema_migrations (
-		name TEXT PRIMARY KEY,
-		applied_at INTEGER NOT NULL
-	);
-"#,
-	// the image editor, who uploaded, where assets are used
-	r#"
-	ALTER TABLE assets ADD COLUMN edits TEXT;
-	ALTER TABLE assets ADD COLUMN uploaded_by INTEGER
-		REFERENCES users(id) ON DELETE SET NULL;
+	-- where assets are used, rebuilt with every save
 	CREATE TABLE asset_relations (
 		entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
 		site TEXT NOT NULL,
@@ -137,30 +127,32 @@ const MIGRATIONS: &[&str] = &[
 	);
 	CREATE INDEX asset_relations_asset ON asset_relations(asset_id);
 	CREATE INDEX asset_relations_entry ON asset_relations(entry_id);
-"#,
-	// sessions end at a time that using the studio pushes back
-	r#"
-	ALTER TABLE sessions ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0;
-	UPDATE sessions SET expires_at = created_at + 1000 * 60 * 60 * 24 * 30;
-"#,
-	// the account of a user: a name, when they logged in last
-	r#"
-	ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT '';
-	ALTER TABLE users ADD COLUMN last_login_at INTEGER;
-"#,
-	// folders of assets, a file in one or on the top
-	r#"
-	CREATE TABLE asset_folders (
+
+	CREATE TABLE users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		parent_id INTEGER REFERENCES asset_folders(id),
-		name TEXT NOT NULL,
-		created_at INTEGER NOT NULL
+		-- Anna@x.ch and anna@x.ch are one user
+		email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+		password_hash TEXT NOT NULL,
+		-- a role of the schema, NULL is an admin
+		role TEXT,
+		created_at INTEGER NOT NULL,
+		name TEXT NOT NULL DEFAULT '',
+		last_login_at INTEGER
 	);
-	ALTER TABLE assets ADD COLUMN folder_id INTEGER
-		REFERENCES asset_folders(id);
-	CREATE INDEX assets_folder ON assets(folder_id);
-"#,
-];
+
+	CREATE TABLE sessions (
+		token TEXT PRIMARY KEY,
+		user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		created_at INTEGER NOT NULL,
+		-- using the studio pushes it back
+		expires_at INTEGER NOT NULL
+	);
+
+	CREATE TABLE schema_migrations (
+		name TEXT PRIMARY KEY,
+		applied_at INTEGER NOT NULL
+	);
+"#];
 
 #[derive(Clone)]
 pub struct Db {
@@ -176,16 +168,20 @@ impl Db {
 		Self::new(Connection::open_in_memory()?)
 	}
 
-	fn new(conn: Connection) -> rusqlite::Result<Self> {
+	fn new(mut conn: Connection) -> rusqlite::Result<Self> {
 		conn.execute_batch(
 			"PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;",
 		)?;
 
 		let version: usize =
 			conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+		// each with its version in one transaction: a failed one can run
+		// again after the fix
 		for (i, sql) in MIGRATIONS.iter().enumerate().skip(version) {
-			conn.execute_batch(sql)?;
-			conn.pragma_update(None, "user_version", i + 1)?;
+			let tx = conn.transaction()?;
+			tx.execute_batch(sql)?;
+			tx.pragma_update(None, "user_version", i + 1)?;
+			tx.commit()?;
 		}
 
 		Ok(Self {
@@ -193,8 +189,10 @@ impl Db {
 		})
 	}
 
+	/// The connection; a panic while another request held it doesn't
+	/// lock everyone out, sqlite rolled back what it didn't commit.
 	pub fn conn(&self) -> MutexGuard<'_, Connection> {
-		self.conn.lock().unwrap()
+		self.conn.lock().unwrap_or_else(PoisonError::into_inner)
 	}
 }
 

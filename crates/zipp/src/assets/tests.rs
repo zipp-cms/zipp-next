@@ -200,8 +200,14 @@ fn knows_where_assets_are_used() {
 	let conn = db.conn();
 	let a = store(&conn, &dir, "hero.png", &png, None).unwrap();
 	let fields = serde_json::json!({ "image": [a.id] });
-	let e = save(&conn, &s, None, input("events", "event", "Jazz", fields))
-		.unwrap();
+	let e = save(
+		&conn,
+		&s,
+		None,
+		input("events", "event", "Jazz", fields),
+		None,
+	)
+	.unwrap();
 	let used = |conn: &Connection| -> Vec<(i64, String)> {
 		let mut stmt = conn
 			.prepare(

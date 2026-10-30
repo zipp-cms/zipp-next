@@ -19,6 +19,9 @@ use crate::field_type::{GraphqlType, Scalar};
 use crate::schema::SectionKind;
 use crate::schema::{FieldKind, Schema};
 
+/// The most entries of one query.
+pub const MAX_LIMIT: i64 = 1000;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Query {
 	pub site: String,
@@ -184,7 +187,7 @@ impl Query {
 					}
 					q.relations.push(f);
 				}
-				"limit" => q.limit = int(key, value)?.clamp(1, 1000),
+				"limit" => q.limit = int(key, value)?.clamp(1, MAX_LIMIT),
 				"offset" => q.offset = int(key, value)?.max(0),
 				"ids" | "notIds" => {
 					let ids = value

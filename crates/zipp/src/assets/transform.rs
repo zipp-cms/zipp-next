@@ -51,15 +51,18 @@ pub(super) fn generate(
 	out: &FsPath,
 ) -> Result<()> {
 	let internal = |e: &dyn std::fmt::Display| Error::Internal(e.to_string());
-	let img = image::open(original).map_err(|e| internal(&e))?;
+	// by its content, a name may have no or another extension
+	let img = image::ImageReader::open(original)
+		.and_then(|r| r.with_guessed_format())
+		.map_err(|e| internal(&e))?
+		.decode()
+		.map_err(|e| internal(&e))?;
 	let img = match &asset.edits {
 		Some(e) => e.apply(img),
 		None => img,
 	};
-	let format = match asset.output_mime() {
-		"image/png" => ImageFormat::Png,
-		_ => ImageFormat::from_path(original).map_err(|e| internal(&e))?,
-	};
+	let format = ImageFormat::from_mime_type(asset.output_mime())
+		.ok_or_else(|| internal(&"an image of an unknown type"))?;
 	let (w, h) = (img.width(), img.height());
 	let (out_w, out_h) = transform_size(w, h, t);
 

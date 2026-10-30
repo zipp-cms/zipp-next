@@ -26,20 +26,30 @@ async fn loads_a_page_with_its_relations() {
 
 	let (about, event) = {
 		let conn = db.conn();
-		let about =
-			save(&conn, &s, None, input("pages", "page", "About", json!({})))
-				.unwrap();
+		let about = save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "About", json!({})),
+			None,
+		)
+		.unwrap();
 		let fields = json!({ "city": "Bern", "price": 12, "page": [about.id] });
-		let event =
-			save(&conn, &s, None, input("events", "event", "Jazz", fields))
-				.unwrap();
+		let event = save(
+			&conn,
+			&s,
+			None,
+			input("events", "event", "Jazz", fields),
+			None,
+		)
+		.unwrap();
 		let body = json!({ "intro": "Hi", "body": [
 			{ "type": "text", "fields": { "content": "Hello" } },
 			{ "type": "button", "fields": { "label": "Go", "link": [about.id] } },
 		]});
 		let mut team = input("pages", "page", "Team", body);
 		team.parent_id = Some(about.id);
-		save(&conn, &s, None, team).unwrap();
+		save(&conn, &s, None, team, None).unwrap();
 		(about, event)
 	};
 
@@ -128,8 +138,14 @@ async fn assets_with_transforms() {
 		let a =
 			crate::assets::store(&conn, &dir, "hero.png", &png, None).unwrap();
 		let fields = json!({ "city": "Bern", "image": [a.id] });
-		save(&conn, &s, None, input("events", "event", "Jazz", fields))
-			.unwrap();
+		save(
+			&conn,
+			&s,
+			None,
+			input("events", "event", "Jazz", fields),
+			None,
+		)
+		.unwrap();
 	}
 
 	let data = run(
@@ -234,7 +250,7 @@ async fn preview_shows_the_draft() {
 		let conn = db.conn();
 		let mut e = input("pages", "page", "Live", json!({ "intro": "old" }));
 		e.published = false;
-		let e = save(&conn, &s, None, e).unwrap();
+		let e = save(&conn, &s, None, e, None).unwrap();
 		let sd = crate::drafts::SiteDoc {
 			title: "Draft".into(),
 			slug: "live".into(),
@@ -277,7 +293,7 @@ async fn site_preview_shows_every_draft() {
 		// new, only its draft publishes it
 		let mut e = input("pages", "page", "New", json!({}));
 		e.published = false;
-		let new = save(&conn, &s, None, e).unwrap();
+		let new = save(&conn, &s, None, e, None).unwrap();
 		crate::drafts::put_draft(
 			&conn,
 			&s,
@@ -289,9 +305,14 @@ async fn site_preview_shows_every_draft() {
 		)
 		.unwrap();
 		// live, its draft takes it down
-		let old =
-			save(&conn, &s, None, input("pages", "page", "Old", json!({})))
-				.unwrap();
+		let old = save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "Old", json!({})),
+			None,
+		)
+		.unwrap();
 		crate::drafts::put_draft(
 			&conn,
 			&s,
@@ -302,8 +323,14 @@ async fn site_preview_shows_every_draft() {
 			None,
 		)
 		.unwrap();
-		save(&conn, &s, None, input("pages", "page", "Same", json!({})))
-			.unwrap();
+		save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "Same", json!({})),
+			None,
+		)
+		.unwrap();
 		let token = crate::drafts::create_site_token(&conn).unwrap();
 		crate::drafts::preview(&conn, &token).unwrap()
 	};
@@ -342,6 +369,7 @@ async fn urls_of_a_preview_keep_the_token() {
 		&s,
 		None,
 		input("pages", "page", "Team", json!({})),
+		None,
 	)
 	.unwrap();
 
@@ -386,9 +414,14 @@ async fn resolves_links() {
 	let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
 	{
 		let conn = db.conn();
-		let about =
-			save(&conn, &s, None, input("pages", "page", "About", json!({})))
-				.unwrap();
+		let about = save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "About", json!({})),
+			None,
+		)
+		.unwrap();
 		for (title, link) in [
 			(
 				"a",
@@ -406,8 +439,14 @@ async fn resolves_links() {
 			),
 		] {
 			let fields = json!({ "ticket": link });
-			save(&conn, &s, None, input("events", "event", title, fields))
-				.unwrap();
+			save(
+				&conn,
+				&s,
+				None,
+				input("events", "event", title, fields),
+				None,
+			)
+			.unwrap();
 		}
 	}
 
@@ -452,9 +491,14 @@ async fn rich_text_in_chunks() {
 	let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
 	{
 		let conn = db.conn();
-		let about =
-			save(&conn, &s, None, input("pages", "page", "About", json!({})))
-				.unwrap();
+		let about = save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "About", json!({})),
+			None,
+		)
+		.unwrap();
 		let story = json!({ "type": "doc", "content": [
 			{ "type": "heading", "attrs": { "level": 2 }, "content": [
 				{ "type": "text", "text": "Hi" }] },
@@ -474,6 +518,7 @@ async fn rich_text_in_chunks() {
 			&s,
 			None,
 			input("pages", "page", "Story", json!({ "story": story })),
+			None,
 		)
 		.unwrap();
 	}
@@ -540,7 +585,7 @@ async fn translations_for_crelte() {
 			}),
 		);
 		en.site = Some("en".into());
-		save(&conn, &s, Some(id), en).unwrap();
+		save(&conn, &s, Some(id), en, None).unwrap();
 	}
 
 	let common = |site: u8| {
@@ -566,14 +611,16 @@ async fn groups_and_markdown() {
 	{
 		let conn = db.conn();
 		let fields = json!({ "seo": { "title": "Hi", "description": "D" } });
-		save(&conn, &s, None, input("pages", "page", "P", fields)).unwrap();
+		save(&conn, &s, None, input("pages", "page", "P", fields), None)
+			.unwrap();
 		let fields = json!({ "notes": "**bold** <script>x</script>" });
-		save(&conn, &s, None, input("events", "event", "E", fields)).unwrap();
+		save(&conn, &s, None, input("events", "event", "E", fields), None)
+			.unwrap();
 
 		// errors inside a group have its path
 		let bad = json!({ "seo": { "title": "x".repeat(61) } });
 		let Err(crate::error::Error::Invalid(errs)) =
-			save(&conn, &s, None, input("pages", "page", "Q", bad))
+			save(&conn, &s, None, input("pages", "page", "Q", bad), None)
 		else {
 			panic!("should fail");
 		};
@@ -607,7 +654,7 @@ async fn hides_drafts_without_a_session() {
 		build(s.clone(), db.clone(), String::new(), SiteUrls::new()).unwrap();
 	let mut draft = input("pages", "page", "Draft", json!({}));
 	draft.published = false;
-	save(&db.conn(), &s, None, draft).unwrap();
+	save(&db.conn(), &s, None, draft, None).unwrap();
 
 	let q = r#"{ entry(uri: "draft") { title } }"#;
 	assert_eq!(run(&gql, q, true).await["entry"], Value::Null);
@@ -639,6 +686,7 @@ async fn offline_sites_only_for_previews() {
 		&s,
 		None,
 		input("pages", "page", "Team", json!({})),
+		None,
 	)
 	.unwrap();
 
@@ -677,9 +725,14 @@ async fn checkboxes_tables_and_navigations() {
 	let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
 	{
 		let conn = db.conn();
-		let team =
-			save(&conn, &s, None, input("pages", "page", "Team", json!({})))
-				.unwrap();
+		let team = save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "Team", json!({})),
+			None,
+		)
+		.unwrap();
 		let fields = json!({
 			"main": [
 				{ "type": "url", "value": "https://a.ch", "label": "A",
@@ -688,7 +741,8 @@ async fn checkboxes_tables_and_navigations() {
 			"links": [{ "label": "Docs", "url": "https://d.ch" }, { "label": " " }],
 			"cycles": ["2", "1", "2"],
 		});
-		save(&conn, &s, None, input("menus", "menu", "M", fields)).unwrap();
+		save(&conn, &s, None, input("menus", "menu", "M", fields), None)
+			.unwrap();
 
 		// mistakes: too deep, a url that isn't one, an unknown option
 		let bad = json!({
@@ -699,7 +753,7 @@ async fn checkboxes_tables_and_navigations() {
 			"cycles": ["3"],
 		});
 		let Err(crate::error::Error::Invalid(errs)) =
-			save(&conn, &s, None, input("menus", "menu", "B", bad))
+			save(&conn, &s, None, input("menus", "menu", "B", bad), None)
 		else {
 			panic!("should fail");
 		};
@@ -757,12 +811,25 @@ async fn craft_arguments_and_fields() {
 			&s,
 			None,
 			input("events", "event", "A", json!({ "image": [img.id] })),
+			None,
 		)
 		.unwrap();
-		let b = save(&conn, &s, None, input("events", "event", "B", json!({})))
-			.unwrap();
-		let c = save(&conn, &s, None, input("pages", "page", "C", json!({})))
-			.unwrap();
+		let b = save(
+			&conn,
+			&s,
+			None,
+			input("events", "event", "B", json!({})),
+			None,
+		)
+		.unwrap();
+		let c = save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "C", json!({})),
+			None,
+		)
+		.unwrap();
 		(a.id, b.id, c.id)
 	};
 
@@ -819,13 +886,31 @@ async fn filters_by_relation_fields_like_craft() {
 		build(s.clone(), db.clone(), String::new(), SiteUrls::new()).unwrap();
 	let about = {
 		let conn = db.conn();
-		let about =
-			save(&conn, &s, None, input("pages", "page", "About", json!({})))
-				.unwrap();
+		let about = save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "About", json!({})),
+			None,
+		)
+		.unwrap();
 		let with = json!({ "city": "Bern", "page": [about.id] });
-		save(&conn, &s, None, input("events", "event", "Jazz", with)).unwrap();
-		save(&conn, &s, None, input("events", "event", "Folk", json!({})))
-			.unwrap();
+		save(
+			&conn,
+			&s,
+			None,
+			input("events", "event", "Jazz", with),
+			None,
+		)
+		.unwrap();
+		save(
+			&conn,
+			&s,
+			None,
+			input("events", "event", "Folk", json!({})),
+			None,
+		)
+		.unwrap();
 		about
 	};
 	let titles = |q: String| {

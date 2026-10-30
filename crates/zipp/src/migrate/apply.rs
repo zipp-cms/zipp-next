@@ -14,15 +14,18 @@ use crate::migrate::{Migration, Op};
 use crate::schema::{Schema, SectionKind};
 
 /// Applies the migrations that didn't run yet and returns their names.
+/// All of them and the rebuild of the indexes are one transaction: when
+/// anything fails nothing is recorded, the next start tries again.
 pub fn apply_migrations(
 	conn: &Connection,
 	migrations: &[Migration],
 ) -> Result<Vec<String>> {
 	let mut applied = vec![];
 	let mut schema = Schema::new();
+	let tx = conn.unchecked_transaction()?;
 
 	for m in migrations {
-		let done: bool = conn.query_row(
+		let done: bool = tx.query_row(
 			"SELECT COUNT(*) FROM schema_migrations WHERE name = ?1",
 			[&m.name],
 			|r| r.get(0),
@@ -32,7 +35,6 @@ pub fn apply_migrations(
 			continue;
 		}
 
-		let tx = conn.unchecked_transaction()?;
 		for op in &m.ops {
 			apply_op(&tx, &schema, op)?;
 			op.apply_schema(&mut schema);
@@ -41,18 +43,16 @@ pub fn apply_migrations(
 			"INSERT INTO schema_migrations (name, applied_at) VALUES (?1, ?2)",
 			params![m.name, now()],
 		)?;
-		tx.commit()?;
 
 		schema = m.schema.clone();
 		applied.push(m.name.clone());
 	}
 
 	if !applied.is_empty() {
-		let tx = conn.unchecked_transaction()?;
 		create_singles(&tx, &schema)?;
 		rebuild(&tx, &schema)?;
-		tx.commit()?;
 	}
+	tx.commit()?;
 
 	Ok(applied)
 }
@@ -80,7 +80,12 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 			})?;
 		}
 		Op::RemoveSite { site } => {
-			for table in ["entry_sites", "entry_values", "entry_relations"] {
+			for table in [
+				"entry_sites",
+				"entry_values",
+				"entry_relations",
+				"asset_relations",
+			] {
 				conn.execute(
 					&format!("DELETE FROM {table} WHERE site = ?1"),
 					[site],
@@ -342,8 +347,9 @@ mod tests {
 		apply_migrations(&conn, std::slice::from_ref(&first)).unwrap();
 
 		let fields = json!({ "city": "Bern", "price": 10 });
-		let e = save(&conn, &s, None, input("events", "event", "E", fields))
-			.unwrap();
+		let e =
+			save(&conn, &s, None, input("events", "event", "E", fields), None)
+				.unwrap();
 
 		let sd = crate::drafts::SiteDoc {
 			title: "E".into(),
@@ -385,9 +391,15 @@ mod tests {
 		let mut page =
 			input("pages", "page", "Hallo", json!({ "intro": "Hoi" }));
 		page.slug = "hallo".into();
-		let p = save(&conn, &s, None, page).unwrap();
-		let e = save(&conn, &s, None, input("events", "event", "E", json!({})))
-			.unwrap();
+		let p = save(&conn, &s, None, page, None).unwrap();
+		let e = save(
+			&conn,
+			&s,
+			None,
+			input("events", "event", "E", json!({})),
+			None,
+		)
+		.unwrap();
 
 		// fr starts as a copy of de, events now live under agenda/, intro
 		// is no longer translatable
@@ -396,7 +408,7 @@ mod tests {
 		s2.get_mut("page").unwrap().fields[0].translatable = false;
 		let mut en = input("pages", "page", "Hello", json!({ "intro": "Hi" }));
 		en.site = Some("en".into());
-		save(&conn, &s, Some(p.id), en).unwrap();
+		save(&conn, &s, Some(p.id), en, None).unwrap();
 
 		apply_migrations(
 			&conn,
