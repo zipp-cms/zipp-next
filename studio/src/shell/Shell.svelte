@@ -16,12 +16,25 @@
 	import FlyoutHost from './FlyoutHost.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import UploadProgress from '../assets/UploadProgress.svelte';
+	import { sideNav } from './sideNav.svelte';
+	import { layer } from 'zipp-ui/layers';
 
 	/**
 	 * The frame of the studio's pages: the sidebar, the page, the flyout
-	 * over it.
+	 * over it. The AI page takes the whole width, its sidebar slides in
+	 * over it (`sideNav`) and goes again with the next page.
 	 */
 	let { schema, children }: { schema: Schema; children: Snippet } = $props();
+
+	const wide = $derived(current.path === '/admin/ai');
+
+	$effect(() => {
+		// a new page closes it
+		void current.path;
+		sideNav.open = false;
+	});
+
+	const close = () => (sideNav.open = false);
 
 	async function onlogout() {
 		await session.logout();
@@ -29,11 +42,17 @@
 	}
 </script>
 
-<!-- the AI chat and the website take the whole height -->
-<div class="layout" class:wide={current.path === '/admin/ai'}>
-	<Sidebar {schema} {onlogout} />
+<!-- the AI chat and the website take the whole page -->
+<div class="layout" class:wide>
+	{#if !wide}<Sidebar {schema} {onlogout} />{/if}
 	<main>{@render children()}</main>
 </div>
+{#if wide && sideNav.open}
+	<div class="backdrop" role="presentation" onclick={close}></div>
+	<div class="drawer" use:layer={close}>
+		<Sidebar {schema} {onlogout} />
+	</div>
+{/if}
 <FlyoutHost {schema} />
 <UploadProgress />
 
@@ -50,11 +69,36 @@
 	}
 
 	.wide {
+		grid-template-columns: minmax(0, 1fr);
 		height: 100vh;
 
 		main {
 			padding: 0;
 			height: 100vh;
+		}
+	}
+
+	.backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: var(--z-overlay);
+		background: var(--backdrop);
+	}
+
+	.drawer {
+		position: fixed;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		z-index: var(--z-overlay);
+		width: 14.5rem;
+		box-shadow: var(--shadow-flyout);
+		animation: slide 0.18s ease-out;
+	}
+
+	@keyframes slide {
+		from {
+			transform: translateX(-100%);
 		}
 	}
 

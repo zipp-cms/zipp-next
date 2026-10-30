@@ -12,6 +12,7 @@
 	"exports": {
 		"./vars.scss": "./vars.scss",
 		"./sortable": "./src/sortable.svelte.ts",
+		"./layers": "./src/layers.ts",
 		"./*": "./src/*"
 	},
 	"peerDependencies": {
