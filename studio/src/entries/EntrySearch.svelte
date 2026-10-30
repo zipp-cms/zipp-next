@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { type Schema } from '../core/schema';
 	import { listEntries, type EntryRef } from './api';
 	import { site } from '../core/router.svelte';
@@ -18,6 +19,7 @@
 		exclude = [],
 		multiple = false,
 		onpick,
+		trigger,
 	}: {
 		schema: Schema;
 		/** the entry types to choose from */
@@ -25,8 +27,12 @@
 		exclude?: number[];
 		multiple?: boolean;
 		onpick: (e: EntryRef) => void;
+		/** what opens it instead of "Choose …", like the chosen entry */
+		trigger?: Snippet<[{ toggle: () => void; open: boolean }]>;
 	} = $props();
 
+	// the prop's name is the Popover's snippet's too
+	const own = $derived(trigger);
 	let open = $state(false);
 	let search = $state('');
 	let found = $state<EntryRef[]>([]);
@@ -69,9 +75,12 @@
 
 <Popover bind:open width="22.75rem" label="Choose {what}">
 	{#snippet trigger({ toggle, open })}
-		<AddButton onclick={() => ((search = ''), toggle())} expanded={open}>
-			Choose {what}
-		</AddButton>
+		{@const start = () => ((search = ''), toggle())}
+		{#if own}
+			{@render own({ toggle: start, open })}
+		{:else}
+			<AddButton onclick={start} expanded={open}>Choose {what}</AddButton>
+		{/if}
 	{/snippet}
 	<SearchList
 		items={shown}

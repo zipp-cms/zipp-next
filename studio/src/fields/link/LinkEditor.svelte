@@ -112,19 +112,39 @@
 		{#if link.type === 'entry'}
 			{#if entry}
 				<span class="entry">
-					<span
-						class="dot"
-						class:live={entry.published}
-						title={entry.published ? 'Published' : 'Not published'}
-					></span>
-					<span class="truncate">{entry.title}</span>
-					<span class="note">
-						{sectionOf(schema, entry.section)?.name ?? ''}
-					</span>
+					<!-- a click on it chooses another one -->
+					<EntrySearch
+						{schema}
+						types={linkableTypes(schema)}
+						onpick={pickEntry}
+					>
+						{#snippet trigger({ toggle, open })}
+							<button
+								type="button"
+								class="chosen plain"
+								title="Choose another entry"
+								aria-expanded={open}
+								onclick={toggle}
+							>
+								<span
+									class="dot"
+									class:live={entry.published}
+									title={entry.published
+										? 'Published'
+										: 'Not published'}
+								></span>
+								<span class="truncate">{entry.title}</span>
+								<span class="note">
+									{sectionOf(schema, entry.section)?.name ??
+										''}
+								</span>
+							</button>
+						{/snippet}
+					</EntrySearch>
 					<button
 						type="button"
 						class="icon"
-						title="Another entry"
+						title="Remove the entry"
 						onclick={() => set({ value: null })}
 					>
 						<Icon name="close" size={14} />
@@ -281,9 +301,30 @@
 		border-radius: var(--radius);
 		background: var(--input);
 
+		// the chooser and its button fill the row
+		> :global(.popover) {
+			flex: 1;
+			min-width: 0;
+		}
+	}
+
+	.chosen {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		width: 100%;
+		min-height: 2rem;
+		font-weight: 400;
+
 		.truncate {
 			flex: 1;
 			min-width: 0;
+		}
+
+		@include hover {
+			&:hover .truncate {
+				color: var(--accent);
+			}
 		}
 	}
 
