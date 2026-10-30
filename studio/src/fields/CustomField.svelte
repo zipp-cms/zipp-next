@@ -1,14 +1,15 @@
 <script module lang="ts">
+	import type { FieldModule, Mounted } from 'zipp-ui/field';
+
 	/** The editor of a field type of another crate, loaded once. */
-	export type Mounted = { update(props: object): void; destroy(): void };
-	type Module = { mount(target: HTMLElement, props: object): Mounted };
+	const modules = new Map<string, Promise<FieldModule>>();
 
-	const modules = new Map<string, Promise<Module>>();
-
-	function load(ty: string): Promise<Module> {
+	function load(ty: string): Promise<FieldModule> {
 		let m = modules.get(ty);
 		if (!m) {
 			m = import(/* @vite-ignore */ `/_fields/${ty}.js`);
+			// a failed load is tried again the next time
+			m.catch(() => modules.delete(ty));
 			modules.set(ty, m);
 		}
 		return m;
@@ -16,6 +17,7 @@
 </script>
 
 <script lang="ts">
+	import type { FieldProps } from 'zipp-ui/field';
 	import type { FieldOf, Values } from '../core/schema';
 	import { host } from './host.svelte';
 	import { getEditing, editedSite } from '../core/editing';
@@ -23,12 +25,21 @@
 
 	/**
 	 * A field of a type of another crate: zipp serves its module, which
-	 * brings its own framework; the studio mounts it, passes the value in
-	 * and out, the entry it belongs to (`entryId` null for a new one, the
-	 * site) and the `host` api.
+	 * brings its own framework; the studio mounts it with `FieldProps`
+	 * (zipp-ui/field) and updates them. A module that throws breaks only
+	 * its field.
 	 */
-	let { field, values }: { field: FieldOf<'custom'>; values: Values } =
-		$props();
+	let {
+		field,
+		values,
+		errors = {},
+		path = '',
+	}: {
+		field: FieldOf<'custom'>;
+		values: Values;
+		errors?: Record<string, string>;
+		path?: string;
+	} = $props();
 
 	const editing = getEditing();
 	const site = editedSite();
@@ -39,7 +50,7 @@
 	let mounted = $state.raw<Mounted | null>(null);
 	let error = $state('');
 
-	function current() {
+	function current(): FieldProps {
 		return {
 			field: $state.snapshot(field),
 			value: $state.snapshot(values[field.handle]) ?? null,
@@ -49,8 +60,20 @@
 			},
 			entryId: editing?.entryId ?? null,
 			site,
+			// a revision, or the role may not edit
+			readonly: !!target?.closest('fieldset[disabled]'),
+			error: errors[path] ?? null,
 			host,
 		};
+	}
+
+	/** Calls into the module, what it throws shows at the field. */
+	function safely(f: () => void) {
+		try {
+			f();
+		} catch (e: any) {
+			error = `${field.type}: ${e?.message ?? e}`;
+		}
 	}
 
 	$effect(() => {
@@ -61,21 +84,27 @@
 				if (gone) return;
 				const props = current();
 				last.changed(props.value);
-				m = mod.mount(target, props);
+				safely(() => (m = mod.mount(target, props)));
 				mounted = m;
 			})
 			.catch(e => (error = `${field.type}: ${e.message}`));
 		return () => {
 			gone = true;
-			m?.destroy();
+			if (m) safely(() => m!.destroy());
+			mounted = null;
 		};
 	});
 
-	// changes from outside, like a restored revision; what the plugin
-	// sent itself doesn't go back, it could send it again and again
+	// changes from outside: a restored revision, the id of a new entry
+	// after its first save, an error; what the plugin sent itself doesn't
+	// go back, it could send it again and again
+	let others = '';
 	$effect(() => {
 		const p = current();
-		if (mounted && last.changed(p.value)) mounted.update(p);
+		const now = JSON.stringify([p.entryId, p.readonly, p.error]);
+		const changed = last.changed(p.value) || now !== others;
+		others = now;
+		if (mounted && changed) safely(() => mounted!.update(p));
 	});
 </script>
 

@@ -24,7 +24,7 @@
 		required = false,
 		onchange,
 		onremove,
-		removeTitle = 'Remove',
+		removeLabel = 'Remove',
 		handle,
 	}: {
 		schema: Schema;
@@ -40,7 +40,7 @@
 		onchange: (link: Link) => void;
 		/** removes what holds the link, like a button of a rich text */
 		onremove?: () => void;
-		removeTitle?: string;
+		removeLabel?: string;
 		/** a DragHandle on the left, like a button of a rich text */
 		handle?: Snippet;
 	} = $props();
@@ -69,7 +69,7 @@
 		onremove
 			? [
 					{
-						label: removeTitle,
+						label: removeLabel,
 						icon: 'delete',
 						onclick: onremove,
 						danger: true,

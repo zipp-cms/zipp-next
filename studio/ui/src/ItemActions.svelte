@@ -9,11 +9,11 @@
 	let {
 		onduplicate,
 		onremove,
-		removeTitle = 'Remove',
+		removeLabel = 'Remove',
 	}: {
 		onduplicate?: () => void;
 		onremove: () => void;
-		removeTitle?: string;
+		removeLabel?: string;
 	} = $props();
 </script>
 
@@ -31,7 +31,7 @@
 	<button
 		type="button"
 		class="icon remove"
-		title={removeTitle}
+		title={removeLabel}
 		onclick={onremove}
 	>
 		<Icon name="delete" size={15} />

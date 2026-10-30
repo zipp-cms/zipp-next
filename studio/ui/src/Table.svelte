@@ -17,7 +17,7 @@
 		id,
 		empty = 'Nothing yet',
 		detail,
-		open,
+		isOpen,
 		ontoggle,
 		widths,
 	}: {
@@ -32,7 +32,7 @@
 		empty?: string;
 		/** what a row shows under it while it is open, a click opens it */
 		detail?: Snippet<[T]>;
-		open?: (row: T) => boolean;
+		isOpen?: (row: T) => boolean;
 		ontoggle?: (row: T) => void;
 		/** of the columns, so tables one under the other line up */
 		widths?: string[];
@@ -45,7 +45,9 @@
 		const url = href(r);
 		if (e.metaKey || e.ctrlKey) return void window.open(url, '_blank');
 		const row = e.currentTarget as HTMLElement;
-		const link = row.querySelector<HTMLAnchorElement>(`a[href="${url}"]`);
+		const link = row.querySelector<HTMLAnchorElement>(
+			`a[href="${CSS.escape(url)}"]`,
+		);
 		if (link) link.click();
 		else location.assign(url);
 	}
@@ -68,12 +70,12 @@
 		{#each rows as r, i (key(r))}
 			<tr
 				id={id?.(r)}
-				aria-expanded={ontoggle ? !!open?.(r) : undefined}
+				aria-expanded={ontoggle ? !!isOpen?.(r) : undefined}
 				onclick={e => click(e, r)}
 			>
 				{@render row(r, i)}
 			</tr>
-			{#if detail && open?.(r)}
+			{#if detail && isOpen?.(r)}
 				<tr class="detail">
 					<td colspan={columns.length || 1}>{@render detail(r)}</td>
 				</tr>

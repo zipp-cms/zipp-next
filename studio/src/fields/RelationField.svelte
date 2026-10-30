@@ -49,7 +49,7 @@
 				{#snippet actions()}
 					<ItemActions
 						onremove={() => set(removed(ids, i))}
-						removeTitle="Remove from the field"
+						removeLabel="Remove from the field"
 					/>
 				{/snippet}
 			</EntryChip>

@@ -1,17 +1,5 @@
-// The contract of a field editor of zipp's studio: mount(target, props)
-// with props { field, value, onchange }, returning update and destroy.
-import { mount as svelteMount, unmount } from 'svelte';
+// The editor of the field in zipp's studio, see zipp-ui/field.
+import { fieldModule } from 'zipp-ui/field';
 import ButtonGroup from './ButtonGroup.svelte';
 
-export function mount(target, initial) {
-	const props = $state({ ...initial });
-	const app = svelteMount(ButtonGroup, { target, props });
-	return {
-		update(next) {
-			Object.assign(props, next);
-		},
-		destroy() {
-			unmount(app);
-		},
-	};
-}
+export const mount = fieldModule(ButtonGroup);

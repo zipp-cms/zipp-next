@@ -66,7 +66,7 @@
 					<td class="actions">
 						<ItemActions
 							onremove={() => set(removed(rows, i))}
-							removeTitle="Remove the row"
+							removeLabel="Remove the row"
 						/>
 					</td>
 				</tr>

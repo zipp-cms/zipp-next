@@ -21,9 +21,11 @@ A crate implements `FieldType`:
 it checks its options and values, says how GraphQL shows them (a scalar,
 an object, or a type of its plugin it resolves itself with the request),
 what entries and assets a value relates to, and brings the editor of the
-studio as an ES module with `mount(target, { field, value, onchange,
-entryId, site, host })`, built with its own framework and compiled into
-the crate. The site registers it with `Schema::field_type(...)`, the
+studio as an ES module with `mount(target, props)`, built with its own
+framework and compiled into the crate. The props are `FieldProps` of
+`zipp-ui/field`: `field, value, onchange, entryId, site, readonly,
+error, host`, again with `update` when they change; a Svelte editor is
+`export const mount = fieldModule(MyField)`. The site registers it with `Schema::field_type(...)`, the
 studio loads the module from `/_fields/<type>.js` when a field needs it.
 `crates/zipp-button-group` is such a crate: Craft's button group, options
 in colors.
@@ -34,8 +36,10 @@ The editors of field types and the modules of plugins look like the
 studio with `zipp-ui` (`studio/ui`), the components the studio itself is
 built of: `Table`, `Segmented`, `Popover`, `Flyout`, `ItemCard`,
 `ItemActions`, `AddGroup`, `SearchInput`, `Icon` and more. A module
-bundles them like its Svelte, they look right because they only use the
-studio's CSS variables, which are on the page:
+bundles them like its Svelte; they look right because they use the
+studio's CSS variables and some of its global classes, which are on the
+page (listed in `studio/ui/README.md`, they are part of the contract).
+A module imports only what `exports` of its `package.json` lists:
 
 ```js
 import Table from 'zipp-ui/Table.svelte';

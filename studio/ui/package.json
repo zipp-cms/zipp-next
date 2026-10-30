@@ -13,7 +13,25 @@
 		"./vars.scss": "./vars.scss",
 		"./sortable": "./src/sortable.svelte.ts",
 		"./layers": "./src/layers.ts",
-		"./*": "./src/*"
+		"./field": "./src/field.svelte.ts",
+		"./AddButton.svelte": "./src/AddButton.svelte",
+		"./AddGroup.svelte": "./src/AddGroup.svelte",
+		"./Crumbs.svelte": "./src/Crumbs.svelte",
+		"./DragHandle.svelte": "./src/DragHandle.svelte",
+		"./Flyout.svelte": "./src/Flyout.svelte",
+		"./Icon.svelte": "./src/Icon.svelte",
+		"./ItemActions.svelte": "./src/ItemActions.svelte",
+		"./ItemCard.svelte": "./src/ItemCard.svelte",
+		"./LogoIcon.svelte": "./src/LogoIcon.svelte",
+		"./Menu.svelte": "./src/Menu.svelte",
+		"./PageTop.svelte": "./src/PageTop.svelte",
+		"./Popover.svelte": "./src/Popover.svelte",
+		"./SearchInput.svelte": "./src/SearchInput.svelte",
+		"./SearchList.svelte": "./src/SearchList.svelte",
+		"./Segmented.svelte": "./src/Segmented.svelte",
+		"./SortLine.svelte": "./src/SortLine.svelte",
+		"./Table.svelte": "./src/Table.svelte",
+		"./UploadButton.svelte": "./src/UploadButton.svelte"
 	},
 	"peerDependencies": {
 		"svelte": "^5.0.0"

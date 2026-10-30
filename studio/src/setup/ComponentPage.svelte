@@ -52,7 +52,7 @@
 						id={f => `field-${f.handle}`}
 						columns={['Label', 'Handle', 'Kind', 'Sites', '']}
 						widths={['20%', '18%', '36%', '12%', '14%']}
-						open={f => open.includes(f.handle)}
+						isOpen={f => open.includes(f.handle)}
 						ontoggle={toggle}
 					>
 						{#snippet row(f)}
