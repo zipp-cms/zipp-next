@@ -29,18 +29,22 @@
 			: undefined,
 	);
 
-	// the group is an object, also when it was never filled in
-	$effect.pre(() => {
-		if (!values[field.handle]) values[field.handle] = {};
+	// a group never filled in gets its object with the first value, not
+	// when it shows: opening an entry changes nothing
+	const empty = $state<Values>({});
+	const group = $derived<Values>(values[field.handle] ?? empty);
+	$effect(() => {
+		if (!values[field.handle] && Object.keys(empty).length)
+			values[field.handle] = empty;
 	});
 </script>
 
-{#if comp && values[field.handle]}
+{#if comp}
 	<div class="group box">
 		<Fields
 			{schema}
 			component={comp}
-			values={values[field.handle]}
+			values={group}
 			{errors}
 			{refs}
 			prefix="{path}."

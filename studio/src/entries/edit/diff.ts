@@ -1,6 +1,4 @@
-import type { Values } from '../../core/schema';
-
-type Block = { id?: string; type: string; fields: Values };
+import type { Block, Values } from '../../core/schema';
 
 function isBlocks(v: unknown): v is Block[] {
 	return (
@@ -19,7 +17,15 @@ function isObject(v: unknown): v is Values {
  */
 export function clean(v: unknown): unknown {
 	if (v === undefined || v === null || v === '') return null;
-	if (Array.isArray(v)) return v.length ? v : null;
+	if (!Array.isArray(v)) return cleanValue(v);
+	if (!v.length) return null;
+	// blocks: their fields like the entry's, also in a draft from before
+	if (isBlocks(v))
+		return v.map(b => ({ ...b, fields: clean(b.fields) ?? {} }));
+	return v;
+}
+
+function cleanValue(v: unknown): unknown {
 	if (isObject(v)) {
 		const out: Values = {};
 		for (const [k, x] of Object.entries(v)) {

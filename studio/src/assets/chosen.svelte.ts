@@ -2,20 +2,27 @@ import { listAssets, type Asset } from './api';
 import { flyout } from '../core/flyout.svelte';
 
 /**
- * The assets of these ids in their order, loaded again when the ids
- * change and after the flyout saved one (a new title or focal point).
- * Call it in a component, it uses an effect.
+ * The assets of the ids a field holds, by id: loaded when an id is new,
+ * all again after the flyout closed (a new title or focal point). `get`
+ * is undefined while loading and null for an asset that is gone. Call
+ * it in a component, it uses an effect.
  */
-export function chosenAssets(ids: () => number[]): { list: Asset[] } {
-	const chosen = $state({ list: [] as Asset[] });
+export function chosenAssets(ids: () => number[]) {
+	const cache = $state<Record<number, Asset | null>>({});
+	let closed = -1;
 	$effect(() => {
-		void flyout.saved;
 		const want = ids();
-		if (!want.length) return void (chosen.list = []);
-		const key = want.join(',');
-		listAssets({ ids: key }).then(a => {
-			if (ids().join(',') === key) chosen.list = a;
-		});
+		const again = flyout.saved !== closed;
+		closed = flyout.saved;
+		const missing = again ? want : want.filter(id => !(id in cache));
+		if (!missing.length) return;
+		listAssets({ ids: missing.join(',') })
+			.then(found => {
+				for (const id of missing)
+					cache[id] = found.find(a => a.id === id) ?? null;
+			})
+			// stays as it was, the next change tries again
+			.catch(() => {});
 	});
-	return chosen;
+	return { get: (id: number): Asset | null | undefined => cache[id] };
 }

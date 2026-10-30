@@ -58,17 +58,19 @@
 		for (const b of blocks) open[key(b)] = to;
 	}
 
-	function add(type: string, at = blocks.length) {
-		const block: Block = { type, fields: {} };
-		open[key(block)] = true;
+	/** Inserts a block and opens it: the one in the state, a proxy. */
+	function insert(block: Block, at: number) {
 		set(inserted(blocks, block, at));
+		open[key(blocks[at])] = true;
 	}
+
+	const add = (type: string, at = blocks.length) =>
+		insert({ type, fields: {} }, at);
 
 	function duplicate(i: number) {
 		const copy: Block = $state.snapshot(blocks[i]);
 		delete copy.id;
-		open[key(copy)] = true;
-		set(inserted(blocks, copy, i + 1));
+		insert(copy, i + 1);
 	}
 
 	/** Whether a block or something inside it has an error. */
@@ -80,7 +82,8 @@
 	// the outline of the editor opens a block and scrolls to it
 	$effect(() => {
 		if (focus.path !== path || !focus.at) return;
-		const b = blocks[focus.index];
+		// only when asked, not when the blocks change later
+		const b = untrack(() => blocks[focus.index]);
 		if (!b) return;
 		open[key(b)] = true;
 		setTimeout(() =>

@@ -103,8 +103,12 @@
 					/>
 				{/if}
 			{:else if link.type === 'asset'}
-				{#if asset.list[0]}
-					<AssetChip asset={asset.list[0]} actions={clear} />
+				{@const chosen =
+					typeof link.value === 'number'
+						? asset.get(link.value)
+						: null}
+				{#if chosen}
+					<AssetChip asset={chosen} actions={clear} />
 				{:else}
 					<AddButton onclick={() => (picking = true)}>
 						Choose file

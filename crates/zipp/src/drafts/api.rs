@@ -1,16 +1,24 @@
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 use super::{Doc, Draft, Revision, SiteDoc};
+use crate::entries::EntryRef;
 use crate::request;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetReq {
 	pub id: i64,
+	/// the site of `relations`, default the primary site
+	pub site: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DraftResp {
 	pub draft: Option<Draft>,
+	/// the entries the draft links to, also those only it has
+	#[serde(default)]
+	pub relations: BTreeMap<i64, EntryRef>,
 }
 
 request!(GetReq, GET "/entries/{id}/draft" => DraftResp);

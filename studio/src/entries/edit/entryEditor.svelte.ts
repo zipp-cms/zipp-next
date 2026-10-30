@@ -11,6 +11,7 @@ import {
 import {
 	discardDraft,
 	getDraft,
+	getDraftWithRefs,
 	getRevision,
 	getRevisions,
 	previewToken,
@@ -21,7 +22,7 @@ import {
 	type Revision,
 	type SiteDoc,
 } from '../drafts';
-import { site } from '../../core/route.svelte';
+import { site as current } from '../../core/route.svelte';
 import { changedPaths, clean } from './diff';
 
 /** How long after the last key a draft is saved. */
@@ -68,11 +69,15 @@ export class EntryEditor {
 	private lastSaved = '';
 	private timer: ReturnType<typeof setTimeout> | undefined;
 
+	/** the site it edits, the one of the start: the site may switch */
+	readonly site: string;
+
 	constructor(
 		readonly schema: Schema,
 		readonly id: number | null,
 		section: string | null,
 	) {
+		this.site = current.current;
 		this.sec = section ?? '';
 		this.loaded = id === null;
 	}
@@ -111,15 +116,16 @@ export class EntryEditor {
 	async load() {
 		const id = this.id;
 		if (id === null) return;
-		const [{ entry, relations }, d] = await Promise.all([
-			getEntry(id, site.current),
-			getDraft(id),
-		]);
+		const [{ entry, relations }, { draft: d, relations: drafted }] =
+			await Promise.all([
+				getEntry(id, this.site),
+				getDraftWithRefs(id, this.site),
+			]);
 		this.sec = entry.section;
 		this.ty = entry.type;
 		this.uri = entry.uri;
 		this.parentId = entry.parentId;
-		this.refs = relations;
+		this.refs = { ...relations, ...drafted };
 		this.draft = d;
 		this.live = {
 			title: entry.title,
@@ -127,7 +133,7 @@ export class EntryEditor {
 			published: entry.published,
 			fields: entry.fields,
 		};
-		const content = d?.doc[site.current] ?? entry;
+		const content = d?.doc[this.site] ?? entry;
 		this.title = content.title;
 		this.slug = content.slug;
 		this.published = content.published;
@@ -139,7 +145,7 @@ export class EntryEditor {
 			listEntries({
 				section: this.sec,
 				ids: String(id),
-				site: site.current,
+				site: this.site,
 			}),
 		]);
 		this.revisions = revs;
@@ -150,7 +156,7 @@ export class EntryEditor {
 	async loadParents() {
 		const r = await listEntries({
 			section: this.sec,
-			site: site.current,
+			site: this.site,
 			order: 'structure',
 		});
 		this.parents = r.entries;
@@ -174,14 +180,15 @@ export class EntryEditor {
 		const snap = this.snapshot();
 		if (!this.loaded || this.id === null || this.conflict || !canEdit)
 			return;
-		if (snap === this.lastSaved) return;
+		if (snap === this.lastSaved) return this.cancelSave();
 		clearTimeout(this.timer);
 		this.draftState = 'saving';
 		this.timer = setTimeout(() => this.saveDraft(snap), SAVE_AFTER_MS);
 	}
 
-	private async saveDraft(snap: string) {
-		if (this.id === null) return;
+	/** Saves the draft; whether it worked, a conflict or error shows. */
+	private async saveDraft(snap: string): Promise<boolean> {
+		if (this.id === null) return false;
 		const content = {
 			title: this.title,
 			slug: this.slug,
@@ -191,12 +198,14 @@ export class EntryEditor {
 		try {
 			this.draft = await putDraft(
 				this.id,
-				site.current,
+				this.site,
 				content,
 				this.draft?.updatedAt ?? null,
 			);
 			this.lastSaved = snap;
-			this.draftState = 'saved';
+			// a newer change may wait for its save
+			if (snap === this.snapshot()) this.draftState = 'saved';
+			return true;
 		} catch (e: any) {
 			if (e instanceof ApiError && e.type === 'CONFLICT') {
 				this.conflict = e.message;
@@ -204,7 +213,14 @@ export class EntryEditor {
 			} else {
 				this.error = e.message;
 			}
+			return false;
 		}
+	}
+
+	/** No save of what was typed before: discarding, restoring, theirs. */
+	private cancelSave() {
+		clearTimeout(this.timer);
+		this.draftState = '';
 	}
 
 	/** Runs an action: busy meanwhile, its errors on the fields. */
@@ -230,12 +246,14 @@ export class EntryEditor {
 	 */
 	save(): Promise<number | null> {
 		let created: number | null = null;
+		// Cmd+S while saving: once is enough, a new entry only once
+		if (this.busy) return Promise.resolve(null);
 		return this.run(async () => {
 			if (this.id === null) {
 				const entry = await saveEntry(null, {
 					section: this.sec,
 					type: this.ty,
-					site: site.current,
+					site: this.site,
 					parentId: this.parentId,
 					title: this.title,
 					slug: this.slug,
@@ -247,7 +265,9 @@ export class EntryEditor {
 			}
 			clearTimeout(this.timer);
 			const snap = this.snapshot();
-			if (snap !== this.lastSaved) await this.saveDraft(snap);
+			// what isn't saved can't be published: the conflict or error shows
+			if (snap !== this.lastSaved && !(await this.saveDraft(snap)))
+				return;
 			if (!this.draft) return;
 			await publishDraft(this.id);
 			this.draftState = '';
@@ -256,6 +276,7 @@ export class EntryEditor {
 	}
 
 	discard() {
+		this.cancelSave();
 		return this.run(async () => {
 			await discardDraft(this.id!);
 			this.draftState = '';
@@ -271,8 +292,18 @@ export class EntryEditor {
 		const id = this.id!;
 		return this.run(async () => {
 			// the other site as the editor sees it: its draft, or live
-			const d = await getDraft(id);
-			const theirs = d?.doc[other] ?? (await getEntry(id, other)).entry;
+			// the chips in this site's language
+			const { draft: d, relations } = await getDraftWithRefs(
+				id,
+				this.site,
+			);
+			let theirs = d?.doc[other];
+			if (!theirs) {
+				const live = await getEntry(id, other);
+				theirs = live.entry;
+				Object.assign(this.refs, live.relations);
+			}
+			Object.assign(this.refs, relations);
 			this.title = theirs.title;
 			this.fields = theirs.fields;
 		});
@@ -280,8 +311,7 @@ export class EntryEditor {
 
 	/** Throws away the own changes and shows the ones of the other. */
 	async loadTheirs() {
-		clearTimeout(this.timer);
-		this.draftState = '';
+		this.cancelSave();
 		await this.run(() => this.load());
 		// only now, else the own state would be saved again
 		this.conflict = '';
@@ -304,8 +334,8 @@ export class EntryEditor {
 			getRevision(id, rev.id),
 			before ? getRevision(id, before.id) : null,
 		]);
-		const now = doc[site.current] ?? null;
-		const old = prev?.[site.current] ?? null;
+		const now = doc[this.site] ?? null;
+		const old = prev?.[this.site] ?? null;
 		const set = new Set<string>();
 		if (now && old) {
 			changedPaths(old.fields, now.fields, '', set);
@@ -316,6 +346,7 @@ export class EntryEditor {
 	}
 
 	restore(rev: Revision) {
+		this.cancelSave();
 		return this.run(async () => {
 			await restoreRevision(this.id!, rev.id);
 			this.viewing = null;

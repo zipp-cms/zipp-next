@@ -1,3 +1,4 @@
+import type { Refs } from './api';
 import { request, token } from '../core/client';
 import { type Values } from '../core/schema';
 
@@ -33,7 +34,16 @@ export function getRevision(
 }
 
 export async function getDraft(id: number): Promise<Draft | null> {
-	return (await request('GET', `/entries/${id}/draft`)).draft;
+	return (await getDraftWithRefs(id)).draft;
+}
+
+/** The draft with the entries it links to in a site, also new ones. */
+export function getDraftWithRefs(
+	id: number,
+	site?: string,
+): Promise<{ draft: Draft | null; relations: Refs }> {
+	const q = site ? '?' + new URLSearchParams({ site }) : '';
+	return request('GET', `/entries/${id}/draft${q}`);
 }
 
 /**

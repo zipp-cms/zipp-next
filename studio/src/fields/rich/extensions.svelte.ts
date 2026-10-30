@@ -27,7 +27,11 @@ export const ZippLink = Mark.create({
 	},
 });
 
-type Options = { schema: Schema; refs: Refs };
+/**
+ * `refs` as a function: TipTap copies plain objects of the options, the
+ * node views need the entry's own, where picked entries go.
+ */
+type Options = { schema: Schema; refs: () => Refs };
 
 /**
  * A node edited by a Svelte component outside of the text: it gets the
@@ -43,7 +47,7 @@ function svelteView(component: Component<any>, options: Options) {
 		const props = $state({
 			attrs: node.attrs,
 			schema: options.schema,
-			refs: options.refs,
+			refs: options.refs(),
 			editable: editor.isEditable,
 			update: (attrs: Record<string, unknown>) => {
 				const pos = getPos();
@@ -96,7 +100,7 @@ export const Buttons = Node.create<Options>({
 	atom: true,
 	draggable: true,
 	addOptions() {
-		return { schema: null as any, refs: {} };
+		return { schema: null as any, refs: () => ({}) };
 	},
 	addAttributes() {
 		return { links: { default: [] } };
@@ -123,7 +127,7 @@ export const Block = Node.create<Options>({
 	atom: true,
 	draggable: true,
 	addOptions() {
-		return { schema: null as any, refs: {} };
+		return { schema: null as any, refs: () => ({}) };
 	},
 	addAttributes() {
 		return {

@@ -8,8 +8,16 @@ async fn get_route(
 	_access: EntryAccess<View>,
 	Req(req): Req<GetReq>,
 ) -> ApiResult<GetReq> {
-	let draft = get_draft(&state.db.conn(), req.id)?;
-	Ok(Json(DraftResp { draft }))
+	let conn = state.db.conn();
+	let draft = get_draft(&conn, req.id)?;
+	let site = req
+		.site
+		.unwrap_or_else(|| state.schema.primary_site().handle.clone());
+	let relations = match &draft {
+		Some(d) => draft_refs(&conn, &state.schema, req.id, d, &site)?,
+		None => Default::default(),
+	};
+	Ok(Json(DraftResp { draft, relations }))
 }
 
 async fn put_route(

@@ -224,6 +224,39 @@ pub fn refs(
 	Ok(out)
 }
 
+/// The entries of these ids as they show in a site, for chips.
+pub fn refs_of(
+	conn: &Connection,
+	ids: &[i64],
+	site: &str,
+) -> Result<BTreeMap<i64, EntryRef>> {
+	let marks = vec!["?"; ids.len()].join(", ");
+	let sql = format!(
+		"SELECT e.id, e.section, e.type, s.title, s.slug, s.uri
+		FROM entries e JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?
+		WHERE e.id IN ({marks})"
+	);
+	let mut stmt = conn.prepare(&sql)?;
+	let mut params = vec![rusqlite::types::Value::Text(site.into())];
+	params.extend(ids.iter().map(|i| rusqlite::types::Value::Integer(*i)));
+	let rows = stmt.query_map(params_from_iter(params), |r| {
+		Ok(EntryRef {
+			id: r.get(0)?,
+			section: r.get(1)?,
+			ty: r.get(2)?,
+			title: r.get(3)?,
+			slug: r.get(4)?,
+			uri: r.get(5)?,
+		})
+	})?;
+	let mut out = BTreeMap::new();
+	for r in rows {
+		let r = r?;
+		out.insert(r.id, r);
+	}
+	Ok(out)
+}
+
 /// Which of the entries have a draft.
 pub fn with_drafts(conn: &Connection, ids: &[i64]) -> Result<Vec<i64>> {
 	let marks = vec!["?"; ids.len()].join(", ");

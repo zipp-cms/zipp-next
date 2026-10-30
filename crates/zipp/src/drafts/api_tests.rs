@@ -45,13 +45,20 @@ async fn drafts_until_published() {
 	let draft = editor.call(&put(id, "Draft", None)).await.unwrap();
 	assert_eq!(draft.doc["de"].title, "Draft");
 	assert!(draft.user.unwrap().starts_with("editor"));
-	let got = editor.call(&GetReq { id }).await.unwrap();
+	let got = editor.call(&GetReq { id, site: None }).await.unwrap();
 	assert_eq!(got.draft.unwrap().doc["de"].title, "Draft");
 	assert_eq!(live_title(&editor, id).await, "Start");
 
 	editor.call(&PublishReq { id }).await.unwrap();
 	assert_eq!(live_title(&editor, id).await, "Draft");
-	assert!(editor.call(&GetReq { id }).await.unwrap().draft.is_none());
+	assert!(
+		editor
+			.call(&GetReq { id, site: None })
+			.await
+			.unwrap()
+			.draft
+			.is_none()
+	);
 
 	// back to the start: a revision becomes the draft
 	let revs = editor.call(&RevisionsReq { id }).await.unwrap();
@@ -63,7 +70,14 @@ async fn drafts_until_published() {
 	assert_eq!(restored.doc["de"].title, "Start");
 
 	editor.call(&DiscardReq { id }).await.unwrap();
-	assert!(editor.call(&GetReq { id }).await.unwrap().draft.is_none());
+	assert!(
+		editor
+			.call(&GetReq { id, site: None })
+			.await
+			.unwrap()
+			.draft
+			.is_none()
+	);
 	assert_eq!(live_title(&editor, id).await, "Draft");
 }
 
@@ -134,7 +148,13 @@ async fn roles_on_drafts() {
 	editor.call(&PublishReq { id: event }).await.unwrap();
 
 	// pages only to look at
-	author.call(&GetReq { id: page }).await.unwrap();
+	author
+		.call(&GetReq {
+			id: page,
+			site: None,
+		})
+		.await
+		.unwrap();
 	author.call(&RevisionsReq { id: page }).await.unwrap();
 	author.call(&PreviewReq { id: page }).await.unwrap();
 	let forbidden = [
@@ -160,4 +180,31 @@ async fn roles_on_drafts() {
 		.await
 		.unwrap_err();
 	assert_eq!(err, Error::MissingSessionToken);
+}
+
+#[tokio::test]
+async fn a_draft_knows_the_entries_only_it_links_to() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	let page = admin
+		.call(&CreateReq(input("pages", "page", "About", json!({}))))
+		.await
+		.unwrap();
+	let event = create(&admin, "events", "event").await;
+	let req = PutReq {
+		id: event,
+		site: "de".into(),
+		base: None,
+		content: content("Jazz", json!({ "page": [page.id] })),
+	};
+	admin.call(&req).await.unwrap();
+
+	let got = admin
+		.call(&GetReq {
+			id: event,
+			site: None,
+		})
+		.await
+		.unwrap();
+	assert_eq!(got.relations[&page.id].title, "About");
 }

@@ -67,7 +67,7 @@
 	// what the role may do here, the server checks it too
 	const canEdit = $derived(can(schema, ed.sec, 'edit'));
 	const canPublish = $derived(can(schema, ed.sec, 'publish'));
-	const url = $derived(entryUrl(schema, site.current, ed.uri));
+	const url = $derived(entryUrl(schema, ed.site, ed.uri));
 
 	$effect(() => {
 		// in the flyout the nav stays at the page behind it
@@ -112,7 +112,8 @@
 		if (!onclose && flyout.open) return;
 		if ((e.metaKey || e.ctrlKey) && e.key === 's') {
 			e.preventDefault();
-			save();
+			// like the button: a new entry who may edit, else who may publish
+			if (ed.id === null ? canEdit : canPublish) save();
 		}
 	}
 </script>
@@ -127,7 +128,7 @@
 			? sectionCrumbs(schema, ed.sec).slice(0, -1)
 			: sectionCrumbs(schema, ed.sec)}
 		title={global ? secDef.name : ed.title}
-		published={ed.published}
+		published={ed.live?.published ?? false}
 		hasDraft={!!ed.draft}
 		draftBy={ed.draft?.user
 			? `by ${ed.draft.user}, ${time(ed.draft.updatedAt)}`
@@ -220,6 +221,7 @@
 
 		<EntrySidebar
 			{schema}
+			site={ed.site}
 			{secDef}
 			{comp}
 			{global}

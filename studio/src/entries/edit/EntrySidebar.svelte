@@ -6,7 +6,7 @@
 	import type { Entry } from '../api';
 	import type { Revision } from '../drafts';
 	import type { Block, Values } from '../../core/schema';
-	import { setSite, site } from '../../core/route.svelte';
+	import { setSite } from '../../core/route.svelte';
 	import RevisionList from './RevisionList.svelte';
 
 	/**
@@ -17,6 +17,7 @@
 	 */
 	let {
 		schema,
+		site,
 		secDef,
 		comp,
 		global,
@@ -40,6 +41,8 @@
 		onrestore,
 	}: {
 		schema: Schema;
+		/** the site the editor edits */
+		site: string;
 		secDef: Section;
 		comp: Component;
 		global: boolean;
@@ -85,20 +88,24 @@
 <aside>
 	{#if !global}
 		<!-- read only for a role that may only look -->
-		<fieldset class="card" disabled={!canEdit}>
-			<label class="switch">
-				<input
-					type="checkbox"
-					bind:checked={published}
-					disabled={!canPublish}
-				/>
-				<span>
-					{#if changed.has('published')}<span class="dot"></span>{/if}
-					Published in {schema.sites.find(
-						s => s.handle === site.current,
-					)?.name}
-				</span>
-			</label>
+		<div class="card">
+			<fieldset class="inline" disabled={!canEdit}>
+				<label class="switch">
+					<input
+						type="checkbox"
+						bind:checked={published}
+						disabled={!canPublish}
+					/>
+					<span>
+						{#if changed.has('published')}<span
+								class="dot"
+							></span>{/if}
+						Published in {schema.sites.find(s => s.handle === site)
+							?.name}
+					</span>
+				</label>
+			</fieldset>
+			<!-- the sites to switch to, also for who may only look -->
 			{#if multiSite && !isNew}
 				<div class="sites">
 					<SiteBadges
@@ -109,54 +116,58 @@
 				</div>
 			{/if}
 
-			{#if !single}
-				<label>
-					<span>
-						{#if changed.has('slug')}<span
-								class="dot"
-							></span>{/if}Slug
-					</span>
-					<input placeholder="from the title" bind:value={slug} />
-					{#if uri !== null}<span class="note uri">/{uri}</span>{/if}
-					{#if errors.slug}<span class="error">
-							{errors.slug}
-						</span>{/if}
-				</label>
-			{/if}
-
-			<label>
-				<span>Type</span>
-				{#if isNew && secDef.types.length > 1}
-					<select bind:value={ty}>
-						{#each secDef.types as t (t)}
-							<option value={t}>
-								{componentName(schema, t)}
-							</option>
-						{/each}
-					</select>
-				{:else}
-					<a
-						class="value"
-						href="/admin/setup/types/{comp.handle}"
-						title="Its fields in Setup"
-					>
-						{comp.name}
-					</a>
+			<fieldset class="inline" disabled={!canEdit}>
+				{#if !single}
+					<label>
+						<span>
+							{#if changed.has('slug')}<span
+									class="dot"
+								></span>{/if}Slug
+						</span>
+						<input placeholder="from the title" bind:value={slug} />
+						{#if uri !== null}<span class="note uri">
+								/{uri}
+							</span>{/if}
+						{#if errors.slug}<span class="error">
+								{errors.slug}
+							</span>{/if}
+					</label>
 				{/if}
-			</label>
 
-			{#if isNew && parents.length}
 				<label>
-					<span>Parent</span>
-					<select bind:value={parentId}>
-						<option value={null}>None, on the top</option>
-						{#each parents as p (p.id)}
-							<option value={p.id}>{p.title}</option>
-						{/each}
-					</select>
+					<span>Type</span>
+					{#if isNew && secDef.types.length > 1}
+						<select bind:value={ty}>
+							{#each secDef.types as t (t)}
+								<option value={t}>
+									{componentName(schema, t)}
+								</option>
+							{/each}
+						</select>
+					{:else}
+						<a
+							class="value"
+							href="/admin/setup/types/{comp.handle}"
+							title="Its fields in Setup"
+						>
+							{comp.name}
+						</a>
+					{/if}
 				</label>
-			{/if}
-		</fieldset>
+
+				{#if isNew && parents.length}
+					<label>
+						<span>Parent</span>
+						<select bind:value={parentId}>
+							<option value={null}>None, on the top</option>
+							{#each parents as p (p.id)}
+								<option value={p.id}>{p.title}</option>
+							{/each}
+						</select>
+					</label>
+				{/if}
+			</fieldset>
+		</div>
 	{/if}
 
 	{#each outlines as o (o.field.handle)}
@@ -176,7 +187,7 @@
 					}}
 				>
 					<option value="" disabled>From another site…</option>
-					{#each schema.sites.filter(s => s.handle !== site.current) as s (s.handle)}
+					{#each schema.sites.filter(s => s.handle !== site) as s (s.handle)}
 						<option value={s.handle}>{s.name}</option>
 					{/each}
 				</select>
@@ -236,6 +247,11 @@
 			font-size: var(--fs-md);
 			font-weight: 500;
 		}
+	}
+
+	// only disables, the card lays out what is in it
+	.inline {
+		display: contents;
 	}
 
 	.sites {

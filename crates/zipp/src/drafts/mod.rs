@@ -78,6 +78,35 @@ pub struct Draft {
 	pub updated_at: i64,
 }
 
+/// The entries a draft links to in a site, also those only the draft
+/// has: the live relations don't know them.
+pub fn draft_refs(
+	conn: &Connection,
+	schema: &Schema,
+	id: i64,
+	draft: &Draft,
+	site: &str,
+) -> Result<BTreeMap<i64, crate::entries::EntryRef>> {
+	let ty: String =
+		conn.query_row("SELECT type FROM entries WHERE id = ?1", [id], |r| {
+			r.get(0)
+		})?;
+	let Some(comp) = schema.entry_type(&ty) else {
+		return Ok(BTreeMap::new());
+	};
+	let mut ids = vec![];
+	for doc in draft.doc.values() {
+		for r in crate::content::relations(schema, comp, &doc.fields) {
+			if let crate::content::Target::Entries(_) = r.target {
+				ids.extend(r.ids);
+			}
+		}
+	}
+	ids.sort_unstable();
+	ids.dedup();
+	crate::entries::refs_of(conn, &ids, site)
+}
+
 /// The live content of an entry.
 pub fn live_doc(conn: &Connection, id: i64) -> Result<Doc> {
 	let mut stmt = conn.prepare(

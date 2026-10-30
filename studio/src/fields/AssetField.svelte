@@ -45,8 +45,17 @@
 {/snippet}
 
 <div class="assets" class:images>
-	{#each chosen.list as a, i (a.id)}
-		{#if images}
+	<!-- by the ids of the field: its order, also while loading -->
+	{#each ids as id, i (id)}
+		{@const a = chosen.get(id)}
+		{#if a === null}
+			<div class="chip box gone">
+				<span class="note">A file that was deleted</span>
+				{@render itemActions(i)}
+			</div>
+		{:else if !a}
+			<div class="tile"><span class="note">Loading…</span></div>
+		{:else if images}
 			<div class="tile">
 				<button
 					type="button"
@@ -121,6 +130,10 @@
 		&:hover :global(.thumb) {
 			border-color: var(--border-strong);
 		}
+	}
+
+	.gone {
+		justify-content: space-between;
 	}
 
 	.caption {
