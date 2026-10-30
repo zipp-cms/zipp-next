@@ -31,7 +31,7 @@ async fn start(
 	fs::create_dir_all(&agent.runs).map_err(io)?;
 
 	// the agent acts as the user, with a session of its own
-	let token = new_session(&state.db.conn(), auth.user_id)?;
+	let token = new_session(&state.db.conn(), auth.user_id)?.token;
 
 	let id = random_token();
 	let out = fs::File::create(run_file(&agent, &id, "jsonl")?).map_err(io)?;

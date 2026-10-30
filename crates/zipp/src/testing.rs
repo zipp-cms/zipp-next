@@ -24,7 +24,7 @@ use serde_json::Value;
 use tower::ServiceExt;
 
 use crate::api::{Request, has_query, path_of};
-use crate::db::{Db, now, random_token};
+use crate::db::{Db, now};
 use crate::error::{Error, Result};
 use crate::schema::Schema;
 use crate::{AppState, graphql, migrate, server};
@@ -127,13 +127,8 @@ impl TestServer {
 			params![email, password_hash(), role, now()],
 		)
 		.unwrap();
-		let token = random_token();
-		conn.execute(
-			"INSERT INTO sessions (token, user_id, created_at)
-			VALUES (?1, ?2, ?3)",
-			params![token, conn.last_insert_rowid(), now()],
-		)
-		.unwrap();
+		let user_id = conn.last_insert_rowid();
+		let token = crate::auth::new_session(&conn, user_id).unwrap().token;
 		Client {
 			app: self.app.clone(),
 			token: Some(token),

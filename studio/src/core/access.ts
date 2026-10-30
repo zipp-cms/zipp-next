@@ -1,3 +1,4 @@
+import { session } from './session.svelte';
 import { navGroups, type Access, type NavGroup, type Schema } from './schema';
 
 /**
@@ -7,7 +8,7 @@ import { navGroups, type Access, type NavGroup, type Schema } from './schema';
 const LEVELS: Access[] = ['view', 'edit', 'publish', 'delete'];
 
 function role(schema: Schema) {
-	return schema.roles.find(r => r.handle === schema.me.role);
+	return schema.roles.find(r => r.handle === session.user?.role);
 }
 
 function enough(has: Access | null | undefined, need: Access) {
@@ -16,7 +17,7 @@ function enough(has: Access | null | undefined, need: Access) {
 
 /** The name of the user's role, `Admin` without one. */
 export function roleName(schema: Schema): string {
-	return roleNameOf(schema, schema.me.role);
+	return roleNameOf(schema, session.user?.role ?? null);
 }
 
 /** The name of a role, `null` is an admin. */
@@ -32,7 +33,7 @@ export function accessOf(schema: Schema, section: string): Access | null {
 }
 
 export function isAdmin(schema: Schema): boolean {
-	return schema.me.role === null;
+	return session.user !== null && session.user.role === null;
 }
 
 export function can(schema: Schema, section: string, need: Access): boolean {

@@ -88,6 +88,10 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   `isPublic` when no login is needed. The frame's `loadProps` gives
   every page the `schema`; an error of a page's `loadProps` shows in the
   frame. Links to `/admin/...` open without a reload, `go(path)` too.
+- Who is logged in: `session` (`core/session.svelte.ts`), a class with
+  the token, its end and the user, loaded at the start through `GET
+  /auth/session` (which renews a session that ends within 10 days);
+  `lp.session` in `loadProps`. The schema has no user.
 - Errors of the api are `ApiError` (`core/client.ts`): `type` and
   `detail` like the server's `Error`, `fields` for INVALID.
 - A component renders; what it does goes into a `.ts` (or `.svelte.ts`

@@ -13,6 +13,7 @@
 	import { deleteUser, listUsers, saveUser, setRole, type User } from './api';
 	import { shown } from '../core/route.svelte';
 	import { roleNameOf } from '../core/access';
+	import { session } from '../core/session.svelte';
 	import { Busy } from '../core/busy.svelte';
 
 	/**
@@ -63,7 +64,7 @@
 				<tr>
 					<td>{u.email}</td>
 					<td>
-						{#if u.id === schema.me.id}
+						{#if u.id === session.user?.id}
 							{roleNameOf(schema, u.role)}
 							<span class="muted">(you)</span>
 						{:else}
@@ -85,7 +86,7 @@
 						{/if}
 					</td>
 					<td class="actions">
-						{#if u.id !== schema.me.id}
+						{#if u.id !== session.user?.id}
 							<button
 								class="link"
 								onclick={() =>

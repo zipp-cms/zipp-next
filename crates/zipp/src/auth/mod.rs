@@ -27,7 +27,10 @@ pub use routes::routes;
 
 /// bcrypt's work, small in tests so they stay fast.
 const COST: u32 = if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST };
+/// How long a session lasts without the studio being used.
 const SESSION_DURATION_MS: i64 = 1000 * 60 * 60 * 24 * 30;
+/// A session with less left is renewed when the studio opens.
+const RENEW_BELOW_MS: i64 = 1000 * 60 * 60 * 24 * 10;
 /// Wrong passwords of an email before it has to wait.
 const MAX_FAILS: u32 = 10;
 const FAIL_WINDOW_MS: i64 = 1000 * 60 * 15;
@@ -238,19 +241,51 @@ pub fn session(conn: &Connection, headers: &HeaderMap) -> Result<Option<i64>> {
 	};
 	let token = token.to_str().map_err(|_| Error::InvalidSessionToken)?;
 
-	let row: Option<(i64, i64)> = conn
-		.query_row(
-			"SELECT user_id, created_at FROM sessions WHERE token = ?1",
-			[token],
-			|r| Ok((r.get(0)?, r.get(1)?)),
-		)
-		.optional()?;
-	match row {
-		Some((user_id, created)) if created + SESSION_DURATION_MS > now() => {
-			Ok(Some(user_id))
-		}
+	match get_session(conn, token)? {
+		Some(s) if s.expires_at > now() => Ok(Some(s.user_id)),
 		_ => Err(Error::InvalidSessionToken),
 	}
+}
+
+/// A session of the `sessions` table.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Session {
+	pub token: String,
+	pub user_id: i64,
+	/// in milliseconds
+	pub expires_at: i64,
+}
+
+fn get_session(conn: &Connection, token: &str) -> Result<Option<Session>> {
+	Ok(conn
+		.query_row(
+			"SELECT token, user_id, expires_at FROM sessions WHERE token = ?1",
+			[token],
+			|r| {
+				Ok(Session {
+					token: r.get(0)?,
+					user_id: r.get(1)?,
+					expires_at: r.get(2)?,
+				})
+			},
+		)
+		.optional()?)
+}
+
+/// The valid session of a token, renewed when less than [`RENEW_BELOW_MS`]
+/// are left: who uses the studio stays logged in.
+pub fn renew_session(conn: &Connection, token: &str) -> Result<Session> {
+	let mut s = get_session(conn, token)?
+		.filter(|s| s.expires_at > now())
+		.ok_or(Error::InvalidSessionToken)?;
+	if s.expires_at - now() < RENEW_BELOW_MS {
+		s.expires_at = now() + SESSION_DURATION_MS;
+		conn.execute(
+			"UPDATE sessions SET expires_at = ?1 WHERE token = ?2",
+			params![s.expires_at, token],
+		)?;
+	}
+	Ok(s)
 }
 
 /// The role of a user, `None` is an admin.
@@ -323,18 +358,20 @@ pub async fn login(db: &Db, email: &str, password: &str) -> Result<i64> {
 	Ok(user_id)
 }
 
-/// A new session of a user, its token. Old sessions go.
-pub fn new_session(conn: &Connection, user_id: i64) -> Result<String> {
+/// A new session of a user. Ended sessions go.
+pub fn new_session(conn: &Connection, user_id: i64) -> Result<Session> {
+	conn.execute("DELETE FROM sessions WHERE expires_at < ?1", [now()])?;
+	let session = Session {
+		token: random_token(),
+		user_id,
+		expires_at: now() + SESSION_DURATION_MS,
+	};
 	conn.execute(
-		"DELETE FROM sessions WHERE created_at < ?1",
-		[now() - SESSION_DURATION_MS],
+		"INSERT INTO sessions (token, user_id, created_at, expires_at)
+		VALUES (?1, ?2, ?3, ?4)",
+		params![session.token, user_id, now(), session.expires_at],
 	)?;
-	let token = random_token();
-	conn.execute(
-		"INSERT INTO sessions (token, user_id, created_at) VALUES (?1, ?2, ?3)",
-		params![token, user_id, now()],
-	)?;
-	Ok(token)
+	Ok(session)
 }
 
 pub fn end_session(conn: &Connection, token: &str) -> Result<()> {

@@ -1,18 +1,21 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
 	import { roleName } from '../core/access';
+	import { session } from '../core/session.svelte';
 	import Icon from '../ui/Icon.svelte';
 
 	/** Who is logged in, with the role, and the logout. */
 	let { schema, onlogout }: { schema: Schema; onlogout: () => void } =
 		$props();
+
+	const email = $derived(session.user?.email ?? '?');
 </script>
 
 <div class="me">
 	<a href="/admin/setup/sites#roles" title="What you may do">
-		<span class="avatar">{schema.me.email[0].toUpperCase()}</span>
+		<span class="avatar">{email[0].toUpperCase()}</span>
 		<span class="who">
-			<strong class="truncate">{schema.me.email}</strong>
+			<strong class="truncate">{email}</strong>
 			<small>{roleName(schema)}</small>
 		</span>
 	</a>

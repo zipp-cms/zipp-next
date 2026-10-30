@@ -113,7 +113,6 @@ export type Schema = {
 	dev: boolean;
 	/** the plugins with a studio module, `/_plugins/<name>.js` */
 	plugins: { name: string; data: unknown }[];
-	me: Me;
 	/** the models of the AI chat, empty if it is off */
 	aiModels: { id: string; name: string }[];
 	/** markdown files of the code, read only, as html */
@@ -157,8 +156,6 @@ export type Role = {
 };
 
 /** The logged in user, `role: null` is an admin. */
-export type Me = { id: number; email: string; role: string | null };
-
 /** Lookups in the schema by handle. */
 
 export function componentOf(

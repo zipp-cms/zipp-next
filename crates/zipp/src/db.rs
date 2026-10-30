@@ -138,6 +138,11 @@ const MIGRATIONS: &[&str] = &[
 	CREATE INDEX asset_relations_asset ON asset_relations(asset_id);
 	CREATE INDEX asset_relations_entry ON asset_relations(entry_id);
 "#,
+	// sessions end at a time that using the studio pushes back
+	r#"
+	ALTER TABLE sessions ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0;
+	UPDATE sessions SET expires_at = created_at + 1000 * 60 * 60 * 24 * 30;
+"#,
 ];
 
 #[derive(Clone)]

@@ -14,20 +14,12 @@ async fn the_schema_for_the_user() {
 		.call_json(&SchemaReq {})
 		.await
 		.unwrap();
-	assert_eq!(schema["me"]["role"], "author");
-	assert!(
-		schema["me"]["email"]
-			.as_str()
-			.unwrap()
-			.starts_with("author")
-	);
+	// who is logged in comes with the session, see auth
+	assert!(schema.get("me").is_none());
 	assert_eq!(schema["roles"].as_array().unwrap().len(), 2);
 	assert_eq!(schema["sites"][0]["handle"], "de");
 	// no key, no AI
 	assert!(schema["aiModels"].as_array().unwrap().is_empty());
-
-	let admin = ts.admin().call_json(&SchemaReq {}).await.unwrap();
-	assert!(admin["me"]["role"].is_null());
 
 	let err = ts.anonymous().call_json(&SchemaReq {}).await.unwrap_err();
 	assert_eq!(err, Error::MissingSessionToken);

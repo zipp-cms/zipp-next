@@ -48,13 +48,4 @@ pub struct SchemaResp {
 	pub plugins: Vec<PluginResp>,
 	/// development mode, see `serve --dev`
 	pub dev: bool,
-	pub me: Me,
-}
-
-/// The logged in user, `role: None` is an admin.
-#[derive(Debug, Serialize)]
-pub struct Me {
-	pub id: i64,
-	pub email: String,
-	pub role: Option<String>,
 }

@@ -9,7 +9,6 @@ use super::api::*;
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::auth::Authed;
-use crate::users::email_of;
 
 async fn file(State(state): State<AppState>, uri: Uri) -> Response {
 	let path = uri.path().trim_start_matches('/');
@@ -103,10 +102,9 @@ pub fn routes() -> Router<AppState> {
 
 async fn schema_route(
 	State(state): State<AppState>,
-	auth: Authed,
+	_auth: Authed,
 	Req(_): Req<SchemaReq>,
 ) -> ApiResult<SchemaReq> {
-	let email = email_of(&state.db.conn(), auth.user_id)?;
 	Ok(Json(SchemaResp {
 		roles: state.schema.roles.clone(),
 		offline: state.schema.offline.clone(),
@@ -124,11 +122,6 @@ async fn schema_route(
 				})
 			})
 			.collect(),
-		me: Me {
-			id: auth.user_id,
-			email,
-			role: auth.role.clone(),
-		},
 		schema: (*state.schema).clone(),
 		site_urls: (*state.site_urls).clone(),
 		ai_models: match state.ai {

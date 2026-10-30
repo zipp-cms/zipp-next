@@ -9,7 +9,7 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { logout } from '../auth/api';
+	import { session } from '../core/session.svelte';
 	import { current, go } from '../core/route.svelte';
 	import { forgetSchema } from '../core/router.svelte';
 	import type { Schema } from '../core/schema';
@@ -23,7 +23,7 @@
 	let { schema, children }: { schema: Schema; children: Snippet } = $props();
 
 	async function onlogout() {
-		await logout();
+		await session.logout();
 		forgetSchema();
 		go('/login');
 	}

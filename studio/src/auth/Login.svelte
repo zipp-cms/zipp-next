@@ -4,7 +4,7 @@
 </script>
 
 <script lang="ts">
-	import { login } from './api';
+	import { session } from '../core/session.svelte';
 	import { router } from '../core/router.svelte';
 	import logo from '../logo/full.svg';
 
@@ -16,7 +16,7 @@
 		e.preventDefault();
 		error = '';
 		try {
-			await login(email, password);
+			await session.login(email, password);
 			// back to the page that wanted the login
 			const url = new URLSearchParams(location.search).get('url');
 			const back =

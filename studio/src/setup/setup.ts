@@ -1,5 +1,6 @@
 import type { Component, Role, Schema, Section } from '../core/schema';
 import { can, isAdmin } from '../core/access';
+import { session } from '../core/session.svelte';
 import { capitalized } from '../core/format';
 
 /** What Setup shows of the schema: only what the role may see. */
@@ -13,7 +14,7 @@ export function visibleSections(schema: Schema): Section[] {
 export function visibleRoles(schema: Schema): Role[] {
 	return isAdmin(schema)
 		? schema.roles
-		: schema.roles.filter(r => r.handle === schema.me.role);
+		: schema.roles.filter(r => r.handle === session.user?.role);
 }
 
 /** The entry types of the sections the role sees. */

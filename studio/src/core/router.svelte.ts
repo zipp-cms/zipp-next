@@ -1,6 +1,7 @@
 import { Router, type Request, type Route } from 'chuchi';
 import type { Component } from 'svelte';
-import { onSessionLost, token } from './client';
+import { onSessionLost } from './client';
+import { session, type Session } from './session.svelte';
 import { getSchema, type Schema } from './schema';
 import { site, storeSite } from './site.svelte';
 
@@ -31,6 +32,11 @@ export class LoadProps {
 	redirect: string | null = null;
 
 	constructor(readonly req: Request) {}
+
+	/** Who is logged in. */
+	get session(): Session {
+		return session;
+	}
 
 	/** The schema, loaded once after the login. */
 	schema(): Promise<Schema> {
@@ -147,7 +153,7 @@ async function resolve(
 
 	try {
 		const mod = await route.load(req);
-		if (!mod.isPublic && !token()) {
+		if (!mod.isPublic && !session.loggedIn) {
 			const back = new URLSearchParams({ url: req.uri });
 			return { redirect: `${BASE}/login?${back}` };
 		}
@@ -179,7 +185,11 @@ async function resolve(
  * to mount the app.
  */
 export function startRouter(onfirst: () => void) {
-	onSessionLost(toLogin);
+	onSessionLost(() => {
+		session.invalidate();
+		forgetSchema();
+		toLogin();
+	});
 	router.currentRequest.subscribe(req => {
 		if (req) current.path = req.pathname.slice(BASE.length) || '/';
 	});

@@ -3,18 +3,47 @@ use axum::http::HeaderMap;
 use axum::{Json, Router};
 
 use super::api::*;
-use super::{Authed, end_session, login, new_session};
+use super::{Session, end_session, login, new_session, renew_session};
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
-use crate::error::Result;
+use crate::error::Error;
+use crate::users::user;
 
 async fn login_route(
 	State(state): State<AppState>,
 	Req(req): Req<LoginReq>,
 ) -> ApiResult<LoginReq> {
 	let user_id = login(&state.db, &req.email, &req.password).await?;
-	let token = new_session(&state.db.conn(), user_id)?;
-	Ok(Json(LoginResp { token }))
+	let conn = state.db.conn();
+	let session = new_session(&conn, user_id)?;
+	Ok(Json(authenticated(&conn, session)?))
+}
+
+fn authenticated(
+	conn: &rusqlite::Connection,
+	s: Session,
+) -> crate::error::Result<Authenticated> {
+	Ok(Authenticated {
+		user: user(conn, s.user_id)?,
+		session: SessionInfo {
+			token: s.token,
+			expires_at: s.expires_at,
+		},
+	})
+}
+
+async fn session_route(
+	State(state): State<AppState>,
+	headers: HeaderMap,
+	Req(_): Req<SessionReq>,
+) -> ApiResult<SessionReq> {
+	let token = headers
+		.get("session-token")
+		.and_then(|t| t.to_str().ok())
+		.ok_or(Error::MissingSessionToken)?;
+	let conn = state.db.conn();
+	let session = renew_session(&conn, token)?;
+	Ok(Json(authenticated(&conn, session)?))
 }
 
 async fn logout_route(
@@ -29,13 +58,9 @@ async fn logout_route(
 	Ok(Json(()))
 }
 
-async fn check_route(_auth: Authed, Req(_): Req<CheckReq>) -> Result<Json<()>> {
-	Ok(Json(()))
-}
-
 pub fn routes() -> Router<AppState> {
 	Router::new()
 		.api::<LoginReq, _>(login_route)
 		.api::<LogoutReq, _>(logout_route)
-		.api::<CheckReq, _>(check_route)
+		.api::<SessionReq, _>(session_route)
 }

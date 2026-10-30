@@ -36,12 +36,18 @@ pub fn list(conn: &Connection) -> Result<Vec<User>> {
 	Ok(users)
 }
 
-pub fn email_of(conn: &Connection, id: i64) -> Result<String> {
-	Ok(
-		conn.query_row("SELECT email FROM users WHERE id = ?1", [id], |r| {
-			r.get(0)
-		})?,
-	)
+pub fn user(conn: &Connection, id: i64) -> Result<User> {
+	Ok(conn.query_row(
+		"SELECT id, email, role FROM users WHERE id = ?1",
+		[id],
+		|r| {
+			Ok(User {
+				id: r.get(0)?,
+				email: r.get(1)?,
+				role: r.get(2)?,
+			})
+		},
+	)?)
 }
 
 /// A role of the schema, `None` is an admin.

@@ -1,5 +1,5 @@
 use super::api::*;
-use crate::auth::api::{CheckReq, LoginReq};
+use crate::auth::api::{LoginReq, SessionReq};
 use crate::error::Error;
 use crate::schema::tests::site_with_roles;
 use crate::testing::TestServer;
@@ -24,10 +24,10 @@ async fn admins_manage_users() {
 		email: "new@x.ch".into(),
 		password: "password1".into(),
 	};
-	let token = ts.anonymous().call(&login).await.unwrap().token;
+	let token = ts.anonymous().call(&login).await.unwrap().session.token;
 	let mut new_user = ts.anonymous();
 	new_user.token = Some(token);
-	new_user.call(&CheckReq {}).await.unwrap();
+	new_user.call(&SessionReq {}).await.unwrap();
 
 	let role = RoleReq {
 		id: user.id,
@@ -40,7 +40,7 @@ async fn admins_manage_users() {
 
 	// deleting ends the sessions
 	admin.call(&DeleteReq { id: user.id }).await.unwrap();
-	let err = new_user.call(&CheckReq {}).await.unwrap_err();
+	let err = new_user.call(&SessionReq {}).await.unwrap_err();
 	assert_eq!(err, Error::InvalidSessionToken);
 	let err = admin.call(&DeleteReq { id: user.id }).await.unwrap_err();
 	assert_eq!(err, Error::NotFound);

@@ -1,7 +1,9 @@
 import { request } from '../core/client';
 
 /** A studio user, `role: null` is an admin. */
-export type User = { id: number; email: string; role: string | null };
+import type { User } from '../core/session.svelte';
+
+export type { User };
 
 export function listUsers(): Promise<User[]> {
 	return request('GET', '/users');

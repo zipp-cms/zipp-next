@@ -18,6 +18,13 @@ SQLite database, default `zipp.db`):
 - `import-craft <export.json> [--volume handle=dir] [--site craft=zipp]`:
   imports a Craft site into a database without content, see below
 
+## Sessions
+
+A login lasts 30 days; the studio renews it when it opens and less than
+10 days are left, so who uses it stays logged in. Logging out ends the
+session, a new password (`user`) ends all of the user's. After 10 wrong
+passwords an email waits 15 minutes.
+
 ## serve
 
 | Option | Environment | |
