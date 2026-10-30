@@ -1,5 +1,12 @@
 <script lang="ts">
-	import type { Edits } from '../api';
+	import { untrack } from 'svelte';
+	import {
+		NO_EDITS,
+		cropsOutside,
+		noEdits,
+		transparentEdges,
+		type Edits,
+	} from '../api';
 	import Icon from './Icon.svelte';
 
 	/**
@@ -82,26 +89,50 @@
 
 	let view: HTMLCanvasElement | undefined = $state();
 
+	const outside = $derived(cropsOutside(edits));
+	/** around the image: past the crop and on the canvas */
+	const background = $derived(edits.background ?? '#ffffff');
+
+	/** Fills a canvas with the background, unless it is transparent. */
+	function fill(ctx: CanvasRenderingContext2D, w: number, h: number) {
+		if (background === 'transparent') return;
+		ctx.fillStyle = background;
+		ctx.fillRect(0, 0, w, h);
+	}
+
 	// draws the base for cropping or the whole result
 	$effect(() => {
 		if (!img || !view) return;
 		void [edits.rotate, edits.flipH, edits.flipV, mode];
 		const base = turnedCanvas();
 		if (mode === 'crop') {
-			view.width = base.width;
-			view.height = base.height;
-			view.getContext('2d')!.drawImage(base, 0, 0);
+			// with room around, the crop may reach past the image
+			const [px, py] = [pad * base.width, pad * base.height];
+			view.width = base.width + 2 * px;
+			view.height = base.height + 2 * py;
+			const ctx = view.getContext('2d')!;
+			fill(ctx, view.width, view.height);
+			ctx.drawImage(base, px, py);
+			ctx.setLineDash([8, 6]);
+			ctx.lineWidth = Math.max(1, base.width / 400);
+			ctx.strokeStyle = 'rgba(16, 24, 40, 0.5)';
+			ctx.strokeRect(px, py, base.width, base.height);
 			return;
 		}
+		// the crop, past the image the background
 		const c = edits.crop ?? { x: 0, y: 0, w: 1, h: 1 };
+		const part = document.createElement('canvas');
+		part.width = cropped.w;
+		part.height = cropped.h;
+		const pctx = part.getContext('2d')!;
+		if (outside) fill(pctx, part.width, part.height);
+		pctx.drawImage(base, -c.x * base.width, -c.y * base.height);
+
 		view.width = final.w;
 		view.height = final.h;
 		const ctx = view.getContext('2d')!;
 		ctx.clearRect(0, 0, final.w, final.h);
-		if (edits.canvas && edits.canvas.background !== 'transparent') {
-			ctx.fillStyle = edits.canvas.background;
-			ctx.fillRect(0, 0, final.w, final.h);
-		}
+		if (edits.canvas) fill(ctx, final.w, final.h);
 		// the image fits into the canvas, centered
 		let { w, h } = resized;
 		if (edits.canvas && (w > final.w || h > final.h)) {
@@ -111,11 +142,7 @@
 		}
 		ctx.imageSmoothingQuality = 'high';
 		ctx.drawImage(
-			base,
-			c.x * base.width,
-			c.y * base.height,
-			c.w * base.width,
-			c.h * base.height,
+			part,
 			Math.floor((final.w - w) / 2),
 			Math.floor((final.h - h) / 2),
 			w,
@@ -148,8 +175,29 @@
 
 	const rect = $derived(edits.crop ?? { x: 0, y: 0, w: 1, h: 1 });
 
+	/**
+	 * The room around the image while cropping, in images: a quarter, or
+	 * more when the crop reaches further. It only grows while cropping,
+	 * the image doesn't jump under the pointer.
+	 */
+	let pad = $state(0.25);
+	function fitPad(shrink: boolean) {
+		const r = rect;
+		const past = Math.max(-r.x, -r.y, r.x + r.w - 1, r.y + r.h - 1);
+		const need = Math.min(1, Math.max(0.25, past + 0.1));
+		pad = shrink ? need : Math.max(pad, need);
+	}
+	$effect(() => {
+		if (mode === 'crop') untrack(() => fitPad(true));
+	});
+	/** A place in the crop view, 0 to 1 of the image, in percent. */
+	const at = (v: number) => ((pad + v) / (1 + 2 * pad)) * 100;
+	const span = (v: number) => (v / (1 + 2 * pad)) * 100;
+
 	function setCrop(c: { x: number; y: number; w: number; h: number }) {
-		const full = c.x <= 0 && c.y <= 0 && c.w >= 1 && c.h >= 1;
+		const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+		const full =
+			near(c.x, 0) && near(c.y, 0) && near(c.w, 1) && near(c.h, 1);
 		edits = { ...edits, crop: full ? null : c };
 	}
 
@@ -188,15 +236,21 @@
 
 	function move(e: PointerEvent) {
 		if (!drag) return;
-		const dx = (e.clientX - drag.start.x) / drag.box.width;
-		const dy = (e.clientY - drag.start.y) / drag.box.height;
+		// in images, the view has the room around it
+		const dx =
+			((e.clientX - drag.start.x) / drag.box.width) * (1 + 2 * pad);
+		const dy =
+			((e.clientY - drag.start.y) / drag.box.height) * (1 + 2 * pad);
 		const f = drag.from;
 		const min = 0.03;
+		// as far as the view goes, past the image too
+		const lo = -pad;
+		const hi = 1 + pad;
 		if (drag.kind === 'move') {
 			setCrop({
 				...f,
-				x: Math.min(Math.max(0, f.x + dx), 1 - f.w),
-				y: Math.min(Math.max(0, f.y + dy), 1 - f.h),
+				x: Math.min(Math.max(lo, f.x + dx), hi - f.w),
+				y: Math.min(Math.max(lo, f.y + dy), hi - f.h),
 			});
 			return;
 		}
@@ -206,15 +260,15 @@
 			y1 = f.y,
 			x2 = f.x + f.w,
 			y2 = f.y + f.h;
-		if (left) x1 = Math.min(Math.max(0, x1 + dx), x2 - min);
-		else x2 = Math.max(Math.min(1, x2 + dx), x1 + min);
-		if (top) y1 = Math.min(Math.max(0, y1 + dy), y2 - min);
-		else y2 = Math.max(Math.min(1, y2 + dy), y1 + min);
-		// a ratio: the height follows the width, within the image
+		if (left) x1 = Math.min(Math.max(lo, x1 + dx), x2 - min);
+		else x2 = Math.max(Math.min(hi, x2 + dx), x1 + min);
+		if (top) y1 = Math.min(Math.max(lo, y1 + dy), y2 - min);
+		else y2 = Math.max(Math.min(hi, y2 + dy), y1 + min);
+		// a ratio: the height follows the width, within the view
 		if (want !== null) {
 			let w = x2 - x1;
 			let h = (w * turned.w) / (want * turned.h);
-			const room = top ? y2 : 1 - y1;
+			const room = top ? y2 - lo : hi - y1;
 			if (h > room) {
 				h = room;
 				w = (h * want * turned.h) / turned.w;
@@ -229,6 +283,7 @@
 
 	function up() {
 		drag = null;
+		fitPad(false);
 	}
 
 	// --- rotate and flip ---
@@ -283,9 +338,7 @@
 		const side = Math.max(resized.w, resized.h);
 		edits = {
 			...edits,
-			canvas: on
-				? { width: side, height: side, background: '#ffffff' }
-				: null,
+			canvas: on ? { width: side, height: side } : null,
 		};
 	}
 
@@ -300,26 +353,36 @@
 		};
 	}
 
-	const empty = $derived(
-		!edits.rotate &&
-			!edits.flipH &&
-			!edits.flipV &&
-			!edits.crop &&
-			!edits.resize &&
-			!edits.canvas,
-	);
+	const empty = $derived(noEdits(edits));
 
 	function reset() {
-		edits = {
-			rotate: 0,
-			flipH: false,
-			flipV: false,
-			crop: null,
-			resize: null,
-			canvas: null,
-		};
+		edits = { ...NO_EDITS };
 	}
 </script>
+
+{#snippet backgroundPicker()}
+	<label class="check">
+		<input
+			type="checkbox"
+			checked={background === 'transparent'}
+			onchange={e =>
+				(edits.background = e.currentTarget.checked
+					? 'transparent'
+					: null)}
+		/>
+		Transparent
+	</label>
+	{#if background !== 'transparent'}
+		<label class="color">
+			Color
+			<input
+				type="color"
+				value={background}
+				oninput={e => (edits.background = e.currentTarget.value)}
+			/>
+		</label>
+	{/if}
+{/snippet}
 
 <div class="editor">
 	{#if editable}
@@ -417,7 +480,12 @@
 					Portrait
 				</label>
 			{/if}
+			{#if outside}
+				<span class="sep"></span>
+				{@render backgroundPicker()}
+			{/if}
 		</div>
+		<p class="note">Drag the crop past the image for room around it.</p>
 	{:else if mode === 'size'}
 		<div class="options sizes">
 			<label>
@@ -485,34 +553,14 @@
 						bind:value={edits.canvas.height}
 					/>
 				</label>
-				<label class="check">
-					<input
-						type="checkbox"
-						checked={edits.canvas.background === 'transparent'}
-						onchange={e =>
-							(edits.canvas!.background = e.currentTarget.checked
-								? 'transparent'
-								: '#ffffff')}
-					/>
-					Transparent
-				</label>
-				{#if edits.canvas.background !== 'transparent'}
-					<label class="color">
-						Color
-						<input
-							type="color"
-							bind:value={edits.canvas.background}
-						/>
-					</label>
-				{/if}
+				{@render backgroundPicker()}
 			{/if}
 		</div>
-		{#if edits.canvas?.background === 'transparent'}
-			<p class="note">
-				A transparent canvas needs a PNG: a JPEG is delivered as PNG
-				then.
-			</p>
-		{/if}
+	{/if}
+	{#if mode !== 'focal' && transparentEdges(edits)}
+		<p class="note">
+			Transparent needs a PNG: a JPEG is delivered as PNG then.
+		</p>
 	{/if}
 
 	<div class="stage">
@@ -532,10 +580,10 @@
 			{:else if mode === 'crop'}
 				<div
 					class="crop"
-					style:left="{rect.x * 100}%"
-					style:top="{rect.y * 100}%"
-					style:width="{rect.w * 100}%"
-					style:height="{rect.h * 100}%"
+					style:left="{at(rect.x)}%"
+					style:top="{at(rect.y)}%"
+					style:width="{span(rect.w)}%"
+					style:height="{span(rect.h)}%"
 					onpointerdown={e => down(e, 'move')}
 					onpointermove={move}
 					onpointerup={up}

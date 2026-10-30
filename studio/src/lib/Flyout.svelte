@@ -2,12 +2,21 @@
 	import type { Snippet } from 'svelte';
 	import Icon from './Icon.svelte';
 
-	/** A panel from the right over the page, Escape or the backdrop close it. */
+	/**
+	 * A panel from the right over the page, Escape or the backdrop close
+	 * it. Its bar has Done, or the buttons of `actions`.
+	 */
 	let {
 		title,
 		onclose,
+		actions,
 		children,
-	}: { title: string; onclose: () => void; children: Snippet } = $props();
+	}: {
+		title: string;
+		onclose: () => void;
+		actions?: Snippet;
+		children: Snippet;
+	} = $props();
 
 	function onkeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') onclose();
@@ -20,10 +29,14 @@
 <div class="flyout" role="dialog" aria-modal="true" aria-label={title}>
 	<div class="bar">
 		<strong>{title}</strong>
-		<button type="button" class="primary" onclick={onclose}>
-			<Icon name="close" size={14} />
-			Done
-		</button>
+		{#if actions}
+			<div class="actions">{@render actions()}</div>
+		{:else}
+			<button type="button" class="primary" onclick={onclose}>
+				<Icon name="close" size={14} />
+				Done
+			</button>
+		{/if}
 	</div>
 	<div class="body">{@render children()}</div>
 </div>
@@ -65,6 +78,11 @@
 		padding: 8px 16px;
 		background: var(--surface);
 		border-bottom: 1px solid var(--line);
+	}
+
+	.actions {
+		display: flex;
+		gap: 8px;
 	}
 
 	/* the page inside scrolls, its top bar sticks to this */

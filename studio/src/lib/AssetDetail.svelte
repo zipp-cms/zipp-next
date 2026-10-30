@@ -7,9 +7,13 @@
 		updateAsset,
 		type Asset,
 		type AssetUsage,
+		NO_EDITS,
+		noEdits,
+		transparentEdges,
 		type Edits,
 		type Schema,
 	} from '../api';
+	import Flyout from './Flyout.svelte';
 	import { canAssets } from './access';
 	import { time } from './format';
 	import Icon from './Icon.svelte';
@@ -21,31 +25,25 @@
 	/**
 	 * A file like Craft's asset panel: the image editor, title, alt text
 	 * and filename, what it is and who uploaded it, download, copy the
-	 * url, replace the file, and where it is used.
+	 * url, replace the file, and where it is used. In a flyout with Save
+	 * and Cancel.
 	 */
 	let {
 		schema,
 		asset,
 		onsaved,
 		ondeleted,
+		onclose,
 	}: {
 		schema: Schema;
 		asset: Asset;
 		onsaved: (a: Asset) => void;
 		ondeleted: () => void;
+		onclose: () => void;
 	} = $props();
 
 	const canEdit = $derived(canAssets(schema, 'edit'));
 	const canDelete = $derived(canAssets(schema, 'delete'));
-
-	const NONE: Edits = {
-		rotate: 0,
-		flipH: false,
-		flipV: false,
-		crop: null,
-		resize: null,
-		canvas: null,
-	};
 
 	// svelte-ignore state_referenced_locally
 	let current = $state(asset);
@@ -58,7 +56,7 @@
 	// svelte-ignore state_referenced_locally
 	let focal = $state({ x: asset.focalX, y: asset.focalY });
 	// svelte-ignore state_referenced_locally
-	let edits = $state<Edits>({ ...NONE, ...(asset.edits ?? {}) });
+	let edits = $state<Edits>({ ...NO_EDITS, ...(asset.edits ?? {}) });
 	let error = $state('');
 	let busy = $state(false);
 	let copied = $state(false);
@@ -70,7 +68,22 @@
 			.catch(() => (usage = []));
 	});
 
-	const unchanged = (e: Edits) => JSON.stringify(e) === JSON.stringify(NONE);
+	const form = () =>
+		JSON.stringify({
+			title,
+			alt,
+			filename,
+			focal,
+			edits: $state.snapshot(edits),
+		});
+	// what Cancel would throw away
+	let initial = $state(form());
+	const dirty = $derived(form() !== initial);
+
+	function cancel() {
+		if (dirty && !confirm('Discard the changes?')) return;
+		onclose();
+	}
 	const kb = (n: number) =>
 		n > 1024 * 1024
 			? `${(n / 1024 / 1024).toFixed(1)} MB`
@@ -87,7 +100,7 @@
 					filename,
 					focalX: focal.x,
 					focalY: focal.y,
-					edits: unchanged(edits) ? null : $state.snapshot(edits),
+					edits: noEdits(edits) ? null : $state.snapshot(edits),
 				}),
 			);
 		} catch (e: any) {
@@ -115,7 +128,8 @@
 			current = await replaceAsset(current.id, file);
 			filename = current.filename;
 			focal = { x: current.focalX, y: current.focalY };
-			edits = { ...NONE };
+			edits = { ...NO_EDITS };
+			initial = form();
 		} catch (e: any) {
 			error = e.message;
 		} finally {
@@ -135,145 +149,155 @@
 		schema.sections.find(s => s.handle === h)?.name ?? h;
 </script>
 
-<div class="detail">
-	<div class="main">
-		{#if current.kind === 'image'}
-			{#key current.filename + current.size}
-				<ImageEditor
-					src={assetUrl(current, false, true)}
-					bind:edits
-					bind:focal
-					editable={canEdit}
-				/>
-			{/key}
-		{:else}
-			<div class="file"><Thumb asset={current} /></div>
-		{/if}
-	</div>
+{#snippet actions()}
+	<button type="button" onclick={cancel}>Cancel</button>
+	<button type="button" class="primary" disabled={busy} onclick={save}>
+		<Icon name="save" size={14} /> Save
+	</button>
+{/snippet}
 
-	<aside>
-		<div class="card fields">
-			<label>
-				Title
-				<input
-					bind:value={title}
-					placeholder="From the filename"
-					disabled={!canEdit}
-				/>
-			</label>
-			<label>
-				Alt text
-				<input
-					bind:value={alt}
-					placeholder="What the image shows"
-					disabled={!canEdit}
-				/>
-			</label>
-			<label>
-				Filename
-				<input bind:value={filename} disabled={!canEdit} />
-			</label>
-			{#if error}<p class="error">{error}</p>{/if}
-			{#if canEdit}
-				<button
-					type="button"
-					class="primary"
-					disabled={busy}
-					onclick={save}
-				>
-					Save
-				</button>
+<Flyout
+	title={current.title || current.filename}
+	onclose={cancel}
+	actions={canEdit ? actions : undefined}
+>
+	<div class="detail">
+		<div class="main">
+			{#if current.kind === 'image'}
+				{#key current.filename + current.size}
+					<ImageEditor
+						src={assetUrl(current, false, true)}
+						bind:edits
+						bind:focal
+						editable={canEdit}
+					/>
+				{/key}
+			{:else}
+				<div class="file"><Thumb asset={current} /></div>
 			{/if}
 		</div>
 
-		<div class="card">
-			<dl>
-				<dt>Size</dt>
-				<dd>{kb(current.size)}</dd>
-				{#if current.width}
-					<dt>Dimensions</dt>
+		<aside>
+			<div class="card fields">
+				<label>
+					Title
+					<input
+						bind:value={title}
+						placeholder="From the filename"
+						disabled={!canEdit}
+					/>
+				</label>
+				<label>
+					Alt text
+					<input
+						bind:value={alt}
+						placeholder="What the image shows"
+						disabled={!canEdit}
+					/>
+				</label>
+				<label>
+					Filename
+					<input bind:value={filename} disabled={!canEdit} />
+				</label>
+				{#if error}<p class="error">{error}</p>{/if}
+			</div>
+
+			<div class="card">
+				<dl>
+					<dt>Size</dt>
+					<dd>{kb(current.size)}</dd>
+					{#if current.width}
+						<dt>Dimensions</dt>
+						<dd>
+							{current.width} × {current.height}
+							{#if current.edits}
+								<span class="muted">
+									uploaded {current.originalWidth} × {current.originalHeight}
+								</span>
+							{/if}
+						</dd>
+					{/if}
+					<dt>Type</dt>
 					<dd>
-						{current.width} × {current.height}
-						{#if current.edits}
-							<span class="muted">
-								uploaded {current.originalWidth} × {current.originalHeight}
-							</span>
+						{current.mime}
+						{#if current.edits && transparentEdges(current.edits) && current.mime !== 'image/png'}
+							<span class="muted">delivered as PNG</span>
 						{/if}
 					</dd>
-				{/if}
-				<dt>Type</dt>
-				<dd>
-					{current.mime}
-					{#if current.edits?.canvas?.background === 'transparent' && current.mime !== 'image/png'}
-						<span class="muted">delivered as PNG</span>
+					<dt>Uploaded</dt>
+					<dd>
+						{time(current.createdAt)}
+						{#if current.uploadedBy}
+							<span class="muted">by {current.uploadedBy}</span>
+						{/if}
+					</dd>
+				</dl>
+				<div class="actions">
+					<a
+						class="light"
+						href={assetUrl(current, false, true)}
+						download={current.filename}
+					>
+						<Icon name="download" size={14} /> Download
+					</a>
+					<button type="button" onclick={copyUrl}>
+						<Icon name="copy-url" size={14} />
+						{copied ? 'Copied' : 'Copy URL'}
+					</button>
+					{#if canEdit}
+						<label class="light replace">
+							<Icon name="replace" size={14} /> Replace file
+							<input
+								type="file"
+								onchange={e => replace(e.currentTarget.files)}
+							/>
+						</label>
 					{/if}
-				</dd>
-				<dt>Uploaded</dt>
-				<dd>
-					{time(current.createdAt)}
-					{#if current.uploadedBy}
-						<span class="muted">by {current.uploadedBy}</span>
-					{/if}
-				</dd>
-			</dl>
-			<div class="actions">
-				<a
-					class="light"
-					href={assetUrl(current, false, true)}
-					download={current.filename}
-				>
-					<Icon name="download" size={14} /> Download
-				</a>
-				<button type="button" onclick={copyUrl}>
-					<Icon name="copy-url" size={14} />
-					{copied ? 'Copied' : 'Copy URL'}
-				</button>
-				{#if canEdit}
-					<label class="light replace">
-						<Icon name="replace" size={14} /> Replace file
-						<input
-							type="file"
-							onchange={e => replace(e.currentTarget.files)}
-						/>
-					</label>
+				</div>
+			</div>
+
+			<div class="card">
+				<h3>Used in</h3>
+				{#if usage === null}
+					<p class="muted">Loading…</p>
+				{:else}
+					<ul>
+						{#each usage as u (u.id)}
+							<li>
+								<a
+									href="/admin{entryPath(u.section, u.id)}"
+									onclick={e => {
+										if (
+											dirty &&
+											!confirm('Discard the changes?')
+										)
+											e.preventDefault();
+										else closeFlyout();
+									}}
+								>
+									{u.title}
+								</a>
+								<span class="muted">
+									{sectionName(u.section)} · {u.sites
+										.map(s => s.toUpperCase())
+										.join(' ')}
+								</span>
+							</li>
+						{:else}
+							<li class="muted">Not used in any entry</li>
+						{/each}
+					</ul>
 				{/if}
 			</div>
-		</div>
 
-		<div class="card">
-			<h3>Used in</h3>
-			{#if usage === null}
-				<p class="muted">Loading…</p>
-			{:else}
-				<ul>
-					{#each usage as u (u.id)}
-						<li>
-							<a
-								href="/admin{entryPath(u.section, u.id)}"
-								onclick={closeFlyout}
-							>
-								{u.title}
-							</a>
-							<span class="muted">
-								{sectionName(u.section)} · {u.sites
-									.map(s => s.toUpperCase())
-									.join(' ')}
-							</span>
-						</li>
-					{:else}
-						<li class="muted">Not used in any entry</li>
-					{/each}
-				</ul>
+			{#if canDelete}
+				<button type="button" class="danger delete" onclick={remove}>
+					Delete the file
+				</button>
 			{/if}
-		</div>
-
-		{#if canDelete}
-			<button type="button" class="danger delete" onclick={remove}>
-				Delete the file
-			</button>
-		{/if}
-	</aside>
-</div>
+		</aside>
+	</div>
+</Flyout>
 
 <style lang="scss">
 	.detail {

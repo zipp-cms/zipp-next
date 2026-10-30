@@ -3,7 +3,6 @@
 	import { canAssets } from '../lib/access';
 	import AssetGrid from '../lib/AssetGrid.svelte';
 	import AssetDetail from '../lib/AssetDetail.svelte';
-	import Flyout from '../lib/Flyout.svelte';
 	import Icon from '../lib/Icon.svelte';
 
 	let { schema }: { schema: Schema } = $props();
@@ -79,29 +78,25 @@
 </div>
 
 {#if current}
-	<Flyout
-		title={current.title || current.filename}
-		onclose={() => {
-			// a replaced file has a new thumbnail
-			current = null;
-			load();
-		}}
-	>
-		{#key current.id}
-			<AssetDetail
-				{schema}
-				asset={current}
-				onsaved={a => {
-					assets = assets.map(x => (x.id === a.id ? a : x));
-					current = null;
-				}}
-				ondeleted={() => {
-					current = null;
-					load();
-				}}
-			/>
-		{/key}
-	</Flyout>
+	{#key current.id}
+		<AssetDetail
+			{schema}
+			asset={current}
+			onsaved={a => {
+				assets = assets.map(x => (x.id === a.id ? a : x));
+				current = null;
+			}}
+			ondeleted={() => {
+				current = null;
+				load();
+			}}
+			onclose={() => {
+				// a replaced file has a new thumbnail
+				current = null;
+				load();
+			}}
+		/>
+	{/key}
 {/if}
 
 <style lang="scss">

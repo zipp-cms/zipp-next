@@ -149,7 +149,9 @@ fn version(edits: &Option<Edits>, focal_x: f64, focal_y: f64) -> String {
 		return String::new();
 	}
 	let mut h = std::collections::hash_map::DefaultHasher::new();
-	serde_json::to_string(edits).unwrap_or_default().hash(&mut h);
+	serde_json::to_string(edits)
+		.unwrap_or_default()
+		.hash(&mut h);
 	focal_x.to_bits().hash(&mut h);
 	focal_y.to_bits().hash(&mut h);
 	format!("{:x}", h.finish() & 0xffff_ffff)

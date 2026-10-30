@@ -26,7 +26,8 @@ export type Asset = {
 
 /**
  * What the image editor changes, the uploaded file stays: rotate, flip,
- * crop (0 to 1 of the rotated image), resize, a canvas around it.
+ * crop (0 to 1 of the rotated image, up to one image past each side),
+ * resize, a canvas around it, and the background past the image.
  */
 export type Edits = {
 	rotate: number;
@@ -34,8 +35,38 @@ export type Edits = {
 	flipV: boolean;
 	crop: { x: number; y: number; w: number; h: number } | null;
 	resize: { width: number; height: number | null } | null;
-	canvas: { width: number; height: number; background: string } | null;
+	canvas: { width: number; height: number } | null;
+	/** `#rrggbb` or `transparent`, white without one */
+	background: string | null;
 };
+
+export const NO_EDITS: Edits = {
+	rotate: 0,
+	flipH: false,
+	flipV: false,
+	crop: null,
+	resize: null,
+	canvas: null,
+	background: null,
+};
+
+/** Whether the crop reaches past the image. */
+export function cropsOutside(e: Edits): boolean {
+	const c = e.crop;
+	return !!c && (c.x < 0 || c.y < 0 || c.x + c.w > 1 || c.y + c.h > 1);
+}
+
+/** Whether the edits leave the image as uploaded. */
+export function noEdits(e: Edits): boolean {
+	return (
+		!e.rotate && !e.flipH && !e.flipV && !e.crop && !e.resize && !e.canvas
+	);
+}
+
+/** Whether the edited image has transparent parts around it. */
+export function transparentEdges(e: Edits): boolean {
+	return e.background === 'transparent' && (!!e.canvas || cropsOutside(e));
+}
 
 /** The image with its edits, its thumbnail, or the file as uploaded. */
 export function assetUrl(a: Asset, thumb = false, original = false): string {

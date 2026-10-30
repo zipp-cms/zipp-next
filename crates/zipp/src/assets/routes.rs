@@ -196,11 +196,21 @@ pub(super) async fn update(
 			return Err(Error::Request("only images can be edited".into()));
 		}
 		e.check().map_err(Error::Request)?;
-		let (w, h) = e.size(
+		let (ow, oh) = (
 			old.original_width.unwrap_or(1),
 			old.original_height.unwrap_or(1),
 		);
-		if u64::from(w) * u64::from(h) > MAX_PIXELS {
+		let (w, h) = e.size(ow, oh);
+		// a crop past the image is made before a resize makes it smaller
+		let crop = Edits {
+			resize: None,
+			canvas: None,
+			..e.clone()
+		};
+		let (cw, ch) = crop.size(ow, oh);
+		if u64::from(w) * u64::from(h) > MAX_PIXELS
+			|| u64::from(cw) * u64::from(ch) > MAX_PIXELS
+		{
 			return Err(Error::Request(
 				"the edited image is bigger than 40 megapixels".into(),
 			));

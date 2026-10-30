@@ -29,19 +29,19 @@
 		{/key}
 	</Flyout>
 {:else if flyout.open?.kind === 'asset'}
-	<Flyout
-		title={asset ? asset.title || asset.filename : 'File'}
-		onclose={closeFlyout}
-	>
-		{#if asset}
-			{#key asset.id}
-				<AssetDetail
-					{schema}
-					{asset}
-					onsaved={closeFlyout}
-					ondeleted={closeFlyout}
-				/>
-			{/key}
-		{/if}
-	</Flyout>
+	{#if asset}
+		{#key asset.id}
+			<AssetDetail
+				{schema}
+				{asset}
+				onsaved={closeFlyout}
+				ondeleted={closeFlyout}
+				onclose={closeFlyout}
+			/>
+		{/key}
+	{:else}
+		<Flyout title="File" onclose={closeFlyout}>
+			<p class="muted">Loading…</p>
+		</Flyout>
+	{/if}
 {/if}

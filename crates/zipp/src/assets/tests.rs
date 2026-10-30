@@ -98,8 +98,8 @@ fn edits_change_the_image_not_the_file() {
 		canvas: Some(Canvas {
 			width: 400,
 			height: 400,
-			background: "transparent".into(),
 		}),
+		background: Some("transparent".into()),
 		..Default::default()
 	};
 	edits.check().unwrap();
@@ -113,6 +113,33 @@ fn edits_change_the_image_not_the_file() {
 		..Default::default()
 	};
 	assert_eq!(resized.size(300, 200), (150, 100));
+	// past the image: the background around it
+	let past = Edits {
+		crop: Some(Crop {
+			x: -0.5,
+			y: 0.0,
+			w: 1.5,
+			h: 1.0,
+		}),
+		background: Some("#0000ff".into()),
+		..Default::default()
+	};
+	past.check().unwrap();
+	let red = image::RgbImage::from_pixel(100, 50, image::Rgb([255, 0, 0]));
+	let img = past.apply(red.into()).to_rgba8();
+	assert_eq!(img.dimensions(), (150, 50));
+	assert_eq!(img.get_pixel(10, 10).0, [0, 0, 255, 255]);
+	assert_eq!(img.get_pixel(100, 10).0, [255, 0, 0, 255]);
+	let far = Edits {
+		crop: Some(Crop {
+			x: -1.5,
+			y: 0.0,
+			w: 1.0,
+			h: 1.0,
+		}),
+		..Default::default()
+	};
+	assert!(far.check().is_err());
 	let bad = Edits {
 		rotate: 45,
 		..Default::default()

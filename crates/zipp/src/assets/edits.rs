@@ -1,7 +1,8 @@
 //! Edits of an image, kept next to the original instead of changing it:
 //! the studio's image editor writes them, every transform starts from the
 //! edited image, and resetting brings the original back. In this order:
-//! rotate, flip, crop, resize, a canvas around it.
+//! rotate, flip, crop, resize, a canvas around it. A crop may reach past
+//! the image and a canvas be bigger than it: that area is the background.
 
 use image::imageops::FilterType;
 use image::{DynamicImage, Rgba, RgbaImage};
@@ -18,12 +19,16 @@ pub struct Edits {
 	pub flip_h: bool,
 	#[serde(default)]
 	pub flip_v: bool,
-	/// a part of the rotated image, 0 to 1 of its width and height
+	/// a part of the rotated image, 0 to 1 of its width and height, at
+	/// most one image beyond each side
 	pub crop: Option<Crop>,
 	/// a new size, the height follows the width without one
 	pub resize: Option<Resize>,
 	/// a bigger area the image sits in the middle of
 	pub canvas: Option<Canvas>,
+	/// `#rrggbb` or `transparent` around the image, white without one
+	#[serde(default)]
+	pub background: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -44,8 +49,6 @@ pub struct Resize {
 pub struct Canvas {
 	pub width: u32,
 	pub height: u32,
-	/// `#rrggbb` or `transparent`
-	pub background: String,
 }
 
 /// The biggest side anything may get.
@@ -56,11 +59,25 @@ impl Edits {
 		*self == Self::default()
 	}
 
+	/// Whether the crop reaches past the image.
+	fn outside(&self) -> bool {
+		self.crop.is_some_and(|c| {
+			c.x < 0.0 || c.y < 0.0 || c.x + c.w > 1.0 || c.y + c.h > 1.0
+		})
+	}
+
 	/// Whether the result needs an alpha channel.
 	pub fn transparent(&self) -> bool {
-		self.canvas
-			.as_ref()
-			.is_some_and(|c| c.background == "transparent")
+		self.background.as_deref() == Some("transparent")
+			&& (self.canvas.is_some() || self.outside())
+	}
+
+	fn background(&self) -> Rgba<u8> {
+		match self.background.as_deref() {
+			Some("transparent") => Rgba([0, 0, 0, 0]),
+			Some(c) => color(c).unwrap_or(Rgba([255; 4])),
+			None => Rgba([255; 4]),
+		}
 	}
 
 	pub fn check(&self) -> std::result::Result<(), String> {
@@ -68,14 +85,14 @@ impl Edits {
 			return Err("rotate is 0, 90, 180 or 270".into());
 		}
 		if let Some(c) = self.crop {
-			let inside = |v: f64| (0.0..=1.0).contains(&v);
-			if !(inside(c.x)
-				&& inside(c.y)
-				&& c.w > 0.0 && c.h > 0.0
-				&& c.x + c.w <= 1.0 + 1e-9
-				&& c.y + c.h <= 1.0 + 1e-9)
+			// one image beyond each side at most
+			let near = |v: f64| (-1.0 - 1e-9..=2.0 + 1e-9).contains(&v);
+			if !(near(c.x)
+				&& near(c.y) && c.w > 0.0
+				&& c.h > 0.0 && near(c.x + c.w)
+				&& near(c.y + c.h))
 			{
-				return Err("the crop is outside the image".into());
+				return Err("the crop is too far outside the image".into());
 			}
 		}
 		let side = |v: u32| (1..=MAX_SIDE).contains(&v);
@@ -91,9 +108,12 @@ impl Edits {
 			if u64::from(c.width) * u64::from(c.height) > MAX_PIXELS {
 				return Err("the canvas is bigger than 40 megapixels".into());
 			}
-			if c.background != "transparent" && color(&c.background).is_none() {
-				return Err("the background is #rrggbb or transparent".into());
-			}
+		}
+		if let Some(b) = &self.background
+			&& b != "transparent"
+			&& color(b).is_none()
+		{
+			return Err("the background is #rrggbb or transparent".into());
 		}
 		Ok(())
 	}
@@ -136,11 +156,21 @@ impl Edits {
 		}
 		if let Some(c) = self.crop {
 			let (w, h) = (img.width() as f64, img.height() as f64);
-			let x = (c.x * w).round() as u32;
-			let y = (c.y * h).round() as u32;
-			let cw = ((c.w * w).round() as u32).clamp(1, img.width() - x);
-			let ch = ((c.h * h).round() as u32).clamp(1, img.height() - y);
-			img = img.crop_imm(x, y, cw, ch);
+			let x = (c.x * w).round() as i64;
+			let y = (c.y * h).round() as i64;
+			let cw = ((c.w * w).round() as u32).max(1);
+			let ch = ((c.h * h).round() as u32).max(1);
+			img = if self.outside() {
+				// the image on the background, where the crop has it
+				let mut out = RgbaImage::from_pixel(cw, ch, self.background());
+				image::imageops::overlay(&mut out, &img.to_rgba8(), -x, -y);
+				DynamicImage::ImageRgba8(out)
+			} else {
+				let (x, y) = (x as u32, y as u32);
+				let (cw, ch) =
+					(cw.min(img.width() - x), ch.min(img.height() - y));
+				img.crop_imm(x, y, cw.max(1), ch.max(1))
+			};
 		}
 		if let Some(r) = self.resize {
 			let (w, h) = (img.width(), img.height());
@@ -150,7 +180,7 @@ impl Edits {
 			img = img.resize_exact(r.width, height, FilterType::Lanczos3);
 		}
 		if let Some(c) = &self.canvas {
-			img = on_canvas(img, c);
+			img = on_canvas(img, c, self.background());
 		}
 		img
 	}
@@ -164,8 +194,7 @@ fn color(hex: &str) -> Option<Rgba<u8>> {
 }
 
 /// The image in the middle of the canvas, made smaller if it doesn't fit.
-fn on_canvas(img: DynamicImage, c: &Canvas) -> DynamicImage {
-	let bg = color(&c.background).unwrap_or(Rgba([0, 0, 0, 0]));
+fn on_canvas(img: DynamicImage, c: &Canvas, bg: Rgba<u8>) -> DynamicImage {
 	let mut canvas = RgbaImage::from_pixel(c.width, c.height, bg);
 	let img = if img.width() > c.width || img.height() > c.height {
 		img.resize(c.width, c.height, FilterType::Lanczos3)
