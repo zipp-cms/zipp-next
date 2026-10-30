@@ -1,6 +1,6 @@
 <script lang="ts">
-	// the Lucide icons of src/icons, colored by `color`
-	const icons = import.meta.glob('../icons/*.svg', {
+	// the Lucide icons of ui/icons, colored by `color`
+	const icons = import.meta.glob('./icons/*.svg', {
 		query: '?raw',
 		import: 'default',
 		eager: true,
@@ -10,7 +10,7 @@
 </script>
 
 <span class="icon" style:width="{size}px" style:height="{size}px">
-	{@html icons[`../icons/${name}.svg`]}
+	{@html icons[`./icons/${name}.svg`]}
 </span>
 
 <style>
