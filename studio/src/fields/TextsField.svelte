@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Field, Schema, Values } from '../core/schema';
+	import type { FieldOf, Schema, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 	import { site } from '../core/router.svelte';
 
 	/**
@@ -11,11 +12,11 @@
 		schema,
 		field,
 		values,
-	}: { schema: Schema; field: Field; values: Values } = $props();
+	}: { schema: Schema; field: FieldOf<'texts'>; values: Values } = $props();
 
-	const keys = $derived(field.kind === 'texts' ? field.keys : []);
+	const keys = $derived(field.keys);
 	const primary = $derived(site.current === schema.sites[0].handle);
-	const texts = $derived((values[field.handle] ?? {}) as Values);
+	const texts = $derived(valueOf(values, field) ?? {});
 
 	function set(key: string, text: string) {
 		values[field.handle] = { ...texts, [key]: text };

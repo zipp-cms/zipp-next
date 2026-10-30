@@ -106,7 +106,7 @@
 	.body {
 		flex: 1;
 		min-height: 0;
-		padding: 0 24px 24px;
+		padding: 0 var(--page-pad) var(--page-pad);
 		overflow-y: auto;
 	}
 </style>

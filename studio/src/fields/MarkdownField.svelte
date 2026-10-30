@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { markdown } from '../core/markdown';
 	import { untrack } from 'svelte';
-	import type { Field, Values } from '../core/schema';
+	import type { FieldOf, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 	import Segmented from '../ui/Segmented.svelte';
 
 	/**
@@ -12,10 +13,10 @@
 		field,
 		values,
 		path: id,
-	}: { field: Field; values: Values; path: string } = $props();
+	}: { field: FieldOf<'markdown'>; values: Values; path: string } = $props();
 
 	let writing = $state(untrack(() => !values[field.handle]));
-	const html = $derived(markdown(values[field.handle] ?? ''));
+	const html = $derived(markdown(valueOf(values, field) ?? ''));
 </script>
 
 <div class="markdown">

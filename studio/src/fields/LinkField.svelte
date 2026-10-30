@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Field, Link, Schema, Values } from '../core/schema';
+	import type { FieldOf, Schema, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
 	import LinkInput from './LinkInput.svelte';
 
@@ -11,13 +12,13 @@
 		refs,
 	}: {
 		schema: Schema;
-		field: Extract<Field, { kind: 'link' }>;
+		field: FieldOf<'link'>;
 		values: Values;
 		refs: Refs;
 	} = $props();
 
-	const link = $derived<Link>(
-		values[field.handle] ?? { type: field.to[0], value: null },
+	const link = $derived(
+		valueOf(values, field) ?? { type: field.to[0], value: null },
 	);
 </script>
 

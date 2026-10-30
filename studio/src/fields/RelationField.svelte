@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Field, Schema, Values } from '../core/schema';
+	import type { FieldOf, Schema, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 	import type { EntryRef, Refs } from '../entries/api';
 	import EntryChip from '../entries/EntryChip.svelte';
 	import EntrySearch from '../entries/EntrySearch.svelte';
@@ -12,11 +13,16 @@
 		field,
 		values,
 		refs,
-	}: { schema: Schema; field: Field; values: Values; refs: Refs } = $props();
+	}: {
+		schema: Schema;
+		field: FieldOf<'relation'>;
+		values: Values;
+		refs: Refs;
+	} = $props();
 
-	const types = $derived(field.kind === 'relation' ? field.types : []);
-	const max = $derived(field.kind === 'relation' ? field.max : null);
-	const ids = $derived<number[]>(values[field.handle] ?? []);
+	const types = $derived(field.types);
+	const max = $derived(field.max);
+	const ids = $derived(valueOf(values, field) ?? []);
 	const set = (next: number[]) => (values[field.handle] = next);
 
 	function add(e: EntryRef) {

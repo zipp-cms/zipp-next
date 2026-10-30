@@ -100,7 +100,15 @@ function failed(resp: Response, data: any): ApiError {
 	return err;
 }
 
-export async function request(method: string, path: string, body?: unknown) {
+/**
+ * A request to the api: its answer as `T`, which the caller names (the
+ * server's `Response` of the request), or the ApiError.
+ */
+export async function request<T = unknown>(
+	method: string,
+	path: string,
+	body?: unknown,
+): Promise<T> {
 	const resp = await send(method, path, body);
 	const text = await resp.text();
 	// an error page of a proxy is no JSON
@@ -111,7 +119,7 @@ export async function request(method: string, path: string, body?: unknown) {
 		if (resp.ok) throw new Error(`${path}: the answer is no JSON`);
 	}
 	if (!resp.ok) throw failed(resp, data);
-	return data;
+	return data as T;
 }
 
 /** An event of a stream: its `event:`, `id:` and `data:` lines. */

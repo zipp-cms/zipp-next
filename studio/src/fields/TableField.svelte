@@ -1,14 +1,16 @@
 <script lang="ts">
-	import type { Field, Values } from '../core/schema';
+	import type { FieldOf, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 	import AddButton from '../ui/AddButton.svelte';
 	import ItemActions from '../ui/ItemActions.svelte';
 	import { inserted, moved, removed, replaced } from '../core/list';
 
 	/** Rows of the columns of the code, like Craft's table field. */
-	let { field, values }: { field: Field; values: Values } = $props();
+	let { field, values }: { field: FieldOf<'table'>; values: Values } =
+		$props();
 
-	const columns = $derived(field.kind === 'table' ? field.columns : []);
-	const rows = $derived<Values[]>(values[field.handle] ?? []);
+	const columns = $derived(field.columns);
+	const rows = $derived(valueOf(values, field) ?? []);
 
 	function set(next: Values[]) {
 		values[field.handle] = next.length ? next : null;

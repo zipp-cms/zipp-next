@@ -77,10 +77,11 @@ export function restoreRevision(id: number, rev: number): Promise<Draft> {
 
 /** A link that shows the draft on the website for a day. */
 export async function previewToken(id: number): Promise<string> {
-	return (await request('POST', `/entries/${id}/preview`)).token;
+	return (await request<{ token: string }>('POST', `/entries/${id}/preview`))
+		.token;
 }
 
 /** A token that shows every draft on the website, for a day. */
 export async function sitePreviewToken(): Promise<string> {
-	return (await request('POST', '/preview')).token;
+	return (await request<{ token: string }>('POST', '/preview')).token;
 }

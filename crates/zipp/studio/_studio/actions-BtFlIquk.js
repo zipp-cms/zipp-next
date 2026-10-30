@@ -1,0 +1,1 @@
+import{a0 as c,j as i,ai as o,l as d,aj as j}from"./index-Bl9-xOMq.js";function u(e,n,a){c(()=>{var r=i(()=>n(e,a==null?void 0:a())||{});if(a&&(r!=null&&r.update)){var s=!1,t={};o(()=>{var f=a();d(f),s&&j(t,f)&&(t=f,r.update(f))}),s=!0}if(r!=null&&r.destroy)return()=>r.destroy()})}export{u as a};

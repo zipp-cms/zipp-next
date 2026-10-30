@@ -50,8 +50,8 @@
 	}
 
 	.bleed {
-		margin: 0 -24px 20px;
-		padding: 8px 24px;
+		margin: 0 calc(-1 * var(--page-pad)) 20px;
+		padding: 8px var(--page-pad);
 	}
 
 	h1 {

@@ -1,15 +1,17 @@
 <script lang="ts">
-	import type { Field, Values } from '../core/schema';
+	import type { FieldOf, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 	import Segmented from '../ui/Segmented.svelte';
 
 	/**
 	 * One of the options: up to three as buttons, more as a select. A
 	 * click on the picked button clears it unless the field is required.
 	 */
-	let { field, values }: { field: Field; values: Values } = $props();
+	let { field, values }: { field: FieldOf<'dropdown'>; values: Values } =
+		$props();
 
-	const options = $derived(field.kind === 'dropdown' ? field.options : []);
-	const value = $derived(values[field.handle] ?? null);
+	const options = $derived(field.options);
+	const value = $derived(valueOf(values, field) ?? null);
 
 	function pick(v: string | null) {
 		values[field.handle] = v === value && !field.required ? null : v;

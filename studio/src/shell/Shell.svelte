@@ -44,7 +44,7 @@
 
 	main {
 		min-width: 0;
-		padding: 0 24px 32px;
+		padding: 0 var(--page-pad) 32px;
 	}
 
 	.wide {
@@ -59,10 +59,6 @@
 	@media (max-width: 800px) {
 		.layout {
 			grid-template-columns: 1fr;
-		}
-
-		main {
-			padding: 0 16px 24px;
 		}
 	}
 </style>

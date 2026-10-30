@@ -172,7 +172,7 @@
 		&.user {
 			margin-left: 32px;
 			background: var(--text);
-			color: white;
+			color: var(--surface);
 			white-space: pre-wrap;
 		}
 

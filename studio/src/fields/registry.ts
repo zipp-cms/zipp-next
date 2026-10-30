@@ -1,5 +1,5 @@
 import type { Component } from 'svelte';
-import type { Field, Schema, Values } from '../core/schema';
+import type { Field, FieldOf, Schema, Values } from '../core/schema';
 import type { Refs } from '../entries/api';
 import AssetField from './AssetField.svelte';
 import BlocksField from './BlocksField.svelte';
@@ -20,9 +20,9 @@ import TextsField from './TextsField.svelte';
  * What every field component gets; each takes what it needs. `values`
  * is the object the field's value is in, `values[field.handle]`.
  */
-export type FieldProps = {
+export type FieldProps<F extends Field = Field> = {
 	schema: Schema;
-	field: Field;
+	field: F;
 	values: Values;
 	errors: Record<string, string>;
 	refs: Refs;
@@ -31,8 +31,8 @@ export type FieldProps = {
 	changed: Set<string>;
 };
 
-/** The component of each kind of field. */
-export const FIELDS: Record<Field['kind'], Component<any>> = {
+/** The component of each kind of field, it gets the field of its kind. */
+const FIELDS: { [K in Field['kind']]: Component<FieldProps<FieldOf<K>>> } = {
 	text: SimpleField,
 	number: SimpleField,
 	boolean: SimpleField,
@@ -51,12 +51,31 @@ export const FIELDS: Record<Field['kind'], Component<any>> = {
 	custom: CustomField,
 };
 
-/** The kinds a plugin's module may mount, they need no entry around them. */
-export const HOSTED: Field['kind'][] = [
-	'text',
-	'assets',
-	'dropdown',
-	'checkboxes',
-	'table',
-	'markdown',
-];
+/** The component of a field. */
+export function fieldComponent(field: Field): Component<FieldProps> {
+	// the kind of the field picks the component that takes it
+	return FIELDS[field.kind] as Component<FieldProps<any>>;
+}
+
+/** What a field in a plugin's module gets, there is no entry around it. */
+export type HostedProps<F extends Field = Field> = Pick<
+	FieldProps<F>,
+	'field' | 'values' | 'path'
+>;
+
+/** The kinds a plugin's module may mount, they need nothing else. */
+const HOSTED: {
+	[K in Field['kind']]?: Component<HostedProps<FieldOf<K>>>;
+} = {
+	text: SimpleField,
+	assets: AssetField,
+	dropdown: DropdownField,
+	checkboxes: CheckboxesField,
+	table: TableField,
+	markdown: MarkdownField,
+};
+
+/** The component of a field in a plugin's module, null if it can't be. */
+export function hostedComponent(field: Field): Component<HostedProps> | null {
+	return (HOSTED[field.kind] as Component<HostedProps<any>>) ?? null;
+}

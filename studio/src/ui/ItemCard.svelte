@@ -38,7 +38,7 @@
 	<div class="head">
 		<button
 			type="button"
-			class="toggle"
+			class="toggle plain"
 			aria-expanded={shown}
 			disabled={!collapsible}
 			onclick={toggle}
@@ -99,13 +99,6 @@
 		flex: 1;
 		min-width: 0;
 		padding: 6px;
-		border: none;
-		background: none;
-		text-align: left;
-
-		&:hover:not(:disabled) {
-			background: none;
-		}
 
 		&:disabled {
 			opacity: 1;

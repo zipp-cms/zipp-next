@@ -88,6 +88,6 @@
 		height: 22px;
 		border-radius: 50%;
 		background: var(--accent);
-		color: white;
+		color: var(--on-accent);
 	}
 </style>

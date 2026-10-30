@@ -50,7 +50,7 @@
 		padding: 0 5px;
 		border-radius: 999px;
 		background: var(--danger);
-		color: white;
+		color: var(--on-accent);
 		font-size: var(--fs-xs);
 		font-weight: 600;
 		line-height: 17px;

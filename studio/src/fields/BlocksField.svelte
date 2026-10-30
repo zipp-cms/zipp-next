@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import type { Block, Field, Schema, Values } from '../core/schema';
+	import type { Block, FieldOf, Schema, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
 	import BlockMenu from './BlockMenu.svelte';
 	import Fields from './Fields.svelte';
@@ -24,7 +25,7 @@
 		changed = new Set(),
 	}: {
 		schema: Schema;
-		field: Field;
+		field: FieldOf<'blocks'>;
 		values: Values;
 		errors: Record<string, string>;
 		refs: Refs;
@@ -33,12 +34,10 @@
 	} = $props();
 
 	const types = $derived(
-		schema.components.filter(
-			c => field.kind === 'blocks' && field.types.includes(c.handle),
-		),
+		schema.components.filter(c => field.types.includes(c.handle)),
 	);
-	const max = $derived(field.kind === 'blocks' ? field.max : null);
-	const blocks = $derived<Block[]>(values[field.handle] ?? []);
+	const max = $derived(field.max);
+	const blocks = $derived(valueOf(values, field) ?? []);
 	const full = $derived(isFull(blocks.length, max));
 	const set = (next: Block[]) => (values[field.handle] = next);
 

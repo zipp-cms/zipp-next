@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Asset } from '../assets/api';
-	import type { Field, Values } from '../core/schema';
+	import type { FieldOf, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 	import AddButton from '../ui/AddButton.svelte';
 	import AssetChip from '../assets/AssetChip.svelte';
 	import AssetPicker from '../assets/AssetPicker.svelte';
@@ -14,11 +15,12 @@
 	 * Images as tiles, other files as chips, in an order; a click opens
 	 * one in the flyout for its title, alt text and focal point.
 	 */
-	let { field, values }: { field: Field; values: Values } = $props();
+	let { field, values }: { field: FieldOf<'assets'>; values: Values } =
+		$props();
 
-	const images = $derived(field.kind === 'assets' && field.images);
-	const max = $derived(field.kind === 'assets' ? field.max : null);
-	const ids = $derived<number[]>(values[field.handle] ?? []);
+	const images = $derived(field.images);
+	const max = $derived(field.max);
+	const ids = $derived(valueOf(values, field) ?? []);
 	const full = $derived(isFull(ids.length, max));
 	const set = (next: number[]) => (values[field.handle] = next);
 
@@ -59,7 +61,7 @@
 			<div class="tile">
 				<button
 					type="button"
-					class="open"
+					class="open plain"
 					title="Details: title, alt text, focal point"
 					onclick={() => openAsset(a.id)}
 				>
@@ -119,13 +121,6 @@
 
 	.open {
 		display: block;
-		padding: 0;
-		border: none;
-		background: none;
-
-		&:hover:not(:disabled) {
-			background: none;
-		}
 
 		&:hover :global(.thumb) {
 			border-color: var(--border-strong);

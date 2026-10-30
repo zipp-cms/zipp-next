@@ -32,7 +32,7 @@
 	<form class="card" {onsubmit}>
 		<img class="logo" src={logo} alt="zipp" />
 		<h1>Log in</h1>
-		<label>
+		<label class="stacked">
 			Email
 			<input
 				type="email"
@@ -41,7 +41,7 @@
 				required
 			/>
 		</label>
-		<label>
+		<label class="stacked">
 			Password
 			<input type="password" bind:value={password} required />
 		</label>
@@ -71,14 +71,6 @@
 	.logo {
 		width: 120px;
 		margin: -8px 0 -4px -6px;
-	}
-
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 5px;
-		font-size: var(--fs-sm);
-		font-weight: 600;
 	}
 
 	button {

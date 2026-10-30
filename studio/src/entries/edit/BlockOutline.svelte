@@ -18,6 +18,7 @@
 			<li>
 				<button
 					type="button"
+					class="block plain"
 					onclick={() => showBlock(field.handle, i)}
 				>
 					<span class="n">{String(i + 1).padStart(2, '0')}</span>
@@ -45,16 +46,13 @@
 		font-weight: 600;
 	}
 
-	button {
+	.block {
 		display: grid;
 		grid-template-columns: 22px auto minmax(0, 1fr);
 		align-items: baseline;
 		gap: 6px;
 		width: 100%;
 		padding: 5px 4px;
-		border: none;
-		background: none;
-		text-align: left;
 		font-weight: 400;
 	}
 

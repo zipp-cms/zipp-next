@@ -21,7 +21,7 @@
 		class:on={background === 'transparent'}
 		onclick={() => (edits = { ...edits, background: null })}
 	>
-		<span class="swatch checker"></span>
+		<span class="swatch checkerboard"></span>
 		Transparent
 	</button>
 	<!-- the button opens the color picker -->
@@ -75,12 +75,9 @@
 		border-radius: var(--radius-sm);
 		box-shadow: inset 0 0 0 1px var(--border-strong);
 
-		&.checker {
-			background: repeating-conic-gradient(
-					var(--border-strong) 0 25%,
-					var(--surface) 0 50%
-				)
-				0 0 / 7px 7px;
+		&.checkerboard {
+			--check: 3.5px;
+			--check-color: var(--border-strong);
 		}
 	}
 </style>

@@ -27,7 +27,7 @@
 <div class="chip box">
 	<button
 		type="button"
-		class="open"
+		class="open plain"
 		title="Open in the flyout"
 		onclick={() => openEntry(id)}
 	>
@@ -40,30 +40,9 @@
 </div>
 
 <style lang="scss">
-	// a row like an input, the actions on the right
-	:global(.chip) {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		min-height: 36px;
-		padding: 2px 4px 2px 12px;
-	}
-
+	// the type on the line of the title
 	.open {
-		display: flex;
 		align-items: baseline;
-		gap: 10px;
-		flex: 1;
-		min-width: 0;
 		padding: 4px 0;
-		border: none;
-		background: none;
-		font-weight: 500;
-		text-align: left;
-
-		&:hover:not(:disabled) {
-			background: none;
-			color: var(--accent);
-		}
 	}
 </style>

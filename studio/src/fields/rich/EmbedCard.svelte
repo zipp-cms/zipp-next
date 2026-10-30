@@ -74,7 +74,7 @@
 	.line {
 		position: absolute;
 		left: 50%;
-		z-index: 2;
+		z-index: var(--z-raised);
 		gap: 3px;
 		padding: 1px 8px;
 		font-size: var(--fs-xs);

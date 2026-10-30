@@ -130,7 +130,7 @@
 	// between two blocks, it shows when the pointer is near
 	.inline {
 		position: relative;
-		z-index: 2;
+		z-index: var(--z-raised);
 		display: flex;
 		justify-content: center;
 		height: 10px;

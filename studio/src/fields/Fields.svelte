@@ -2,7 +2,7 @@
 	import type { Component, Schema, Values } from '../core/schema';
 	import type { Refs } from '../entries/api';
 	import FieldLabel from './FieldLabel.svelte';
-	import { FIELDS } from './registry';
+	import { fieldComponent } from './registry';
 
 	/**
 	 * The fields of an entry type or block with their labels and errors:
@@ -40,7 +40,7 @@
 <div class="fields" class:nested={prefix !== ''}>
 	{#each shown as field (field.handle)}
 		{@const path = prefix + field.handle}
-		{@const Input = FIELDS[field.kind]}
+		{@const Input = fieldComponent(field)}
 		<FieldLabel
 			{schema}
 			{component}

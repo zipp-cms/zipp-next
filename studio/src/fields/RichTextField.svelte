@@ -1,12 +1,13 @@
 <script lang="ts">
 	import type { Editor } from '@tiptap/core';
 	import { onDestroy, onMount } from 'svelte';
-	import type { Field, Schema, Values } from '../core/schema';
+	import type { FieldOf, Schema, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
 	import { site } from '../core/router.svelte';
 	import { Last } from '../core/synced.svelte';
 	import Toolbar from './rich/Toolbar.svelte';
-	import { EMPTY, createEditor, richOptions, trimmed } from './rich/editor';
+	import { EMPTY, createEditor, trimmed } from './rich/editor';
 
 	/**
 	 * Rich text with TipTap. The toolbar has only what the schema allows
@@ -18,9 +19,15 @@
 		field,
 		values,
 		refs,
-	}: { schema: Schema; field: Field; values: Values; refs: Refs } = $props();
+	}: {
+		schema: Schema;
+		field: FieldOf<'richText'>;
+		values: Values;
+		refs: Refs;
+	} = $props();
 
-	const opts = $derived(richOptions(field));
+	// what the toolbar offers
+	const opts = $derived(field);
 	const blockTypes = $derived(
 		schema.components.filter(c => opts.blocks.includes(c.handle)),
 	);
@@ -55,7 +62,7 @@
 
 	// content that changes from outside (load, restore) goes into the editor
 	$effect(() => {
-		const doc = values[field.handle] ?? EMPTY;
+		const doc = valueOf(values, field) ?? EMPTY;
 		if (!editor || !last.changed(trimmed(doc))) return;
 		editor.commands.setContent($state.snapshot(doc), { emitUpdate: false });
 	});

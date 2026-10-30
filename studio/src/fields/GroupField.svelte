@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Field, Schema, Values } from '../core/schema';
+	import type { FieldOf, Schema, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
 	import Fields from './Fields.svelte';
 	import { componentOf } from '../core/schema';
@@ -15,7 +16,7 @@
 		changed,
 	}: {
 		schema: Schema;
-		field: Field;
+		field: FieldOf<'group'>;
 		values: Values;
 		errors: Record<string, string>;
 		refs: Refs;
@@ -23,16 +24,12 @@
 		changed: Set<string>;
 	} = $props();
 
-	const comp = $derived(
-		field.kind === 'group'
-			? componentOf(schema, field.component)
-			: undefined,
-	);
+	const comp = $derived(componentOf(schema, field.component));
 
 	// a group never filled in gets its object with the first value, not
 	// when it shows: opening an entry changes nothing
 	const empty = $state<Values>({});
-	const group = $derived<Values>(values[field.handle] ?? empty);
+	const group = $derived(valueOf(values, field) ?? empty);
 	$effect(() => {
 		if (!values[field.handle] && Object.keys(empty).length)
 			values[field.handle] = empty;

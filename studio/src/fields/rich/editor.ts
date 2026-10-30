@@ -1,30 +1,12 @@
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { Placeholder } from '@tiptap/extensions';
-import type { Field, Link, Schema } from '../../core/schema';
+import type { FieldOf, Link, Schema } from '../../core/schema';
 import type { Refs } from '../../entries/api';
 import { Block, Buttons, ZippLink } from './extensions.svelte';
 
-/** What a rich text field allows, from its field. */
-export type RichOptions = {
-	headings: number[];
-	lists: boolean;
-	links: boolean;
-	buttons: boolean;
-	blocks: string[];
-};
-
-export function richOptions(field: Field): RichOptions {
-	return field.kind === 'richText'
-		? field
-		: {
-				headings: [],
-				lists: false,
-				links: false,
-				buttons: false,
-				blocks: [],
-			};
-}
+/** What a rich text field allows: its field. */
+export type RichOptions = Omit<FieldOf<'richText'>, 'kind'>;
 
 /** An empty text: TipTap needs a paragraph to write in. */
 export const EMPTY = { type: 'doc', content: [{ type: 'paragraph' }] };

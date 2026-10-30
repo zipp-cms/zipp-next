@@ -16,7 +16,8 @@ export async function agentStart(
 	message: string,
 	view: string | null,
 ): Promise<string> {
-	return (await request('POST', '/agent', { message, view })).id;
+	return (await request<{ id: string }>('POST', '/agent', { message, view }))
+		.id;
 }
 
 /** The next conversation starts new. */

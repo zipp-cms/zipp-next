@@ -1,11 +1,13 @@
 <script lang="ts">
-	import type { Field, Values } from '../core/schema';
+	import type { FieldOf, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 
 	/** Some of the options, stored in the order of the options. */
-	let { field, values }: { field: Field; values: Values } = $props();
+	let { field, values }: { field: FieldOf<'checkboxes'>; values: Values } =
+		$props();
 
-	const options = $derived(field.kind === 'checkboxes' ? field.options : []);
-	const picked = $derived<string[]>(values[field.handle] ?? []);
+	const options = $derived(field.options);
+	const picked = $derived(valueOf(values, field) ?? []);
 
 	function toggle(value: string, on: boolean) {
 		const next = options

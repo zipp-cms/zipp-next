@@ -11,7 +11,7 @@
 <div class="chip box">
 	<button
 		type="button"
-		class="open"
+		class="open plain"
 		title="Details: title, alt text, focal point"
 		onclick={() => openAsset(asset.id)}
 	>
@@ -24,24 +24,6 @@
 <style lang="scss">
 	.chip {
 		padding-left: 4px;
-	}
-
-	.open {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		flex: 1;
-		min-width: 0;
-		padding: 0;
-		border: none;
-		background: none;
-		font-weight: 500;
-		text-align: left;
-
-		&:hover:not(:disabled) {
-			background: none;
-			color: var(--accent);
-		}
 	}
 
 	.thumb {

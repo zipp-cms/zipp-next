@@ -60,6 +60,9 @@ export type Field = FieldKind & {
 	translatable: boolean;
 };
 
+/** A field of one kind, what the component of that kind gets. */
+export type FieldOf<K extends Field['kind']> = Extract<Field, { kind: K }>;
+
 export type Component = {
 	handle: string;
 	name: string;
@@ -121,7 +124,40 @@ export type Schema = {
 
 export type Block = { id?: string; type: string; fields: Values };
 
-export type Values = Record<string, any>;
+/** The values of fields by their handle, of an entry, block or group. */
+export type Values = Record<string, unknown>;
+
+/** The value of a field of each kind, as the content keeps it. */
+export type ValueOf = {
+	text: string;
+	number: number;
+	boolean: boolean;
+	relation: number[];
+	assets: number[];
+	link: Link;
+	group: Values;
+	markdown: string;
+	/** the own texts by key */
+	texts: Record<string, string>;
+	dropdown: string;
+	checkboxes: string[];
+	table: Values[];
+	navigation: NavItem[];
+	/** a TipTap document */
+	richText: Record<string, unknown>;
+	blocks: Block[];
+	/** what the plugin keeps */
+	custom: unknown;
+};
+
+/** The value of a field in `values`, undefined while it has none. */
+export function valueOf<K extends Field['kind']>(
+	values: Values,
+	field: FieldOf<K>,
+): ValueOf[K] | undefined {
+	// the server checks the values against the schema
+	return values[field.handle] as ValueOf[K] | undefined;
+}
 
 export function getSchema(): Promise<Schema> {
 	return request('GET', '/schema');

@@ -53,10 +53,10 @@
 	.primary {
 		border-color: var(--accent);
 		background: var(--accent);
-		color: white;
+		color: var(--on-accent);
 
 		&:hover {
-			color: white;
+			color: var(--on-accent);
 			border-color: var(--accent-hover);
 			background: var(--accent-hover);
 		}

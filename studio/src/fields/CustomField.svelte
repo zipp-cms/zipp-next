@@ -16,7 +16,7 @@
 </script>
 
 <script lang="ts">
-	import type { Field, Values } from '../core/schema';
+	import type { FieldOf, Values } from '../core/schema';
 	import { host } from './host.svelte';
 	import { getEditing } from '../core/editing';
 	import { site } from '../core/router.svelte';
@@ -27,7 +27,8 @@
 	 * and out, the entry it belongs to (`entryId` null for a new one, the
 	 * site) and the `host` api.
 	 */
-	let { field, values }: { field: Field; values: Values } = $props();
+	let { field, values }: { field: FieldOf<'custom'>; values: Values } =
+		$props();
 
 	const editing = getEditing();
 
@@ -47,7 +48,6 @@
 	}
 
 	$effect(() => {
-		if (field.kind !== 'custom') return;
 		let gone = false;
 		let m: Mounted | null = null;
 		load(field.type)

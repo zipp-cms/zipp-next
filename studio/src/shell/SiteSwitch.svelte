@@ -55,7 +55,7 @@
 		flex-shrink: 0;
 		border-radius: var(--radius);
 		background: var(--accent);
-		color: white;
+		color: var(--on-accent);
 		font-weight: 700;
 		font-size: var(--fs-md);
 	}

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Field, NavItem, Schema, Values } from '../core/schema';
+	import type { FieldOf, Schema, Values } from '../core/schema';
+	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
 	import NavItems from './NavItems.svelte';
 
@@ -9,16 +10,19 @@
 		field,
 		values,
 		refs,
-	}: { schema: Schema; field: Field; values: Values; refs: Refs } = $props();
+	}: {
+		schema: Schema;
+		field: FieldOf<'navigation'>;
+		values: Values;
+		refs: Refs;
+	} = $props();
 </script>
 
-{#if field.kind === 'navigation'}
-	<NavItems
-		{schema}
-		{refs}
-		items={(values[field.handle] ?? []) as NavItem[]}
-		to={field.to}
-		depth={field.depth}
-		onchange={items => (values[field.handle] = items.length ? items : null)}
-	/>
-{/if}
+<NavItems
+	{schema}
+	{refs}
+	items={valueOf(values, field) ?? []}
+	to={field.to}
+	depth={field.depth}
+	onchange={items => (values[field.handle] = items.length ? items : null)}
+/>

@@ -1,12 +1,16 @@
 <script lang="ts">
-	import type { Field, Values } from '../core/schema';
+	import type { FieldOf, Values } from '../core/schema';
 
 	/** A field that is one input: text, number, boolean. */
 	let {
 		field,
 		values,
 		path,
-	}: { field: Field; values: Values; path: string } = $props();
+	}: {
+		field: FieldOf<'text' | 'number' | 'boolean'>;
+		values: Values;
+		path: string;
+	} = $props();
 </script>
 
 {#if field.kind === 'boolean'}
@@ -14,7 +18,7 @@
 	<input
 		id={path}
 		type="checkbox"
-		checked={values[field.handle] ?? false}
+		checked={!!values[field.handle]}
 		onchange={e => (values[field.handle] = e.currentTarget.checked)}
 	/>
 {:else if field.kind === 'text' && field.multiline}
@@ -29,7 +33,7 @@
 		maxlength={field.max ?? undefined}
 		bind:value={values[field.handle]}
 	/>
-{:else if field.kind === 'number'}
+{:else}
 	<input
 		id={path}
 		type="number"
