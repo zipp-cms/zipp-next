@@ -1,13 +1,10 @@
 <script lang="ts">
-	import { Editor } from '@tiptap/core';
-	import StarterKit from '@tiptap/starter-kit';
-	import { Placeholder } from '@tiptap/extensions';
-	import Icon from '../lib/Icon.svelte';
+	import type { Editor } from '@tiptap/core';
 	import { onDestroy, onMount } from 'svelte';
-	import type { Field, Link, Refs, Schema, Values } from '../api';
-	import { Block, Buttons, ZippLink } from './rich/extensions.svelte';
-	import LinkField from './LinkField.svelte';
+	import type { Field, Refs, Schema, Values } from '../api';
 	import { site } from '../route.svelte';
+	import Toolbar from './rich/Toolbar.svelte';
+	import { EMPTY, createEditor, richOptions, trimmed } from './rich/editor';
 
 	/**
 	 * Rich text with TipTap. The toolbar has only what the schema allows
@@ -21,24 +18,7 @@
 		refs,
 	}: { schema: Schema; field: Field; values: Values; refs: Refs } = $props();
 
-	type Opts = {
-		headings: number[];
-		lists: boolean;
-		links: boolean;
-		buttons: boolean;
-		blocks: string[];
-	};
-	const opts: Opts = $derived(
-		field.kind === 'richText'
-			? field
-			: {
-					headings: [],
-					lists: false,
-					links: false,
-					buttons: false,
-					blocks: [],
-				},
-	);
+	const opts = $derived(richOptions(field));
 	const blockTypes = $derived(
 		schema.components.filter(c => opts.blocks.includes(c.handle)),
 	);
@@ -47,70 +27,22 @@
 	let editor = $state<Editor | null>(null);
 	// the toolbar follows the selection
 	let tick = $state(0);
-	let linkEdit = $state<{ link: Link } | null>(null);
+	// the content as last sent or received, to not send it back
 	let last = '';
 
-	const EMPTY = { type: 'doc', content: [] };
-
-	/**
-	 * Without the empty paragraphs at the end: TipTap keeps one after a
-	 * card to write on, it is no change of the content.
-	 */
-	function trimmed(doc: any) {
-		const content = [...(doc.content ?? [])];
-		while (
-			content.length &&
-			content[content.length - 1].type === 'paragraph' &&
-			!content[content.length - 1].content?.length
-		)
-			content.pop();
-		return { ...doc, content };
-	}
-
 	onMount(() => {
-		const disabled = !!el.closest('fieldset[disabled]');
-		editor = new Editor({
+		editor = createEditor({
 			element: el,
-			editable: !disabled,
-			// the language of the site, so spellcheck checks the right one
-			editorProps: {
-				attributes: {
-					lang:
-						schema.sites.find(s => s.handle === site.current)
-							?.language ?? '',
-				},
-			},
+			opts,
+			schema,
+			refs,
+			editable: !el.closest('fieldset[disabled]'),
+			language:
+				schema.sites.find(s => s.handle === site.current)?.language ??
+				'',
 			// a plain copy, TipTap doesn't take Svelte's proxies
-			content: $state.snapshot(values[field.handle]) ?? EMPTY,
-			extensions: [
-				StarterKit.configure({
-					heading: opts.headings.length
-						? { levels: opts.headings as any }
-						: false,
-					bulletList: opts.lists ? {} : false,
-					orderedList: opts.lists ? {} : false,
-					listItem: opts.lists ? {} : false,
-					listKeymap: opts.lists ? {} : false,
-					blockquote: false,
-					code: false,
-					codeBlock: false,
-					horizontalRule: false,
-					strike: false,
-					underline: false,
-					link: false,
-				}),
-				...(opts.links ? [ZippLink] : []),
-				// css shows it only at the end, see .tiptap below
-				Placeholder.configure({
-					placeholder: ({ editor }) =>
-						editor.isEmpty ? 'Write …' : 'Continue writing …',
-					showOnlyCurrent: false,
-				}),
-				Buttons.configure({ schema, refs }),
-				Block.configure({ schema, refs }),
-			],
-			onUpdate: ({ editor }) => {
-				const doc = trimmed(editor.getJSON());
+			content: $state.snapshot(values[field.handle]),
+			onChange: doc => {
 				const json = JSON.stringify(doc);
 				if (json === last) return;
 				last = json;
@@ -118,8 +50,6 @@
 			},
 			// later: a transaction can come while Svelte renders (a blur)
 			onTransaction: () => queueMicrotask(() => tick++),
-			enableContentCheck: true,
-			onContentError: ({ error }) => console.error('rich text:', error),
 		});
 		last = JSON.stringify(trimmed(editor.getJSON()));
 	});
@@ -134,169 +64,12 @@
 	});
 
 	onDestroy(() => editor?.destroy());
-
-	function active(name: string, attrs?: Record<string, unknown>) {
-		void tick;
-		return editor?.isActive(name, attrs) ?? false;
-	}
-
-	function chain() {
-		return editor!.chain().focus();
-	}
-
-	function openLink() {
-		const current = editor?.getAttributes('link').link;
-		linkEdit = { link: current ?? { type: 'url', value: '' } };
-	}
-
-	function applyLink() {
-		if (!linkEdit) return;
-		const link = $state.snapshot(linkEdit.link);
-		linkEdit = null;
-		if (link.value === null || link.value === '') {
-			chain().extendMarkRange('link').unsetMark('link').run();
-		} else {
-			chain().extendMarkRange('link').setMark('link', { link }).run();
-		}
-	}
-
-	function insertButtons() {
-		chain()
-			.insertContent({
-				type: 'buttons',
-				attrs: { links: [{ type: 'entry', value: null }] },
-			})
-			.run();
-	}
-
-	function insertBlock(type: string) {
-		chain()
-			.insertContent({
-				type: 'embed',
-				attrs: { id: null, type, fields: {} },
-			})
-			.run();
-	}
-
-	// what the link popup edits, like a link field without its own label
-	const linkField: Field = {
-		handle: 'link',
-		label: 'Link',
-		required: false,
-		indexed: false,
-		translatable: false,
-		kind: 'link',
-		to: ['entry', 'url', 'email', 'phone'],
-		labels: false,
-		newTab: true,
-	};
 </script>
 
 <div class="rich" class:readonly={editor && !editor.isEditable}>
 	{#if editor?.isEditable}
-		<div class="toolbar">
-			{#if opts.headings.length}
-				<select
-					class="format"
-					title="Format"
-					value={opts.headings.find(level =>
-						active('heading', { level }),
-					) ?? 0}
-					onchange={e => {
-						const level = Number(e.currentTarget.value);
-						if (level)
-							chain()
-								.setHeading({ level: level as any })
-								.run();
-						else chain().setParagraph().run();
-					}}
-				>
-					<option value={0}>Paragraph</option>
-					{#each opts.headings as level (level)}
-						<option value={level}>Heading {level}</option>
-					{/each}
-				</select>
-				<span class="sep"></span>
-			{/if}
-			<button
-				class:on={active('bold')}
-				title="Bold"
-				onclick={() => chain().toggleBold().run()}
-			>
-				<b>B</b>
-			</button>
-			<button
-				class:on={active('italic')}
-				title="Italic"
-				onclick={() => chain().toggleItalic().run()}
-			>
-				<i class="italic">I</i>
-			</button>
-			{#if opts.lists}
-				<button
-					class:on={active('bulletList')}
-					title="List"
-					onclick={() => chain().toggleBulletList().run()}
-				>
-					<Icon name="channel" size={15} />
-				</button>
-				<button
-					class:on={active('orderedList')}
-					title="Numbered list"
-					onclick={() => chain().toggleOrderedList().run()}
-				>
-					<span class="num">1.</span>
-				</button>
-			{/if}
-			{#if opts.links}
-				<button
-					class:on={active('link')}
-					title="Link"
-					onclick={openLink}
-				>
-					<Icon name="external" size={14} />
-				</button>
-			{/if}
-			{#if opts.buttons || blockTypes.length}
-				<span class="sep"></span>
-				<span class="insert-label">Insert:</span>
-			{/if}
-			{#if opts.buttons}
-				<button
-					class="insert"
-					title="A row of buttons"
-					onclick={insertButtons}
-				>
-					<Icon name="add" size={13} />
-					Buttons
-				</button>
-			{/if}
-			{#each blockTypes as b (b.handle)}
-				<button class="insert" onclick={() => insertBlock(b.handle)}>
-					<Icon name="add" size={13} />
-					{b.name}
-				</button>
-			{/each}
-		</div>
+		<Toolbar {editor} {tick} {opts} {blockTypes} {schema} {refs} />
 	{/if}
-
-	{#if linkEdit}
-		<div class="link-edit">
-			<LinkField {schema} field={linkField} values={linkEdit} {refs} />
-			<div class="actions">
-				<button
-					onclick={() => {
-						linkEdit = { link: { type: 'url', value: null } };
-						applyLink();
-					}}
-				>
-					Remove link
-				</button>
-				<button class="primary" onclick={applyLink}>Apply</button>
-			</div>
-		</div>
-	{/if}
-
 	<div class="editor" bind:this={el}></div>
 </div>
 
@@ -309,84 +82,6 @@
 		&:focus-within {
 			border-color: var(--accent);
 			outline: 1px solid var(--accent);
-		}
-	}
-
-	// a light bar over the text
-	.toolbar {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 2px;
-		padding: 3px 4px;
-		background: var(--surface-2);
-		border-bottom: 1px solid var(--line);
-		border-radius: 5px 5px 0 0;
-
-		button {
-			padding: 3px 7px;
-			border: none;
-			background: none;
-			color: var(--text-2);
-			font-size: var(--fs-sm);
-
-			&.on {
-				background: var(--accent-soft);
-				color: var(--accent);
-			}
-
-			&:hover:not(:disabled) {
-				background: var(--hover);
-			}
-		}
-
-		.sep {
-			width: 1px;
-			height: 16px;
-			margin: 0 4px;
-			background: var(--border);
-		}
-
-		.format {
-			width: auto;
-			height: 28px;
-			padding: 0 6px;
-			font-size: var(--fs-sm);
-			border-color: var(--border);
-			border-radius: var(--radius-sm);
-		}
-
-		.italic {
-			font-family: Georgia, serif;
-		}
-
-		.num {
-			font-size: var(--fs-xs);
-			font-weight: 600;
-		}
-
-		.insert-label {
-			padding: 0 4px;
-			color: var(--muted);
-			font-size: var(--fs-xs);
-		}
-
-		.insert {
-			color: var(--accent-hover);
-			font-weight: 500;
-		}
-	}
-
-	.link-edit {
-		padding: 12px;
-		background: var(--surface);
-		border: 1px solid var(--line);
-
-		.actions {
-			display: flex;
-			justify-content: flex-end;
-			gap: 8px;
-			margin-top: 10px;
 		}
 	}
 

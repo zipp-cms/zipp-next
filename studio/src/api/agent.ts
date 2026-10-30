@@ -1,4 +1,4 @@
-import { ApiError, request, token } from './client';
+import { request, stream } from './client';
 
 /**
  * The coding agent of the plugin `agent` (development): a run per
@@ -10,6 +10,8 @@ export type AgentEvent = {
 	kind: 'text' | 'step' | 'error';
 	text: string;
 };
+
+/** Starts a run with a message, `view` is the page the preview shows. */
 export async function agentStart(
 	message: string,
 	view: string | null,
@@ -33,36 +35,14 @@ export async function agentEvents(
 	from: number,
 	line: (n: number, event: AgentEvent) => void,
 ): Promise<string> {
-	const resp = await fetch(`/api/agent/${id}?from=${from}`, {
-		headers: { 'session-token': token() ?? '' },
-	});
-	if (!resp.ok || !resp.body) {
-		const data = await resp.json().catch(() => null);
-		throw new ApiError(resp.status, data?.message ?? resp.statusText, []);
-	}
-	const reader = resp.body.pipeThrough(new TextDecoderStream()).getReader();
-	let buf = '';
-	for (;;) {
-		const { value, done } = await reader.read();
-		if (done) throw new Error('reconnect');
-		buf += value;
-		let end;
-		while ((end = buf.indexOf('\n\n')) >= 0) {
-			const block = buf.slice(0, end).split('\n');
-			buf = buf.slice(end + 2);
-			const field = (name: string) =>
-				block
-					.filter(l => l.startsWith(name + ':'))
-					.map(l => l.slice(name.length + 1).trimStart())
-					.join('\n');
-			const data = field('data');
-			if (field('event') === 'done') return data;
-			if (!data) continue;
-			try {
-				line(Number(field('id')), JSON.parse(data));
-			} catch {
-				// not an event
-			}
+	for await (const ev of stream('GET', `/agent/${id}?from=${from}`)) {
+		if (ev.event === 'done') return ev.data;
+		if (!ev.data) continue;
+		try {
+			line(Number(ev.id), JSON.parse(ev.data));
+		} catch {
+			// not an event
 		}
 	}
+	throw new Error('reconnect');
 }

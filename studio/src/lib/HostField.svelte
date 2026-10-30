@@ -1,10 +1,6 @@
 <script lang="ts">
 	import type { Field, Values } from '../api';
-	import AssetField from '../fields/AssetField.svelte';
-	import CheckboxesField from '../fields/CheckboxesField.svelte';
-	import DropdownField from '../fields/DropdownField.svelte';
-	import MarkdownField from '../fields/MarkdownField.svelte';
-	import TableField from '../fields/TableField.svelte';
+	import { FIELDS, HOSTED } from '../fields/registry';
 
 	/**
 	 * A field of the studio inside a plugin's module, see `host.ts`: the
@@ -34,20 +30,9 @@
 	});
 </script>
 
-{#if field.kind === 'assets'}
-	<AssetField {field} {values} />
-{:else if field.kind === 'dropdown'}
-	<DropdownField {field} {values} />
-{:else if field.kind === 'checkboxes'}
-	<CheckboxesField {field} {values} />
-{:else if field.kind === 'table'}
-	<TableField {field} {values} />
-{:else if field.kind === 'markdown'}
-	<MarkdownField {field} {values} id={field.handle} />
-{:else if field.kind === 'text' && field.multiline}
-	<textarea bind:value={values[field.handle]}></textarea>
-{:else if field.kind === 'text'}
-	<input bind:value={values[field.handle]} />
+{#if HOSTED.includes(field.kind)}
+	{@const Input = FIELDS[field.kind]}
+	<Input {field} {values} path={field.handle} />
 {:else}
 	<span class="error">{field.kind} fields can't be mounted by plugins</span>
 {/if}

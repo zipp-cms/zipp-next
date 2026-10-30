@@ -8,8 +8,11 @@
 	 * Markdown: shown rendered when there is text, so it reads like docs,
 	 * Write to change it.
 	 */
-	let { field, values, id }: { field: Field; values: Values; id: string } =
-		$props();
+	let {
+		field,
+		values,
+		path: id,
+	}: { field: Field; values: Values; path: string } = $props();
 
 	let writing = $state(untrack(() => !values[field.handle]));
 	const html = $derived(markdown(values[field.handle] ?? ''));

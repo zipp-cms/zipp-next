@@ -145,7 +145,7 @@
 		onkeepmine={() => ed.keepMine()}
 	/>
 
-	<div class="layout">
+	<div class="with-aside">
 		<div class="main">
 			{#if ed.error}<p class="error">{ed.error}</p>{/if}
 
@@ -240,13 +240,6 @@
 {/if}
 
 <style lang="scss">
-	.layout {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) 280px;
-		gap: 24px;
-		align-items: start;
-	}
-
 	// the fields put their labels on the left when this is wide
 	.main {
 		container-type: inline-size;
@@ -275,12 +268,6 @@
 
 		&:hover {
 			color: var(--accent);
-		}
-	}
-
-	@media (max-width: 1100px) {
-		.layout {
-			grid-template-columns: 1fr;
 		}
 	}
 </style>

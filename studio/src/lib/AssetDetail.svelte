@@ -16,7 +16,7 @@
 	import Flyout from './Flyout.svelte';
 	import UploadButton from './UploadButton.svelte';
 	import { canAssets } from './access';
-	import { time } from './format';
+	import { fileSize, time } from './format';
 	import Icon from './Icon.svelte';
 	import ImageEditor from './image/ImageEditor.svelte';
 	import Thumb from './Thumb.svelte';
@@ -85,10 +85,6 @@
 		if (dirty && !confirm('Discard the changes?')) return;
 		onclose();
 	}
-	const kb = (n: number) =>
-		n > 1024 * 1024
-			? `${(n / 1024 / 1024).toFixed(1)} MB`
-			: `${Math.round(n / 1024)} KB`;
 
 	async function save() {
 		busy = true;
@@ -206,7 +202,7 @@
 			<div class="card">
 				<dl>
 					<dt>Size</dt>
-					<dd>{kb(current.size)}</dd>
+					<dd>{fileSize(current.size)}</dd>
 					{#if current.width}
 						<dt>Dimensions</dt>
 						<dd>

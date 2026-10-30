@@ -1,4 +1,4 @@
-import { ApiError, token } from './client';
+import { stream } from './client';
 
 /** A message of the AI chat, the studio keeps the conversation. */
 export type AiMessage =
@@ -36,41 +36,17 @@ export async function aiChat(
 	view: string | null,
 	on: AiEvents,
 ): Promise<AiMessage[]> {
-	const resp = await fetch('/api/ai/chat', {
-		method: 'POST',
-		headers: {
-			'content-type': 'application/json',
-			'session-token': token() ?? '',
-		},
-		body: JSON.stringify({ model, messages, view }),
-	});
-	if (!resp.ok || !resp.body) {
-		const data = await resp.json().catch(() => null);
-		throw new ApiError(resp.status, data?.message ?? resp.statusText, []);
+	for await (const { data } of stream('POST', '/ai/chat', {
+		model,
+		messages,
+		view,
+	})) {
+		if (!data) continue;
+		const ev = JSON.parse(data);
+		if (ev.type === 'delta') on.delta(ev.text);
+		else if (ev.type === 'action') on.action(ev.action);
+		else if (ev.type === 'error') throw new Error(ev.message);
+		else if (ev.type === 'done') return ev.messages;
 	}
-
-	// server-sent events: `data: {json}` blocks split by an empty line
-	const reader = resp.body.pipeThrough(new TextDecoderStream()).getReader();
-	let buf = '';
-	for (;;) {
-		const { value, done } = await reader.read();
-		if (done) throw new Error('The answer ended early');
-		buf += value;
-		let end;
-		while ((end = buf.indexOf('\n\n')) >= 0) {
-			const block = buf.slice(0, end);
-			buf = buf.slice(end + 2);
-			const data = block
-				.split('\n')
-				.filter(l => l.startsWith('data:'))
-				.map(l => l.slice(5).trimStart())
-				.join('\n');
-			if (!data) continue;
-			const ev = JSON.parse(data);
-			if (ev.type === 'delta') on.delta(ev.text);
-			else if (ev.type === 'action') on.action(ev.action);
-			else if (ev.type === 'error') throw new Error(ev.message);
-			else if (ev.type === 'done') return ev.messages;
-		}
-	}
+	throw new Error('The answer ended early');
 }

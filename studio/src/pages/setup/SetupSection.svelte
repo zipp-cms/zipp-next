@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { accessText, uriOf, visibleRoles } from '../../lib/setup';
+	import { depth } from '../../lib/tree';
 	import SiteBadges from '../../lib/SiteBadges.svelte';
 	import {
 		entryUrl,
@@ -33,11 +35,7 @@
 		navGroups(schema).find(g => g.sections.includes(handle))?.name,
 	);
 	// an admin sees every role, a role only itself
-	const roles = $derived(
-		isAdmin(schema)
-			? schema.roles
-			: schema.roles.filter(r => r.handle === schema.me.role),
-	);
+	const roles = $derived(visibleRoles(schema));
 
 	let entries = $state<Entry[]>([]);
 	let published = $state<Record<number, Record<string, boolean>>>({});
@@ -63,37 +61,16 @@
 			.catch(e => (error = e.message));
 	});
 
-	// the depth of an entry in a structure, for indenting
-	function depth(e: Entry): number {
-		let d = 0;
-		let parent = e.parentId;
-		while (parent !== null && d < 10) {
-			d++;
-			parent = entries.find(x => x.id === parent)?.parentId ?? null;
-		}
-		return d;
-	}
-
-	/** The uri of an entry type, its own or the section's. */
-	function uriOf(type: string, site?: string): string | null {
-		const own = section?.type_uris?.[type];
-		if (own !== undefined) return own;
-		const inSite = site ? section?.site_uris?.[site] : undefined;
-		return inSite ?? section?.uri ?? null;
-	}
-
 	const KINDS = {
 		single: 'Single: exactly one entry',
 		channel: 'Channel: a list, newest first',
 		structure: 'Structure: a tree in a set order',
 	};
-	const cap = (s: string | null | undefined) =>
-		s ? s[0].toUpperCase() + s.slice(1) : '–';
 </script>
 
 {#if section}
-	<div class="layout">
-		<div class="main">
+	<div class="with-aside">
+		<div class="cards">
 			<div class="card">
 				<h2>General</h2>
 				<dl>
@@ -121,7 +98,7 @@
 						</code>
 					</dd>
 					<dt>You may</dt>
-					<dd>{cap(accessOf(schema, handle) ?? 'nothing')}</dd>
+					<dd>{accessText(accessOf(schema, handle) ?? 'nothing')}</dd>
 				</dl>
 			</div>
 
@@ -139,7 +116,7 @@
 					</thead>
 					<tbody>
 						{#each types as t (t.handle)}
-							{@const uri = uriOf(t.handle)}
+							{@const uri = uriOf(section, t.handle)}
 							<tr>
 								<td>
 									<a href="/admin/setup/types/{t.handle}">
@@ -180,7 +157,11 @@
 								<td>{s.language}</td>
 								<td>
 									{#each types as t (t.handle)}
-										{@const uri = uriOf(t.handle, s.handle)}
+										{@const uri = uriOf(
+											section,
+											t.handle,
+											s.handle,
+										)}
 										<div>
 											{#if types.length > 1}
 												<span class="muted">
@@ -233,7 +214,7 @@
 									<code>{r.handle}</code>
 								</td>
 								<td>
-									{cap(
+									{accessText(
 										r.sections[handle] ?? 'nothing, hidden',
 									)}
 								</td>
@@ -254,9 +235,9 @@
 				Entries <span class="muted">{total}</span>
 			</h2>
 			{#if error}<p class="error">{error}</p>{/if}
-			<ul>
+			<ul class="plain">
 				{#each entries as e (e.id)}
-					<li style:padding-left="{depth(e) * 12}px">
+					<li style:padding-left="{depth(entries, e) * 12}px">
 						<a href="/admin/entries/{handle}/{e.id}">{e.title}</a>
 						{#if drafts.includes(e.id)}
 							<span
@@ -283,24 +264,6 @@
 {/if}
 
 <style>
-	.layout {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) 300px;
-		gap: 20px;
-		align-items: start;
-	}
-
-	@media (max-width: 1100px) {
-		.layout {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	.card {
-		margin-bottom: 20px;
-		overflow-x: auto;
-	}
-
 	dl {
 		display: grid;
 		grid-template-columns: 140px 1fr;
@@ -314,13 +277,6 @@
 
 	dd {
 		margin: 0;
-	}
-
-	ul {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		font-size: var(--fs-base);
 	}
 
 	li {

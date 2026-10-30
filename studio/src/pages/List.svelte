@@ -15,10 +15,13 @@
 	import Menu, { type MenuItem } from '../lib/Menu.svelte';
 	import { entryPath, go, shown, site } from '../route.svelte';
 	import Icon from '../lib/Icon.svelte';
+	import { date } from '../lib/format';
+	import { depth, dropTo, dropWhere, isBelow, type Where } from '../lib/tree';
+	import { componentName, sectionOf } from '../lib/schema';
 
 	let { schema, section }: { schema: Schema; section: string } = $props();
 
-	const sec = $derived(schema.sections.find(s => s.handle === section)!);
+	const sec = $derived(sectionOf(schema, section)!);
 	const tree = $derived(sec.kind === 'structure');
 	// moving changes the website at once, like publishing
 	let search = $state('');
@@ -69,38 +72,15 @@
 
 	$effect(load);
 
-	/** How deep an entry is in the tree, from the parents in the list. */
-	function depth(e: Entry): number {
-		const parent = entries.find(p => p.id === e.parentId);
-		return parent ? depth(parent) + 1 : 0;
-	}
-
-	function siblings(e: Entry) {
-		return entries.filter(s => s.parentId === e.parentId);
-	}
-
 	// drag and drop in a structure: before or after a row, or into it
 	let dragged = $state<Entry | null>(null);
-	let drop = $state<{
-		id: number;
-		where: 'before' | 'after' | 'into';
-	} | null>(null);
-
-	/** An entry can't go below itself. */
-	function isBelow(e: Entry, ancestor: Entry): boolean {
-		if (e.parentId === null) return false;
-		if (e.parentId === ancestor.id) return true;
-		const parent = entries.find(p => p.id === e.parentId);
-		return parent ? isBelow(parent, ancestor) : false;
-	}
+	let drop = $state<{ id: number; where: Where } | null>(null);
 
 	function ondragover(ev: DragEvent, e: Entry) {
-		if (!dragged || e === dragged || isBelow(e, dragged)) return;
+		if (!dragged || e === dragged || isBelow(entries, e, dragged)) return;
 		ev.preventDefault();
 		const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
-		const y = (ev.clientY - r.top) / r.height;
-		const where = y < 0.3 ? 'before' : y > 0.7 ? 'after' : 'into';
-		drop = { id: e.id, where };
+		drop = { id: e.id, where: dropWhere((ev.clientY - r.top) / r.height) };
 	}
 
 	async function ondrop(ev: DragEvent) {
@@ -110,17 +90,10 @@
 		const where = drop?.where;
 		dragged = null;
 		drop = null;
-		if (!d || !target) return;
-
+		if (!d || !target || !where) return;
+		const to = dropTo(entries, d, target, where);
 		try {
-			if (where === 'into') {
-				await moveEntry(d.id, target.id, 1e6);
-			} else {
-				// the position among the new siblings, without the dragged one
-				const sibs = siblings(target).filter(s => s !== d);
-				const at = sibs.indexOf(target) + (where === 'after' ? 1 : 0);
-				await moveEntry(d.id, target.parentId, at);
-			}
+			await moveEntry(d.id, to.parentId, to.index);
 			load();
 		} catch (err: any) {
 			error = err.message;
@@ -155,7 +128,7 @@
 
 	async function remove(e: Entry) {
 		// the entries below it go with it
-		const below = entries.filter(c => c !== e && isBelow(c, e)).length;
+		const below = entries.filter(c => isBelow(entries, c, e)).length;
 		const also = below
 			? ` The ${below === 1 ? 'entry' : `${below} entries`} below it too.`
 			: '';
@@ -166,10 +139,6 @@
 		} catch (err: any) {
 			error = err.message;
 		}
-	}
-
-	function date(ms: number) {
-		return new Date(ms).toLocaleDateString();
 	}
 </script>
 
@@ -218,7 +187,10 @@
 			{ondrop}
 			role="listitem"
 		>
-			<span class="name" style:padding-left="{depth(e) * 1.5}rem">
+			<span
+				class="name"
+				style:padding-left="{depth(entries, e) * 1.5}rem"
+			>
 				{#if canMove}
 					<span
 						class="handle"
@@ -255,7 +227,7 @@
 			</span>
 			{#if types}
 				<span class="type hide-small">
-					{schema.components.find(c => c.handle === e.type)?.name}
+					{componentName(schema, e.type)}
 				</span>
 			{/if}
 			<span class="date hide-small">{date(e.updatedAt)}</span>
