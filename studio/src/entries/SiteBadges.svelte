@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
-	import { site } from '../core/route.svelte';
+	import { site } from '../core/router.svelte';
 
 	/**
 	 * Whether an entry is live in each site: a badge per site, grey where

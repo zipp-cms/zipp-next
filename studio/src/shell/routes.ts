@@ -11,9 +11,9 @@ import { Shell } from './layouts';
 export function registerRoutes() {
 	inLayout(Shell, [
 		// the start and the content without a section: the first page
-		['', () => import('./Start.svelte')],
-		['/entries', () => import('./Start.svelte')],
-		[/\/docs\/(?<handle>[^/]+)/, () => import('./Doc.svelte')],
+		['/admin', () => import('./Start.svelte')],
+		['/admin/entries', () => import('./Start.svelte')],
+		[/\/admin\/docs\/(?<handle>[^/]+)/, () => import('./Doc.svelte')],
 	]);
 	registerAuth();
 	registerEntries();

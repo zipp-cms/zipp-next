@@ -10,7 +10,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { session } from '../core/session.svelte';
-	import { current, go } from '../core/route.svelte';
+	import { current, go } from '../core/router.svelte';
 	import { endSession } from '../core/router.svelte';
 	import type { Schema } from '../core/schema';
 	import FlyoutHost from './FlyoutHost.svelte';
@@ -29,7 +29,7 @@
 </script>
 
 <!-- the AI chat and the website take the whole height -->
-<div class="layout" class:wide={current.path === '/ai'}>
+<div class="layout" class:wide={current.path === '/admin/ai'}>
 	<Sidebar {schema} {onlogout} />
 	<main>{@render children()}</main>
 </div>

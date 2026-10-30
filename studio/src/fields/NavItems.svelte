@@ -1,12 +1,12 @@
 <script lang="ts">
 	import NavItems from './NavItems.svelte';
-	import LinkField from './LinkField.svelte';
+	import LinkInput from './LinkInput.svelte';
 	import AddButton from '../ui/AddButton.svelte';
 	import ItemActions from '../ui/ItemActions.svelte';
 	import ItemCard from '../ui/ItemCard.svelte';
-	import { linkField, linkLabel } from './link';
+	import { linkLabel } from './link';
 	import { inserted, moved, removed, replaced } from '../core/list';
-	import type { LinkKind, NavItem, Schema } from '../core/schema';
+	import type { Link, LinkKind, NavItem, Schema } from '../core/schema';
 	import type { Refs } from '../entries/api';
 
 	/**
@@ -29,25 +29,17 @@
 		onchange: (items: NavItem[]) => void;
 	} = $props();
 
-	const field = $derived(linkField(to));
+	/** The link of an item, without its children. */
+	function linkOf(item: NavItem): Link {
+		const { children: _, ...link } = item;
+		return link;
+	}
 
-	/** The link of an item for the link field, without its children. */
-	function holder(i: number) {
-		return {
-			get link() {
-				const { children: _, ...link } = items[i];
-				return link;
-			},
-			set link(link: NavItem) {
-				const children = items[i].children;
-				onchange(
-					replaced(items, i, {
-						...link,
-						...(children ? { children } : {}),
-					}),
-				);
-			},
-		};
+	function setLink(i: number, link: Link) {
+		const children = items[i].children;
+		onchange(
+			replaced(items, i, { ...link, ...(children ? { children } : {}) }),
+		);
 	}
 
 	function setChildren(i: number, children: NavItem[]) {
@@ -71,7 +63,14 @@
 					removeTitle="Remove with the items under it"
 				/>
 			{/snippet}
-			<LinkField {schema} {field} values={holder(i)} {refs} />
+			<LinkInput
+				{schema}
+				{refs}
+				link={linkOf(item)}
+				{to}
+				labels
+				onchange={link => setLink(i, link)}
+			/>
 			{#if depth > 1}
 				<div class="children">
 					<NavItems

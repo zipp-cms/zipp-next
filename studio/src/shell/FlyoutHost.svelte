@@ -2,7 +2,7 @@
 	import { listAssets, type Asset } from '../assets/api';
 	import AssetDetail from '../assets/AssetDetail.svelte';
 	import { closeFlyout, flyout } from '../core/flyout.svelte';
-	import { site } from '../core/route.svelte';
+	import { site } from '../core/router.svelte';
 	import { type Schema } from '../core/schema';
 	import Edit from '../entries/edit/Edit.svelte';
 	import { EntryEditor } from '../entries/edit/entryEditor.svelte';

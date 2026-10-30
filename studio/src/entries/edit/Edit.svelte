@@ -16,13 +16,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { entryUrl, type Schema } from '../../core/schema';
-	import { entryPath, go, shown, site } from '../../core/route.svelte';
+	import { entryPath, go, site } from '../../core/router.svelte';
 	import Fields from '../../fields/Fields.svelte';
 	import { can, isAdmin, sectionCrumbs } from '../../core/access';
 	import { EntryEditor } from './entryEditor.svelte';
 	import { setEditing } from '../../core/editing';
 	import { flyout } from '../../core/flyout.svelte';
-	import { time } from '../../core/format';
 	import { componentOf, sectionOf } from '../../core/schema';
 	import ConflictBanner from './ConflictBanner.svelte';
 	import EditHeader from './EditHeader.svelte';
@@ -70,12 +69,12 @@
 	// what the role may do here, the server checks it too
 	const canEdit = $derived(can(schema, ed.sec, 'edit'));
 	const canPublish = $derived(can(schema, ed.sec, 'publish'));
-	const url = $derived(entryUrl(schema, ed.site, ed.uri));
-
-	$effect(() => {
-		// in the flyout the nav stays at the page behind it
-		if (!onclose) shown.section = ed.sec;
+	const may = $derived({
+		edit: canEdit,
+		publish: canPublish,
+		delete: id !== null && !single && can(schema, ed.sec, 'delete'),
 	});
+	const url = $derived(entryUrl(schema, ed.site, ed.uri));
 
 	// every change goes into the draft, a moment after the last key
 	$effect(() => {
@@ -102,7 +101,7 @@
 		if (!confirm(`Delete ${ed.title} in all sites?`)) return;
 		if (!(await ed.remove())) return;
 		if (onclose) onclose();
-		else go('/entries/' + ed.sec);
+		else go('/admin/entries/' + ed.sec);
 	}
 
 	async function view(rev: (typeof ed.revisions)[number]) {
@@ -127,22 +126,13 @@
 	<p class="error">{ed.error}</p>
 {:else if ed.loaded && secDef && comp}
 	<EditHeader
+		{ed}
 		crumbs={global
 			? sectionCrumbs(schema, ed.sec).slice(0, -1)
 			: sectionCrumbs(schema, ed.sec)}
 		title={global ? secDef.name : ed.title}
-		published={ed.live?.published ?? false}
-		hasDraft={!!ed.draft}
-		draftBy={ed.draft?.user
-			? `by ${ed.draft.user}, ${time(ed.draft.updatedAt)}`
-			: null}
-		saving={ed.draftState === 'saving'}
 		{url}
-		busy={ed.busy}
-		isNew={id === null}
-		{canEdit}
-		{canPublish}
-		canDelete={id !== null && !single && can(schema, ed.sec, 'delete')}
+		{may}
 		onpreview={() => url && ed.preview(url)}
 		ondiscard={discard}
 		onremove={remove}
@@ -224,28 +214,14 @@
 
 		<EntrySidebar
 			{schema}
-			site={ed.site}
+			{ed}
 			{secDef}
 			{comp}
 			{global}
-			isNew={id === null}
-			{canEdit}
-			{canPublish}
-			bind:published={ed.published}
-			bind:slug={ed.slug}
-			bind:ty={ed.ty}
-			bind:parentId={ed.parentId}
-			uri={ed.uri}
-			perSite={ed.perSite}
-			changed={ed.changed}
-			errors={ed.errors}
-			parents={ed.parents}
-			revisions={ed.revisions}
-			values={ed.fields}
+			{may}
 			{shownFields}
 			oncopy={copyFrom}
 			onview={view}
-			onrestore={rev => ed.restore(rev)}
 		/>
 	</div>
 {/if}

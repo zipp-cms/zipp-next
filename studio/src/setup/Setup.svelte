@@ -3,7 +3,6 @@
 	import PageTop from '../ui/PageTop.svelte';
 	import { SETUP_TABS } from '../shell/nav';
 	import { componentOf, sectionOf } from '../core/schema';
-	import { shown } from '../core/route.svelte';
 	import ComponentPage from './ComponentPage.svelte';
 	import ComponentsTab from './ComponentsTab.svelte';
 	import SectionsTab from './SectionsTab.svelte';
@@ -20,10 +19,6 @@
 		tab = 'sections',
 		handle = null,
 	}: { schema: Schema; tab?: string; handle?: string | null } = $props();
-
-	$effect(() => {
-		shown.section = '';
-	});
 
 	const component = $derived(
 		handle ? componentOf(schema, handle) : undefined,

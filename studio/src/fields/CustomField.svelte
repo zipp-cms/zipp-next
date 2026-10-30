@@ -19,7 +19,7 @@
 	import type { Field, Values } from '../core/schema';
 	import { host } from './host.svelte';
 	import { getEditing } from '../core/editing';
-	import { site } from '../core/route.svelte';
+	import { site } from '../core/router.svelte';
 
 	/**
 	 * A field of a type of another crate: zipp serves its module, which

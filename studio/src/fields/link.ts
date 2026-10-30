@@ -1,4 +1,4 @@
-import type { Field, Link, LinkKind, Schema } from '../core/schema';
+import type { Link, LinkKind, Schema } from '../core/schema';
 import type { Refs } from '../entries/api';
 
 /** Links: of the link field, a navigation and the buttons of a rich text. */
@@ -11,23 +11,8 @@ export const LINK_NAMES: Record<LinkKind, string> = {
 	asset: 'File',
 };
 
-/** The field of a link that isn't a field of the schema itself. */
-export function linkField(
-	to: LinkKind[],
-	{ label = 'Link', labels = true } = {},
-): Field {
-	return {
-		handle: 'link',
-		label,
-		required: false,
-		indexed: false,
-		translatable: false,
-		kind: 'link',
-		to,
-		labels,
-		newTab: true,
-	};
-}
+/** What the links and buttons of a rich text go to. */
+export const BUTTON_LINKS: LinkKind[] = ['entry', 'url', 'email', 'phone'];
 
 /** The entry types with a page, only they can be linked to. */
 export function linkableTypes(schema: Schema): string[] {

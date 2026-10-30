@@ -1,4 +1,5 @@
 import { ApiError } from '../../core/client';
+import { Busy } from '../../core/busy.svelte';
 import { type Schema, type Values } from '../../core/schema';
 import {
 	deleteEntry,
@@ -22,8 +23,11 @@ import {
 	type Revision,
 	type SiteDoc,
 } from '../drafts';
-import { site as current } from '../../core/route.svelte';
+import { site } from '../../core/router.svelte';
 import { changedPaths, clean } from './diff';
+
+/** What the role may do with the entry; the server checks it too. */
+export type May = { edit: boolean; publish: boolean; delete: boolean };
 
 /** How long after the last key a draft is saved. */
 const SAVE_AFTER_MS = 700;
@@ -44,9 +48,8 @@ export class EntryEditor {
 	fields = $state<Values>({});
 	refs = $state<Refs>({});
 	loaded = $state(false);
-	busy = $state(false);
-	error = $state('');
-	errors = $state<Record<string, string>>({});
+	/** loading, saving, publishing…: one at a time */
+	readonly action = new Busy();
 	/** whether the entry is live in each site, as saved */
 	perSite = $state<Record<string, boolean>>({});
 	/** possible parents of a new entry in a structure */
@@ -72,12 +75,29 @@ export class EntryEditor {
 	/** the site it edits, the one of the start: the site may switch */
 	readonly site: string;
 
+	get busy() {
+		return this.action.busy;
+	}
+
+	get error() {
+		return this.action.error;
+	}
+
+	set error(message: string) {
+		this.action.error = message;
+	}
+
+	/** of the fields by their path */
+	get errors() {
+		return this.action.fields;
+	}
+
 	constructor(
 		readonly schema: Schema,
 		readonly id: number | null,
 		section: string | null,
 	) {
-		this.site = current.current;
+		this.site = site.current;
 		this.sec = section ?? '';
 		this.loaded = id === null;
 	}
@@ -223,32 +243,14 @@ export class EntryEditor {
 		this.draftState = '';
 	}
 
-	/** Runs an action: busy meanwhile, its errors on the fields. */
-	private async run(f: () => Promise<unknown>) {
-		this.busy = true;
-		this.error = '';
-		this.errors = {};
-		try {
-			await f();
-		} catch (e: any) {
-			this.error = e.message;
-			if (e instanceof ApiError) {
-				for (const f of e.fields) this.errors[f.path] = f.message;
-			}
-		} finally {
-			this.busy = false;
-		}
-	}
-
 	/**
 	 * A new entry is created directly, its id comes back; a draft is
 	 * published, the last keys first.
 	 */
-	save(): Promise<number | null> {
-		let created: number | null = null;
+	async save(): Promise<number | null> {
 		// Cmd+S while saving: once is enough, a new entry only once
-		if (this.busy) return Promise.resolve(null);
-		return this.run(async () => {
+		if (this.busy) return null;
+		const created = await this.action.run(async () => {
 			if (this.id === null) {
 				const entry = await saveEntry(null, {
 					section: this.sec,
@@ -260,24 +262,25 @@ export class EntryEditor {
 					published: this.published,
 					fields: $state.snapshot(this.fields),
 				});
-				created = entry.id;
-				return;
+				return entry.id;
 			}
 			clearTimeout(this.timer);
 			const snap = this.snapshot();
 			// what isn't saved can't be published: the conflict or error shows
 			if (snap !== this.lastSaved && !(await this.saveDraft(snap)))
-				return;
-			if (!this.draft) return;
+				return null;
+			if (!this.draft) return null;
 			await publishDraft(this.id);
 			this.draftState = '';
 			await this.load();
-		}).then(() => created);
+			return null;
+		});
+		return created ?? null;
 	}
 
 	discard() {
 		this.cancelSave();
-		return this.run(async () => {
+		return this.action.run(async () => {
 			await discardDraft(this.id!);
 			this.draftState = '';
 			await this.load();
@@ -290,7 +293,7 @@ export class EntryEditor {
 	 */
 	copyFrom(other: string) {
 		const id = this.id!;
-		return this.run(async () => {
+		return this.action.run(async () => {
 			// the other site as the editor sees it: its draft, or live
 			// the chips in this site's language
 			const { draft: d, relations } = await getDraftWithRefs(
@@ -312,7 +315,7 @@ export class EntryEditor {
 	/** Throws away the own changes and shows the ones of the other. */
 	async loadTheirs() {
 		this.cancelSave();
-		await this.run(() => this.load());
+		await this.action.run(() => this.load());
 		// only now, else the own state would be saved again
 		this.conflict = '';
 	}
@@ -320,7 +323,7 @@ export class EntryEditor {
 	/** Saves the own changes over the ones of the other. */
 	keepMine() {
 		this.conflict = '';
-		return this.run(async () => {
+		return this.action.run(async () => {
 			this.draft = await getDraft(this.id!);
 			await this.saveDraft(this.snapshot());
 		});
@@ -347,7 +350,7 @@ export class EntryEditor {
 
 	restore(rev: Revision) {
 		this.cancelSave();
-		return this.run(async () => {
+		return this.action.run(async () => {
 			await restoreRevision(this.id!, rev.id);
 			this.viewing = null;
 			await this.load();
@@ -371,11 +374,10 @@ export class EntryEditor {
 
 	/** Deletes the entry in every site; whether it is gone. */
 	async remove(): Promise<boolean> {
-		let gone = false;
-		await this.run(async () => {
+		const gone = await this.action.run(async () => {
 			await deleteEntry(this.id!);
-			gone = true;
+			return true;
 		});
-		return gone;
+		return gone ?? false;
 	}
 }

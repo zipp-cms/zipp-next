@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Field, Values } from '../core/schema';
+	import { synced } from '../core/synced.svelte';
 	import { FIELDS, HOSTED } from './registry';
 
 	/**
@@ -16,23 +17,16 @@
 		onchange: (v: unknown) => void;
 	} = $props();
 
-	let values = $state<Values>({});
-	// the value from outside, unless it is the one sent
-	let sent: unknown = undefined;
-	$effect.pre(() => {
-		if (value !== sent) values[field.handle] = value ?? undefined;
-	});
-	$effect(() => {
-		const v = $state.snapshot(values[field.handle]);
-		if (JSON.stringify(v) === JSON.stringify(value)) return;
-		sent = v;
-		onchange(v ?? null);
-	});
+	// a field takes the object its value is in
+	const values = synced<Values>(
+		() => ({ [field.handle]: value ?? undefined }),
+		v => onchange(v[field.handle] ?? null),
+	);
 </script>
 
 {#if HOSTED.includes(field.kind)}
 	{@const Input = FIELDS[field.kind]}
-	<Input {field} {values} path={field.handle} />
+	<Input {field} values={values.value} path={field.handle} />
 {:else}
 	<span class="error">{field.kind} fields can't be mounted by plugins</span>
 {/if}

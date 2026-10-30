@@ -6,7 +6,7 @@
 	import { Chat } from './chat.svelte';
 	import { markdown } from '../core/markdown';
 	import { SitePreview } from './preview.svelte';
-	import { entryPath, shown, site } from '../core/route.svelte';
+	import { entryPath, site } from '../core/router.svelte';
 	import Preview from './Preview.svelte';
 
 	/**
@@ -35,10 +35,6 @@
 		() => new SitePreview(schema, site.current, chat.savedView),
 	);
 	let input = $state('');
-
-	$effect(() => {
-		shown.section = '';
-	});
 
 	$effect(() => chat.save(preview.view));
 
@@ -98,10 +94,10 @@
 						<span>{line.action.text}</span>
 						{#if line.action.entryId && line.action.section}
 							<a
-								href="/admin{entryPath(
+								href={entryPath(
 									line.action.section,
 									line.action.entryId,
-								)}"
+								)}
 							>
 								Open
 							</a>

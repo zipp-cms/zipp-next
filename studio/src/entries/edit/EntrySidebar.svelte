@@ -2,12 +2,11 @@
 	import SiteBadges from '../SiteBadges.svelte';
 	import BlockOutline from './BlockOutline.svelte';
 	import { componentName } from '../../core/schema';
-	import type { Component, Schema, Section } from '../../core/schema';
-	import type { Entry } from '../api';
+	import type { Block, Component, Schema, Section } from '../../core/schema';
 	import type { Revision } from '../drafts';
-	import type { Block, Values } from '../../core/schema';
-	import { setSite } from '../../core/route.svelte';
+	import { setSite } from '../../core/router.svelte';
 	import RevisionList from './RevisionList.svelte';
+	import type { EntryEditor, May } from './entryEditor.svelte';
 
 	/**
 	 * Next to the content like Craft's sidebar: the status in each site,
@@ -17,58 +16,28 @@
 	 */
 	let {
 		schema,
-		site,
+		ed,
 		secDef,
 		comp,
 		global,
-		isNew,
-		canEdit,
-		canPublish,
-		published = $bindable(),
-		slug = $bindable(),
-		ty = $bindable(),
-		parentId = $bindable(),
-		uri,
-		perSite,
-		changed,
-		errors,
-		parents,
-		revisions,
-		values,
+		may,
 		shownFields,
 		oncopy,
 		onview,
-		onrestore,
 	}: {
 		schema: Schema;
-		/** the site the editor edits */
-		site: string;
+		ed: EntryEditor;
 		secDef: Section;
 		comp: Component;
 		global: boolean;
-		isNew: boolean;
-		canEdit: boolean;
-		canPublish: boolean;
-		published: boolean;
-		slug: string;
-		ty: string;
-		parentId: number | null;
-		uri: string | null;
-		/** whether the entry is live in each site, as saved */
-		perSite: Record<string, boolean>;
-		changed: Set<string>;
-		errors: Record<string, string>;
-		parents: Entry[];
-		revisions: Revision[];
-		/** the fields of the entry, for the outline */
-		values: Values;
+		may: May;
 		/** the fields of the open tab, all without tabs */
 		shownFields: string[] | null;
 		oncopy: (site: string) => void;
 		onview: (rev: Revision) => void;
-		onrestore: (rev: Revision) => void;
 	} = $props();
 
+	const isNew = $derived(ed.id === null);
 	const single = $derived(secDef.kind === 'single');
 	const multiSite = $derived(schema.sites.length > 1);
 
@@ -79,7 +48,7 @@
 			.filter(f => !shownFields || shownFields.includes(f.handle))
 			.map(f => ({
 				field: f,
-				blocks: (values[f.handle] ?? []) as Block[],
+				blocks: (ed.fields[f.handle] ?? []) as Block[],
 			}))
 			.filter(o => o.blocks.length),
 	);
@@ -89,19 +58,20 @@
 	{#if !global}
 		<!-- read only for a role that may only look -->
 		<div class="card">
-			<fieldset class="inline" disabled={!canEdit}>
+			<fieldset class="inline" disabled={!may.edit}>
 				<label class="switch">
 					<input
 						type="checkbox"
-						bind:checked={published}
-						disabled={!canPublish}
+						bind:checked={ed.published}
+						disabled={!may.publish}
 					/>
 					<span>
-						{#if changed.has('published')}<span
+						{#if ed.changed.has('published')}<span
 								class="dot"
 							></span>{/if}
-						Published in {schema.sites.find(s => s.handle === site)
-							?.name}
+						Published in {schema.sites.find(
+							s => s.handle === ed.site,
+						)?.name}
 					</span>
 				</label>
 			</fieldset>
@@ -110,26 +80,29 @@
 				<div class="sites">
 					<SiteBadges
 						{schema}
-						published={perSite}
+						published={ed.perSite}
 						onselect={setSite}
 					/>
 				</div>
 			{/if}
 
-			<fieldset class="inline" disabled={!canEdit}>
+			<fieldset class="inline" disabled={!may.edit}>
 				{#if !single}
 					<label>
 						<span>
-							{#if changed.has('slug')}<span
+							{#if ed.changed.has('slug')}<span
 									class="dot"
 								></span>{/if}Slug
 						</span>
-						<input placeholder="from the title" bind:value={slug} />
-						{#if uri !== null}<span class="note uri">
-								/{uri}
+						<input
+							placeholder="from the title"
+							bind:value={ed.slug}
+						/>
+						{#if ed.uri !== null}<span class="note uri">
+								/{ed.uri}
 							</span>{/if}
-						{#if errors.slug}<span class="error">
-								{errors.slug}
+						{#if ed.errors.slug}<span class="error">
+								{ed.errors.slug}
 							</span>{/if}
 					</label>
 				{/if}
@@ -137,7 +110,7 @@
 				<label>
 					<span>Type</span>
 					{#if isNew && secDef.types.length > 1}
-						<select bind:value={ty}>
+						<select bind:value={ed.ty}>
 							{#each secDef.types as t (t)}
 								<option value={t}>
 									{componentName(schema, t)}
@@ -155,12 +128,12 @@
 					{/if}
 				</label>
 
-				{#if isNew && parents.length}
+				{#if isNew && ed.parents.length}
 					<label>
 						<span>Parent</span>
-						<select bind:value={parentId}>
+						<select bind:value={ed.parentId}>
 							<option value={null}>None, on the top</option>
-							{#each parents as p (p.id)}
+							{#each ed.parents as p (p.id)}
 								<option value={p.id}>{p.title}</option>
 							{/each}
 						</select>
@@ -174,7 +147,7 @@
 		<BlockOutline {schema} field={o.field} blocks={o.blocks} />
 	{/each}
 
-	{#if !isNew && multiSite && canEdit}
+	{#if !isNew && multiSite && may.edit}
 		<div class="card">
 			<label>
 				<span>Copy content</span>
@@ -187,7 +160,7 @@
 					}}
 				>
 					<option value="" disabled>From another site…</option>
-					{#each schema.sites.filter(s => s.handle !== site) as s (s.handle)}
+					{#each schema.sites.filter(s => s.handle !== ed.site) as s (s.handle)}
 						<option value={s.handle}>{s.name}</option>
 					{/each}
 				</select>
@@ -195,15 +168,15 @@
 		</div>
 	{/if}
 
-	{#if revisions.length}
+	{#if ed.revisions.length}
 		<div class="card">
 			<h3>Revisions</h3>
 			<RevisionList
-				{revisions}
+				revisions={ed.revisions}
 				{comp}
 				{multiSite}
 				{onview}
-				onrestore={canEdit ? onrestore : null}
+				onrestore={may.edit ? rev => ed.restore(rev) : null}
 			/>
 		</div>
 	{/if}

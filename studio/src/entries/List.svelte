@@ -1,8 +1,7 @@
 <script module lang="ts">
 	import type { Schema as SchemaT } from '../core/schema';
 	import { listEntries as list, type EntryList } from './api';
-	import type { LoadProps } from '../core/router.svelte';
-	import { site as current } from '../core/site.svelte';
+	import { entryPath, go, site, type LoadProps } from '../core/router.svelte';
 
 	/** The entries of the section; a single opens its entry. */
 	export async function loadProps(
@@ -12,10 +11,10 @@
 		const sec = props.schema.sections.find(s => s.handle === props.section);
 		if (!sec) throw new Error(`There is no section ${props.section}`);
 		const first = await list(
-			listParams(sec.kind, props.section, current.current, ''),
+			listParams(sec.kind, props.section, site.current, ''),
 		);
 		if (sec.kind === 'single' && first.entries[0])
-			lp.setRedirect(`/entries/${props.section}/${first.entries[0].id}`);
+			lp.setRedirect(entryPath(props.section, first.entries[0].id));
 		return { first };
 	}
 
@@ -34,7 +33,7 @@
 
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import SearchInput from '../ui/SearchInput.svelte';
+	import SearchInput, { SEARCH_DELAY_MS } from '../ui/SearchInput.svelte';
 	import { plural } from '../core/list';
 	import SiteBadges from './SiteBadges.svelte';
 	import PageTop from '../ui/PageTop.svelte';
@@ -42,7 +41,6 @@
 	import { entryUrl, type Schema } from '../core/schema';
 	import { deleteEntry, listEntries, moveEntry, type Entry } from './api';
 	import Menu, { type MenuItem } from '../ui/Menu.svelte';
-	import { entryPath, go, shown, site } from '../core/route.svelte';
 	import Icon from '../ui/Icon.svelte';
 	import { date } from '../core/format';
 	import { depth, dropTo, dropWhere, isBelow, type Where } from './tree';
@@ -69,9 +67,6 @@
 	// the type is worth a column only with several
 	const types = $derived(sec.types.length > 1);
 
-	$effect(() => {
-		shown.section = section;
-	});
 	let total = $state(untrack(() => first.total));
 	let error = $state('');
 
@@ -92,10 +87,14 @@
 
 	// the first list came with the page
 	let searched = '';
+	// a moment after the last key, not with every one
 	$effect(() => {
 		if (search === searched) return;
-		searched = search;
-		untrack(load);
+		const wait = setTimeout(() => {
+			searched = search;
+			load();
+		}, SEARCH_DELAY_MS);
+		return () => clearTimeout(wait);
 	});
 
 	// drag and drop in a structure: before or after a row, or into it
@@ -132,7 +131,7 @@
 			{
 				label: 'Edit',
 				icon: 'edit',
-				href: '/admin' + entryPath(section, e.id),
+				href: entryPath(section, e.id),
 			},
 		];
 		const url = entryUrl(schema, site.current, e.uri);
@@ -173,7 +172,7 @@
 		{#if sec.kind !== 'single' && can(schema, section, 'edit')}
 			<button
 				class="primary"
-				onclick={() => go(`/entries/${section}/new`)}
+				onclick={() => go(`/admin/entries/${section}/new`)}
 			>
 				<Icon name="add" />
 				New entry
@@ -239,7 +238,7 @@
 						<Icon name="move" size={15} />
 					</span>
 				{/if}
-				<a class="title" href="/admin{entryPath(section, e.id)}">
+				<a class="title" href={entryPath(section, e.id)}>
 					{e.title}
 				</a>
 			</span>

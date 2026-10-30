@@ -2,12 +2,13 @@
 	import { untrack } from 'svelte';
 	import type { Link, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
-	import LinkField from '../LinkField.svelte';
+	import LinkInput from '../LinkInput.svelte';
 	import EmbedCard from './EmbedCard.svelte';
 	import AddButton from '../../ui/AddButton.svelte';
 	import ItemActions from '../../ui/ItemActions.svelte';
-	import { linkField, linkLabel, linkTarget } from '../link';
-	import { clone, moved, removed } from '../../core/list';
+	import { BUTTON_LINKS, linkLabel, linkTarget } from '../link';
+	import { moved, removed } from '../../core/list';
+	import { synced } from '../../core/synced.svelte';
 
 	/** A row of buttons in a rich text, each one a link with a label. */
 	let {
@@ -28,31 +29,11 @@
 		insertLine: (where: 'before' | 'after') => void;
 	} = $props();
 
-	// what the link field of a button allows
-	const field = linkField(['entry', 'url', 'email', 'phone'], {
-		label: 'Button',
-	});
-
-	let items = $state(
-		untrack(() => attrs.links.map(link => ({ link: clone(link) }))),
-	);
-	let last = JSON.stringify(untrack(() => attrs.links));
-
 	// changes from the text (undo) come in, changes of the buttons go out
-	$effect(() => {
-		const outer = JSON.stringify(attrs.links);
-		if (outer !== last) {
-			last = outer;
-			items = attrs.links.map(link => ({ link: clone(link) }));
-		}
-	});
-	$effect(() => {
-		const links = $state.snapshot(items).map(i => i.link);
-		const inner = JSON.stringify(links);
-		if (inner === last) return;
-		last = inner;
-		update({ links });
-	});
+	const buttons = synced(
+		() => attrs.links,
+		links => update({ links }),
+	);
 
 	// a new row without a target opens to be filled in
 	let editing = $state(
@@ -63,9 +44,9 @@
 	);
 
 	const summary = $derived(
-		items
+		buttons.value
 			.map(
-				({ link }) =>
+				link =>
 					`${linkLabel(link, refs, 'Button')} → ${linkTarget(link, refs)}`,
 			)
 			.join(' · ') || 'No buttons yet',
@@ -81,14 +62,21 @@
 >
 	{#snippet preview()}{summary}{/snippet}
 	<fieldset disabled={!editable} class="buttons">
-		{#each items as item, i (i)}
+		{#each buttons.value as item, i (i)}
 			<div class="item">
-				<LinkField {schema} {field} values={item} {refs} />
+				<LinkInput
+					{schema}
+					{refs}
+					link={item}
+					to={BUTTON_LINKS}
+					labels
+					onchange={link => (buttons.value[i] = link)}
+				/>
 				<ItemActions
 					index={i}
-					count={items.length}
-					onmove={by => (items = moved(items, i, by))}
-					onremove={() => (items = removed(items, i))}
+					count={buttons.value.length}
+					onmove={by => (buttons.value = moved(buttons.value, i, by))}
+					onremove={() => (buttons.value = removed(buttons.value, i))}
 					removeTitle="Remove the button"
 				/>
 			</div>
@@ -96,7 +84,7 @@
 		<div>
 			<AddButton
 				onclick={() =>
-					items.push({ link: { type: 'entry', value: null } })}
+					buttons.value.push({ type: 'entry', value: null })}
 			>
 				Add a button
 			</AddButton>

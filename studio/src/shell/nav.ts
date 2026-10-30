@@ -14,13 +14,6 @@ export const SETUP_TABS: [string, string][] = [
 	['sites', 'Sites, transforms and roles'],
 ];
 
-/** The page of a section or a doc. */
-export function navHref(schema: Schema, handle: string): string {
-	if (schema.docs.some(d => d.handle === handle))
-		return '/admin/docs/' + handle;
-	return '/admin/entries/' + handle;
-}
-
 /** A group of only globals is settings, others are content. */
 export function groupIcon(schema: Schema, group: NavGroup): string {
 	const all = group.sections.map(h => sectionOf(schema, h));

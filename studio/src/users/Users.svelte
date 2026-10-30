@@ -11,7 +11,6 @@
 	import PageTop from '../ui/PageTop.svelte';
 	import { type Schema } from '../core/schema';
 	import { deleteUser, listUsers, saveUser, setRole, type User } from './api';
-	import { shown } from '../core/route.svelte';
 	import { roleNameOf } from '../core/access';
 	import { session } from '../core/session.svelte';
 	import { Busy } from '../core/busy.svelte';
@@ -27,10 +26,6 @@
 	let email = $state('');
 	let password = $state('');
 	let role = $state<string | null>(null);
-
-	$effect(() => {
-		shown.section = '';
-	});
 
 	async function load() {
 		users = await listUsers();

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { type Schema } from '../core/schema';
 	import { listEntries, type EntryRef } from './api';
-	import { site } from '../core/route.svelte';
+	import { site } from '../core/router.svelte';
 	import AddButton from '../ui/AddButton.svelte';
 	import Popover from '../ui/Popover.svelte';
 	import SearchList from '../ui/SearchList.svelte';

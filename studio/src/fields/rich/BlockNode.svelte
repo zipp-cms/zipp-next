@@ -5,7 +5,7 @@
 	import Fields from '../Fields.svelte';
 	import EmbedCard from './EmbedCard.svelte';
 	import { blockSummary } from '../blocks.svelte';
-	import { clone } from '../../core/list';
+	import { synced } from '../../core/synced.svelte';
 	import { componentOf } from '../../core/schema';
 
 	/**
@@ -31,26 +31,14 @@
 	} = $props();
 
 	const comp = $derived(componentOf(schema, attrs.type));
-	let fields = $state<Values>(untrack(() => clone(attrs.fields)));
-	let last = JSON.stringify(untrack(() => attrs.fields));
+	// changes from the text (undo) come in, changes of the fields go out
+	const fields = synced(
+		() => attrs.fields,
+		f => update({ ...attrs, fields: f }),
+	);
 	let editing = $state(
 		untrack(() => !Object.keys(attrs.fields ?? {}).length),
 	);
-
-	// changes from the text (undo) come in, changes of the fields go out
-	$effect(() => {
-		const outer = JSON.stringify(attrs.fields);
-		if (outer !== last) {
-			last = outer;
-			fields = clone(attrs.fields);
-		}
-	});
-	$effect(() => {
-		const inner = JSON.stringify($state.snapshot(fields));
-		if (inner === last) return;
-		last = inner;
-		update({ ...attrs, fields: $state.snapshot(fields) });
-	});
 </script>
 
 <EmbedCard
@@ -61,14 +49,14 @@
 	oninsert={insertLine}
 >
 	{#snippet preview()}
-		{blockSummary(comp, fields) || 'Empty'}
+		{blockSummary(comp, fields.value) || 'Empty'}
 	{/snippet}
 	{#if comp}
 		<fieldset disabled={!editable}>
 			<Fields
 				{schema}
 				component={comp}
-				values={fields}
+				values={fields.value}
 				errors={{}}
 				{refs}
 				prefix="rt."

@@ -1,17 +1,18 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
-	import { current, shown } from '../core/route.svelte';
+	import { current } from '../core/router.svelte';
 	import {
 		canAi,
 		canAssets,
 		hasAgent,
 		isAdmin,
+		navHref,
 		visibleNav,
 	} from '../core/access';
 	import Icon from '../ui/Icon.svelte';
 	import SiteSwitch from './SiteSwitch.svelte';
 	import UserMenu from './UserMenu.svelte';
-	import { SETUP_TABS, groupIcon, groupItems, navHref } from './nav';
+	import { SETUP_TABS, groupIcon, groupItems } from './nav';
 
 	/**
 	 * The sidebar: the site, the groups of the schema's navigation with
@@ -22,20 +23,18 @@
 		$props();
 
 	// the first part of the path: entries, assets, setup…
-	const page = $derived(current.path.split('/')[1] ?? '');
+	const page = $derived(current.path.split('/')[2] ?? '');
 	// the pages that aren't a group of the nav
 	const other = $derived(['assets', 'ai', 'users', 'setup'].includes(page));
 	// only the sections the role may see
 	const groups = $derived(visibleNav(schema));
 	// the group of the section on screen
 	const group = $derived(
-		groups.find(g => g.sections.includes(shown.section)) ?? groups[0],
+		groups.find(g => g.sections.includes(current.section)) ?? groups[0],
 	);
 	const items = $derived(groupItems(schema, group));
 
-	// a doc page is active by its handle, a section by what the page shows
-	const active = (handle: string) =>
-		shown.section === handle || current.path === `/docs/${handle}`;
+	const active = (handle: string) => current.section === handle;
 </script>
 
 <aside class="side">
@@ -92,7 +91,7 @@
 			Setup
 		</a>
 		{#if page === 'setup'}
-			{@const tab = current.path.split('/')[2] ?? 'sections'}
+			{@const tab = current.path.split('/')[3] ?? 'sections'}
 			<div class="sub">
 				{#each SETUP_TABS as [handle, name] (handle)}
 					<a

@@ -1,44 +1,41 @@
 <script lang="ts">
 	import PageTop from '../../ui/PageTop.svelte';
 	import Icon from '../../ui/Icon.svelte';
+	import { time } from '../../core/format';
+	import type { EntryEditor, May } from './entryEditor.svelte';
 
 	/** Where the entry is, its state and what can be done with it. */
 	let {
+		ed,
 		crumbs,
 		title,
-		published,
-		hasDraft,
-		draftBy,
-		saving,
 		url,
-		busy,
-		isNew,
-		canEdit,
-		canPublish,
-		canDelete,
+		may,
 		onpreview,
 		ondiscard,
 		onremove,
 		onsave,
 	}: {
+		ed: EntryEditor;
 		crumbs: { label: string; href?: string }[];
 		title: string;
-		published: boolean;
-		hasDraft: boolean;
-		/** who changed the draft last, and when */
-		draftBy: string | null;
-		saving: boolean;
 		url: string | null;
-		busy: boolean;
-		isNew: boolean;
-		canEdit: boolean;
-		canPublish: boolean;
-		canDelete: boolean;
+		may: May;
 		onpreview: () => void;
 		ondiscard: () => void;
 		onremove: () => void;
 		onsave: () => void;
 	} = $props();
+
+	const isNew = $derived(ed.id === null);
+	const published = $derived(ed.live?.published ?? false);
+	const hasDraft = $derived(!!ed.draft);
+	// who changed the draft last, and when
+	const draftBy = $derived(
+		ed.draft?.user
+			? `by ${ed.draft.user}, ${time(ed.draft.updatedAt)}`
+			: null,
+	);
 </script>
 
 <PageTop crumbs={[...crumbs, { label: title || 'New entry' }]}>
@@ -50,19 +47,19 @@
 		{/if}
 		{#if hasDraft}
 			<span class="badge changes" title="Saved as draft, not live yet">
-				{saving ? 'Saving…' : 'Draft'}
+				{ed.draftState === 'saving' ? 'Saving…' : 'Draft'}
 			</span>
 			{#if draftBy}<span class="by">{draftBy}</span>{/if}
 		{/if}
 	{/snippet}
 	{#snippet actions()}
-		{#if canDelete}
+		{#if may.delete}
 			<button class="icon" onclick={onremove} title="Delete in all sites">
 				<Icon name="delete" />
 			</button>
 		{/if}
 		{#if hasDraft}
-			<button onclick={ondiscard} disabled={busy || !canEdit}>
+			<button onclick={ondiscard} disabled={ed.busy || !may.edit}>
 				Discard
 			</button>
 		{/if}
@@ -83,8 +80,9 @@
 		<button
 			class="primary"
 			onclick={onsave}
-			disabled={busy || (isNew ? !canEdit : !hasDraft || !canPublish)}
-			title={!isNew && !canPublish
+			disabled={ed.busy ||
+				(isNew ? !may.edit : !hasDraft || !may.publish)}
+			title={!isNew && !may.publish
 				? 'Your role can edit drafts, someone else publishes them'
 				: undefined}
 		>

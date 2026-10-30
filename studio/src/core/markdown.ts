@@ -1,4 +1,4 @@
-import { marked, type Tokens } from 'marked';
+import { Marked, type Tokens } from 'marked';
 
 /**
  * Markdown to html for the studio: raw html is dropped, links only go to
@@ -12,7 +12,8 @@ const safe = (href: string) =>
 const escape = (s: string) =>
 	s.replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
 
-marked.use({
+// its own instance: others that use marked keep its defaults
+const marked = new Marked({
 	renderer: {
 		html: () => '',
 		image: ({ text }: Tokens.Image) => escape(text),

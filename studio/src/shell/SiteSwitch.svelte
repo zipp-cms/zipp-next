@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
-	import { setSite, site } from '../core/route.svelte';
+	import { setSite, site } from '../core/router.svelte';
 	import Icon from '../ui/Icon.svelte';
 
 	/** The site the studio edits, and where it runs; the box opens a choice. */

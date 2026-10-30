@@ -3,7 +3,8 @@
 	import { onDestroy, onMount } from 'svelte';
 	import type { Field, Schema, Values } from '../core/schema';
 	import type { Refs } from '../entries/api';
-	import { site } from '../core/route.svelte';
+	import { site } from '../core/router.svelte';
+	import { Last } from '../core/synced.svelte';
 	import Toolbar from './rich/Toolbar.svelte';
 	import { EMPTY, createEditor, richOptions, trimmed } from './rich/editor';
 
@@ -29,7 +30,7 @@
 	// the toolbar follows the selection
 	let tick = $state(0);
 	// the content as last sent or received, to not send it back
-	let last = '';
+	const last = new Last();
 
 	onMount(() => {
 		editor = createEditor({
@@ -44,23 +45,18 @@
 			// a plain copy, TipTap doesn't take Svelte's proxies
 			content: $state.snapshot(values[field.handle]),
 			onChange: doc => {
-				const json = JSON.stringify(doc);
-				if (json === last) return;
-				last = json;
-				values[field.handle] = doc;
+				if (last.changed(doc)) values[field.handle] = doc;
 			},
 			// later: a transaction can come while Svelte renders (a blur)
 			onTransaction: () => queueMicrotask(() => tick++),
 		});
-		last = JSON.stringify(trimmed(editor.getJSON()));
+		last.changed(trimmed(editor.getJSON()));
 	});
 
 	// content that changes from outside (load, restore) goes into the editor
 	$effect(() => {
 		const doc = values[field.handle] ?? EMPTY;
-		const json = JSON.stringify(trimmed(doc));
-		if (!editor || json === last) return;
-		last = json;
+		if (!editor || !last.changed(trimmed(doc))) return;
 		editor.commands.setContent($state.snapshot(doc), { emitUpdate: false });
 	});
 

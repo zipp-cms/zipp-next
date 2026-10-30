@@ -1,1 +1,0 @@
-import{y as s,aw as o,K as e}from"./index-Ly-qPh-a.js";function a(t,r){return`/entries/${t}/${r}`}function i(t){o(t),e.currentRequest.get()&&e.reload()}const u=s({section:""});export{i as a,a as e,u as s};

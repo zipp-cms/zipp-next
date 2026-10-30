@@ -1,6 +1,6 @@
-import { BASE, router } from '../core/router.svelte';
+import { router } from '../core/router.svelte';
 
 /** The login, without the frame. */
 export function registerAuth() {
-	router.register(BASE + '/login', () => import('./Login.svelte'));
+	router.register('/admin/login', () => import('./Login.svelte'));
 }

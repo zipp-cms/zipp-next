@@ -2,7 +2,7 @@
 	import { untrack } from 'svelte';
 	import { assetUrl, transparentEdges, type Asset } from './api';
 	import { type Schema } from '../core/schema';
-	import { entryPath } from '../core/route.svelte';
+	import { entryPath } from '../core/router.svelte';
 	import { canAssets } from '../core/access';
 	import { AssetForm } from './assetForm.svelte';
 	import Flyout from '../ui/Flyout.svelte';
@@ -187,7 +187,7 @@
 						{#each form.usage as u (u.id)}
 							<li>
 								<a
-									href="/admin{entryPath(u.section, u.id)}"
+									href={entryPath(u.section, u.id)}
 									onclick={e => {
 										if (mayLeave()) closeFlyout();
 										else e.preventDefault();

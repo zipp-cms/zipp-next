@@ -4,13 +4,15 @@ import { onSessionLost } from './client';
 import { flyout } from './flyout.svelte';
 import { session, type Session } from './session.svelte';
 import { getSchema, type Schema } from './schema';
-import { site, storeSite } from './site.svelte';
 
 /**
  * The pages of the studio with chuchi's router, like hostdinghy: each
  * area registers its pages in its `routes.ts`, loaded when opened. A page
  * module may export `loadProps` (its data before it shows), `layout`
  * (the frame around it) and `isPublic` (no login needed).
+ *
+ * Pages are paths under `/admin`, like Craft, and every path here is the
+ * whole one: `go('/admin/assets')`, `href="/admin/assets"`.
  */
 
 export type Props = Record<string, any>;
@@ -44,22 +46,52 @@ export class LoadProps {
 		return loadSchema();
 	}
 
-	/** Opens another page instead of this one, the path under /admin. */
+	/** Opens another page instead of this one. */
 	setRedirect(path: string) {
-		this.redirect = BASE + path;
+		this.redirect = path;
 	}
 }
 
-export const BASE = '/admin';
+const BASE = '/admin';
 
 export const router = new Router<PageModule>();
 
-/** The path of the current page, without `/admin`. */
-export const current = $state({ path: '' });
+/** Where the studio is. */
+class Current {
+	/** the path of the page, with `/admin` */
+	path = $state('');
+	/** the section of an entry or doc page, the nav shows its group */
+	section = $derived(
+		this.path.match(/^\/admin\/(?:entries|docs)\/([^/]+)/)?.[1] ?? '',
+	);
+}
 
-/** Opens a page of the studio, `path` without `/admin`. */
+export const current = new Current();
+
+/** The path of an entry in the studio. */
+export function entryPath(section: string, id: number) {
+	return `${BASE}/entries/${section}/${id}`;
+}
+
+/** Opens a page of the studio. */
 export function go(path: string, replace = false) {
-	router.open(BASE + path, {}, { history: replace ? 'replace' : 'push' });
+	router.open(path, {}, { history: replace ? 'replace' : 'push' });
+}
+
+/** The site the studio edits, the same in all pages. */
+export const site = $state({
+	current: localStorage.getItem('zipp-site') ?? '',
+});
+
+function storeSite(handle: string) {
+	site.current = handle;
+	localStorage.setItem('zipp-site', handle);
+}
+
+/** Another site: the page loads again with its content. */
+export function setSite(handle: string) {
+	storeSite(handle);
+	if (router.currentRequest.get()) router.reload();
 }
 
 /** Opens the login, which comes back to this page. */
@@ -129,21 +161,14 @@ export function withLayout(layout: LoadModule, page: LoadModule): LoadModule {
 	};
 }
 
-/** Pages under one path in one frame. */
+/** Pages in one frame. */
 export function inLayout(
 	layout: LoadModule,
 	pages: [string | RegExp, LoadModule][],
 ) {
-	for (const [path, page] of pages) {
-		const uri =
-			typeof path === 'string'
-				? BASE + path
-				: new RegExp(escape(BASE) + path.source, path.flags);
-		router.register(uri, withLayout(layout, page));
-	}
+	for (const [path, page] of pages)
+		router.register(path, withLayout(layout, page));
 }
-
-const escape = (s: string) => s.replace(/[/.]/g, '\\$&');
 
 /** The pages of the app for what has no page: a wrong path, an error. */
 export type Fallbacks = {
@@ -211,7 +236,7 @@ export function startRouter(pages: Fallbacks, onfirst: () => void) {
 	fallbacks = pages;
 	onSessionLost(endSession);
 	router.currentRequest.subscribe(req => {
-		if (req) current.path = req.pathname.slice(BASE.length) || '/';
+		if (req) current.path = req.pathname;
 	});
 	let mounted = false;
 	// the newest request, an older one doesn't redirect anymore

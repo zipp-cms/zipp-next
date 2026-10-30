@@ -5,9 +5,9 @@ import { Shell } from '../shell/layouts';
 export function registerSetup() {
 	const setup = () => import('./Setup.svelte');
 	inLayout(Shell, [
-		['/setup', setup],
+		['/admin/setup', setup],
 		[
-			/\/setup\/(?<tab>sections|types|blocks|sites)(?:\/(?<handle>[^/]+))?/,
+			/\/admin\/setup\/(?<tab>sections|types|blocks|sites)(?:\/(?<handle>[^/]+))?/,
 			setup,
 		],
 	]);

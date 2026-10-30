@@ -15,7 +15,7 @@
 	import { canAssets } from '../core/access';
 	import AssetGrid from './AssetGrid.svelte';
 	import AssetDetail from './AssetDetail.svelte';
-	import SearchInput from '../ui/SearchInput.svelte';
+	import SearchInput, { SEARCH_DELAY_MS } from '../ui/SearchInput.svelte';
 	import { Busy } from '../core/busy.svelte';
 	import UploadButton from '../ui/UploadButton.svelte';
 
@@ -39,10 +39,14 @@
 
 	// the first assets came with the page
 	let searched = '';
+	// a moment after the last key, not with every one
 	$effect(() => {
 		if (search === searched) return;
-		searched = search;
-		untrack(load);
+		const wait = setTimeout(() => {
+			searched = search;
+			load();
+		}, SEARCH_DELAY_MS);
+		return () => clearTimeout(wait);
 	});
 
 	async function upload(files: FileList | null) {

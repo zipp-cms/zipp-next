@@ -4,8 +4,8 @@
 	import type { Refs } from '../../entries/api';
 	import Icon from '../../ui/Icon.svelte';
 	import Popover from '../../ui/Popover.svelte';
-	import { linkField } from '../link';
-	import LinkField from '../LinkField.svelte';
+	import LinkInput from '../LinkInput.svelte';
+	import { BUTTON_LINKS } from '../link';
 	import {
 		insertBlock,
 		insertButtons,
@@ -39,16 +39,13 @@
 
 	const chain = () => editor.chain().focus();
 
-	// the link of the selection, like a link field without a label
-	const field = linkField(['entry', 'url', 'email', 'phone'], {
-		labels: false,
-	});
+	// the link of the selection, without a label
 	let linking = $state(false);
-	let link = $state<{ link: Link }>({ link: { type: 'url', value: '' } });
+	let link = $state<Link>({ type: 'url', value: '' });
 
 	function openLink(toggle: () => void) {
 		const current = editor.getAttributes('link').link;
-		link = { link: current ?? { type: 'url', value: '' } };
+		link = current ?? { type: 'url', value: '' };
 		toggle();
 	}
 
@@ -127,7 +124,13 @@
 				</button>
 			{/snippet}
 			<div class="link">
-				<LinkField {schema} {field} values={link} {refs} />
+				<LinkInput
+					{schema}
+					{refs}
+					{link}
+					to={BUTTON_LINKS}
+					onchange={l => (link = l)}
+				/>
 				<div class="actions">
 					<button
 						type="button"
@@ -138,7 +141,7 @@
 					<button
 						type="button"
 						class="primary"
-						onclick={() => applyLink($state.snapshot(link.link))}
+						onclick={() => applyLink($state.snapshot(link))}
 					>
 						Apply
 					</button>
