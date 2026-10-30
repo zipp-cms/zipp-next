@@ -8,6 +8,7 @@ use crate::schema::tests::site;
 
 fn site_doc(title: &str, fields: Value) -> SiteDoc {
 	SiteDoc {
+		dates: Default::default(),
 		title: title.into(),
 		slug: String::new(),
 		published: true,

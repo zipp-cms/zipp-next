@@ -28,6 +28,8 @@
 				<button
 					type="button"
 					class="block plain"
+					class:off={b.enabled === false}
+					title={b.enabled === false ? 'Disabled' : undefined}
 					onclick={() => showBlock(field.handle, i)}
 				>
 					<span class="n">{String(i + 1).padStart(2, '0')}</span>
@@ -47,6 +49,11 @@
 </nav>
 
 <style lang="scss">
+	// switched off, the website leaves it out
+	.off {
+		opacity: 0.55;
+	}
+
 	.outline {
 		display: flex;
 		flex-direction: column;

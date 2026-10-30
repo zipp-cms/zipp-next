@@ -1,4 +1,7 @@
 <script lang="ts">
+	import DateTime from './DateTime.svelte';
+	import { dateState } from '../api';
+	import { time } from '../../core/format';
 	import { setupPath } from '../../core/paths';
 	import SiteBadges from '../SiteBadges.svelte';
 	import BlockOutline from './BlockOutline.svelte';
@@ -53,6 +56,9 @@
 			}))
 			.filter(o => o.blocks.length),
 	);
+
+	/** a published entry its dates keep off the website, and why */
+	const waiting = $derived(dateState(ed.dates));
 </script>
 
 <aside>
@@ -75,6 +81,13 @@
 						)?.name}
 					</span>
 				</label>
+				{#if ed.published && waiting}
+					<span class="note">
+						{waiting === 'pending'
+							? `Not live yet, from ${time(ed.dates.postDate!)}`
+							: `Not live anymore, expired ${time(ed.dates.expiryDate!)}`}
+					</span>
+				{/if}
 			</fieldset>
 			<!-- the sites to switch to, also for who may only look -->
 			{#if multiSite && !isNew}
@@ -104,6 +117,35 @@
 							</span>{/if}
 						{#if ed.errors.slug}<span class="error">
 								{ed.errors.slug}
+							</span>{/if}
+					</label>
+
+					<!-- in every site, like Craft's -->
+					<label>
+						<span>
+							{#if ed.changed.has('postDate')}<span
+									class="changed-dot"
+								></span>{/if}Post date
+						</span>
+						<DateTime
+							label="Post date"
+							value={ed.dates.postDate}
+							onchange={v => (ed.dates.postDate = v)}
+						/>
+					</label>
+					<label>
+						<span>
+							{#if ed.changed.has('expiryDate')}<span
+									class="changed-dot"
+								></span>{/if}Expiry date
+						</span>
+						<DateTime
+							label="Expiry date"
+							value={ed.dates.expiryDate}
+							onchange={v => (ed.dates.expiryDate = v)}
+						/>
+						{#if ed.errors.expiryDate}<span class="error">
+								{ed.errors.expiryDate}
 							</span>{/if}
 					</label>
 				{/if}

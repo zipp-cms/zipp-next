@@ -87,6 +87,7 @@ async fn preview_tokens_show_the_draft() {
 		site: "de".into(),
 		base: None,
 		content: SiteDoc {
+			dates: Default::default(),
 			title: "Jazz am Abend".into(),
 			slug: "jazz".into(),
 			published: true,

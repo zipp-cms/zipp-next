@@ -59,6 +59,36 @@ pub struct Entry {
 	pub fields: Value,
 	pub created_at: i64,
 	pub updated_at: i64,
+	#[serde(flatten)]
+	pub dates: Dates,
+}
+
+/// When an entry is live, in all its sites, like Craft's post and expiry
+/// date: from `post_date` (set when it is first published) until
+/// `expiry_date`, milliseconds. Published in a site and in these dates
+/// is live there, see [`LIVE_DATES`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Dates {
+	#[serde(default)]
+	pub post_date: Option<i64>,
+	#[serde(default)]
+	pub expiry_date: Option<i64>,
+}
+
+/// The SQL of an entry `e` whose dates make it live now.
+/// Now in milliseconds like `db::now`, `strftime('%s')` has seconds.
+pub(crate) const LIVE_DATES: &str = "(e.post_date IS NULL \
+	OR e.post_date <= (julianday('now') - 2440587.5) * 86400000) \
+	AND (e.expiry_date IS NULL \
+	OR e.expiry_date > (julianday('now') - 2440587.5) * 86400000)";
+
+impl Dates {
+	/// Whether these dates make an entry live at `now`.
+	pub fn live_at(&self, now: i64) -> bool {
+		self.post_date.is_none_or(|p| p <= now)
+			&& self.expiry_date.is_none_or(|e| e > now)
+	}
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,6 +105,9 @@ pub struct EntryInput {
 	pub slug: String,
 	#[serde(default)]
 	pub published: bool,
+	/// no post date: the one it has, or now when it is first published
+	#[serde(flatten, default)]
+	pub dates: Dates,
 	/// only when creating an entry of a structure, later it moves
 	#[serde(default)]
 	pub parent_id: Option<i64>,
@@ -111,7 +144,8 @@ fn entry_ref(r: &rusqlite::Row) -> rusqlite::Result<EntryRef> {
 }
 
 const COLUMNS: &str = "e.id, e.section, e.type, s.site, s.title, s.slug, \
-	s.uri, s.published, e.parent_id, s.fields, e.created_at, s.updated_at";
+	s.uri, s.published, e.parent_id, s.fields, e.created_at, s.updated_at, \
+	e.post_date, e.expiry_date";
 
 fn from_row(row: &Row) -> rusqlite::Result<Entry> {
 	let fields: String = row.get(9)?;
@@ -128,6 +162,10 @@ fn from_row(row: &Row) -> rusqlite::Result<Entry> {
 		fields: serde_json::from_str(&fields).unwrap_or_default(),
 		created_at: row.get(10)?,
 		updated_at: row.get(11)?,
+		dates: Dates {
+			post_date: row.get(12)?,
+			expiry_date: row.get(13)?,
+		},
 	})
 }
 
@@ -178,6 +216,26 @@ pub struct Checked {
 	/// per site, only the saved site for an update
 	uris: HashMap<String, Option<String>>,
 	fields: Value,
+	dates: Dates,
+}
+
+/// The published entries whose post or expiry date passed in `(from,
+/// to]`: they went live or expired then. With their section.
+pub fn dated_between(
+	conn: &Connection,
+	from: i64,
+	to: i64,
+) -> Result<Vec<(i64, String)>> {
+	let mut stmt = conn.prepare(
+		"SELECT e.id, e.section FROM entries e
+		WHERE ((e.post_date > ?1 AND e.post_date <= ?2)
+			OR (e.expiry_date > ?1 AND e.expiry_date <= ?2))
+		AND EXISTS (SELECT 1 FROM entry_sites s
+			WHERE s.entry_id = e.id AND s.published = 1)",
+	)?;
+	let rows =
+		stmt.query_map(params![from, to], |r| Ok((r.get(0)?, r.get(1)?)))?;
+	Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
 /// Deletes an entry in all sites, in a structure also its children.
@@ -214,9 +272,9 @@ pub fn refs(
 		WHERE r.site = ? AND r.entry_id IN ({}) {}",
 		marks(ids.len()),
 		if published_only {
-			"AND s.published = 1"
+			format!("AND s.published = 1 AND {LIVE_DATES}")
 		} else {
-			""
+			String::new()
 		}
 	);
 	refs_by(conn, &sql, site, ids)

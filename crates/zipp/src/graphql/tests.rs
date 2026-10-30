@@ -252,6 +252,7 @@ async fn preview_shows_the_draft() {
 		e.published = false;
 		let e = save(&conn, &s, None, e, None).unwrap();
 		let sd = crate::drafts::SiteDoc {
+			dates: Default::default(),
 			title: "Draft".into(),
 			slug: "live".into(),
 			published: false,
@@ -285,6 +286,7 @@ async fn site_preview_shows_every_draft() {
 	let preview = {
 		let conn = db.conn();
 		let draft = |title: &str, published: bool| crate::drafts::SiteDoc {
+			dates: Default::default(),
 			title: title.into(),
 			slug: title.to_lowercase(),
 			published,
@@ -932,4 +934,34 @@ async fn filters_by_relation_fields_like_craft() {
 	assert_eq!(titles(by(r#"":notempty:""#)).await, ["Jazz"]);
 	assert_eq!(titles(by(r#"":empty:""#)).await, ["Folk"]);
 	assert!(titles(by("[999]")).await.is_empty());
+}
+
+#[tokio::test]
+async fn switched_off_blocks_and_dates() {
+	let db = Db::memory().unwrap();
+	let s = Arc::new(site());
+	let gql =
+		build(s.clone(), db.clone(), String::new(), SiteUrls::new()).unwrap();
+	let expiry = crate::db::now() + 24 * 60 * 60 * 1000;
+	{
+		let conn = db.conn();
+		let body = json!({ "body": [
+			{ "type": "text", "fields": { "content": "On" } },
+			{ "type": "text", "enabled": false, "fields": { "content": "Off" } },
+		]});
+		let mut page = input("pages", "page", "Blocks", body);
+		page.dates.expiry_date = Some(expiry);
+		save(&conn, &s, None, page, None).unwrap();
+	}
+	let data = run(
+		&gql,
+		r#"{ entry(uri: "blocks") { postDate expiryDate
+			... on page_Entry { body { ... on text_Block { content } } } } }"#,
+		true,
+	)
+	.await;
+	let e = &data["entry"];
+	assert_eq!(e["body"], json!([{ "content": "On" }]));
+	assert_eq!(e["expiryDate"], crate::db::iso(expiry));
+	assert!(e["postDate"].as_str().is_some_and(|d| d.starts_with("20")));
 }

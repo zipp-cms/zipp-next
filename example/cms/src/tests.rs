@@ -15,6 +15,7 @@ use super::*;
 
 fn create(section: &str, ty: &str, title: &str, fields: Value) -> CreateReq {
 	CreateReq(EntryInput {
+		dates: Default::default(),
 		section: section.into(),
 		ty: ty.into(),
 		site: None,
@@ -40,6 +41,7 @@ async fn authors_write_editors_publish() {
 	let jazz = author.call(&event("Jazz", "2099-01-01")).await.unwrap();
 	assert!(!jazz.published);
 	let live = SiteDoc {
+		dates: Default::default(),
 		title: jazz.title,
 		slug: jazz.slug,
 		published: true,

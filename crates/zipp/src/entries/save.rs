@@ -119,6 +119,14 @@ pub fn check(
 	if errors.is_empty() {
 		errors.extend(check_relations(conn, schema, &input.ty, &fields)?);
 	}
+	if let Dates {
+		post_date: Some(post),
+		expiry_date: Some(expiry),
+	} = input.dates
+		&& expiry <= post
+	{
+		errors.push(field_error("expiryDate", "after the post date"));
+	}
 	if !errors.is_empty() {
 		return Err(Error::Invalid(errors));
 	}
@@ -134,6 +142,7 @@ pub fn check(
 		slug,
 		uris,
 		fields,
+		dates: input.dates,
 	})
 }
 
@@ -181,9 +190,18 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 				reindex(conn, schema, id, &other.handle, &c.ty, &theirs)?;
 			}
 
+			// a post date once published, kept when the input has none
 			conn.execute(
-				"UPDATE entries SET updated_at = ?1 WHERE id = ?2",
-				params![now, id],
+				"UPDATE entries SET updated_at = ?1,
+				post_date = COALESCE(?2, post_date, CASE WHEN ?3 THEN ?1 END),
+				expiry_date = ?4 WHERE id = ?5",
+				params![
+					now,
+					c.dates.post_date,
+					c.published,
+					c.dates.expiry_date,
+					id
+				],
 			)?;
 			// children follow the uri of their parent, the uri of other
 			// sites a field that is the same in all of them
@@ -201,11 +219,20 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 				params![section.handle, c.parent_id],
 				|r| r.get(0),
 			)?;
+			let post = c.dates.post_date.or(c.published.then_some(now));
 			conn.execute(
-				"INSERT INTO entries
-				(section, type, parent_id, position, created_at, updated_at)
-				VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
-				params![section.handle, c.ty, c.parent_id, position, now],
+				"INSERT INTO entries (section, type, parent_id, position,
+				created_at, updated_at, post_date, expiry_date)
+				VALUES (?1, ?2, ?3, ?4, ?5, ?5, ?6, ?7)",
+				params![
+					section.handle,
+					c.ty,
+					c.parent_id,
+					position,
+					now,
+					post,
+					c.dates.expiry_date
+				],
 			)?;
 			let id = conn.last_insert_rowid();
 

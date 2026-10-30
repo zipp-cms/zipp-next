@@ -131,6 +131,9 @@ pub enum ChangeKind {
 	Published,
 	Moved,
 	Deleted,
+	/// it went live or expired by its post or expiry date, nothing was
+	/// saved: see `serve`, a minute later at most
+	Dated,
 }
 
 type Hook = Arc<dyn Fn(&Change) + Send + Sync>;

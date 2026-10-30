@@ -23,7 +23,7 @@ use serde_json::Value;
 use crate::AppState;
 use crate::content::{FieldError, share};
 use crate::db::now;
-use crate::entries::{EntryInput, check, get_entry, write};
+use crate::entries::{Dates, EntryInput, check, get_entry, write};
 use crate::error::{Error, Result};
 use crate::schema::Schema;
 
@@ -62,6 +62,9 @@ pub struct SiteDoc {
 	pub slug: String,
 	pub published: bool,
 	pub fields: Value,
+	/// the same in every site, like shared fields
+	#[serde(flatten, default)]
+	pub dates: Dates,
 }
 
 /// The content of an entry in every site, by site handle.
@@ -110,8 +113,9 @@ pub fn draft_refs(
 /// The live content of an entry.
 pub fn live_doc(conn: &Connection, id: i64) -> Result<Doc> {
 	let mut stmt = conn.prepare(
-		"SELECT site, title, slug, published, fields FROM entry_sites
-		WHERE entry_id = ?1",
+		"SELECT s.site, s.title, s.slug, s.published, s.fields, e.post_date,
+		e.expiry_date FROM entry_sites s JOIN entries e ON e.id = s.entry_id
+		WHERE s.entry_id = ?1",
 	)?;
 	let rows = stmt.query_map([id], |r| {
 		let fields: String = r.get(4)?;
@@ -122,6 +126,10 @@ pub fn live_doc(conn: &Connection, id: i64) -> Result<Doc> {
 				slug: r.get(2)?,
 				published: r.get(3)?,
 				fields: serde_json::from_str(&fields).unwrap_or_default(),
+				dates: Dates {
+					post_date: r.get(5)?,
+					expiry_date: r.get(6)?,
+				},
 			},
 		))
 	})?;
@@ -219,6 +227,7 @@ pub fn put_draft(
 	};
 	for (_, sd) in doc.iter_mut().filter(|(s, _)| s.as_str() != site) {
 		sd.fields = share(comp, &content.fields, &sd.fields);
+		sd.dates = content.dates;
 	}
 	doc.insert(site.into(), content);
 
@@ -253,6 +262,7 @@ pub fn publish(
 			title: sd.title.clone(),
 			slug: sd.slug.clone(),
 			published: sd.published,
+			dates: sd.dates,
 			parent_id: None,
 			fields: sd.fields.clone(),
 		};

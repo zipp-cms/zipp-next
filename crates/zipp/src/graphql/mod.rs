@@ -91,6 +91,7 @@ pub const ENTRY_FIELDS: &[&str] = &[
 	"createdAt",
 	"updatedAt",
 	"postDate",
+	"expiryDate",
 	"dateCreated",
 	"dateUpdated",
 	"language",

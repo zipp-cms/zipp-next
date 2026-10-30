@@ -39,10 +39,16 @@
 	import { can } from '../core/access';
 	import { sectionCrumbs } from '../core/paths';
 	import { entryUrl, type Schema } from '../core/schema';
-	import { deleteEntry, listEntries, moveEntry, type Entry } from './api';
+	import {
+		dateState,
+		deleteEntry,
+		listEntries,
+		moveEntry,
+		type Entry,
+	} from './api';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
-	import { date, plural } from '../core/format';
+	import { date, plural, time } from '../core/format';
 	import { depth, isBelow } from './tree';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
@@ -227,6 +233,21 @@
 				{#if drafts.includes(e.id)}
 					<span class="badge changes" title="Unpublished changes">
 						Draft
+					</span>
+				{/if}
+				{#if dateState(e) === 'pending'}
+					<span
+						class="badge draft"
+						title="Live from {time(e.postDate!)}"
+					>
+						Pending
+					</span>
+				{:else if dateState(e) === 'expired'}
+					<span
+						class="badge draft"
+						title="Expired {time(e.expiryDate!)}"
+					>
+						Expired
 					</span>
 				{/if}
 			</span>

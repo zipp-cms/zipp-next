@@ -1,8 +1,9 @@
+import type { Dates } from './api';
 import type { Refs } from './api';
 import { request, token } from '../core/client';
 import { type Values } from '../core/schema';
 
-export type SiteDoc = {
+export type SiteDoc = Dates & {
 	title: string;
 	slug: string;
 	published: boolean;

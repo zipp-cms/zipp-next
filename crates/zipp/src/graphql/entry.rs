@@ -22,6 +22,8 @@ pub(super) fn entry_common() -> Vec<(&'static str, TypeRef)> {
 		("updatedAt", TypeRef::named_nn(TypeRef::FLOAT)),
 		// Craft's, as `2026-10-28T08:00:00+00:00`
 		("postDate", s()),
+		// none: it doesn't expire
+		("expiryDate", TypeRef::named(TypeRef::STRING)),
 		("dateCreated", s()),
 		("dateUpdated", s()),
 		("language", s()),
@@ -55,9 +57,16 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 				"published" => GqlValue::from(e.published),
 				"createdAt" => GqlValue::from(e.created_at as f64),
 				"updatedAt" => GqlValue::from(e.updated_at as f64),
-				"postDate" | "dateCreated" => {
-					GqlValue::from(crate::db::iso(e.created_at))
-				}
+				// not published yet: when it was made
+				"postDate" => GqlValue::from(crate::db::iso(
+					e.dates.post_date.unwrap_or(e.created_at),
+				)),
+				"expiryDate" => e
+					.dates
+					.expiry_date
+					.map(|d| GqlValue::from(crate::db::iso(d)))
+					.unwrap_or_default(),
+				"dateCreated" => GqlValue::from(crate::db::iso(e.created_at)),
 				"dateUpdated" => GqlValue::from(crate::db::iso(e.updated_at)),
 				"language" => {
 					let schema = ctx.data::<Arc<Schema>>()?;
@@ -215,7 +224,10 @@ pub(super) fn content_field(
 				}
 				FieldKind::Blocks { .. } => {
 					let blocks = value.as_array().into_iter().flatten();
-					let blocks = blocks.map(|b| block_of(b, &site));
+					// a switched off block isn't on the website
+					let blocks = blocks
+						.filter(|b| b["enabled"] != false)
+						.map(|b| block_of(b, &site));
 					Ok(Some(FieldValue::list(blocks)))
 				}
 				FieldKind::Group { component } if value.is_object() => {

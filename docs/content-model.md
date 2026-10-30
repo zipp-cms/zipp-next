@@ -11,7 +11,14 @@ exactly one entry (created on start), a channel a list and a structure
 a tree. A section allows one or more entry types and has a uri format
 (`events/{slug}`, `{parent.uri}/{slug}`). Every entry has a row per
 site with its own title, slug, uri, published flag and translatable
-fields; the other fields are shared by all sites.
+fields; the other fields are shared by all sites. Like Craft an entry
+has a post date (set when it is first published) and an expiry date,
+the same in all sites: it is live in a site when it is published there
+and the date is between them, the website and GraphQL only show it
+then. Nothing is saved when a date passes, `serve` tells the
+`on_change` hooks (`ChangeKind::Dated`) within a minute, so a cache can
+clear. A block can be switched off (`"enabled": false`): it stays in the
+entry, the website leaves it out.
 
 `uri_of("home", "")` gives one entry type another uri, `uri_in("fr",
 "offres/{slug}")` one site, `uri_if("hasPage")` gives only entries with

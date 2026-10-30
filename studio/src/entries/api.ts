@@ -1,7 +1,23 @@
 import { request } from '../core/client';
 import { type Values } from '../core/schema';
 
-export type Entry = {
+/**
+ * When an entry is live, in all its sites (milliseconds): from its post
+ * date (set when it is first published) until its expiry date.
+ */
+export type Dates = { postDate: number | null; expiryDate: number | null };
+
+/** Whether the dates let an entry be live now, or why not. */
+export function dateState(
+	d: Dates,
+	now = Date.now(),
+): 'pending' | 'expired' | null {
+	if (d.postDate !== null && d.postDate > now) return 'pending';
+	if (d.expiryDate !== null && d.expiryDate <= now) return 'expired';
+	return null;
+}
+
+export type Entry = Dates & {
 	id: number;
 	section: string;
 	type: string;

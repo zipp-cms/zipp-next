@@ -261,7 +261,12 @@ pub(super) fn validate_block(
 		errors,
 	);
 
-	serde_json::json!({ "id": id, "type": ty, "fields": fields })
+	let mut out = serde_json::json!({ "id": id, "type": ty, "fields": fields });
+	// switched off: kept, the website doesn't show it
+	if block["enabled"] == false {
+		out["enabled"] = false.into();
+	}
+	out
 }
 
 /// A url a link may have: the web, or a path or anchor of the site. No

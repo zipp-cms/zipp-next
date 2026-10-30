@@ -83,6 +83,12 @@
 		insert(copy, i + 1);
 	}
 
+	/** Off and on again; on is no key, like blocks that never were off. */
+	function switchBlock(b: Block) {
+		if (b.enabled === false) delete b.enabled;
+		else b.enabled = false;
+	}
+
 	/** Whether a block or something inside it has an error. */
 	const hasError = (i: number) =>
 		Object.keys(errors).some(
@@ -141,6 +147,7 @@
 				bind:open={() => isOpen(block), v => setOpen(block, v)}
 				invalid={hasError(i)}
 				changed={changed.has(`${path}.${i}`)}
+				off={block.enabled === false}
 				id="block-{path}-{i}"
 			>
 				{#snippet summary()}
@@ -160,6 +167,8 @@
 				{/snippet}
 				{#snippet actions()}
 					<ItemActions
+						onswitch={() => switchBlock(block)}
+						off={block.enabled === false}
 						onduplicate={full ? undefined : () => duplicate(i)}
 						onremove={() => set(removed(blocks, i))}
 					/>

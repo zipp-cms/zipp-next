@@ -6,6 +6,7 @@ import {
 	getEntry,
 	listEntries,
 	saveEntry,
+	type Dates,
 	type Entry,
 	type Refs,
 } from '../api';
@@ -64,6 +65,8 @@ export class EntryEditor {
 	slug = $state('');
 	uri = $state<string | null>(null);
 	published = $state(false);
+	/** the same in every site */
+	dates = $state<Dates>({ postDate: null, expiryDate: null });
 	parentId = $state<number | null>(null);
 	fields = $state<Values>({});
 	refs = $state<Refs>({});
@@ -154,6 +157,8 @@ export class EntryEditor {
 		if (this.title !== live.title) set.add('title');
 		if (this.slug !== live.slug) set.add('slug');
 		if (this.published !== live.published) set.add('published');
+		if (this.dates.postDate !== live.postDate) set.add('postDate');
+		if (this.dates.expiryDate !== live.expiryDate) set.add('expiryDate');
 		return set;
 	});
 
@@ -176,11 +181,17 @@ export class EntryEditor {
 			slug: entry.slug,
 			published: entry.published,
 			fields: entry.fields,
+			postDate: entry.postDate,
+			expiryDate: entry.expiryDate,
 		};
 		const content = d?.doc[this.site] ?? entry;
 		this.title = content.title;
 		this.slug = content.slug;
 		this.published = content.published;
+		this.dates = {
+			postDate: content.postDate ?? null,
+			expiryDate: content.expiryDate ?? null,
+		};
 		this.fields = content.fields;
 		this.lastSaved = this.snapshot();
 		this.loaded = true;
@@ -215,6 +226,7 @@ export class EntryEditor {
 			this.title,
 			this.slug,
 			this.published,
+			this.dates,
 			clean($state.snapshot(this.fields)),
 		]);
 	}
@@ -272,6 +284,7 @@ export class EntryEditor {
 			slug: this.slug,
 			published: this.published,
 			fields: $state.snapshot(this.fields),
+			...$state.snapshot(this.dates),
 		};
 		try {
 			this.draft = await putDraft(
@@ -320,6 +333,7 @@ export class EntryEditor {
 					slug: this.slug,
 					published: this.published,
 					fields: $state.snapshot(this.fields),
+					...$state.snapshot(this.dates),
 				});
 				return entry.id;
 			}

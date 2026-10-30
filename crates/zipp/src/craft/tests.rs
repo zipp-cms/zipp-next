@@ -167,8 +167,12 @@ fn imports_a_site() {
 	assert_eq!(text[2]["type"], "button");
 	assert_eq!(text[2]["attrs"]["link"]["value"], "https://x.ch");
 	assert_eq!(f["tags"].as_array().unwrap().len(), 1);
-	assert_eq!(f["sections"].as_array().unwrap().len(), 1);
-	assert_eq!(f["sections"][0]["fields"]["title"], "One");
+	// a disabled entry of a matrix is a switched off block
+	let sections = f["sections"].as_array().unwrap();
+	assert_eq!(sections.len(), 2);
+	assert_eq!(sections[0]["fields"]["title"], "One");
+	assert_eq!(sections[0].get("enabled"), None);
+	assert_eq!(sections[1]["enabled"], false);
 	assert_eq!(f["teaser"]["link"]["value"], team.id);
 	assert_eq!(f["price"], 12.0);
 	assert!(f.get("craftOnly").is_none());

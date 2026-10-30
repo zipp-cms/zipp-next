@@ -13,7 +13,8 @@ website: crelte passes `?token=` on to GraphQL.
 
 The editor has the content on the left and a sidebar like Craft's on the
 right: published in the current site with the status in every site (a
-badge switches to that site), slug, type and parent, copying the content
+badge switches to that site), slug, post and expiry date (lists show
+Pending and Expired), type and parent, copying the content
 from another site, and the revisions. A global (a single without a page)
 has no title and only the copying and revisions there.
 

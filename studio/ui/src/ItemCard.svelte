@@ -15,6 +15,7 @@
 		collapsible = true,
 		invalid = false,
 		changed = false,
+		off = false,
 		handle,
 		actions,
 		children,
@@ -29,6 +30,8 @@
 		invalid?: boolean;
 		/** new or changed in the draft */
 		changed?: boolean;
+		/** switched off: kept, the website leaves it out */
+		off?: boolean;
 		/** the DragHandle, at the start of the head */
 		handle?: Snippet;
 		actions?: Snippet;
@@ -40,7 +43,7 @@
 	const toggle = () => collapsible && (open = !open);
 </script>
 
-<div class="item-card box" class:open={shown} class:invalid {id}>
+<div class="item-card box" class:open={shown} class:invalid class:off {id}>
 	<div class="head">
 		{@render handle?.()}
 		<button
@@ -52,6 +55,7 @@
 		>
 			{#if changed}<span class="changed-dot" title="Changed"></span>{/if}
 			<span class="kind">{@render kindIcon?.()}{kind}</span>
+			{#if off}<span class="badge draft">Disabled</span>{/if}
 			{#if summary}
 				<span class="summary truncate">{@render summary()}</span>
 			{/if}
@@ -84,6 +88,12 @@
 
 		&.invalid {
 			border-color: var(--danger);
+		}
+
+		// switched off: its head faded, its fields as they are
+		&.off > .head .kind,
+		&.off > .head .summary {
+			opacity: 0.55;
 		}
 	}
 

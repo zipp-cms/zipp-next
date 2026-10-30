@@ -14,6 +14,7 @@ use zipp_seo::{Seo, SeoDefaults, seo_field};
 
 fn input(section: &str, ty: &str, title: &str, fields: Value) -> EntryInput {
 	EntryInput {
+		dates: Default::default(),
 		section: section.into(),
 		ty: ty.into(),
 		site: None,

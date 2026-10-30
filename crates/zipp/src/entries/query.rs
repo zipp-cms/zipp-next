@@ -16,6 +16,7 @@
 use rusqlite::types::Value;
 
 use crate::db::marks;
+use crate::entries::LIVE_DATES;
 use crate::schema::{IndexKind, Schema, SectionKind};
 
 /// The most entries of one query.
@@ -209,9 +210,8 @@ impl Query {
 					q.desc = desc;
 					q.order = match name {
 						"title" => Order::Column("title"),
-						"postDate" | "dateCreated" => {
-							Order::Column("created_at")
-						}
+						"postDate" => Order::Column("post_date"),
+						"dateCreated" => Order::Column("created_at"),
 						"dateUpdated" => Order::Column("updated_at"),
 						"lft" | "structure" => Order::Structure,
 						_ => {
@@ -260,8 +260,9 @@ impl Query {
 					q.order = Order::Structure;
 					q.desc = false;
 				}
+				// newest first, like Craft's channels
 				Some(SectionKind::Channel) => {
-					q.order = Order::Column("created_at")
+					q.order = Order::Column("post_date")
 				}
 				_ => {}
 			}
@@ -412,8 +413,12 @@ impl Query {
 				FROM drafts d WHERE d.entry_id = e.id), s.published) = 1";
 			cond(sql.into(), vec![]);
 		} else if self.published_only {
+			// live: published, after its post date and before it expires;
+			// the entry of a preview anyway
 			let preview = Value::Integer(self.preview_id.unwrap_or(0));
-			cond("(s.published = 1 OR e.id = ?)".into(), vec![preview]);
+			let live =
+				format!("((s.published = 1 AND {LIVE_DATES}) OR e.id = ?)");
+			cond(live, vec![preview]);
 		}
 
 		for (i, f) in self.filters.iter().enumerate() {
@@ -453,6 +458,10 @@ impl Query {
 	pub fn order_by(&self) -> String {
 		let col = match &self.order {
 			Order::Column("title") => "s.title".into(),
+			// not published yet: when it was made
+			Order::Column("post_date") => {
+				"COALESCE(e.post_date, e.created_at)".into()
+			}
 			Order::Column(c) => format!("e.{c}"),
 			Order::Structure => "t.sort".into(),
 			Order::Field(_, true) => "o.num".into(),

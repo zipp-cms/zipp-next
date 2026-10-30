@@ -143,7 +143,13 @@ export type Schema = {
 	docs: { handle: string; name: string; html: string }[];
 };
 
-export type Block = { id?: string; type: string; fields: Values };
+export type Block = {
+	id?: string;
+	type: string;
+	fields: Values;
+	/** false: switched off, the website leaves it out */
+	enabled?: false;
+};
 
 /** The values of fields by their handle, of an entry, block or group. */
 export type Values = Record<string, unknown>;

@@ -73,6 +73,7 @@ pub(super) async fn serve(
 		hooks: Arc::new(hooks),
 		..AppState::new(db, schema, gql, files)
 	};
+	tokio::spawn(watch_dates(state.clone()));
 	let app = app(state, routes);
 
 	let listener = tokio::net::TcpListener::bind(&listen)
@@ -113,4 +114,26 @@ pub(crate) fn app(state: AppState, routes: Router<AppState>) -> Router {
 		)
 		.layer(TraceLayer::new_for_http())
 		.with_state(state)
+}
+
+/// Every minute: entries that went live or expired by their dates tell
+/// the hooks (`ChangeKind::Dated`), a cache of the website clears like
+/// after a save.
+async fn watch_dates(state: AppState) {
+	let mut last = crate::db::now();
+	let mut tick = tokio::time::interval(std::time::Duration::from_secs(60));
+	loop {
+		tick.tick().await;
+		let now = crate::db::now();
+		let dated = crate::entries::dated_between(&state.db.conn(), last, now);
+		match dated {
+			Ok(entries) => {
+				for (id, section) in entries {
+					state.changed(id, &section, crate::ChangeKind::Dated);
+				}
+				last = now;
+			}
+			Err(e) => tracing::warn!("dates of entries: {e}"),
+		}
+	}
 }

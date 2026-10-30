@@ -67,6 +67,7 @@ pub struct Element {
 	pub enabled: bool,
 	pub parent_id: Option<i64>,
 	pub post_date: Option<String>,
+	pub expiry_date: Option<String>,
 	pub date_created: Option<String>,
 	#[serde(default)]
 	pub fields: Value,
@@ -231,6 +232,10 @@ pub fn import(
 				title: title_of(e),
 				slug: e.slug.clone().unwrap_or_default(),
 				published: e.enabled,
+				dates: entries::Dates {
+					post_date: e.post_date.as_deref().and_then(parse_iso),
+					expiry_date: e.expiry_date.as_deref().and_then(parse_iso),
+				},
 				parent_id: None,
 				fields,
 			};
@@ -286,6 +291,7 @@ pub fn import(
 				title: current.title,
 				slug: current.slug,
 				published: true,
+				dates: Default::default(),
 				parent_id: None,
 				fields: im.fields(comp, &global.fields),
 			};
@@ -528,16 +534,13 @@ impl Importer<'_> {
 	}
 
 	/// A nested entry as a block of the same type, its title into a field
-	/// `title` if the block has one.
+	/// `title` if the block has one; a disabled one is a switched off block.
 	fn block(
 		&mut self,
 		field: &Field,
 		types: &[String],
 		nested: &Value,
 	) -> Option<Value> {
-		if nested["enabled"] == false {
-			return None;
-		}
 		let ty = nested["type"].as_str().unwrap_or_default();
 		let Some(comp) = self
 			.schema
@@ -554,7 +557,11 @@ impl Importer<'_> {
 		{
 			fields["title"] = Value::from(t);
 		}
-		Some(json!({ "type": ty, "fields": fields }))
+		let mut block = json!({ "type": ty, "fields": fields });
+		if nested["enabled"] == false {
+			block["enabled"] = false.into();
+		}
+		Some(block)
 	}
 
 	/// Craft's link `{ type, id, value, label, target, download }`.

@@ -312,6 +312,7 @@ fn tool_create_entry(t: &Ctx, input: &Value) -> ToolResult {
 			title: req("title"),
 			slug: req("slug"),
 			published: false,
+			dates: Default::default(),
 			parent_id: input["parent_id"].as_i64(),
 			fields: input.get("fields").cloned().unwrap_or(json!({})),
 		},

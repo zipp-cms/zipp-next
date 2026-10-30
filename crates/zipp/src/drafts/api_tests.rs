@@ -10,6 +10,7 @@ use crate::testing::{Client, TestServer};
 
 fn content(title: &str, fields: serde_json::Value) -> SiteDoc {
 	SiteDoc {
+		dates: Default::default(),
 		title: title.into(),
 		slug: crate::entries::slugify(title),
 		published: true,

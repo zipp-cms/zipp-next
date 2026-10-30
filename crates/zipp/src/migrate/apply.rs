@@ -352,6 +352,7 @@ mod tests {
 				.unwrap();
 
 		let sd = crate::drafts::SiteDoc {
+			dates: Default::default(),
 			title: "E".into(),
 			slug: "e".into(),
 			published: true,

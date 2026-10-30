@@ -11,8 +11,9 @@ fields, so one query loads a page with everything it shows:
 `entry(uri: "about/team", site: "en") { title ... on page_Entry {
 content { ... on images_Block { images { url alt } } } } }`. `entries`
 and `entryCount` take the same filters as the rest api (`where: [{
-field: "city", value: "Bern" }]`). Without a session only published
-entries show.
+field: "city", value: "Bern" }]`). Without a session only live entries
+show: published, after their post date and before their expiry date;
+switched off blocks never.
 
 ## Private GraphQL, dev and prod
 
@@ -35,7 +36,8 @@ offerCategory: 5)` the entries pointing to 5, `offerCategory:
 ":notempty:"` to anything, `":empty:"` to nothing. Image transforms may
 have Craft's names like `land_w800`. Ids of entries and
 assets are strings (`ID`) like Craft's. Entries have
-`postDate`, `dateCreated`, `dateUpdated`, `language` and `localized`
+`postDate`, `expiryDate`, `dateCreated`, `dateUpdated`, `language` and
+`localized`
 (the entry in the other sites), images `focalPoint`, `title` and
 `url(width: 800)` for the widths of `.image_widths([400, 800, 1600])`.
 

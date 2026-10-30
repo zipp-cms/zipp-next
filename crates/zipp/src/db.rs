@@ -17,7 +17,10 @@ const MIGRATIONS: &[&str] = &[r#"
 		parent_id INTEGER REFERENCES entries(id) ON DELETE CASCADE,
 		position INTEGER NOT NULL DEFAULT 0,
 		created_at INTEGER NOT NULL,
-		updated_at INTEGER NOT NULL
+		updated_at INTEGER NOT NULL,
+		-- live from (set when first published) and until, in all sites
+		post_date INTEGER,
+		expiry_date INTEGER
 	);
 	CREATE INDEX entries_section ON entries(section);
 	CREATE INDEX entries_parent ON entries(parent_id);

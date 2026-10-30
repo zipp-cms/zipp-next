@@ -10,7 +10,8 @@ pub struct Revision {
 	pub changes: Vec<FieldChange>,
 }
 
-/// A field (or title, slug, published) that changed, and in which sites.
+/// A field (or title, slug, published, postDate, expiryDate) that
+/// changed, and in which sites.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FieldChange {
 	pub field: String,
@@ -42,6 +43,12 @@ pub fn diff_docs(old: &Doc, new: &Doc) -> Vec<FieldChange> {
 		}
 		if o.published != n.published {
 			add("published", site);
+		}
+		if o.dates.post_date != n.dates.post_date {
+			add("postDate", site);
+		}
+		if o.dates.expiry_date != n.dates.expiry_date {
+			add("expiryDate", site);
 		}
 		let empty = serde_json::Map::new();
 		let of = o.fields.as_object().unwrap_or(&empty);

@@ -12,6 +12,7 @@ pub fn input(
 	fields: Value,
 ) -> EntryInput {
 	EntryInput {
+		dates: Default::default(),
 		section: section.into(),
 		ty: ty.into(),
 		site: None,
@@ -258,4 +259,79 @@ fn asset_fields_take_their_kinds_of_files() {
 	assert_eq!(errs[0].path, "body.0.pdf");
 	assert_eq!(errs[0].message, "asset 2 is no pdf");
 	save(&conn, &s, None, page(json!({ "pdf": [1] })), None).unwrap();
+}
+
+#[test]
+fn live_between_post_and_expiry_date() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	let now = crate::db::now();
+	const DAY: i64 = 24 * 60 * 60 * 1000;
+	let event = |title: &str, dates: Dates| EntryInput {
+		dates,
+		..input("events", "event", title, json!({}))
+	};
+
+	// published: its post date is now
+	let a =
+		save(&conn, &s, None, event("Jetzt", Dates::default()), None).unwrap();
+	let post = a.dates.post_date.unwrap();
+	assert!((post - now).abs() < 1000, "{post} {now}");
+	// not published: none yet
+	let mut draft = event("Entwurf", Dates::default());
+	draft.published = false;
+	let d = save(&conn, &s, None, draft, None).unwrap();
+	assert_eq!(d.dates.post_date, None);
+
+	let soon = Dates {
+		post_date: Some(now + DAY),
+		expiry_date: None,
+	};
+	save(&conn, &s, None, event("Bald", soon), None).unwrap();
+	let gone = Dates {
+		post_date: Some(now - 2 * DAY),
+		expiry_date: Some(now - DAY),
+	};
+	let old = save(&conn, &s, None, event("Vorbei", gone), None).unwrap();
+
+	let live = |conn: &Connection| {
+		let mut q = query(&[("section", "events"), ("order", "title")]);
+		q.published_only = true;
+		let (entries, _) = list(conn, &q).unwrap();
+		entries.into_iter().map(|e| e.title).collect::<Vec<_>>()
+	};
+	assert_eq!(live(&conn), ["Jetzt"]);
+	// the studio sees all of them
+	assert_eq!(titles(&conn, &[("section", "events")]).len(), 4);
+
+	// saving without dates keeps the post date, the expiry date goes
+	let again = save(
+		&conn,
+		&s,
+		Some(old.id),
+		event("Vorbei", Dates::default()),
+		None,
+	)
+	.unwrap();
+	assert_eq!(again.dates.post_date, gone.post_date);
+	assert_eq!(again.dates.expiry_date, None);
+	assert_eq!(live(&conn), ["Jetzt", "Vorbei"]);
+
+	// an expiry before the post date
+	let wrong = Dates {
+		post_date: Some(now),
+		expiry_date: Some(now - DAY),
+	};
+	let Err(Error::Invalid(errs)) =
+		save(&conn, &s, None, event("Falsch", wrong), None)
+	else {
+		panic!("should fail");
+	};
+	assert_eq!(errs[0].path, "expiryDate");
+
+	// what went live in a window, for the hooks
+	let went = dated_between(&conn, now + 1000, now + 2 * DAY).unwrap();
+	assert_eq!(went.len(), 1);
+	assert_eq!(went[0].1, "events");
 }
