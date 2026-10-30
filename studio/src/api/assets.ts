@@ -36,7 +36,7 @@ export type Edits = {
 	crop: { x: number; y: number; w: number; h: number } | null;
 	resize: { width: number; height: number | null } | null;
 	canvas: { width: number; height: number } | null;
-	/** `#rrggbb` or `transparent`, white without one */
+	/** `#rrggbb` or `transparent`, transparent without one */
 	background: string | null;
 };
 
@@ -65,7 +65,8 @@ export function noEdits(e: Edits): boolean {
 
 /** Whether the edited image has transparent parts around it. */
 export function transparentEdges(e: Edits): boolean {
-	return e.background === 'transparent' && (!!e.canvas || cropsOutside(e));
+	const transparent = (e.background ?? 'transparent') === 'transparent';
+	return transparent && (!!e.canvas || cropsOutside(e));
 }
 
 /** The image with its edits, its thumbnail, or the file as uploaded. */

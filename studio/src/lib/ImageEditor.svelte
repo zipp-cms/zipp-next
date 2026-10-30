@@ -91,7 +91,14 @@
 
 	const outside = $derived(cropsOutside(edits));
 	/** around the image: past the crop and on the canvas */
-	const background = $derived(edits.background ?? '#ffffff');
+	const background = $derived(edits.background ?? 'transparent');
+	// the color the color button sets, kept while transparent
+	// svelte-ignore state_referenced_locally
+	let color = $state(
+		edits.background && edits.background !== 'transparent'
+			? edits.background
+			: '#ffffff',
+	);
 
 	/** Fills a canvas with the background, unless it is transparent. */
 	function fill(ctx: CanvasRenderingContext2D, w: number, h: number) {
@@ -106,17 +113,10 @@
 		void [edits.rotate, edits.flipH, edits.flipV, mode];
 		const base = turnedCanvas();
 		if (mode === 'crop') {
-			// with room around, the crop may reach past the image
-			const [px, py] = [pad * base.width, pad * base.height];
-			view.width = base.width + 2 * px;
-			view.height = base.height + 2 * py;
-			const ctx = view.getContext('2d')!;
-			fill(ctx, view.width, view.height);
-			ctx.drawImage(base, px, py);
-			ctx.setLineDash([8, 6]);
-			ctx.lineWidth = Math.max(1, base.width / 400);
-			ctx.strokeStyle = 'rgba(16, 24, 40, 0.5)';
-			ctx.strokeRect(px, py, base.width, base.height);
+			// only the image, the crop area around it is the stage
+			view.width = base.width;
+			view.height = base.height;
+			view.getContext('2d')!.drawImage(base, 0, 0);
 			return;
 		}
 		// the crop, past the image the background
@@ -176,23 +176,46 @@
 	const rect = $derived(edits.crop ?? { x: 0, y: 0, w: 1, h: 1 });
 
 	/**
-	 * The room around the image while cropping, in images: a quarter, or
-	 * more when the crop reaches further. It only grows while cropping,
-	 * the image doesn't jump under the pointer.
+	 * While cropping the whole stage is the area: the image in the middle,
+	 * the crop may reach past it into the checkerboard, at most one image
+	 * beyond each side. `scale` is pixels on screen per image pixel; it
+	 * only changes between drags, the image doesn't move under the
+	 * pointer.
 	 */
-	let pad = $state(0.25);
-	function fitPad(shrink: boolean) {
-		const r = rect;
-		const past = Math.max(-r.x, -r.y, r.x + r.w - 1, r.y + r.h - 1);
-		const need = Math.min(1, Math.max(0.25, past + 0.1));
-		pad = shrink ? need : Math.max(pad, need);
-	}
+	let area = $state({ w: 0, h: 0 });
+	let scale = $state(0);
+	let refit = $state(0);
 	$effect(() => {
-		if (mode === 'crop') untrack(() => fitPad(true));
+		void [mode, area.w, area.h, turned.w, turned.h, refit];
+		untrack(() => {
+			const { w: W, h: H } = turned;
+			const r = rect;
+			// the image and the crop fit, centered on the image
+			const needX = 2 * Math.max(0.5, 0.5 - r.x, r.x + r.w - 0.5);
+			const needY = 2 * Math.max(0.5, 0.5 - r.y, r.y + r.h - 0.5);
+			scale = Math.min(
+				(0.8 * area.w) / W,
+				(0.8 * area.h) / H,
+				(0.96 * area.w) / (W * needX),
+				(0.96 * area.h) / (H * needY),
+			);
+		});
 	});
-	/** A place in the crop view, 0 to 1 of the image, in percent. */
-	const at = (v: number) => ((pad + v) / (1 + 2 * pad)) * 100;
-	const span = (v: number) => (v / (1 + 2 * pad)) * 100;
+	/** where the image is in the area, and how far the crop may go */
+	const place = $derived.by(() => {
+		const w = turned.w * scale;
+		const h = turned.h * scale;
+		const left = (area.w - w) / 2;
+		const top = (area.h - h) / 2;
+		return {
+			left,
+			top,
+			w,
+			h,
+			x: [Math.max(-1, -left / w), Math.min(2, 1 + left / w)],
+			y: [Math.max(-1, -top / h), Math.min(2, 1 + top / h)],
+		};
+	});
 
 	function setCrop(c: { x: number; y: number; w: number; h: number }) {
 		const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
@@ -218,7 +241,6 @@
 		kind: 'move' | 'nw' | 'ne' | 'sw' | 'se';
 		start: { x: number; y: number };
 		from: typeof rect;
-		box: DOMRect;
 	} | null = null;
 
 	function down(e: PointerEvent, kind: NonNullable<typeof drag>['kind']) {
@@ -230,27 +252,24 @@
 			kind,
 			start: { x: e.clientX, y: e.clientY },
 			from: { ...rect },
-			box: view.getBoundingClientRect(),
 		};
 	}
 
 	function move(e: PointerEvent) {
 		if (!drag) return;
-		// in images, the view has the room around it
-		const dx =
-			((e.clientX - drag.start.x) / drag.box.width) * (1 + 2 * pad);
-		const dy =
-			((e.clientY - drag.start.y) / drag.box.height) * (1 + 2 * pad);
+		// in images
+		const dx = (e.clientX - drag.start.x) / place.w;
+		const dy = (e.clientY - drag.start.y) / place.h;
 		const f = drag.from;
 		const min = 0.03;
-		// as far as the view goes, past the image too
-		const lo = -pad;
-		const hi = 1 + pad;
+		// as far as the area goes, past the image too
+		const [lx, hx] = place.x;
+		const [ly, hy] = place.y;
 		if (drag.kind === 'move') {
 			setCrop({
 				...f,
-				x: Math.min(Math.max(lo, f.x + dx), hi - f.w),
-				y: Math.min(Math.max(lo, f.y + dy), hi - f.h),
+				x: Math.min(Math.max(lx, f.x + dx), hx - f.w),
+				y: Math.min(Math.max(ly, f.y + dy), hy - f.h),
 			});
 			return;
 		}
@@ -260,15 +279,15 @@
 			y1 = f.y,
 			x2 = f.x + f.w,
 			y2 = f.y + f.h;
-		if (left) x1 = Math.min(Math.max(lo, x1 + dx), x2 - min);
-		else x2 = Math.max(Math.min(hi, x2 + dx), x1 + min);
-		if (top) y1 = Math.min(Math.max(lo, y1 + dy), y2 - min);
-		else y2 = Math.max(Math.min(hi, y2 + dy), y1 + min);
+		if (left) x1 = Math.min(Math.max(lx, x1 + dx), x2 - min);
+		else x2 = Math.max(Math.min(hx, x2 + dx), x1 + min);
+		if (top) y1 = Math.min(Math.max(ly, y1 + dy), y2 - min);
+		else y2 = Math.max(Math.min(hy, y2 + dy), y1 + min);
 		// a ratio: the height follows the width, within the view
 		if (want !== null) {
 			let w = x2 - x1;
 			let h = (w * turned.w) / (want * turned.h);
-			const room = top ? y2 - lo : hi - y1;
+			const room = top ? y2 - ly : hy - y1;
 			if (h > room) {
 				h = room;
 				w = (h * want * turned.h) / turned.w;
@@ -283,7 +302,7 @@
 
 	function up() {
 		drag = null;
-		fitPad(false);
+		refit++;
 	}
 
 	// --- rotate and flip ---
@@ -361,27 +380,31 @@
 </script>
 
 {#snippet backgroundPicker()}
-	<label class="check">
-		<input
-			type="checkbox"
-			checked={background === 'transparent'}
-			onchange={e =>
-				(edits.background = e.currentTarget.checked
-					? 'transparent'
-					: null)}
-		/>
-		Transparent
-	</label>
-	{#if background !== 'transparent'}
-		<label class="color">
-			Color
+	<div class="background" role="group" aria-label="Background">
+		<span class="label">Background</span>
+		<button
+			type="button"
+			class:on={background === 'transparent'}
+			onclick={() => (edits.background = null)}
+		>
+			<span class="swatch checker"></span>
+			 Transparent
+		</button>
+		<!-- the button opens the color picker -->
+		<label class="button" class:on={background !== 'transparent'}>
+			<span class="swatch" style:background={color}></span>
+			{color}
 			<input
 				type="color"
-				value={background}
-				oninput={e => (edits.background = e.currentTarget.value)}
+				value={color}
+				onclick={() => (edits.background = color)}
+				oninput={e => {
+					color = e.currentTarget.value;
+					edits.background = color;
+				}}
 			/>
 		</label>
-	{/if}
+	</div>
 {/snippet}
 
 <div class="editor">
@@ -563,44 +586,72 @@
 		</p>
 	{/if}
 
-	<div class="stage">
-		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-		<div
-			class="frame"
-			class:focal={mode === 'focal' && editable}
-			onclick={setFocal}
-		>
-			<canvas bind:this={view}></canvas>
-			{#if mode === 'focal'}
-				<span
-					class="point"
-					style:left="{focal.x * 100}%"
-					style:top="{focal.y * 100}%"
-				></span>
-			{:else if mode === 'crop'}
-				<div
-					class="crop"
-					style:left="{at(rect.x)}%"
-					style:top="{at(rect.y)}%"
-					style:width="{span(rect.w)}%"
-					style:height="{span(rect.h)}%"
-					onpointerdown={e => down(e, 'move')}
-					onpointermove={move}
-					onpointerup={up}
-					role="presentation"
-				>
-					{#each ['nw', 'ne', 'sw', 'se'] as const as h (h)}
-						<span
-							class="handle {h}"
-							onpointerdown={e => down(e, h)}
-							onpointermove={move}
-							onpointerup={up}
-							role="presentation"
-						></span>
-					{/each}
-				</div>
-			{/if}
-		</div>
+	<div class="stage" class:cropping={mode === 'crop'}>
+		{#if mode === 'crop'}
+			<div
+				class="area"
+				bind:clientWidth={area.w}
+				bind:clientHeight={area.h}
+			>
+				{#if img && scale > 0}
+					{#if background !== 'transparent'}
+						<div
+							class="fill"
+							style:background
+							style:left="{place.left + rect.x * place.w}px"
+							style:top="{place.top + rect.y * place.h}px"
+							style:width="{rect.w * place.w}px"
+							style:height="{rect.h * place.h}px"
+						></div>
+					{/if}
+					<canvas
+						bind:this={view}
+						class="placed"
+						style:left="{place.left}px"
+						style:top="{place.top}px"
+						style:width="{place.w}px"
+						style:height="{place.h}px"
+					></canvas>
+					<div
+						class="crop"
+						style:left="{place.left + rect.x * place.w}px"
+						style:top="{place.top + rect.y * place.h}px"
+						style:width="{rect.w * place.w}px"
+						style:height="{rect.h * place.h}px"
+						onpointerdown={e => down(e, 'move')}
+						onpointermove={move}
+						onpointerup={up}
+						role="presentation"
+					>
+						{#each ['nw', 'ne', 'sw', 'se'] as const as h (h)}
+							<span
+								class="handle {h}"
+								onpointerdown={e => down(e, h)}
+								onpointermove={move}
+								onpointerup={up}
+								role="presentation"
+							></span>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{:else}
+			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+			<div
+				class="frame"
+				class:focal={mode === 'focal' && editable}
+				onclick={setFocal}
+			>
+				<canvas bind:this={view}></canvas>
+				{#if mode === 'focal'}
+					<span
+						class="point"
+						style:left="{focal.x * 100}%"
+						style:top="{focal.y * 100}%"
+					></span>
+				{/if}
+			</div>
+		{/if}
 		{#if !img}<p class="note">Loading…</p>{/if}
 	</div>
 	{#if mode === 'focal' && editable}
@@ -687,10 +738,59 @@
 		font-weight: 500;
 	}
 
-	.color input {
-		width: 3rem;
-		height: 32px;
-		padding: 2px;
+	.background {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+
+		.label {
+			margin-right: 2px;
+			color: var(--muted);
+			font-size: 12px;
+		}
+
+		// a label that looks like the buttons, it opens the color picker
+		.button {
+			position: relative;
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			padding: 6px 12px;
+			font-size: 13px;
+			font-weight: 500;
+			font-family: var(--mono);
+			border: 1px solid var(--border-strong);
+			border-radius: 5px;
+			background: var(--surface);
+			cursor: pointer;
+
+			&.on {
+				color: var(--accent);
+				background: var(--accent-soft);
+				border-color: var(--accent-soft);
+			}
+
+			input {
+				position: absolute;
+				inset: 0;
+				width: 100%;
+				height: 100%;
+				opacity: 0;
+				cursor: pointer;
+			}
+		}
+	}
+
+	.swatch {
+		width: 14px;
+		height: 14px;
+		border-radius: 3px;
+		box-shadow: inset 0 0 0 1px rgba(16, 24, 40, 0.2);
+
+		&.checker {
+			background: repeating-conic-gradient(#d0d5dd 0 25%, #fff 0 50%) 0
+				0 / 7px 7px;
+		}
 	}
 
 	.note {
@@ -791,7 +891,29 @@
 		}
 	}
 
-	.frame:has(.crop) {
+	// the whole stage is the crop area
+	.stage.cropping {
+		display: block;
+		padding: 0;
 		overflow: hidden;
+	}
+
+	.area {
+		position: relative;
+		width: 100%;
+		height: 60vh;
+		overflow: hidden;
+	}
+
+	.placed {
+		position: absolute;
+		max-width: none;
+		max-height: none;
+		box-shadow: none;
+		outline: 1px dashed rgba(16, 24, 40, 0.45);
+	}
+
+	.fill {
+		position: absolute;
 	}
 </style>

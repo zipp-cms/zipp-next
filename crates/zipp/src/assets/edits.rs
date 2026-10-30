@@ -26,7 +26,8 @@ pub struct Edits {
 	pub resize: Option<Resize>,
 	/// a bigger area the image sits in the middle of
 	pub canvas: Option<Canvas>,
-	/// `#rrggbb` or `transparent` around the image, white without one
+	/// `#rrggbb` or `transparent` around the image, transparent without
+	/// one
 	#[serde(default)]
 	pub background: Option<String>,
 }
@@ -68,15 +69,18 @@ impl Edits {
 
 	/// Whether the result needs an alpha channel.
 	pub fn transparent(&self) -> bool {
-		self.background.as_deref() == Some("transparent")
+		self.background
+			.as_deref()
+			.is_none_or(|b| b == "transparent")
 			&& (self.canvas.is_some() || self.outside())
 	}
 
 	fn background(&self) -> Rgba<u8> {
 		match self.background.as_deref() {
-			Some("transparent") => Rgba([0, 0, 0, 0]),
-			Some(c) => color(c).unwrap_or(Rgba([255; 4])),
-			None => Rgba([255; 4]),
+			Some(c) if c != "transparent" => {
+				color(c).unwrap_or(Rgba([0, 0, 0, 0]))
+			}
+			_ => Rgba([0, 0, 0, 0]),
 		}
 	}
 

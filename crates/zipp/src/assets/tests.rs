@@ -99,7 +99,7 @@ fn edits_change_the_image_not_the_file() {
 			width: 400,
 			height: 400,
 		}),
-		background: Some("transparent".into()),
+		// no background: transparent
 		..Default::default()
 	};
 	edits.check().unwrap();
