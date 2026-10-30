@@ -58,7 +58,8 @@ fn schema() -> Schema {
 		// the pages like the crelte tutorial: the home page is the page of
 		// type home, the news page lists the articles
 		.section(
-			Section::structure("pages", ["home", "page", "news"])
+			// a new page is a page, the home and news page are there once
+			Section::structure("pages", ["page", "home", "news"])
 				.uri("{parent.uri}/{slug}")
 				.uri_of("home", ""),
 		)

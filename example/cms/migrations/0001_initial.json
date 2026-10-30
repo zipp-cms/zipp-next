@@ -469,12 +469,12 @@
                 "label": "Section Events"
               },
               {
-                "value": "type:home",
-                "label": "Entry type Home"
-              },
-              {
                 "value": "type:page",
                 "label": "Entry type Page"
+              },
+              {
+                "value": "type:home",
+                "label": "Entry type Home"
               },
               {
                 "value": "type:news",
@@ -1431,8 +1431,8 @@
         "name": "Pages",
         "kind": "structure",
         "types": [
-          "home",
           "page",
+          "home",
           "news"
         ],
         "uri": "{parent.uri}/{slug}",
@@ -1545,8 +1545,8 @@
         "name": "Pages",
         "kind": "structure",
         "types": [
-          "home",
           "page",
+          "home",
           "news"
         ],
         "uri": "{parent.uri}/{slug}",
@@ -2080,12 +2080,12 @@
                 "label": "Section Events"
               },
               {
-                "value": "type:home",
-                "label": "Entry type Home"
-              },
-              {
                 "value": "type:page",
                 "label": "Entry type Page"
+              },
+              {
+                "value": "type:home",
+                "label": "Entry type Home"
               },
               {
                 "value": "type:news",

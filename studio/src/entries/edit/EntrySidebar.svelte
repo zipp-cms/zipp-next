@@ -101,6 +101,38 @@
 			{/if}
 
 			<fieldset class="inline" disabled={!may.edit}>
+				<label>
+					<span>Type</span>
+					{#if isNew && secDef.types.length > 1}
+						<select bind:value={ed.ty}>
+							{#each secDef.types as t (t)}
+								<option value={t}>
+									{componentName(schema, t)}
+								</option>
+							{/each}
+						</select>
+					{:else}
+						<a
+							class="value"
+							href={setupPath('types', comp.handle)}
+							title="Its fields in Setup"
+						>
+							{comp.name}
+						</a>
+					{/if}
+				</label>
+
+				{#if isNew && ed.parents.length}
+					<label>
+						<span>Parent</span>
+						<select bind:value={ed.parentId}>
+							<option value={null}>None, on the top</option>
+							{#each ed.parents as p (p.id)}
+								<option value={p.id}>{p.title}</option>
+							{/each}
+						</select>
+					</label>
+				{/if}
 				{#if !single}
 					<label>
 						<span>
@@ -147,39 +179,6 @@
 						{#if ed.errors.expiryDate}<span class="error">
 								{ed.errors.expiryDate}
 							</span>{/if}
-					</label>
-				{/if}
-
-				<label>
-					<span>Type</span>
-					{#if isNew && secDef.types.length > 1}
-						<select bind:value={ed.ty}>
-							{#each secDef.types as t (t)}
-								<option value={t}>
-									{componentName(schema, t)}
-								</option>
-							{/each}
-						</select>
-					{:else}
-						<a
-							class="value"
-							href={setupPath('types', comp.handle)}
-							title="Its fields in Setup"
-						>
-							{comp.name}
-						</a>
-					{/if}
-				</label>
-
-				{#if isNew && ed.parents.length}
-					<label>
-						<span>Parent</span>
-						<select bind:value={ed.parentId}>
-							<option value={null}>None, on the top</option>
-							{#each ed.parents as p (p.id)}
-								<option value={p.id}>{p.title}</option>
-							{/each}
-						</select>
 					</label>
 				{/if}
 			</fieldset>
