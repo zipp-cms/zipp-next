@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { Field, Values } from '../api';
-	import Segmented from '../lib/Segmented.svelte';
+	import type { Field, Values } from '../core/schema';
+	import Segmented from '../ui/Segmented.svelte';
 
 	/**
 	 * One of the options: up to three as buttons, more as a select. A

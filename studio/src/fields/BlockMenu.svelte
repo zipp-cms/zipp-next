@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { Component } from '../api';
-	import Icon from '../lib/Icon.svelte';
-	import Popover from '../lib/Popover.svelte';
-	import SearchList from '../lib/SearchList.svelte';
+	import type { Component } from '../core/schema';
+	import Icon from '../ui/Icon.svelte';
+	import Popover from '../ui/Popover.svelte';
+	import SearchList from '../ui/SearchList.svelte';
 
 	/**
 	 * Adds a block: as a bar with the types (the first ones as buttons,

@@ -102,5 +102,10 @@
 - [x] SEO as the plugin `zipp-seo`, the test of the plugin system (operator
   2026-10-28); field handles for admins; tabs of entry types, shown in Setup
 - Tabs for blocks too, like Craft's nested entry types? (question)
+- Two AI features (operator 2026-10-30, later): the AI chat in the core
+  (`crates/zipp/src/ai`, a model on OpenRouter that writes drafts, for
+  roles with `.ai()`) and the coding agent of the plugin `zipp-agent`
+  (development, admins); the studio's AI page shows the agent when the
+  plugin is on. Should the chat be a plugin too, or both one feature?
 - Where translation keys live: in code (today) or in the frontend's JSON
   (question, open since the textrem plans)

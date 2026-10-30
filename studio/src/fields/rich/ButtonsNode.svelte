@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import type { Link, Refs, Schema } from '../../api';
+	import type { Link, Schema } from '../../core/schema';
+	import type { Refs } from '../../entries/api';
 	import LinkField from '../LinkField.svelte';
 	import EmbedCard from './EmbedCard.svelte';
-	import AddButton from '../../lib/AddButton.svelte';
-	import ItemActions from '../../lib/ItemActions.svelte';
-	import { linkField, linkLabel, linkTarget } from '../../lib/link';
-	import { clone, moved, removed } from '../../lib/list';
+	import AddButton from '../../ui/AddButton.svelte';
+	import ItemActions from '../../ui/ItemActions.svelte';
+	import { linkField, linkLabel, linkTarget } from '../link';
+	import { clone, moved, removed } from '../../core/list';
 
 	/** A row of buttons in a rich text, each one a link with a label. */
 	let {

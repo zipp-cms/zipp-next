@@ -1,7 +1,8 @@
 <script lang="ts">
-	import type { Field, Refs, Schema, Values } from '../api';
+	import type { Field, Schema, Values } from '../core/schema';
+	import type { Refs } from '../entries/api';
 	import Fields from './Fields.svelte';
-	import { componentOf } from '../lib/schema';
+	import { componentOf } from '../core/schema';
 
 	/** The fields of another component under one name, always there. */
 	let {

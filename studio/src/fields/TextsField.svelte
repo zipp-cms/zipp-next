@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { Field, Schema, Values } from '../api';
-	import { site } from '../route.svelte';
+	import type { Field, Schema, Values } from '../core/schema';
+	import { site } from '../core/route.svelte';
 
 	/**
 	 * The texts of the frontend: the keys come from the code with the text

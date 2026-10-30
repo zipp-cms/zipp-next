@@ -48,30 +48,37 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   `lib.rs` is the public api, `cli.rs` the commands, `server.rs` the
   router, `testing.rs` the test server. Plugin crates have the same
   files.
-- `studio/src`: `api/` (one file per area, `index.ts` re-exports;
-  `client.ts` sends requests and reads streams), `pages/` (a folder per
-  page with parts: `edit/`, `setup/`, `ai/`), `fields/` (one component
-  per field kind, `registry.ts` maps the kinds, `rich/` the rich text),
-  `lib/` (shared components and the logic in `.ts`: `image/` the image
-  editor, `nav/` the sidebar). Tokens and shared classes are in
-  `app.scss`.
+- `studio/src`: one folder per area like the server: `entries/` (lists,
+  the editor in `edit/`, drafts), `assets/` (the library, the asset
+  panel, the image editor in `image/`), `fields/` (one component per
+  field kind, `registry.ts` maps the kinds, `rich/` the rich text),
+  `setup/`, `ai/`, `users/`, `auth/`. An area has its `api.ts` (the
+  requests of its server area), its pages and components and their
+  logic in `.ts`. What several areas use: `ui/` (components without an
+  area, the icons), `core/` (`client.ts` sends requests and reads
+  streams, `schema.ts` the schema's types and lookups, `route` the
+  page and site, `access`, `format`, `list`, `busy`, `flyout`), `shell/`
+  (the app with its pages, the sidebar). An area imports from `ui/`, `core/` and other areas'
+  `api.ts` and components; `ui/` and `core/` import no area. Tokens and
+  shared classes are in `app.scss`.
 
 ## The studio
 
 - One component per piece of UI, one look. Before building something,
-  use what `lib/` has:
+  use what `ui/` and the areas have:
   - overlays: `Flyout` (the panel from the right, also for pickers),
     `Popover` (menus, pickers under their button; Escape and a click
     outside close it, `layers.ts` closes only the top one), `Menu` (⋯),
     `SearchList` in a popover, `.popup-item` for its lines;
   - pages: `PageTop` (crumbs or title, state, actions), `.with-aside`
-    and `.cards` for the layout, `SiteBadges`, `.empty` for nothing and
+    and `.cards` for the layout, `.empty` for nothing and
     Loading…, `.error` for errors;
   - fields: `ItemCard` (blocks, embeds, nav items), `ItemActions` (move,
     duplicate, remove in every list), `EntryChip` and `AssetChip` (a
     chosen entry or file), `AddButton`, `UploadButton`, `SearchInput`,
-    `Segmented` (tabs and short choices), `EntrySearch`,
-    `AssetPicker`;
+    `Segmented` (tabs and short choices), `entries/EntrySearch`,
+    `entries/SiteBadges`,
+    `assets/AssetPicker`;
   - text: `.muted`, `.note`, `.truncate`, `label.stacked`, `label.check`.
 - A component renders; what it does goes into a `.ts` (or `.svelte.ts`
   for state) next to it when it is more than a few lines: geometry,
@@ -82,8 +89,8 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
 - CSS uses the tokens of `app.scss` (colors, `--fs-*`, `--radius*`,
   shadows, z-index layers), no hex colors or pixel font sizes in
   components; a component styles only its own layout.
-- Lookups by handle: `lib/schema.ts`; lists of a field: `lib/list.ts`;
-  links: `lib/link.ts`; dates and sizes: `lib/format.ts`.
+- Lookups by handle: `core/schema.ts`; lists of a field: `core/list.ts`;
+  links: `fields/link.ts`; dates and sizes: `core/format.ts`.
 - A field never writes its value when it mounts (opening an entry must
   not make a draft); new fields go into `fields/registry.ts`.
 

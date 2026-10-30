@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Field, NavItem, Refs, Schema, Values } from '../api';
+	import type { Field, NavItem, Schema, Values } from '../core/schema';
+	import type { Refs } from '../entries/api';
 	import NavItems from './NavItems.svelte';
 
 	/** A menu: links with their own label and the links under them. */

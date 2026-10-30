@@ -1,27 +1,15 @@
 <script lang="ts">
-	import type {
-		Asset,
-		EntryRef,
-		Field,
-		Link,
-		LinkKind,
-		Refs,
-		Schema,
-		Values,
-	} from '../api';
-	import AddButton from '../lib/AddButton.svelte';
-	import AssetChip from '../lib/AssetChip.svelte';
-	import AssetPicker from '../lib/AssetPicker.svelte';
-	import EntryChip from '../lib/EntryChip.svelte';
-	import EntrySearch from '../lib/EntrySearch.svelte';
-	import ItemActions from '../lib/ItemActions.svelte';
-	import { chosenAssets } from '../lib/assets.svelte';
-	import {
-		LINK_NAMES,
-		isExternal,
-		linkInput,
-		linkableTypes,
-	} from '../lib/link';
+	import type { Asset } from '../assets/api';
+	import type { Field, Link, LinkKind, Schema, Values } from '../core/schema';
+	import type { EntryRef, Refs } from '../entries/api';
+	import AddButton from '../ui/AddButton.svelte';
+	import AssetChip from '../assets/AssetChip.svelte';
+	import AssetPicker from '../assets/AssetPicker.svelte';
+	import EntryChip from '../entries/EntryChip.svelte';
+	import EntrySearch from '../entries/EntrySearch.svelte';
+	import ItemActions from '../ui/ItemActions.svelte';
+	import { chosenAssets } from '../assets/chosen.svelte';
+	import { LINK_NAMES, isExternal, linkInput, linkableTypes } from './link';
 
 	/**
 	 * A link to an entry, a url, an email, a phone or a file, with an

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { Field, Values } from '../api';
-	import AddButton from '../lib/AddButton.svelte';
-	import ItemActions from '../lib/ItemActions.svelte';
-	import { inserted, moved, removed, replaced } from '../lib/list';
+	import type { Field, Values } from '../core/schema';
+	import AddButton from '../ui/AddButton.svelte';
+	import ItemActions from '../ui/ItemActions.svelte';
+	import { inserted, moved, removed, replaced } from '../core/list';
 
 	/** Rows of the columns of the code, like Craft's table field. */
 	let { field, values }: { field: Field; values: Values } = $props();

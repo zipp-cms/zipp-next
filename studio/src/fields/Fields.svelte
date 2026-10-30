@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Component, Refs, Schema, Values } from '../api';
+	import type { Component, Schema, Values } from '../core/schema';
+	import type { Refs } from '../entries/api';
 	import FieldLabel from './FieldLabel.svelte';
 	import { FIELDS } from './registry';
 

@@ -1,9 +1,10 @@
 <script lang="ts">
 	import type { Editor } from '@tiptap/core';
-	import type { Component, Link, Refs, Schema } from '../../api';
-	import Icon from '../../lib/Icon.svelte';
-	import Popover from '../../lib/Popover.svelte';
-	import { linkField } from '../../lib/link';
+	import type { Component, Link, Schema } from '../../core/schema';
+	import type { Refs } from '../../entries/api';
+	import Icon from '../../ui/Icon.svelte';
+	import Popover from '../../ui/Popover.svelte';
+	import { linkField } from '../link';
 	import LinkField from '../LinkField.svelte';
 	import {
 		insertBlock,

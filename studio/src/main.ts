@@ -1,5 +1,5 @@
 import { mount } from 'svelte';
-import App from './App.svelte';
+import App from './shell/App.svelte';
 // bundled, the studio loads nothing from other servers
 import '@fontsource/inter/latin-400.css';
 import '@fontsource/inter/latin-500.css';

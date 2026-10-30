@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Field, Values } from '../api';
+	import type { Field, Values } from '../core/schema';
 
 	/** Some of the options, stored in the order of the options. */
 	let { field, values }: { field: Field; values: Values } = $props();

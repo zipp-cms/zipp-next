@@ -1,5 +1,6 @@
 import type { Component } from 'svelte';
-import type { Field, Refs, Schema, Values } from '../api';
+import type { Field, Schema, Values } from '../core/schema';
+import type { Refs } from '../entries/api';
 import AssetField from './AssetField.svelte';
 import BlocksField from './BlocksField.svelte';
 import CheckboxesField from './CheckboxesField.svelte';

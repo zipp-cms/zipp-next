@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Field, Values } from '../api';
+	import type { Field, Values } from '../core/schema';
 
 	/** A field that is one input: text, number, boolean. */
 	let {

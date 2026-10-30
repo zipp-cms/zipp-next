@@ -1,12 +1,13 @@
 <script lang="ts">
 	import NavItems from './NavItems.svelte';
 	import LinkField from './LinkField.svelte';
-	import AddButton from '../lib/AddButton.svelte';
-	import ItemActions from '../lib/ItemActions.svelte';
-	import ItemCard from '../lib/ItemCard.svelte';
-	import { linkField, linkLabel } from '../lib/link';
-	import { inserted, moved, removed, replaced } from '../lib/list';
-	import type { LinkKind, NavItem, Refs, Schema } from '../api';
+	import AddButton from '../ui/AddButton.svelte';
+	import ItemActions from '../ui/ItemActions.svelte';
+	import ItemCard from '../ui/ItemCard.svelte';
+	import { linkField, linkLabel } from './link';
+	import { inserted, moved, removed, replaced } from '../core/list';
+	import type { LinkKind, NavItem, Schema } from '../core/schema';
+	import type { Refs } from '../entries/api';
 
 	/**
 	 * The items of a level of a navigation, each a card with its link and

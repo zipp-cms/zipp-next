@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import type { Refs, Schema, Values } from '../../api';
+	import type { Schema, Values } from '../../core/schema';
+	import type { Refs } from '../../entries/api';
 	import Fields from '../Fields.svelte';
 	import EmbedCard from './EmbedCard.svelte';
-	import { blockSummary } from '../../lib/blocks.svelte';
-	import { clone } from '../../lib/list';
-	import { componentOf } from '../../lib/schema';
+	import { blockSummary } from '../blocks.svelte';
+	import { clone } from '../../core/list';
+	import { componentOf } from '../../core/schema';
 
 	/**
 	 * A block inside a rich text: a card with its summary, its fields like

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { markdown } from '../lib/markdown';
+	import { markdown } from '../core/markdown';
 	import { untrack } from 'svelte';
-	import type { Field, Values } from '../api';
-	import Segmented from '../lib/Segmented.svelte';
+	import type { Field, Values } from '../core/schema';
+	import Segmented from '../ui/Segmented.svelte';
 
 	/**
 	 * Markdown: shown rendered when there is text, so it reads like docs,

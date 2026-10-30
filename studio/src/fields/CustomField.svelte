@@ -16,9 +16,9 @@
 </script>
 
 <script lang="ts">
-	import type { Field, Values } from '../api';
-	import { host } from '../lib/host.svelte';
-	import { route, site } from '../route.svelte';
+	import type { Field, Values } from '../core/schema';
+	import { host } from './host.svelte';
+	import { route, site } from '../core/route.svelte';
 
 	/**
 	 * A field of a type of another crate: zipp serves its module, which

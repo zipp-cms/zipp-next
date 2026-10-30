@@ -1,7 +1,8 @@
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { Placeholder } from '@tiptap/extensions';
-import type { Field, Link, Refs, Schema } from '../../api';
+import type { Field, Link, Schema } from '../../core/schema';
+import type { Refs } from '../../entries/api';
 import { Block, Buttons, ZippLink } from './extensions.svelte';
 
 /** What a rich text field allows, from its field. */

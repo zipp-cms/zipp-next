@@ -1,6 +1,7 @@
 import { Mark, Node, type NodeViewRendererProps } from '@tiptap/core';
 import { mount, unmount, type Component } from 'svelte';
-import type { Refs, Schema } from '../../api';
+import type { Schema } from '../../core/schema';
+import type { Refs } from '../../entries/api';
 import BlockNode from './BlockNode.svelte';
 import ButtonsNode from './ButtonsNode.svelte';
 

@@ -1,9 +1,10 @@
 <script lang="ts">
-	import type { EntryRef, Field, Refs, Schema, Values } from '../api';
-	import EntryChip from '../lib/EntryChip.svelte';
-	import EntrySearch from '../lib/EntrySearch.svelte';
-	import ItemActions from '../lib/ItemActions.svelte';
-	import { inserted, isFull, moved, removed } from '../lib/list';
+	import type { Field, Schema, Values } from '../core/schema';
+	import type { EntryRef, Refs } from '../entries/api';
+	import EntryChip from '../entries/EntryChip.svelte';
+	import EntrySearch from '../entries/EntrySearch.svelte';
+	import ItemActions from '../ui/ItemActions.svelte';
+	import { inserted, isFull, moved, removed } from '../core/list';
 
 	/** Entries in an order, each a chip that opens it. */
 	let {

@@ -1,8 +1,9 @@
 <script lang="ts">
 	import type { Editor } from '@tiptap/core';
 	import { onDestroy, onMount } from 'svelte';
-	import type { Field, Refs, Schema, Values } from '../api';
-	import { site } from '../route.svelte';
+	import type { Field, Schema, Values } from '../core/schema';
+	import type { Refs } from '../entries/api';
+	import { site } from '../core/route.svelte';
 	import Toolbar from './rich/Toolbar.svelte';
 	import { EMPTY, createEditor, richOptions, trimmed } from './rich/editor';
 

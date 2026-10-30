@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Icon from '../../lib/Icon.svelte';
-	import ItemActions from '../../lib/ItemActions.svelte';
-	import ItemCard from '../../lib/ItemCard.svelte';
+	import Icon from '../../ui/Icon.svelte';
+	import ItemActions from '../../ui/ItemActions.svelte';
+	import ItemCard from '../../ui/ItemCard.svelte';
 
 	/**
 	 * Something in a rich text that isn't text: the card of a block, with

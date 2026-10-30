@@ -1,13 +1,14 @@
 <script lang="ts">
-	import type { Asset, Field, Values } from '../api';
-	import AddButton from '../lib/AddButton.svelte';
-	import AssetChip from '../lib/AssetChip.svelte';
-	import AssetPicker from '../lib/AssetPicker.svelte';
-	import ItemActions from '../lib/ItemActions.svelte';
-	import Thumb from '../lib/Thumb.svelte';
-	import { chosenAssets } from '../lib/assets.svelte';
-	import { openAsset } from '../lib/flyout.svelte';
-	import { inserted, isFull, moved, removed } from '../lib/list';
+	import type { Asset } from '../assets/api';
+	import type { Field, Values } from '../core/schema';
+	import AddButton from '../ui/AddButton.svelte';
+	import AssetChip from '../assets/AssetChip.svelte';
+	import AssetPicker from '../assets/AssetPicker.svelte';
+	import ItemActions from '../ui/ItemActions.svelte';
+	import Thumb from '../assets/Thumb.svelte';
+	import { chosenAssets } from '../assets/chosen.svelte';
+	import { openAsset } from '../core/flyout.svelte';
+	import { inserted, isFull, moved, removed } from '../core/list';
 
 	/**
 	 * Images as tiles, other files as chips, in an order; a click opens

@@ -442,7 +442,7 @@ ol.plain {
 	}
 }
 
-// a box that floats next to what opened it, see lib/Popover.svelte
+// a box that floats next to what opened it, see ui/Popover.svelte
 .popup {
 	position: absolute;
 	z-index: var(--z-popup);
