@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { can, sectionCrumbs } from '../lib/access';
 	import Crumbs from '../lib/Crumbs.svelte';
-	import { listEntries, moveEntry, type Entry, type Schema } from '../api';
+	import {
+		deleteEntry,
+		entryUrl,
+		listEntries,
+		moveEntry,
+		type Entry,
+		type Schema,
+	} from '../api';
+	import Menu, { type MenuItem } from '../lib/Menu.svelte';
 	import { entryPath, go, shown, site } from '../route.svelte';
 	import Icon from '../lib/Icon.svelte';
 
@@ -71,15 +79,15 @@
 	} | null>(null);
 
 	/** An entry can't go below itself. */
-	function below(e: Entry, ancestor: Entry): boolean {
+	function isBelow(e: Entry, ancestor: Entry): boolean {
 		if (e.parentId === null) return false;
 		if (e.parentId === ancestor.id) return true;
 		const parent = entries.find(p => p.id === e.parentId);
-		return parent ? below(parent, ancestor) : false;
+		return parent ? isBelow(parent, ancestor) : false;
 	}
 
 	function ondragover(ev: DragEvent, e: Entry) {
-		if (!dragged || e === dragged || below(e, dragged)) return;
+		if (!dragged || e === dragged || isBelow(e, dragged)) return;
 		ev.preventDefault();
 		const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
 		const y = (ev.clientY - r.top) / r.height;
@@ -105,6 +113,47 @@
 				const at = sibs.indexOf(target) + (where === 'after' ? 1 : 0);
 				await moveEntry(d.id, target.parentId, at);
 			}
+			load();
+		} catch (err: any) {
+			error = err.message;
+		}
+	}
+
+	/** Edit, view and delete without opening the entry. */
+	function actions(e: Entry): MenuItem[] {
+		const items: MenuItem[] = [
+			{
+				label: 'Edit',
+				icon: 'edit',
+				href: '/admin' + entryPath(section, e.id),
+			},
+		];
+		const url = entryUrl(schema, site.current, e.uri);
+		if (url && published[e.id]?.[site.current])
+			items.push({
+				label: 'View on the website',
+				icon: 'external',
+				href: url,
+			});
+		if (sec.kind !== 'single' && can(schema, section, 'delete'))
+			items.push({
+				label: 'Delete',
+				icon: 'delete',
+				danger: true,
+				onclick: () => remove(e),
+			});
+		return items;
+	}
+
+	async function remove(e: Entry) {
+		// the entries below it go with it
+		const below = entries.filter(c => c !== e && isBelow(c, e)).length;
+		const also = below
+			? ` The ${below === 1 ? 'entry' : `${below} entries`} below it too.`
+			: '';
+		if (!confirm(`Delete ${e.title} in all sites?${also}`)) return;
+		try {
+			await deleteEntry(e.id);
 			load();
 		} catch (err: any) {
 			error = err.message;
@@ -142,6 +191,7 @@
 			<span>Status</span>
 			{#if types}<span class="hide-small">Type</span>{/if}
 			<span class="hide-small">Updated</span>
+			<span></span>
 		</div>
 	{/if}
 	{#each entries as e (e.id)}
@@ -209,6 +259,7 @@
 				</span>
 			{/if}
 			<span class="date hide-small">{date(e.updatedAt)}</span>
+			<Menu items={actions(e)} label="Actions for {e.title}" />
 		</div>
 	{:else}
 		<p class="empty">No entries yet</p>
@@ -219,9 +270,9 @@
 </div>
 
 <style lang="scss">
+	// no overflow hidden, the menus of the last rows reach out
 	.list {
 		padding: 0 0 6px;
-		overflow: hidden;
 	}
 
 	.search {
@@ -256,7 +307,7 @@
 
 	.row {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 13rem 7rem;
+		grid-template-columns: minmax(0, 1fr) 13rem 7rem 2rem;
 		align-items: center;
 		gap: 12px;
 		min-height: 44px;
@@ -264,7 +315,7 @@
 		border-top: 1px solid var(--line);
 
 		&.types {
-			grid-template-columns: minmax(0, 1fr) 13rem 10rem 7rem;
+			grid-template-columns: minmax(0, 1fr) 13rem 10rem 7rem 2rem;
 		}
 
 		&:not(.columns):hover {
@@ -356,7 +407,7 @@
 	@media (max-width: 800px) {
 		.row,
 		.row.types {
-			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-columns: minmax(0, 1fr) auto 2rem;
 		}
 
 		.hide-small {

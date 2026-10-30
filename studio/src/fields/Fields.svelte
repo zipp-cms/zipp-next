@@ -14,6 +14,7 @@
 	import TableField from './TableField.svelte';
 	import NavigationField from './NavigationField.svelte';
 	import { isAdmin } from '../lib/access';
+	import Icon from '../lib/Icon.svelte';
 
 	let {
 		schema,
@@ -43,11 +44,12 @@
 			: component.fields,
 	);
 
-	/** Entry fields that are the same in all sites, so editors know. */
-	function shared(field: Field) {
-		return (
-			component.entry && !field.translatable && schema.sites.length > 1
-		);
+	/**
+	 * Entry fields with their own value in each site get an icon, like
+	 * Craft's; the others are the same in all sites.
+	 */
+	function translated(field: Field) {
+		return component.entry && field.translatable && schema.sites.length > 1;
 	}
 </script>
 
@@ -66,7 +68,14 @@
 						*
 					</span>{/if}
 			</span>
-			{#if shared(field)}<span class="shared">all sites</span>{/if}
+			{#if translated(field)}
+				<span
+					class="translated"
+					title="Translated: each site has its own"
+				>
+					<Icon name="translate" size={13} />
+				</span>
+			{/if}
 			<!-- for admins the handle, like Craft's "show field handles" -->
 			{#if isAdmin(schema)}
 				<a
@@ -199,9 +208,9 @@
 		color: var(--text);
 	}
 
-	.shared {
-		font-size: 11px;
-		font-weight: 400;
+	.translated {
+		display: inline-flex;
+		align-self: center;
 		color: var(--subtle);
 	}
 
@@ -218,23 +227,6 @@
 	.req {
 		margin-left: 2px;
 		color: var(--danger);
-	}
-
-	// a wide editor: the label on the left of its field, like the old Zipp
-	@container (min-width: 720px) {
-		.fields:not(.nested) {
-			display: grid;
-			grid-template-columns: 180px minmax(0, 1fr);
-			gap: 0 24px;
-
-			> label {
-				align-self: start;
-				flex-direction: column;
-				align-items: flex-start;
-				gap: 1px;
-				padding-top: 8px;
-			}
-		}
 	}
 
 	@media (max-width: 800px) {
