@@ -7,7 +7,7 @@
 
 	/**
 	 * A file as a square card: the picture, below it a bar with the title
-	 * and the ⋯ menu. A click on the picture opens it; `handle` goes on
+	 * and the ⋯ menu. A click on the picture or the title opens it; `handle` goes on
 	 * the top left (a field's order), `caption` replaces the title (a
 	 * rename). The Assets page, the picker and the asset field have it.
 	 */
@@ -55,9 +55,16 @@
 		{#if caption}
 			{@render caption()}
 		{:else}
-			<span class="caption truncate" title={asset.filename}>
+			<!-- the picture is the stop of the keyboard, the title only for the mouse -->
+			<button
+				type="button"
+				class="caption plain truncate"
+				title={asset.filename}
+				tabindex="-1"
+				onclick={onopen}
+			>
 				{asset.title || asset.filename}
-			</span>
+			</button>
 		{/if}
 		{#if menu?.length}
 			<span class="menu"><Menu items={menu} label="File actions" /></span>
@@ -128,9 +135,20 @@
 	}
 
 	.caption {
+		display: block;
 		flex: 1;
+		min-width: 0;
+		align-self: stretch;
+		padding: 0;
 		font-size: var(--fs-sm);
 		font-weight: 500;
+		text-align: left;
+
+		@include hover {
+			&:hover {
+				color: var(--accent);
+			}
+		}
 	}
 
 	.menu {
