@@ -79,8 +79,12 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
     and `.cards` for the layout, `Table` for every table (users, Setup;
     `href` opens a row), `.empty` for nothing and Loading…, `.error` for
     errors;
-  - fields: `ItemCard` (blocks, embeds, nav items), `ItemActions` (move,
-    duplicate, remove in every list), `EntryChip` and `AssetChip` (a
+  - lists: every list that has an order moves with `DragHandle` and
+    `sortable` (`zipp-ui/sortable`: rows with `data-sort` and a depth,
+    drag, its menu and the arrow keys; trees move a level up and down),
+    `SortLine` shows where;
+  - fields: `ItemCard` (blocks, embeds, nav items), `ItemActions`
+    (duplicate, remove in every list), `EntryChip` and `AssetChip` (a
     chosen entry or file), `AddButton`, `UploadButton`, `SearchInput`,
     `Segmented` (tabs and short choices), `entries/EntrySearch`,
     `entries/SiteBadges`,

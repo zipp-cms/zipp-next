@@ -36,6 +36,14 @@ Admins see each field's handle next to its label, like Craft's "show
 field handles"; the handle links to the field in Setup, the entry type
 in the sidebar to the type's fields.
 
+Everything with an order moves the same way: the pages of a structure,
+the links of a navigation, blocks, relations, files, the rows of a
+table, buttons and blocks in a rich text. The handle (⠿, on the left
+when the pointer is on the row) drags it, left and right for the level
+in a tree, as deep as allowed; a click on it opens a menu of the moves
+and the arrow keys move it too, so it needs no dragging. Pages move at
+once, the rest goes into the draft.
+
 Lists of structures (Pages) have a search too; while searching, entries
 can't be moved. Globals (singles without a url) have no title field, their
 name is the section's.
