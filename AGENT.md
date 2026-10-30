@@ -73,8 +73,9 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
     outside close it, `layers.ts` closes only the top one), `Menu` (⋯),
     `SearchList` in a popover, `.popup-item` for its lines;
   - pages: `PageTop` (crumbs or title, state, actions), `.with-aside`
-    and `.cards` for the layout, `.empty` for nothing and
-    Loading…, `.error` for errors;
+    and `.cards` for the layout, `Table` for every table (users, Setup;
+    `href` opens a row), `.empty` for nothing and Loading…, `.error` for
+    errors;
   - fields: `ItemCard` (blocks, embeds, nav items), `ItemActions` (move,
     duplicate, remove in every list), `EntryChip` and `AssetChip` (a
     chosen entry or file), `AddButton`, `UploadButton`, `SearchInput`,

@@ -474,32 +474,6 @@ ol.plain {
 	list-style: none;
 }
 
-// a table of the model or of users
-.table {
-	width: 100%;
-	border-collapse: collapse;
-
-	th,
-	td {
-		padding: 0.375rem 0.5rem;
-		text-align: left;
-		vertical-align: top;
-	}
-
-	th {
-		font-weight: 600;
-	}
-
-	td {
-		border-top: 1px solid var(--line);
-	}
-
-	code {
-		font-size: var(--fs-md);
-		color: var(--muted);
-	}
-}
-
 // a box that floats next to what opened it, see ui/Popover.svelte
 .popup {
 	position: absolute;

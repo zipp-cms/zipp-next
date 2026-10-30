@@ -9,6 +9,7 @@
 <script lang="ts">
 	import PageTop from '../ui/PageTop.svelte';
 	import Icon from '../ui/Icon.svelte';
+	import Table from '../ui/Table.svelte';
 	import type { Schema } from '../core/schema';
 	import type { Account } from './api';
 	import { displayName } from './api';
@@ -35,32 +36,26 @@
 </PageTop>
 
 <div class="card">
-	<table class="table">
-		<thead>
-			<tr>
-				<th>User</th>
-				<th>Role</th>
-				<th>Last login</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each users as u (u.id)}
-				<tr>
-					<td>
-						<a href="/admin/users/{u.id}">{displayName(u)}</a>
-						{#if u.name}<span class="note">{u.email}</span>{/if}
-						{#if u.id === session.user?.id}
-							<span class="muted">(you)</span>
-						{/if}
-					</td>
-					<td>{roleNameOf(schema, u.role)}</td>
-					<td class="muted">
-						{u.lastLoginAt ? time(u.lastLoginAt) : 'Never'}
-					</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
+	<Table
+		rows={users}
+		key={u => u.id}
+		columns={['User', 'Role', 'Last login']}
+		href={u => `/admin/users/${u.id}`}
+	>
+		{#snippet row(u)}
+			<td>
+				<a href="/admin/users/{u.id}">{displayName(u)}</a>
+				{#if u.name}<span class="note">{u.email}</span>{/if}
+				{#if u.id === session.user?.id}
+					<span class="muted">(you)</span>
+				{/if}
+			</td>
+			<td>{roleNameOf(schema, u.role)}</td>
+			<td class="muted">
+				{u.lastLoginAt ? time(u.lastLoginAt) : 'Never'}
+			</td>
+		{/snippet}
+	</Table>
 </div>
 
 <style lang="scss">

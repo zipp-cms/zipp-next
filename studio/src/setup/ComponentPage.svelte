@@ -3,6 +3,7 @@
 	import { describeField } from '../fields/fieldKind';
 	import { gqlType, usedIn } from './setup';
 	import TypePreview from './TypePreview.svelte';
+	import Table from '../ui/Table.svelte';
 
 	/**
 	 * An entry type or block: its editor as editors see it, its fields
@@ -31,41 +32,37 @@
 				Fields <code class="gql">{gqlType(c)}</code>
 			</h2>
 			{#if c.fields.length}
-				<table class="table">
-					<thead>
-						<tr>
-							<th>Label</th>
-							<th>Handle</th>
-							{#if c.tabs?.length}<th>Tab</th>{/if}
-							<th>Kind</th>
-							<th>Sites</th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each c.fields as f (f.handle)}
-							<tr id="field-{f.handle}">
-								<td>{f.label}</td>
-								<td><code>{f.handle}</code></td>
-								{#if c.tabs?.length}<td>
-										{tabOf(f.handle)}
-									</td>{/if}
-								<td>{describeField(f)}</td>
-								<td>
-									{c.entry
-										? f.translatable
-											? 'per site'
-											: 'all sites'
-										: ''}
-								</td>
-								<td class="muted">
-									{f.required ? 'required' : ''}
-									{f.indexed ? 'indexed' : ''}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+				<Table
+					rows={c.fields}
+					key={f => f.handle}
+					id={f => `field-${f.handle}`}
+					columns={[
+						'Label',
+						'Handle',
+						...(c.tabs?.length ? ['Tab'] : []),
+						'Kind',
+						'Sites',
+						'',
+					]}
+				>
+					{#snippet row(f)}
+						<td>{f.label}</td>
+						<td><code>{f.handle}</code></td>
+						{#if c.tabs?.length}<td>{tabOf(f.handle)}</td>{/if}
+						<td>{describeField(f)}</td>
+						<td>
+							{c.entry
+								? f.translatable
+									? 'per site'
+									: 'all sites'
+								: ''}
+						</td>
+						<td class="muted">
+							{f.required ? 'required' : ''}
+							{f.indexed ? 'indexed' : ''}
+						</td>
+					{/snippet}
+				</Table>
 			{:else}
 				<p class="muted">No fields, only a title.</p>
 			{/if}
@@ -84,11 +81,6 @@
 </div>
 
 <style lang="scss">
-	tr:global(.target) td {
-		background: var(--hover);
-		transition: background 0.3s;
-	}
-
 	h2 {
 		display: flex;
 		align-items: baseline;

@@ -6,6 +6,7 @@
 	import type { EntryList } from '../entries/api';
 	import { accessOf, isAdmin } from '../core/access';
 	import PluginCards from './PluginCards.svelte';
+	import Table from '../ui/Table.svelte';
 	import { componentOf, sectionOf } from '../core/schema';
 
 	/**
@@ -36,6 +37,17 @@
 	);
 	// an admin sees every role, a role only itself
 	const roles = $derived(visibleRoles(schema));
+	// who may what here, admins first
+	const access = $derived([
+		...(isAdmin(schema)
+			? [{ name: 'Admins (no role)', handle: null, may: 'Everything' }]
+			: []),
+		...roles.map(r => ({
+			name: r.name,
+			handle: r.handle,
+			may: accessText(r.sections[handle] ?? 'nothing, hidden'),
+		})),
+	]);
 
 	// the first entries in the primary site, see Setup's loadProps
 	const { entries, published, drafts, total } = $derived(list);
@@ -83,124 +95,90 @@
 
 			<div class="card">
 				<h2>Entry types</h2>
-				<table class="table">
-					<thead>
-						<tr>
-							<th>Name</th>
-							<th>Handle</th>
-							<th>Fields</th>
-							<th>URI</th>
-							<th>GraphQL</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each types as t (t.handle)}
-							{@const uri = uriOf(section, t.handle)}
-							<tr>
-								<td>
-									<a href="/admin/setup/types/{t.handle}">
-										{t.name}
-									</a>
-								</td>
-								<td><code>{t.handle}</code></td>
-								<td>{t.fields.length}</td>
-								<td>
-									<code>
-										{uri === null
-											? 'no pages'
-											: uri || '/ (home)'}
-									</code>
-								</td>
-								<td><code>{t.handle}_Entry</code></td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+				<Table
+					rows={types}
+					key={t => t.handle}
+					columns={['Name', 'Handle', 'Fields', 'URI', 'GraphQL']}
+					href={t => `/admin/setup/types/${t.handle}`}
+				>
+					{#snippet row(t)}
+						{@const uri = uriOf(section, t.handle)}
+						<td>
+							<a href="/admin/setup/types/{t.handle}">
+								{t.name}
+							</a>
+						</td>
+						<td><code>{t.handle}</code></td>
+						<td>{t.fields.length}</td>
+						<td>
+							<code>
+								{uri === null ? 'no pages' : uri || '/ (home)'}
+							</code>
+						</td>
+						<td><code>{t.handle}_Entry</code></td>
+					{/snippet}
+				</Table>
 			</div>
 
 			<div class="card">
 				<h2>Sites</h2>
-				<table class="table">
-					<thead>
-						<tr>
-							<th>Site</th>
-							<th>Language</th>
-							<th>URLs</th>
-							<th>Status</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each schema.sites as s (s.handle)}
-							<tr>
-								<td>{s.name}</td>
-								<td>{s.language}</td>
-								<td>
-									{#each types as t (t.handle)}
-										{@const uri = uriOf(
-											section,
-											t.handle,
-											s.handle,
-										)}
-										<div>
-											{#if types.length > 1}
-												<span class="muted">
-													{t.name}:
-												</span>
-											{/if}
-											<code>
-												{uri === null
-													? 'no pages'
-													: (entryUrl(
-															schema,
-															s.handle,
-															uri,
-														) ?? '/' + uri)}
-											</code>
-										</div>
-									{/each}
-								</td>
-								<td>
-									{schema.offline.includes(s.handle)
-										? 'Offline'
-										: 'Online'}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+				<Table
+					rows={schema.sites}
+					key={s => s.handle}
+					columns={['Site', 'Language', 'URLs', 'Status']}
+				>
+					{#snippet row(s)}
+						<td>{s.name}</td>
+						<td>{s.language}</td>
+						<td>
+							{#each types as t (t.handle)}
+								{@const uri = uriOf(
+									section,
+									t.handle,
+									s.handle,
+								)}
+								<div>
+									{#if types.length > 1}
+										<span class="muted">
+											{t.name}:
+										</span>
+									{/if}
+									<code>
+										{uri === null
+											? 'no pages'
+											: (entryUrl(
+													schema,
+													s.handle,
+													uri,
+												) ?? '/' + uri)}
+									</code>
+								</div>
+							{/each}
+						</td>
+						<td>
+							{schema.offline.includes(s.handle)
+								? 'Offline'
+								: 'Online'}
+						</td>
+					{/snippet}
+				</Table>
 			</div>
 
 			<div class="card">
 				<h2>Access</h2>
-				<table class="table">
-					<thead>
-						<tr>
-							<th>Role</th>
-							<th>May</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#if isAdmin(schema)}
-							<tr>
-								<td>Admins (no role)</td>
-								<td>Everything</td>
-							</tr>
-						{/if}
-						{#each roles as r (r.handle)}
-							<tr>
-								<td>
-									{r.name}
-									<code>{r.handle}</code>
-								</td>
-								<td>
-									{accessText(
-										r.sections[handle] ?? 'nothing, hidden',
-									)}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+				<Table
+					rows={access}
+					key={a => a.name}
+					columns={['Role', 'May']}
+				>
+					{#snippet row(a)}
+						<td>
+							{a.name}
+							{#if a.handle}<code>{a.handle}</code>{/if}
+						</td>
+						<td>{a.may}</td>
+					{/snippet}
+				</Table>
 				<p class="muted">
 					<a href="/admin/setup/sites#roles">All roles</a>
 				</p>
