@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Crumbs from './Crumbs.svelte';
+	import { flyoutBar } from './flyoutBar';
 
 	/**
 	 * The bar at the top of every page: where it is (crumbs or a title), a
@@ -23,16 +24,28 @@
 		/** reaches to the edges of the page's padding */
 		bleed?: boolean;
 	} = $props();
+
+	// in a flyout it is the flyout's bar
+	const host = flyoutBar();
+	$effect(() => {
+		if (!host) return;
+		host.content = inner;
+		return () => (host.content = null);
+	});
 </script>
 
-<div class="page-top" class:bleed>
+{#snippet inner()}
 	<h1>
 		{#if crumbs}<Crumbs items={crumbs} />{:else}{title}{/if}
 	</h1>
 	{#if note}<span class="note">{note}</span>{/if}
 	{#if state}<span class="state">{@render state()}</span>{/if}
 	<span class="actions">{@render actions?.()}</span>
-</div>
+{/snippet}
+
+{#if !host}
+	<div class="page-top" class:bleed>{@render inner()}</div>
+{/if}
 
 <style lang="scss">
 	.page-top {

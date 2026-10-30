@@ -2,11 +2,13 @@
 	import type { Snippet } from 'svelte';
 	import Icon from './Icon.svelte';
 	import { layer } from './layers';
+	import { provideFlyoutBar, type FlyoutBar } from './flyoutBar';
 
 	/**
 	 * The panel from the right over the page, for an entry, an asset or
 	 * the asset library. Escape or the backdrop close it; its bar has Done,
-	 * or the buttons of `actions`.
+	 * or the buttons of `actions`. A page in it (its PageTop) puts its
+	 * crumbs and actions into the bar, with × to close.
 	 */
 	let {
 		title,
@@ -22,6 +24,9 @@
 		/** for a list to choose from, not a whole page */
 		narrow?: boolean;
 	} = $props();
+
+	const bar: FlyoutBar = $state({ content: null });
+	provideFlyoutBar(bar);
 
 	let panel = $state<HTMLElement>();
 	$effect(() => panel?.focus());
@@ -39,17 +44,30 @@
 	use:layer={onclose}
 >
 	<div class="bar">
-		<strong class="truncate">{title}</strong>
-		{#if actions}
-			<div class="actions">{@render actions()}</div>
-		{:else}
-			<button type="button" class="primary" onclick={onclose}>
-				<Icon name="close" size={14} />
-				Done
+		{#if bar.content}
+			<div class="page">{@render bar.content()}</div>
+			<button
+				type="button"
+				class="icon"
+				title="Close"
+				aria-label="Close"
+				onclick={onclose}
+			>
+				<Icon name="close" size={16} />
 			</button>
+		{:else}
+			<strong class="truncate">{title}</strong>
+			{#if actions}
+				<div class="actions">{@render actions()}</div>
+			{:else}
+				<button type="button" class="primary" onclick={onclose}>
+					<Icon name="close" size={14} />
+					Done
+				</button>
+			{/if}
 		{/if}
 	</div>
-	<div class="body">{@render children()}</div>
+	<div class="body" class:page-in={!!bar.content}>{@render children()}</div>
 </div>
 
 <style lang="scss">
@@ -87,6 +105,8 @@
 	}
 
 	.bar {
+		position: relative;
+		z-index: var(--z-bar);
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -108,5 +128,20 @@
 		min-height: 0;
 		padding: 0 var(--page-pad) var(--page-pad);
 		overflow-y: auto;
+	}
+
+	// a page's PageTop is in the bar: the space under it here
+	.page-in {
+		padding-top: 1.25rem;
+	}
+
+	// the PageTop of the page in it
+	.page {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex: 1;
+		flex-wrap: wrap;
+		min-width: 0;
 	}
 </style>
