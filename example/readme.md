@@ -15,7 +15,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | The home page in the tree | Pages → Willkommen | the entry type `home` gets the uri `/` (`uri_of`) |
 | Drag and drop | Pages | drag the handle before a title: before, after or into a page |
 | Sites and languages | the language switch top right | titles, slugs and text per site; fields marked *all sites* are shared |
-| Status per site | every list | `DE 2/2`: published here, and in how many sites |
+| Status per site | every list | `DE EN`: a badge per site, grey where it is not published |
 | Drafts | change any field | the orange *Unpublished changes*, the website stays as it is until **Publish** |
 | Preview | an entry with a draft → **Preview** | the website with your draft, for a day |
 | What changed | the orange dots | fields that differ from the live version, also inside blocks |
