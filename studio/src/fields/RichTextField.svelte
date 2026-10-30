@@ -7,6 +7,7 @@
 	import { editedSite } from '../core/editing';
 	import { Last } from '../core/synced.svelte';
 	import Toolbar from './rich/Toolbar.svelte';
+	import LinkBubble from './rich/LinkBubble.svelte';
 	import { EMPTY, createEditor, moveNode, trimmed } from './rich/editor';
 	import { Sortable } from 'zipp-ui/sortable';
 	import SortLine from 'zipp-ui/SortLine.svelte';
@@ -91,10 +92,14 @@
 		<Toolbar {editor} {tick} {opts} {blockTypes} {schema} {refs} />
 	{/if}
 	<div class="editor" bind:this={el}><SortLine sortable={sort} /></div>
+	{#if editor && opts.links}
+		<LinkBubble {editor} {tick} {schema} {refs} />
+	{/if}
 </div>
 
 <style lang="scss">
 	.rich {
+		position: relative;
 		background: var(--input);
 		border: 1px solid var(--border-strong);
 		border-radius: var(--radius);
