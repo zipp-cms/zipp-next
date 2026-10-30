@@ -43,19 +43,61 @@
 		if (!open) at = null;
 	});
 
-	/** At the point, moved in where it would leave the window. */
+	/** Room kept to the edges of the window, and to the button. */
+	const EDGE = 8;
+	const GAP = 4;
+
+	/**
+	 * Where the box goes, fixed in the window so no scrolling container
+	 * around it cuts it or gets a scrollbar: at the point of a right
+	 * click, else under the button as `align` says, above it when there is
+	 * no room below; moved in where it would leave the window. Again when
+	 * the page scrolls or the window changes.
+	 */
 	function place(node: HTMLElement, p: { x: number; y: number } | null) {
-		const set = (p: { x: number; y: number } | null) => {
-			if (!p) return;
+		let point = p;
+		const set = () => {
 			const r = node.getBoundingClientRect();
-			const x = Math.min(p.x, innerWidth - r.width - 8);
-			const y = p.y + r.height > innerHeight - 8 ? p.y - r.height : p.y;
-			node.style.left = `${Math.max(x, 8)}px`;
-			node.style.top = `${Math.max(y, 8)}px`;
+			let x: number, y: number;
+			if (point) {
+				x = point.x;
+				y =
+					point.y + r.height > innerHeight - EDGE
+						? point.y - r.height
+						: point.y;
+			} else {
+				const b = root!.getBoundingClientRect();
+				x =
+					align === 'end'
+						? b.right - r.width
+						: align === 'center'
+							? b.left + b.width / 2 - r.width / 2
+							: b.left;
+				const below = b.bottom + GAP;
+				const above = b.top - GAP - r.height;
+				y =
+					below + r.height > innerHeight - EDGE && above >= EDGE
+						? above
+						: below;
+			}
+			x = Math.min(x, innerWidth - r.width - EDGE);
+			node.style.left = `${Math.max(x, EDGE)}px`;
+			node.style.top = `${Math.max(y, EDGE)}px`;
 		};
-		set(p);
-		// another right click while it is open
-		return { update: set };
+		set();
+		addEventListener('scroll', set, true);
+		addEventListener('resize', set);
+		return {
+			// another right click while it is open
+			update(next: { x: number; y: number } | null) {
+				point = next;
+				set();
+			},
+			destroy() {
+				removeEventListener('scroll', set, true);
+				removeEventListener('resize', set);
+			},
+		};
 	}
 
 	// a click outside closes it, listened to only while it is open
@@ -95,7 +137,7 @@
 	{@render trigger({ toggle, open })}
 	{#if open}
 		<div
-			class="popup {at ? 'at' : align}"
+			class="popup"
 			role={menu ? 'menu' : 'dialog'}
 			aria-label={label}
 			tabindex="-1"
@@ -115,30 +157,13 @@
 		position: relative;
 	}
 
+	// fixed in the window, see `place`; over the flyouts too
 	.popup {
-		top: calc(100% + 0.25rem);
+		position: fixed;
+		z-index: calc(var(--z-overlay) + 1);
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
-		max-width: 90vw;
-	}
-
-	// at the pointer, over everything of the page
-	.at {
-		position: fixed;
-		z-index: calc(var(--z-overlay) + 1);
-	}
-
-	.start {
-		left: 0;
-	}
-
-	.end {
-		right: 0;
-	}
-
-	.center {
-		left: 50%;
-		transform: translateX(-50%);
+		max-width: calc(100vw - 1rem);
 	}
 </style>
