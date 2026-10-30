@@ -1,6 +1,14 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+
+// the studio is part of the zipp crate, it has its version
+const cargo = readFileSync(
+	new URL('../crates/zipp/Cargo.toml', import.meta.url),
+	'utf8',
+);
+const version = cargo.match(/^version = "(.+)"/m)![1];
 
 // breakpoints and mixins in every style block, see sass/vars.scss
 const vars = fileURLToPath(new URL('./src/sass/vars.scss', import.meta.url));
@@ -9,6 +17,7 @@ const vars = fileURLToPath(new URL('./src/sass/vars.scss', import.meta.url));
 // `example-cms serve`
 export default defineConfig({
 	plugins: [svelte()],
+	define: { __ZIPP_VERSION__: JSON.stringify(version) },
 	css: {
 		preprocessorOptions: {
 			scss: { additionalData: `@use '${vars}' as *;\n` },

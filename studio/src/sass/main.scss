@@ -18,6 +18,8 @@
 	--accent: #2b59c3;
 	--accent-hover: #1f4499;
 	--accent-soft: #e8eefb;
+	// the ring of the icon on the accent
+	--accent-ring: #a9c1f5;
 	--danger: #b42318;
 	--danger-soft: #fef0ee;
 	--warn: #7a4f00;
@@ -408,7 +410,6 @@ label.check {
 	gap: 0.5rem;
 }
 
-// a label with its input under it
 // a label over its input
 label.stacked {
 	display: flex;

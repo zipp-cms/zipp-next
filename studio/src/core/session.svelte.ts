@@ -31,15 +31,21 @@ export class Session {
 	async init() {
 		if (!token()) return;
 		try {
-			this.set(await request('GET', '/auth/session'));
+			this.set(await request<Authenticated>('GET', '/auth/session'));
 		} catch (e) {
 			if (!(e instanceof ApiError) || !isSessionError(e)) throw e;
 			this.invalidate();
 		}
 	}
 
-	async login(email: string, password: string) {
-		this.set(await request('POST', '/auth/login', { email, password }));
+	/** `remember`: stays logged in this browser, else only in this tab. */
+	async login(email: string, password: string, remember = true) {
+		const auth = await request<Authenticated>('POST', '/auth/login', {
+			email,
+			password,
+		});
+		this.set(auth);
+		setToken(auth.session.token, remember);
 	}
 
 	async logout() {
@@ -59,7 +65,6 @@ export class Session {
 		this.token = auth.session.token;
 		this.expiresAt = new Date(auth.session.expiresAt);
 		this.user = auth.user;
-		setToken(auth.session.token);
 	}
 }
 

@@ -49,13 +49,18 @@ export function onSessionLost(f: () => void) {
 	sessionLost = f;
 }
 
+const TOKEN = 'zipp-token';
+
+/** The token of the session, kept in this browser or only this tab. */
 export function token(): string | null {
-	return localStorage.getItem('zipp-token');
+	return localStorage.getItem(TOKEN) ?? sessionStorage.getItem(TOKEN);
 }
 
-export function setToken(t: string | null) {
-	if (t) localStorage.setItem('zipp-token', t);
-	else localStorage.removeItem('zipp-token');
+/** `remember`: in this browser, else it ends with the tab. */
+export function setToken(t: string | null, remember = true) {
+	localStorage.removeItem(TOKEN);
+	sessionStorage.removeItem(TOKEN);
+	if (t) (remember ? localStorage : sessionStorage).setItem(TOKEN, t);
 }
 
 function send(
