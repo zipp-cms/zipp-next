@@ -1,67 +1,77 @@
 <script lang="ts">
-	import { listAssets, type Asset, type Field, type Values } from '../api';
+	import type { Asset, Field, Values } from '../api';
+	import AddButton from '../lib/AddButton.svelte';
+	import AssetChip from '../lib/AssetChip.svelte';
 	import AssetPicker from '../lib/AssetPicker.svelte';
+	import ItemActions from '../lib/ItemActions.svelte';
 	import Thumb from '../lib/Thumb.svelte';
-	import Icon from '../lib/Icon.svelte';
-	import { flyout, openAsset } from '../lib/flyout.svelte';
+	import { chosenAssets } from '../lib/assets.svelte';
+	import { openAsset } from '../lib/flyout.svelte';
+	import { inserted, isFull, moved, removed } from '../lib/list';
 
+	/**
+	 * Images as tiles, other files as chips, in an order; a click opens
+	 * one in the flyout for its title, alt text and focal point.
+	 */
 	let { field, values }: { field: Field; values: Values } = $props();
 
 	const images = $derived(field.kind === 'assets' && field.images);
 	const max = $derived(field.kind === 'assets' ? field.max : null);
 	const ids = $derived<number[]>(values[field.handle] ?? []);
-	const full = $derived(max !== null && ids.length >= max);
+	const full = $derived(isFull(ids.length, max));
+	const set = (next: number[]) => (values[field.handle] = next);
 
-	let chosen = $state<Asset[]>([]);
+	const chosen = chosenAssets(() => ids);
 	let picking = $state(false);
-	// the assets of the field, in its order
-	$effect(() => {
-		// again after the flyout saved a title or focal point
-		void flyout.saved;
-		if (!ids.length) return void (chosen = []);
-		listAssets({ ids: ids.join(',') }).then(a => (chosen = a));
-	});
 
 	function toggle(a: Asset) {
-		if (ids.includes(a.id)) {
-			values[field.handle] = ids.filter(i => i !== a.id);
-		} else if (!full) {
-			values[field.handle] = [...ids, a.id];
-		}
+		const i = ids.indexOf(a.id);
+		if (i >= 0) set(removed(ids, i));
+		else if (!full) set(inserted(ids, a.id));
 		// with a single one there is nothing more to pick
 		if (max === 1) picking = false;
 	}
 </script>
 
-<div class="assets">
-	{#each chosen as a (a.id)}
-		<div class="chosen">
-			<button
-				type="button"
-				class="open"
-				title="Details: title, alt text, focal point"
-				onclick={() => openAsset(a.id)}
-			>
-				<Thumb asset={a} />
-			</button>
-			<span class="caption" title={a.filename}>
-				{a.title || a.filename}
-			</span>
-			<button
-				type="button"
-				class="remove"
-				title="Remove"
-				onclick={() => toggle(a)}
-			>
-				<Icon name="close" size={14} />
-			</button>
-		</div>
+{#snippet itemActions(i: number)}
+	<ItemActions
+		index={i}
+		count={ids.length}
+		horizontal={images}
+		onmove={by => set(moved(ids, i, by))}
+		onremove={() => set(removed(ids, i))}
+	/>
+{/snippet}
+
+<div class="assets" class:images>
+	{#each chosen.list as a, i (a.id)}
+		{#if images}
+			<div class="tile">
+				<button
+					type="button"
+					class="open"
+					title="Details: title, alt text, focal point"
+					onclick={() => openAsset(a.id)}
+				>
+					<Thumb asset={a} />
+				</button>
+				<span class="caption truncate" title={a.filename}>
+					{a.title || a.filename}
+				</span>
+				<span class="reveal on-tile">{@render itemActions(i)}</span>
+			</div>
+		{:else}
+			<AssetChip asset={a}>
+				{#snippet actions()}{@render itemActions(i)}{/snippet}
+			</AssetChip>
+		{/if}
 	{/each}
 	{#if !full}
-		<button type="button" class="choose" onclick={() => (picking = true)}>
-			<Icon name="add" size={14} />
-			Choose {images ? 'image' : 'file'}
-		</button>
+		<div>
+			<AddButton onclick={() => (picking = true)}>
+				Choose {images ? 'image' : 'file'}
+			</AddButton>
+		</div>
 	{/if}
 </div>
 
@@ -78,12 +88,18 @@
 <style lang="scss">
 	.assets {
 		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.images {
+		flex-direction: row;
 		flex-wrap: wrap;
 		gap: 12px;
 		align-items: flex-start;
 	}
 
-	.chosen {
+	.tile {
 		position: relative;
 		display: flex;
 		flex-direction: column;
@@ -107,47 +123,17 @@
 	}
 
 	.caption {
-		overflow: hidden;
 		color: var(--muted);
 		font-size: var(--fs-xs);
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 
-	// on the tile, when the pointer is on it
-	.remove {
+	// over the top of the image
+	.on-tile {
 		position: absolute;
-		top: 5px;
-		right: 5px;
-		padding: 3px;
-		border: none;
-		border-radius: 50%;
-		background: rgba(255, 255, 255, 0.92);
-		color: var(--text);
+		top: 4px;
+		right: 4px;
+		border-radius: var(--radius);
+		background: var(--surface);
 		box-shadow: var(--shadow);
-		opacity: 0;
-		transition: opacity 0.15s;
-
-		&:hover:not(:disabled) {
-			background: var(--surface);
-			color: var(--danger);
-		}
-	}
-
-	.chosen:hover .remove,
-	.remove:focus-visible {
-		opacity: 1;
-	}
-
-	@media (hover: none) {
-		.remove {
-			opacity: 1;
-		}
-	}
-
-	.choose {
-		border-style: dashed;
-		border-color: var(--border-strong);
-		color: var(--accent);
 	}
 </style>

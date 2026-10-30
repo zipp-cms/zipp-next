@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Tab } from '../../api';
+	import Segmented from '../../lib/Segmented.svelte';
 
 	/**
 	 * The tabs of an entry type, like Craft's: a dot on a tab with changes,
@@ -22,58 +23,24 @@
 		[...paths].filter(p => tab.fields.includes(p.split('.')[0])).length;
 </script>
 
-<div class="tabs" role="tablist">
-	{#each tabs as tab (tab.name)}
+<Segmented
+	tabs
+	options={tabs.map(t => ({ value: t.name, label: t.name }))}
+	value={current}
+	onchange={v => (current = v)}
+>
+	{#snippet item({ value })}
+		{@const tab = tabs.find(t => t.name === value)!}
 		{@const errs = count(tab, Object.keys(errors))}
-		<button
-			type="button"
-			role="tab"
-			aria-selected={current === tab.name}
-			class:active={current === tab.name}
-			onclick={() => (current = tab.name)}
-		>
-			{#if count(tab, changed)}<span
-					class="dot"
-					title="Changed"
-				></span>{/if}
-			{tab.name}
-			{#if errs}
-				<span class="errors" title="{errs} errors">{errs}</span>
-			{/if}
-		</button>
-	{/each}
-</div>
+		{#if count(tab, changed)}<span class="dot" title="Changed"></span>{/if}
+		{value}
+		{#if errs}
+			<span class="errors" title="{errs} errors">{errs}</span>
+		{/if}
+	{/snippet}
+</Segmented>
 
 <style lang="scss">
-	.tabs {
-		display: inline-flex;
-		gap: 2px;
-		padding: 3px;
-		background: var(--hover);
-		border: 1px solid var(--line);
-		border-radius: var(--radius-lg);
-
-		button {
-			gap: 6px;
-			padding: 5px 12px;
-			border: none;
-			border-radius: var(--radius);
-			background: none;
-			color: var(--muted);
-
-			&.active {
-				background: var(--surface);
-				color: var(--text);
-				box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1);
-			}
-
-			&:hover:not(.active) {
-				color: var(--text);
-				background: none;
-			}
-		}
-	}
-
 	.dot {
 		margin: 0;
 	}

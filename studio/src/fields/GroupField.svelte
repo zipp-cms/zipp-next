@@ -34,7 +34,7 @@
 </script>
 
 {#if comp && values[field.handle]}
-	<div class="group">
+	<div class="group box">
 		<Fields
 			{schema}
 			component={comp}
@@ -51,8 +51,5 @@
 	/* a white box like an open block, its fields on the left */
 	.group {
 		padding: 14px;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
 	}
 </style>

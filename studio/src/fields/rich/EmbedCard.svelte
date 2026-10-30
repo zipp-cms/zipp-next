@@ -1,10 +1,12 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Icon from '../../lib/Icon.svelte';
+	import ItemActions from '../../lib/ItemActions.svelte';
+	import ItemCard from '../../lib/ItemCard.svelte';
 
 	/**
-	 * Something in a rich text that isn't text, like the design: a card
-	 * with what it shows, the form opens with edit.
+	 * Something in a rich text that isn't text: the card of a block, with
+	 * a button on its edges for an empty line above or below.
 	 */
 	let {
 		kind,
@@ -28,7 +30,7 @@
 </script>
 
 <!-- not part of the text: the editor doesn't place the cursor in it -->
-<div class="card-embed" class:editing contenteditable="false">
+<div class="embed" contenteditable="false">
 	{#if editable}
 		<button
 			type="button"
@@ -39,34 +41,14 @@
 			<Icon name="add" size={12} /> Line
 		</button>
 	{/if}
-	<div class="head">
-		<div class="preview">
-			<span class="kind">{kind}</span>
-			{@render preview()}
-		</div>
-		<button
-			type="button"
-			class="icon"
-			title={editing ? 'Close' : 'Edit'}
-			aria-expanded={editing}
-			onclick={() => (editing = !editing)}
-		>
-			<Icon name={editing ? 'chevron-down' : 'edit'} size={15} />
-		</button>
-		{#if editable}
-			<button
-				type="button"
-				class="icon remove"
-				title="Remove"
-				onclick={onremove}
-			>
-				<Icon name="delete" size={15} />
-			</button>
-		{/if}
-	</div>
-	{#if editing}
-		<div class="form">{@render children()}</div>
-	{/if}
+	<ItemCard {kind} bind:open={editing} summary={preview}>
+		{#snippet actions()}
+			{#if editable}
+				<ItemActions index={0} count={1} {onremove} />
+			{/if}
+		{/snippet}
+		{@render children()}
+	</ItemCard>
 	{#if editable}
 		<button
 			type="button"
@@ -80,14 +62,11 @@
 </div>
 
 <style lang="scss">
-	.card-embed {
+	.embed {
 		position: relative;
 		margin: 12px 0;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-lg);
-		font-size: var(--fs-md);
-		line-height: 1.4;
+		font-size: var(--fs-base);
+		line-height: 1.45;
 		white-space: normal;
 	}
 
@@ -115,7 +94,7 @@
 		}
 	}
 
-	.card-embed:hover > .line,
+	.embed:hover > .line,
 	.line:focus-visible {
 		opacity: 1;
 	}
@@ -124,47 +103,5 @@
 		.line {
 			opacity: 1;
 		}
-	}
-
-	.editing {
-		border-color: var(--border-strong);
-	}
-
-	.head {
-		display: flex;
-		align-items: flex-start;
-		gap: 4px;
-		padding: 8px 8px 8px 12px;
-	}
-
-	.preview {
-		display: flex;
-		flex-direction: column;
-		gap: 3px;
-		flex: 1;
-		min-width: 0;
-	}
-
-	.kind {
-		color: var(--accent-hover);
-		font-size: 10px;
-		font-weight: 600;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-	}
-
-	.remove {
-		color: var(--danger);
-
-		&:hover:not(:disabled) {
-			color: var(--danger);
-		}
-	}
-
-	.form {
-		padding: 12px;
-		background: var(--surface-2);
-		border-top: 1px solid var(--line);
-		border-radius: 0 0 8px 8px;
 	}
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Crumbs from '../../lib/Crumbs.svelte';
+	import PageTop from '../../lib/PageTop.svelte';
 	import Icon from '../../lib/Icon.svelte';
 
 	/** Where the entry is, its state and what can be done with it. */
@@ -41,9 +41,8 @@
 	} = $props();
 </script>
 
-<div class="page-top">
-	<Crumbs items={[...crumbs, { label: title || 'New entry' }]} />
-	<span class="state">
+<PageTop crumbs={[...crumbs, { label: title || 'New entry' }]}>
+	{#snippet state()}
 		{#if !isNew}
 			<span class="badge" class:live={published} class:draft={!published}>
 				{published ? 'Live' : 'Not published'}
@@ -55,8 +54,8 @@
 			</span>
 			{#if draftBy}<span class="by">{draftBy}</span>{/if}
 		{/if}
-	</span>
-	<span class="actions">
+	{/snippet}
+	{#snippet actions()}
 		{#if canDelete}
 			<button class="icon" onclick={onremove} title="Delete in all sites">
 				<Icon name="delete" />
@@ -91,17 +90,10 @@
 		>
 			{isNew ? 'Create' : 'Publish'}
 		</button>
-	</span>
-</div>
+	{/snippet}
+</PageTop>
 
 <style>
-	.state {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		margin-right: auto;
-	}
-
 	.by {
 		color: var(--subtle);
 		font-size: var(--fs-sm);
@@ -111,11 +103,5 @@
 		.by {
 			display: none;
 		}
-	}
-
-	.actions {
-		display: flex;
-		align-items: center;
-		gap: 8px;
 	}
 </style>

@@ -2,6 +2,7 @@
 	import { markdown } from '../lib/markdown';
 	import { untrack } from 'svelte';
 	import type { Field, Values } from '../api';
+	import Segmented from '../lib/Segmented.svelte';
 
 	/**
 	 * Markdown: shown rendered when there is text, so it reads like docs,
@@ -16,12 +17,15 @@
 
 <div class="markdown">
 	<div class="tabs">
-		<button class:on={writing} onclick={() => (writing = true)}>
-			Write
-		</button>
-		<button class:on={!writing} onclick={() => (writing = false)}>
-			Preview
-		</button>
+		<Segmented
+			tabs
+			options={[
+				{ value: 'write', label: 'Write' },
+				{ value: 'preview', label: 'Preview' },
+			]}
+			value={writing ? 'write' : 'preview'}
+			onchange={v => (writing = v === 'write')}
+		/>
 	</div>
 	{#if writing}
 		<textarea {id} rows="14" bind:value={values[field.handle]}></textarea>
@@ -30,27 +34,13 @@
 	{/if}
 </div>
 
-<style lang="scss">
+<style>
 	.tabs {
-		display: flex;
-		gap: 4px;
 		margin-bottom: 6px;
-
-		button {
-			padding: 4px 10px;
-			border: none;
-			background: none;
-			color: var(--muted);
-
-			&.on {
-				color: var(--text);
-				border-bottom: 2px solid var(--text);
-			}
-		}
 	}
 
 	textarea {
-		font-family: monospace;
-		font-size: var(--fs-base);
+		font-family: var(--mono);
+		font-size: var(--fs-md);
 	}
 </style>

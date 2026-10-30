@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageTop from '../lib/PageTop.svelte';
 	import {
 		deleteUser,
 		listUsers,
@@ -55,9 +56,7 @@
 			: (schema.roles.find(r => r.handle === h)?.name ?? h);
 </script>
 
-<div class="page-top">
-	<h1>Users</h1>
-</div>
+<PageTop title="Users" />
 
 {#if error}<p class="error">{error}</p>{/if}
 

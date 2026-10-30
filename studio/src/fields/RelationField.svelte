@@ -1,15 +1,11 @@
 <script lang="ts">
-	import {
-		type EntryRef,
-		type Field,
-		type Refs,
-		type Schema,
-		type Values,
-	} from '../api';
-	import Icon from '../lib/Icon.svelte';
+	import type { EntryRef, Field, Refs, Schema, Values } from '../api';
+	import EntryChip from '../lib/EntryChip.svelte';
 	import EntrySearch from '../lib/EntrySearch.svelte';
-	import { openEntry } from '../lib/flyout.svelte';
+	import ItemActions from '../lib/ItemActions.svelte';
+	import { inserted, isFull, moved, removed } from '../lib/list';
 
+	/** Entries in an order, each a chip that opens it. */
 	let {
 		schema,
 		field,
@@ -20,104 +16,46 @@
 	const types = $derived(field.kind === 'relation' ? field.types : []);
 	const max = $derived(field.kind === 'relation' ? field.max : null);
 	const ids = $derived<number[]>(values[field.handle] ?? []);
-	const full = $derived(max !== null && ids.length >= max);
-
-	function typeName(t: string) {
-		return schema.components.find(c => c.handle === t)?.name ?? t;
-	}
+	const set = (next: number[]) => (values[field.handle] = next);
 
 	function add(e: EntryRef) {
 		refs[e.id] = e;
-		values[field.handle] = [...ids, e.id];
-	}
-
-	function remove(id: number) {
-		values[field.handle] = ids.filter(i => i !== id);
+		set(inserted(ids, e.id));
 	}
 </script>
 
 <div class="relation">
-	{#each ids as id (id)}
-		<div class="chip">
-			<button
-				type="button"
-				class="open"
-				title="Open in the flyout"
-				onclick={() => openEntry(id)}
-			>
-				<span class="title">{refs[id]?.title ?? `#${id}`}</span>
-				{#if refs[id]}<span class="muted">
-						{typeName(refs[id].type)}
-					</span>{/if}
-			</button>
-			<button
-				type="button"
-				class="icon"
-				onclick={() => remove(id)}
-				title="Remove from the field"
-			>
-				<Icon name="close" size={15} />
-			</button>
-		</div>
+	{#each ids as id, i (id)}
+		<EntryChip {schema} {refs} {id}>
+			{#snippet actions()}
+				<ItemActions
+					index={i}
+					count={ids.length}
+					onmove={by => set(moved(ids, i, by))}
+					onremove={() => set(removed(ids, i))}
+					removeTitle="Remove from the field"
+				/>
+			{/snippet}
+		</EntryChip>
 	{/each}
 
-	{#if !full}
-		<EntrySearch
-			{schema}
-			{types}
-			exclude={ids}
-			multiple={max !== 1}
-			onpick={add}
-		/>
+	{#if !isFull(ids.length, max)}
+		<div>
+			<EntrySearch
+				{schema}
+				{types}
+				exclude={ids}
+				multiple={max !== 1}
+				onpick={add}
+			/>
+		</div>
 	{/if}
 </div>
 
-<style lang="scss">
+<style>
 	.relation {
 		display: flex;
 		flex-direction: column;
-		align-items: stretch;
 		gap: 6px;
-
-		> :global(.picker) {
-			align-self: flex-start;
-		}
-	}
-
-	// a row like an input, with the remove action on the right
-	.chip {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		min-height: 36px;
-		padding: 3px 4px 3px 12px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background: var(--surface);
-	}
-
-	// the title opens the entry, like Craft's element chips
-	.open {
-		display: flex;
-		align-items: baseline;
-		gap: 10px;
-		flex: 1;
-		min-width: 0;
-		padding: 4px 0;
-		border: none;
-		background: none;
-		font-weight: 500;
-		text-align: left;
-
-		&:hover:not(:disabled) {
-			background: none;
-			color: var(--accent);
-		}
-	}
-
-	.title {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 </style>

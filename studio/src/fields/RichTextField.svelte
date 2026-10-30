@@ -422,12 +422,13 @@
 		}
 
 		:global(.rt-link) {
-			color: #2f5bea;
+			color: var(--accent);
 			text-decoration: underline;
 		}
 
 		:global(.ProseMirror-selectednode) {
-			outline: 2px solid var(--text);
+			outline: 2px solid var(--accent);
+			border-radius: var(--radius);
 		}
 	}
 

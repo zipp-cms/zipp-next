@@ -1,4 +1,6 @@
 <script lang="ts">
+	import SiteBadges from '../../lib/SiteBadges.svelte';
+	import { componentOf } from '../../lib/schema';
 	import type {
 		Component,
 		Entry,
@@ -105,20 +107,11 @@
 			</label>
 			{#if multiSite && !isNew}
 				<div class="sites">
-					{#each schema.sites as s (s.handle)}
-						<button
-							type="button"
-							class="badge"
-							class:draft={!perSite[s.handle]}
-							class:current={s.handle === site.current}
-							title="{s.name}: {perSite[s.handle]
-								? 'published'
-								: 'not published'}, open"
-							onclick={() => setSite(s.handle)}
-						>
-							{s.handle.toUpperCase()}
-						</button>
-					{/each}
+					<SiteBadges
+						{schema}
+						published={perSite}
+						onselect={setSite}
+					/>
 				</div>
 			{/if}
 
@@ -189,10 +182,7 @@
 							<span class="name">{nameOf(b.type)}</span>
 							<span class="sum">
 								{blockSummary(
-									schema,
-									schema.components.find(
-										c => c.handle === b.type,
-									),
+									componentOf(schema, b.type),
 									b.fields,
 								)}
 							</span>
@@ -279,19 +269,7 @@
 	}
 
 	.sites {
-		display: flex;
-		gap: 4px;
 		margin-top: -6px;
-
-		button {
-			border: none;
-			cursor: pointer;
-
-			&.current {
-				outline: 2px solid var(--accent);
-				outline-offset: 1px;
-			}
-		}
 	}
 
 	.value {

@@ -23,13 +23,16 @@
 
 	let library = $state<Asset[]>([]);
 	let search = $state('');
+	let loaded = $state(false);
 
 	$effect(() => {
 		const q = search;
 		const params: Record<string, string> = { search: q };
 		if (images) params.kind = 'image';
 		listAssets(params).then(a => {
-			if (q === search) library = a;
+			if (q !== search) return;
+			library = a;
+			loaded = true;
 		});
 	});
 
@@ -65,7 +68,7 @@
 		<SearchInput bind:value={search} placeholder="Search files" />
 	</div>
 	<div class="card">
-		<AssetGrid assets={library} {selected} {onpick} />
+		<AssetGrid assets={library} {selected} loading={!loaded} {onpick} />
 	</div>
 </Flyout>
 

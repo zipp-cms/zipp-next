@@ -1,13 +1,16 @@
 <script lang="ts">
 	import NavItems from './NavItems.svelte';
 	import LinkField from './LinkField.svelte';
-	import Icon from '../lib/Icon.svelte';
-	import { moved } from '../lib/list';
-	import type { Field, LinkKind, NavItem, Refs, Schema } from '../api';
+	import AddButton from '../lib/AddButton.svelte';
+	import ItemActions from '../lib/ItemActions.svelte';
+	import ItemCard from '../lib/ItemCard.svelte';
+	import { linkField, linkLabel } from '../lib/link';
+	import { inserted, moved, removed, replaced } from '../lib/list';
+	import type { LinkKind, NavItem, Refs, Schema } from '../api';
 
 	/**
-	 * The items of a level of a navigation, each a link with the items
-	 * under it, up to `depth` levels.
+	 * The items of a level of a navigation, each a card with its link and
+	 * the items under it, up to `depth` levels.
 	 */
 	let {
 		schema,
@@ -25,18 +28,9 @@
 		onchange: (items: NavItem[]) => void;
 	} = $props();
 
-	// the link editor of an item, it edits the item but not its children
-	const linkField = $derived<Field>({
-		handle: 'link',
-		label: 'Link',
-		required: false,
-		indexed: false,
-		translatable: false,
-		kind: 'link',
-		to,
-		labels: true,
-		newTab: true,
-	});
+	const field = $derived(linkField(to));
+
+	/** The link of an item for the link field, without its children. */
 	function holder(i: number) {
 		return {
 			get link() {
@@ -45,116 +39,73 @@
 			},
 			set link(link: NavItem) {
 				const children = items[i].children;
-				replace(i, { ...link, ...(children ? { children } : {}) });
+				onchange(
+					replaced(items, i, {
+						...link,
+						...(children ? { children } : {}),
+					}),
+				);
 			},
 		};
 	}
 
-	function replace(i: number, item: NavItem) {
-		onchange(items.map((x, j) => (j === i ? item : x)));
+	function setChildren(i: number, children: NavItem[]) {
+		const { children: _, ...item } = items[i];
+		onchange(
+			replaced(items, i, children.length ? { ...item, children } : item),
+		);
 	}
-
-	const move = (i: number, by: number) => onchange(moved(items, i, by));
 </script>
 
-{#each items as item, i (i)}
-	<div class="item">
-		<div class="head">
-			<div class="link">
-				<LinkField
-					{schema}
-					field={linkField}
-					values={holder(i)}
-					{refs}
+<div class="items">
+	{#each items as item, i (i)}
+		<ItemCard kind="Link">
+			{#snippet summary()}{linkLabel(item, refs)}{/snippet}
+			{#snippet actions()}
+				<ItemActions
+					index={i}
+					count={items.length}
+					onmove={by => onchange(moved(items, i, by))}
+					onremove={() => onchange(removed(items, i))}
+					removeTitle="Remove with the items under it"
 				/>
-			</div>
-			<div class="actions">
-				<button
-					type="button"
-					class="link"
-					disabled={i === 0}
-					onclick={() => move(i, -1)}
-				>
-					↑
-				</button>
-				<button
-					type="button"
-					class="link"
-					disabled={i === items.length - 1}
-					onclick={() => move(i, 1)}
-				>
-					↓
-				</button>
-				<button
-					type="button"
-					class="link"
-					title="Remove with the items under it"
-					onclick={() => onchange(items.filter((_, j) => j !== i))}
-				>
-					<Icon name="delete" />
-				</button>
-			</div>
-		</div>
-		{#if depth > 1}
-			<div class="children">
-				<NavItems
-					{schema}
-					{refs}
-					items={item.children ?? []}
-					{to}
-					depth={depth - 1}
-					onchange={children =>
-						replace(i, {
-							...item,
-							children: children.length ? children : undefined,
-						})}
-				/>
-			</div>
-		{/if}
+			{/snippet}
+			<LinkField {schema} {field} values={holder(i)} {refs} />
+			{#if depth > 1}
+				<div class="children">
+					<NavItems
+						{schema}
+						{refs}
+						items={item.children ?? []}
+						{to}
+						depth={depth - 1}
+						onchange={children => setChildren(i, children)}
+					/>
+				</div>
+			{/if}
+		</ItemCard>
+	{/each}
+	<div>
+		<AddButton
+			onclick={() =>
+				onchange(inserted(items, { type: to[0], value: null }))}
+		>
+			Add a link
+		</AddButton>
 	</div>
-{/each}
-<button
-	type="button"
-	class="link add"
-	onclick={() => onchange([...items, { type: to[0], value: null }])}
->
-	<Icon name="add" /> Add a link
-</button>
+</div>
 
 <style>
-	/* white boxes like blocks, the second level indented */
-	.item {
-		margin-bottom: 8px;
-		padding: 10px;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-	}
-
-	.head {
+	.items {
 		display: flex;
-		gap: 10px;
-		align-items: flex-start;
+		flex-direction: column;
+		gap: 6px;
 	}
 
-	.head .link {
-		flex: 1;
-	}
-
-	.actions {
-		display: flex;
-		gap: 4px;
-	}
-
+	/* the second level indented */
 	.children {
-		margin: 10px 0 0 6px;
+		margin: 12px 0 0 6px;
 		padding-left: 12px;
 		border-left: 2px solid var(--accent-soft);
-	}
-
-	.add {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
 	}
 </style>

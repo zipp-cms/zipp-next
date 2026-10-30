@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageTop from '../lib/PageTop.svelte';
 	import type { Schema } from '../api';
 	import { shown } from '../route.svelte';
 
@@ -23,10 +24,7 @@
 	}
 </script>
 
-<div class="page-top">
-	<h1>{doc.name}</h1>
-	<span class="note">Read only, from the code</span>
-</div>
+<PageTop title={doc.name} note="Read only, from the code" />
 
 <div class="card markdown-body" use:external>
 	{@html doc.html}

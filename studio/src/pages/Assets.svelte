@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageTop from '../lib/PageTop.svelte';
 	import { listAssets, uploadAssets, type Asset, type Schema } from '../api';
 	import { canAssets } from '../lib/access';
 	import AssetGrid from '../lib/AssetGrid.svelte';
@@ -11,6 +12,7 @@
 
 	let assets = $state<Asset[]>([]);
 	let search = $state('');
+	let loaded = $state(false);
 	let error = $state('');
 	let uploading = $state(false);
 	let current = $state<Asset | null>(null);
@@ -19,7 +21,9 @@
 		const q = search;
 		listAssets({ search: q })
 			.then(a => {
-				if (q === search) assets = a;
+				if (q !== search) return;
+				assets = a;
+				loaded = true;
 			})
 			.catch(e => (error = e.message));
 	}
@@ -56,14 +60,15 @@
 	ondragover={e => e.preventDefault()}
 	{ondrop}
 >
-	<div class="page-top">
-		<h1>Assets</h1>
-		{#if canEdit}
-			<UploadButton onfiles={upload} multiple primary>
-				{uploading ? 'Uploading…' : 'Upload'}
-			</UploadButton>
-		{/if}
-	</div>
+	<PageTop title="Assets">
+		{#snippet actions()}
+			{#if canEdit}
+				<UploadButton onfiles={upload} multiple primary>
+					{uploading ? 'Uploading…' : 'Upload'}
+				</UploadButton>
+			{/if}
+		{/snippet}
+	</PageTop>
 
 	{#if error}<p class="error">{error}</p>{/if}
 
@@ -71,7 +76,7 @@
 		<div class="search">
 			<SearchInput bind:value={search} placeholder="Search files" />
 		</div>
-		<AssetGrid {assets} onpick={open} />
+		<AssetGrid {assets} loading={!loaded} onpick={open} />
 	</div>
 </div>
 

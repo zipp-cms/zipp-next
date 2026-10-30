@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { Field, Values } from '../api';
-	import Icon from '../lib/Icon.svelte';
-	import { moved } from '../lib/list';
+	import AddButton from '../lib/AddButton.svelte';
+	import ItemActions from '../lib/ItemActions.svelte';
+	import { inserted, moved, removed, replaced } from '../lib/list';
 
 	/** Rows of the columns of the code, like Craft's table field. */
 	let { field, values }: { field: Field; values: Values } = $props();
@@ -14,10 +15,8 @@
 	}
 
 	function cell(i: number, column: string, text: string) {
-		set(rows.map((r, j) => (j === i ? { ...r, [column]: text } : r)));
+		set(replaced(rows, i, { ...rows[i], [column]: text }));
 	}
-
-	const move = (i: number, by: number) => set(moved(rows, i, by));
 </script>
 
 <table>
@@ -42,42 +41,24 @@
 					</td>
 				{/each}
 				<td class="actions">
-					<button
-						type="button"
-						class="link"
-						disabled={i === 0}
-						onclick={() => move(i, -1)}
-					>
-						↑
-					</button>
-					<button
-						type="button"
-						class="link"
-						disabled={i === rows.length - 1}
-						onclick={() => move(i, 1)}
-					>
-						↓
-					</button>
-					<button
-						type="button"
-						class="link"
-						title="Remove the row"
-						onclick={() => set(rows.filter((_, j) => j !== i))}
-					>
-						<Icon name="delete" />
-					</button>
+					<ItemActions
+						index={i}
+						count={rows.length}
+						onmove={by => set(moved(rows, i, by))}
+						onremove={() => set(removed(rows, i))}
+						removeTitle="Remove the row"
+					/>
 				</td>
 			</tr>
 		{/each}
 	</tbody>
 </table>
-<button type="button" class="link add" onclick={() => set([...rows, {}])}>
-	<Icon name="add" /> Add a row
-</button>
+<AddButton onclick={() => set(inserted(rows, {}))}>Add a row</AddButton>
 
 <style>
 	table {
 		width: 100%;
+		margin-bottom: 6px;
 		border-collapse: collapse;
 	}
 
@@ -95,13 +76,5 @@
 
 	.actions {
 		width: 1%;
-		white-space: nowrap;
-	}
-
-	.add {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		margin-top: 6px;
 	}
 </style>

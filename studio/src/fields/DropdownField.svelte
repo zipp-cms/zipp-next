@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Field, Values } from '../api';
+	import Segmented from '../lib/Segmented.svelte';
 
 	/**
 	 * One of the options: up to three as buttons, more as a select. A
@@ -16,19 +17,7 @@
 </script>
 
 {#if options.length <= 3}
-	<div class="buttons" role="radiogroup" aria-label={field.label}>
-		{#each options as o (o.value)}
-			<button
-				type="button"
-				role="radio"
-				aria-checked={o.value === value}
-				class:on={o.value === value}
-				onclick={() => pick(o.value)}
-			>
-				{o.label}
-			</button>
-		{/each}
-	</div>
+	<Segmented {options} {value} onchange={pick} label={field.label} />
 {:else}
 	<select
 		value={value ?? ''}
@@ -43,32 +32,7 @@
 	</select>
 {/if}
 
-<style lang="scss">
-	.buttons {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 6px;
-	}
-
-	button {
-		padding: 8px 12px;
-		border-color: transparent;
-		background: var(--input);
-		color: inherit;
-		transition:
-			background-color 0.2s ease,
-			color 0.2s ease;
-
-		&:hover:not(:disabled) {
-			border-color: var(--text);
-		}
-	}
-
-	.on {
-		background: var(--text);
-		color: white;
-	}
-
+<style>
 	select {
 		width: auto;
 		min-width: 200px;

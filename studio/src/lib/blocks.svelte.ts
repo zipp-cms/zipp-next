@@ -1,4 +1,5 @@
-import type { Component, Schema, Values } from '../api';
+import type { Component, Values } from '../api';
+import { plural } from './list';
 
 /**
  * A block the outline of the editor asks to show: the path of its blocks
@@ -19,15 +20,11 @@ function docText(doc: any): string {
 	return (doc.content ?? []).map(docText).join(' ');
 }
 
-const plural = (n: number, one: string, many: string) =>
-	`${n} ${n === 1 ? one : many}`;
-
 /**
  * What a collapsed block shows: its first text, else how many images,
  * entries or blocks it has.
  */
 export function blockSummary(
-	schema: Schema,
 	comp: Component | undefined,
 	fields: Values,
 ): string {
@@ -55,6 +52,5 @@ export function blockSummary(
 		else if (f.kind === 'blocks')
 			counts.push(plural(v.length, 'block', 'blocks'));
 	}
-	void schema;
 	return counts.join(' · ');
 }

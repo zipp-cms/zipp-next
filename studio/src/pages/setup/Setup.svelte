@@ -1,9 +1,9 @@
 <script lang="ts">
+	import PageTop from '../../lib/PageTop.svelte';
 	import { listEntries, type Component, type Schema } from '../../api';
 	import { accessOf, can, isAdmin, roleName } from '../../lib/access';
 	import { describeField } from '../../lib/fieldKind';
 	import SetupSection from './SetupSection.svelte';
-	import Crumbs from '../../lib/Crumbs.svelte';
 	import TypePreview from './TypePreview.svelte';
 	import { shown } from '../../route.svelte';
 
@@ -101,10 +101,7 @@
 	}
 </script>
 
-<div class="page-top">
-	<h1><Crumbs items={crumbs} /></h1>
-	<span class="muted">Read only, the content model is code</span>
-</div>
+<PageTop {crumbs} note="Read only, the content model is code" />
 
 {#if tab === 'sections' && handle}
 	<SetupSection {schema} {handle} />

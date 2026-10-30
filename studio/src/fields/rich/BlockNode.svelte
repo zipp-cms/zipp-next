@@ -4,6 +4,8 @@
 	import Fields from '../Fields.svelte';
 	import EmbedCard from './EmbedCard.svelte';
 	import { blockSummary } from '../../lib/blocks.svelte';
+	import { clone } from '../../lib/list';
+	import { componentOf } from '../../lib/schema';
 
 	/**
 	 * A block inside a rich text: a card with its summary, its fields like
@@ -27,10 +29,7 @@
 		insertLine: (where: 'before' | 'after') => void;
 	} = $props();
 
-	// attrs are reactive proxies, structuredClone can't copy them
-	const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
-
-	const comp = $derived(schema.components.find(c => c.handle === attrs.type));
+	const comp = $derived(componentOf(schema, attrs.type));
 	let fields = $state<Values>(untrack(() => clone(attrs.fields)));
 	let last = JSON.stringify(untrack(() => attrs.fields));
 	let editing = $state(
@@ -61,9 +60,7 @@
 	oninsert={insertLine}
 >
 	{#snippet preview()}
-		<span class="summary">
-			{blockSummary(schema, comp, fields) || 'Empty'}
-		</span>
+		{blockSummary(comp, fields) || 'Empty'}
 	{/snippet}
 	{#if comp}
 		<fieldset disabled={!editable}>
@@ -78,13 +75,3 @@
 		</fieldset>
 	{/if}
 </EmbedCard>
-
-<style>
-	.summary {
-		overflow: hidden;
-		color: var(--text);
-		font-weight: 500;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-</style>

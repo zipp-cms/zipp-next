@@ -1,6 +1,9 @@
 <script lang="ts">
+	import SearchInput from '../lib/SearchInput.svelte';
+	import { plural } from '../lib/list';
+	import SiteBadges from '../lib/SiteBadges.svelte';
+	import PageTop from '../lib/PageTop.svelte';
 	import { can, sectionCrumbs } from '../lib/access';
-	import Crumbs from '../lib/Crumbs.svelte';
 	import {
 		deleteEntry,
 		entryUrl,
@@ -35,6 +38,7 @@
 	});
 	let total = $state(0);
 	let error = $state('');
+	let loaded = $state(false);
 
 	function load() {
 		const params: Record<string, string> = {
@@ -43,9 +47,12 @@
 			limit: '500',
 		};
 		if (tree) params.order = 'structure';
-		if (search) params.search = search;
+		const q = search;
+		if (q) params.search = q;
 		listEntries(params)
 			.then(r => {
+				// an answer to an older search
+				if (q !== search) return;
 				// a single has no list, it opens its entry
 				if (sec.kind === 'single' && r.entries[0]) {
 					go(entryPath(section, r.entries[0].id), true);
@@ -55,6 +62,7 @@
 				total = r.total;
 				published = r.published;
 				drafts = r.drafts;
+				loaded = true;
 			})
 			.catch(e => (error = e.message));
 	}
@@ -165,25 +173,28 @@
 	}
 </script>
 
-<div class="page-top">
-	<h1><Crumbs items={sectionCrumbs(schema, section)} /></h1>
-	{#if sec.kind !== 'single' && can(schema, section, 'edit')}
-		<button class="primary" onclick={() => go(`/entries/${section}/new`)}>
-			<Icon name="add" />
-			New entry
-		</button>
-	{/if}
-</div>
+<PageTop crumbs={sectionCrumbs(schema, section)}>
+	{#snippet actions()}
+		{#if sec.kind !== 'single' && can(schema, section, 'edit')}
+			<button
+				class="primary"
+				onclick={() => go(`/entries/${section}/new`)}
+			>
+				<Icon name="add" />
+				New entry
+			</button>
+		{/if}
+	{/snippet}
+</PageTop>
 
 {#if error}<p class="error">{error}</p>{/if}
 
 <div class="card list">
 	<div class="search">
 		<span class="field">
-			<Icon name="search" size={15} />
-			<input placeholder="Search entries" bind:value={search} />
+			<SearchInput bind:value={search} placeholder="Search entries" />
 		</span>
-		<span class="total">{total} {total === 1 ? 'entry' : 'entries'}</span>
+		<span class="note total">{plural(total, 'entry', 'entries')}</span>
 	</div>
 	{#if entries.length}
 		<div class="row columns" class:types>
@@ -235,18 +246,7 @@
 				</a>
 			</span>
 			<span class="status">
-				<!-- live or not in every site, the current one first -->
-				{#each schema.sites as s (s.handle)}
-					{@const on = published[e.id]?.[s.handle]}
-					<span
-						class="badge"
-						class:draft={!on}
-						class:current={s.handle === site.current}
-						title="{s.name}: {on ? 'published' : 'not published'}"
-					>
-						{s.handle.toUpperCase()}
-					</span>
-				{/each}
+				<SiteBadges {schema} published={published[e.id]} />
 				{#if drafts.includes(e.id)}
 					<span class="badge changes" title="Unpublished changes">
 						Draft
@@ -262,7 +262,13 @@
 			<Menu items={actions(e)} label="Actions for {e.title}" />
 		</div>
 	{:else}
-		<p class="empty">No entries yet</p>
+		<p class="empty">
+			{loaded
+				? search
+					? 'Nothing found'
+					: 'No entries yet'
+				: 'Loading…'}
+		</p>
 	{/each}
 	{#if total > entries.length}
 		<p class="empty">{entries.length} of {total}</p>
@@ -282,26 +288,11 @@
 		padding: 10px 14px;
 
 		.field {
-			position: relative;
-			display: flex;
-			align-items: center;
 			width: 320px;
-			color: var(--subtle);
-
-			:global(.icon) {
-				position: absolute;
-				left: 10px;
-			}
-		}
-
-		input {
-			padding-left: 32px;
 		}
 
 		.total {
 			margin-left: auto;
-			color: var(--muted);
-			font-size: var(--fs-sm);
 		}
 	}
 
@@ -348,11 +339,6 @@
 		align-items: center;
 		gap: 4px;
 		flex-wrap: wrap;
-
-		.current {
-			outline: 1px solid currentColor;
-			outline-offset: -1px;
-		}
 	}
 
 	.type,
@@ -397,11 +383,6 @@
 
 	.type {
 		font-size: var(--fs-base);
-	}
-
-	.empty {
-		padding: 10px 26px;
-		color: var(--muted);
 	}
 
 	@media (max-width: 800px) {

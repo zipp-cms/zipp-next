@@ -41,7 +41,7 @@
 		{/key}
 	{:else}
 		<Flyout title="File" onclose={closeFlyout}>
-			<p class="muted">Loading…</p>
+			<p class="empty">Loading…</p>
 		</Flyout>
 	{/if}
 {/if}

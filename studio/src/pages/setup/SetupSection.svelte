@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SiteBadges from '../../lib/SiteBadges.svelte';
 	import {
 		entryUrl,
 		listEntries,
@@ -259,24 +260,13 @@
 						<a href="/admin/entries/{handle}/{e.id}">{e.title}</a>
 						{#if drafts.includes(e.id)}
 							<span
-								class="dot"
+								class="badge changes"
 								title="Unpublished changes"
-							></span>
+							>
+								Draft
+							</span>
 						{/if}
-						<span class="sites">
-							{#each schema.sites as s (s.handle)}
-								{@const on = published[e.id]?.[s.handle]}
-								<span
-									class="badge"
-									class:draft={!on}
-									title="{s.name}: {on
-										? 'published'
-										: 'not published'}"
-								>
-									{s.handle.toUpperCase()}
-								</span>
-							{/each}
-						</span>
+						<SiteBadges {schema} published={published[e.id]} />
 					</li>
 				{/each}
 			</ul>
@@ -348,17 +338,5 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		color: inherit;
-	}
-
-	.dot {
-		width: 7px;
-		height: 7px;
-		border-radius: 50%;
-		background: var(--changed);
-	}
-
-	.sites {
-		display: flex;
-		gap: 3px;
 	}
 </style>

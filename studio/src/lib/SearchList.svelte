@@ -39,7 +39,7 @@
 			{@render item(t)}
 		</button>
 	{:else}
-		<p class="muted empty">{loading ? 'Loading…' : 'Nothing found'}</p>
+		<p class="empty">{loading ? 'Loading…' : 'Nothing found'}</p>
 	{/each}
 </div>
 
@@ -51,9 +51,5 @@
 		max-height: 18rem;
 		margin-top: 4px;
 		overflow-y: auto;
-	}
-
-	.empty {
-		margin: 6px 8px;
 	}
 </style>

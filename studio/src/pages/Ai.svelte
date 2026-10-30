@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageTop from '../lib/PageTop.svelte';
 	import { markdown } from '../lib/markdown';
 	import {
 		agentEvents,
@@ -240,12 +241,13 @@
 
 <div class="split">
 	<section class="chat">
-		<div class="top">
-			<h1>AI</h1>
-			<button onclick={clear} disabled={busy || !lines.length}>
-				New
-			</button>
-		</div>
+		<PageTop title="AI" bleed={false}>
+			{#snippet actions()}
+				<button onclick={clear} disabled={busy || !lines.length}>
+					New
+				</button>
+			{/snippet}
+		</PageTop>
 
 		<div class="log" bind:this={log}>
 			{#if !lines.length}
@@ -330,17 +332,6 @@
 		min-height: 0;
 		background: var(--surface);
 		border-right: 1px solid var(--line);
-	}
-
-	.top {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 16px;
-
-		h1 {
-			flex: 1;
-		}
 	}
 
 	.log {

@@ -1,21 +1,32 @@
 <script lang="ts">
-	import {
-		listAssets,
-		type Asset,
-		type EntryRef,
-		type Field,
-		type Link,
-		type LinkKind,
-		type Refs,
-		type Schema,
-		type Values,
+	import type {
+		Asset,
+		EntryRef,
+		Field,
+		Link,
+		LinkKind,
+		Refs,
+		Schema,
+		Values,
 	} from '../api';
+	import AddButton from '../lib/AddButton.svelte';
+	import AssetChip from '../lib/AssetChip.svelte';
 	import AssetPicker from '../lib/AssetPicker.svelte';
+	import EntryChip from '../lib/EntryChip.svelte';
 	import EntrySearch from '../lib/EntrySearch.svelte';
-	import { openEntry } from '../lib/flyout.svelte';
-	import Thumb from '../lib/Thumb.svelte';
-	import Icon from '../lib/Icon.svelte';
+	import ItemActions from '../lib/ItemActions.svelte';
+	import { chosenAssets } from '../lib/assets.svelte';
+	import {
+		LINK_NAMES,
+		isExternal,
+		linkInput,
+		linkableTypes,
+	} from '../lib/link';
 
+	/**
+	 * A link to an entry, a url, an email, a phone or a file, with an
+	 * optional label and whether it opens in a new tab.
+	 */
 	let {
 		schema,
 		field,
@@ -23,56 +34,28 @@
 		refs,
 	}: { schema: Schema; field: Field; values: Values; refs: Refs } = $props();
 
-	const NAMES: Record<LinkKind, string> = {
-		entry: 'Entry',
-		url: 'URL',
-		email: 'Email',
-		phone: 'Phone',
-		asset: 'File',
-	};
-
 	const to = $derived(field.kind === 'link' ? field.to : []);
 	const link = $derived<Link>(
 		values[field.handle] ?? { type: to[0], value: null },
 	);
-	// only entries with a page can be linked to
-	const entryTypes = $derived(
-		schema.sections
-			.filter(
-				s => s.uri !== null || Object.keys(s.type_uris ?? {}).length,
-			)
-			.flatMap(s => s.types),
-	);
-	// like the website: external urls and files in a new tab
-	const external = $derived(
-		link.type === 'asset' ||
-			(link.type === 'url' &&
-				String(link.value ?? '').startsWith('http') &&
-				!Object.values(schema.siteUrls).some(
-					b => b && String(link.value).startsWith(b),
-				)),
-	);
 	const newTab = $derived(
-		link.newTab ?? (field.kind === 'link' && field.newTab && external),
+		link.newTab ??
+			(field.kind === 'link' && field.newTab && isExternal(schema, link)),
 	);
+	const input = $derived(linkInput(link.type));
 
-	let asset = $state<Asset | null>(null);
+	const asset = chosenAssets(() =>
+		link.type === 'asset' && typeof link.value === 'number'
+			? [link.value]
+			: [],
+	);
 	let picking = $state(false);
-
-	$effect(() => {
-		if (link.type !== 'asset' || typeof link.value !== 'number') {
-			asset = null;
-			return;
-		}
-		listAssets({ ids: String(link.value) }).then(
-			a => (asset = a[0] ?? null),
-		);
-	});
 
 	function set(change: Partial<Link>) {
 		values[field.handle] = { ...link, ...change };
 	}
 
+	/** Another kind of link starts empty, its label stays. */
 	function setType(type: LinkKind) {
 		const { label } = link;
 		values[field.handle] = {
@@ -93,6 +76,15 @@
 	}
 </script>
 
+{#snippet clear()}
+	<ItemActions
+		index={0}
+		count={1}
+		onremove={() => set({ value: null })}
+		removeTitle="Remove the target"
+	/>
+{/snippet}
+
 <div class="link">
 	<div class="row">
 		{#if to.length > 1}
@@ -101,7 +93,7 @@
 				onchange={e => setType(e.currentTarget.value as LinkKind)}
 			>
 				{#each to as t (t)}
-					<option value={t}>{NAMES[t]}</option>
+					<option value={t}>{LINK_NAMES[t]}</option>
 				{/each}
 			</select>
 		{/if}
@@ -109,61 +101,31 @@
 		<div class="value">
 			{#if link.type === 'entry'}
 				{#if typeof link.value === 'number'}
-					<div class="chip">
-						<button
-							type="button"
-							class="open"
-							title="Open in the flyout"
-							onclick={() => openEntry(link.value as number)}
-						>
-							{refs[link.value]?.title ?? `#${link.value}`}
-						</button>
-						<button
-							type="button"
-							class="icon"
-							title="Choose another entry"
-							onclick={() => set({ value: null })}
-						>
-							<Icon name="close" size={15} />
-						</button>
-					</div>
+					<EntryChip
+						{schema}
+						{refs}
+						id={link.value}
+						actions={clear}
+					/>
 				{:else}
 					<EntrySearch
 						{schema}
-						types={entryTypes}
+						types={linkableTypes(schema)}
 						onpick={pickEntry}
 					/>
 				{/if}
 			{:else if link.type === 'asset'}
-				{#if asset}
-					<div class="chip">
-						<span class="thumb"><Thumb {asset} /></span>
-						<span>{asset.filename}</span>
-						<button
-							class="icon"
-							title="Remove"
-							onclick={() => set({ value: null })}
-						>
-							<Icon name="delete" />
-						</button>
-					</div>
+				{#if asset.list[0]}
+					<AssetChip asset={asset.list[0]} actions={clear} />
 				{:else}
-					<button onclick={() => (picking = true)}>
+					<AddButton onclick={() => (picking = true)}>
 						Choose file
-					</button>
+					</AddButton>
 				{/if}
 			{:else}
 				<input
-					type={link.type === 'email'
-						? 'email'
-						: link.type === 'phone'
-							? 'tel'
-							: 'url'}
-					placeholder={link.type === 'url'
-						? 'https://…'
-						: link.type === 'email'
-							? 'name@example.ch'
-							: '+41 31 …'}
+					type={input.type}
+					placeholder={input.placeholder}
 					value={link.value ?? ''}
 					oninput={e => set({ value: e.currentTarget.value })}
 				/>
@@ -179,7 +141,7 @@
 		/>
 	{/if}
 
-	<label class="tab">
+	<label class="check">
 		<input
 			type="checkbox"
 			checked={newTab}
@@ -188,7 +150,7 @@
 		Open in a new tab
 	</label>
 	{#if link.type === 'asset'}
-		<label class="tab">
+		<label class="check">
 			<input
 				type="checkbox"
 				checked={link.download ?? false}
@@ -232,40 +194,10 @@
 		min-width: 0;
 	}
 
-	.chip {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		min-height: 34px;
-		padding: 2px 4px 2px 12px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background: var(--surface);
-
-		.open {
-			flex: 1;
-			padding: 4px 0;
-			border: none;
-			background: none;
-			font-weight: 500;
-			text-align: left;
-
-			&:hover:not(:disabled) {
-				background: none;
-				color: var(--accent);
-			}
-		}
-	}
-
-	.thumb {
-		width: 32px;
-	}
-
-	.tab {
+	.check {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		font-size: var(--fs-base);
 		color: var(--muted);
 	}
 </style>

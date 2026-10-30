@@ -7,9 +7,11 @@
 	let {
 		assets,
 		selected = [],
+		loading = false,
 		onpick,
 	}: {
 		assets: Asset[];
+		loading?: boolean;
 		selected?: number[];
 		onpick: (a: Asset) => void;
 	} = $props();
@@ -30,7 +32,7 @@
 			{/if}
 		</button>
 	{:else}
-		<p class="muted">No assets yet</p>
+		<p class="empty">{loading ? 'Loading…' : 'No assets yet'}</p>
 	{/each}
 </div>
 
