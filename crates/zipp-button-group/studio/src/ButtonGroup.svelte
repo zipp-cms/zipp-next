@@ -51,10 +51,18 @@
 			color 0.2s ease;
 	}
 
-	/* no sticky hover on touch screens, like the studio's hover mixin */
+	/* no sticky hover on touch screens, like the studio's hover mixin;
+	   the picked one keeps its color, the studio's hover of buttons
+	   would make it grey */
 	@media (hover: hover) {
 		button:hover:not(:disabled) {
 			border-color: var(--color);
+		}
+
+		button.on:hover:not(:disabled) {
+			background: var(--color);
+			color: white;
+			filter: brightness(0.9);
 		}
 	}
 
