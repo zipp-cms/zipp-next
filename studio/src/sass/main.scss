@@ -513,6 +513,11 @@ ol.plain {
 	}
 }
 
+// a row that is dragged, see zipp-ui's sortable.svelte.ts
+.sort-dragging {
+	opacity: 0.4;
+}
+
 // actions that show when the pointer is over their row, always on touch
 @include hover {
 	.reveal {

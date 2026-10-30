@@ -1,0 +1,1 @@
+function p(r,l){var n;const d=new Map(r.map(e=>[e.id,e]));let t=0;for(let e=l.parentId;e!==null&&t<100;t++)e=((n=d.get(e))==null?void 0:n.parentId)??null;return t}function a(r,l,d){var n;const t=new Map(r.map(e=>[e.id,e]));for(let e=l.parentId;e!==null;e=((n=t.get(e))==null?void 0:n.parentId)??null)if(e===d.id)return!0;return!1}export{p as d,a as i};

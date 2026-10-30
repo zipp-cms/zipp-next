@@ -14,6 +14,7 @@
 		collapsible = true,
 		invalid = false,
 		changed = false,
+		handle,
 		actions,
 		children,
 		id,
@@ -25,6 +26,8 @@
 		invalid?: boolean;
 		/** new or changed in the draft */
 		changed?: boolean;
+		/** the DragHandle, at the start of the head */
+		handle?: Snippet;
 		actions?: Snippet;
 		children: Snippet;
 		id?: string;
@@ -36,6 +39,7 @@
 
 <div class="item-card box" class:open={shown} class:invalid {id}>
 	<div class="head">
+		{@render handle?.()}
 		<button
 			type="button"
 			class="toggle plain"

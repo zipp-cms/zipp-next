@@ -30,7 +30,7 @@
 	<ItemCard {kind} bind:open={editing} summary={preview}>
 		{#snippet actions()}
 			{#if editable}
-				<ItemActions index={0} count={1} {onremove} />
+				<ItemActions {onremove} />
 			{/if}
 		{/snippet}
 		{@render children()}

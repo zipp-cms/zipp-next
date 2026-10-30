@@ -7,8 +7,11 @@
 	import Fields from './Fields.svelte';
 	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import ItemCard from 'zipp-ui/ItemCard.svelte';
+	import DragHandle from 'zipp-ui/DragHandle.svelte';
+	import SortLine from 'zipp-ui/SortLine.svelte';
+	import { Sortable, moved } from 'zipp-ui/sortable';
 	import { blockMissing, blockSummary, focus } from './blocks.svelte';
-	import { inserted, isFull, moved, removed } from '../core/list';
+	import { inserted, isFull, removed } from '../core/list';
 	import { componentOf } from '../core/schema';
 
 	/**
@@ -91,9 +94,17 @@
 				?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
 		);
 	});
+
+	// dragging a block, or its handle's menu and arrow keys
+	let list = $state<HTMLElement>();
+	const sort = new Sortable({
+		container: () => list,
+		depths: () => blocks.map(() => 0),
+		onmove: (from, drop) => set(moved(blocks, from, drop)),
+	});
 </script>
 
-<div class="blocks">
+<div class="blocks" bind:this={list}>
 	{#if blocks.length > 1}
 		<div class="tools">
 			<span>{blocks.length} blocks</span>
@@ -111,48 +122,56 @@
 		{#if i > 0 && !full}
 			<BlockMenu {types} inline onpick={t => add(t, i)} />
 		{/if}
-		<ItemCard
-			kind={comp?.name ?? block.type}
-			bind:open={
-				() => open[key(block)] ?? startOpen, v => (open[key(block)] = v)
-			}
-			invalid={hasError(i)}
-			changed={changed.has(`${path}.${i}`)}
-			id="block-{path}-{i}"
-		>
-			{#snippet summary()}
-				{@const missing = blockMissing(comp, block.fields)}
-				{#if missing}
-					<span class="missing">{missing}</span>
-				{:else}
-					{blockSummary(comp, block.fields, refs)}
+		<div data-sort class:sort-dragging={sort.dragging === i}>
+			<ItemCard
+				kind={comp?.name ?? block.type}
+				bind:open={
+					() => open[key(block)] ?? startOpen,
+					v => (open[key(block)] = v)
+				}
+				invalid={hasError(i)}
+				changed={changed.has(`${path}.${i}`)}
+				id="block-{path}-{i}"
+			>
+				{#snippet summary()}
+					{@const missing = blockMissing(comp, block.fields)}
+					{#if missing}
+						<span class="missing">{missing}</span>
+					{:else}
+						{blockSummary(comp, block.fields, refs)}
+					{/if}
+				{/snippet}
+				{#snippet handle()}
+					<DragHandle
+						sortable={sort}
+						index={i}
+						label="Move the block"
+					/>
+				{/snippet}
+				{#snippet actions()}
+					<ItemActions
+						onduplicate={full ? undefined : () => duplicate(i)}
+						onremove={() => set(removed(blocks, i))}
+					/>
+				{/snippet}
+				{#if errors[`${path}.${i}`]}
+					<p class="error">{errors[`${path}.${i}`]}</p>
 				{/if}
-			{/snippet}
-			{#snippet actions()}
-				<ItemActions
-					index={i}
-					count={blocks.length}
-					onmove={by => set(moved(blocks, i, by))}
-					onduplicate={full ? undefined : () => duplicate(i)}
-					onremove={() => set(removed(blocks, i))}
-				/>
-			{/snippet}
-			{#if errors[`${path}.${i}`]}
-				<p class="error">{errors[`${path}.${i}`]}</p>
-			{/if}
-			{#if comp}
-				<Fields
-					{schema}
-					component={comp}
-					values={block.fields}
-					{errors}
-					{refs}
-					prefix="{path}.{i}."
-					{changed}
-				/>
-			{/if}
-		</ItemCard>
+				{#if comp}
+					<Fields
+						{schema}
+						component={comp}
+						values={block.fields}
+						{errors}
+						{refs}
+						prefix="{path}.{i}."
+						{changed}
+					/>
+				{/if}
+			</ItemCard>
+		</div>
 	{/each}
+	<SortLine sortable={sort} />
 
 	{#if !full}
 		<BlockMenu {types} onpick={t => add(t)} />
@@ -161,6 +180,7 @@
 
 <style lang="scss">
 	.blocks {
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		gap: 0.375rem;

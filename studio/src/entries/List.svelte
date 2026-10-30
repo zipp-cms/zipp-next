@@ -42,7 +42,10 @@
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { date, plural } from '../core/format';
-	import { depth, dropTo, dropWhere, isBelow, type Where } from './tree';
+	import { depth, isBelow } from './tree';
+	import DragHandle from 'zipp-ui/DragHandle.svelte';
+	import SortLine from 'zipp-ui/SortLine.svelte';
+	import { Sortable, placeIn } from 'zipp-ui/sortable';
 	import { componentName, sectionOf } from '../core/schema';
 
 	let {
@@ -96,33 +99,27 @@
 		return () => clearTimeout(wait);
 	});
 
-	// drag and drop in a structure: before or after a row, or into it
-	let dragged = $state<Entry | null>(null);
-	let drop = $state<{ id: number; where: Where } | null>(null);
-
-	function ondragover(ev: DragEvent, e: Entry) {
-		if (!dragged || e === dragged || isBelow(entries, e, dragged)) return;
-		ev.preventDefault();
-		const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
-		drop = { id: e.id, where: dropWhere((ev.clientY - r.top) / r.height) };
-	}
-
-	async function ondrop(ev: DragEvent) {
-		ev.preventDefault();
-		const d = dragged;
-		const target = entries.find(e => e.id === drop?.id);
-		const where = drop?.where;
-		dragged = null;
-		drop = null;
-		if (!d || !target || !where) return;
-		const to = dropTo(entries, d, target, where);
-		try {
-			await moveEntry(d.id, to.parentId, to.index);
-			load();
-		} catch (err: any) {
-			error = err.message;
-		}
-	}
+	// moving in a structure: dragging up and down, left and right for the
+	// level; a move changes the website at once
+	let rows = $state<HTMLElement>();
+	const depths = $derived(entries.map(e => depth(entries, e)));
+	const sort = new Sortable({
+		container: () => rows,
+		depths: () => depths,
+		maxDepth: 20,
+		indent: 21,
+		inset: 16,
+		onmove: async (from, drop) => {
+			const to = placeIn(depths, from, drop);
+			const parentId = to.parent === null ? null : entries[to.parent].id;
+			try {
+				await moveEntry(entries[from].id, parentId, to.index);
+				load();
+			} catch (err: any) {
+				error = err.message;
+			}
+		},
+	});
 
 	/** Edit, view and delete without opening the entry. */
 	function actions(e: Entry): MenuItem[] {
@@ -182,7 +179,7 @@
 
 {#if error}<p class="error">{error}</p>{/if}
 
-<div class="card list">
+<div class="card list" bind:this={rows}>
 	<div class="search">
 		<span class="field">
 			<SearchInput bind:value={search} placeholder="Search entries" />
@@ -199,16 +196,12 @@
 		</div>
 	{/if}
 	{#each entries as e (e.id)}
+		{@const i = entries.indexOf(e)}
 		<div
 			class="row"
 			class:types
-			class:dragging={dragged === e}
-			class:drop-before={drop?.id === e.id && drop.where === 'before'}
-			class:drop-after={drop?.id === e.id && drop.where === 'after'}
-			class:drop-into={drop?.id === e.id && drop.where === 'into'}
-			ondragover={ev => canMove && ondragover(ev, e)}
-			ondragleave={() => drop?.id === e.id && (drop = null)}
-			{ondrop}
+			data-sort
+			class:sort-dragging={sort.moving(i)}
 			role="listitem"
 		>
 			<span
@@ -216,26 +209,11 @@
 				style:padding-left="{depth(entries, e) * 1.3125}rem"
 			>
 				{#if canMove}
-					<span
-						class="handle"
-						draggable="true"
-						title="Drag to move"
-						role="button"
-						tabindex="-1"
-						ondragstart={ev => {
-							dragged = e;
-							ev.dataTransfer?.setData(
-								'text/plain',
-								String(e.id),
-							);
-						}}
-						ondragend={() => {
-							dragged = null;
-							drop = null;
-						}}
-					>
-						<Icon name="move" size={15} />
-					</span>
+					<DragHandle
+						sortable={sort}
+						index={i}
+						label="Move {e.title}"
+					/>
 				{/if}
 				<a class="title" href={entryPath(section, e.id)}>
 					{e.title}
@@ -270,6 +248,7 @@
 <style lang="scss">
 	// no overflow hidden, the menus of the last rows reach out
 	.list {
+		position: relative;
 		padding: 0 0 0.375rem;
 	}
 
@@ -350,35 +329,6 @@
 		align-items: center;
 		gap: 0.5rem;
 		min-width: 0;
-	}
-
-	.handle {
-		display: flex;
-		cursor: grab;
-		color: var(--subtle);
-		opacity: 0;
-	}
-
-	@include hover {
-		.row:hover .handle {
-			opacity: 1;
-		}
-	}
-
-	.dragging {
-		opacity: 0.4;
-	}
-
-	.drop-before {
-		box-shadow: inset 0 2px 0 var(--accent);
-	}
-
-	.drop-after {
-		box-shadow: inset 0 -2px 0 var(--accent);
-	}
-
-	.drop-into {
-		background: var(--accent-soft);
 	}
 
 	.type {
