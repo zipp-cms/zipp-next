@@ -11,6 +11,7 @@
 	} from '../../api';
 	import { accessOf, isAdmin } from '../../lib/access';
 	import PluginCards from './PluginCards.svelte';
+	import { componentOf, sectionOf } from '../../lib/schema';
 
 	/**
 	 * A section in the setup, read only: its settings in the main column
@@ -19,11 +20,11 @@
 	 */
 	let { schema, handle }: { schema: Schema; handle: string } = $props();
 
-	const section = $derived(schema.sections.find(s => s.handle === handle));
+	const section = $derived(sectionOf(schema, handle));
 	const types = $derived(
 		(section?.types ?? []).map(
 			t =>
-				schema.components.find(c => c.handle === t) ?? {
+				componentOf(schema, t) ?? {
 					handle: t,
 					name: t,
 					entry: true,

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import SiteBadges from '../../lib/SiteBadges.svelte';
-	import { componentOf } from '../../lib/schema';
+	import BlockOutline from './BlockOutline.svelte';
+	import { componentName } from '../../lib/schema';
 	import type {
 		Component,
 		Entry,
@@ -9,7 +10,6 @@
 		Section,
 	} from '../../api';
 	import type { Block, Values } from '../../api';
-	import { blockSummary, showBlock } from '../../lib/blocks.svelte';
 	import { setSite, site } from '../../route.svelte';
 	import RevisionList from './RevisionList.svelte';
 
@@ -84,8 +84,6 @@
 			}))
 			.filter(o => o.blocks.length),
 	);
-	const nameOf = (type: string) =>
-		schema.components.find(c => c.handle === type)?.name ?? type;
 </script>
 
 <aside>
@@ -136,8 +134,7 @@
 					<select bind:value={ty}>
 						{#each secDef.types as t (t)}
 							<option value={t}>
-								{schema.components.find(c => c.handle === t)
-									?.name}
+								{componentName(schema, t)}
 							</option>
 						{/each}
 					</select>
@@ -167,30 +164,7 @@
 	{/if}
 
 	{#each outlines as o (o.field.handle)}
-		<nav class="card outline" aria-label="Outline of {o.field.label}">
-			<h3>Outline · {o.field.label}</h3>
-			<ol>
-				{#each o.blocks as b, i (i)}
-					<li>
-						<button
-							type="button"
-							onclick={() => showBlock(o.field.handle, i)}
-						>
-							<span class="n">
-								{String(i + 1).padStart(2, '0')}
-							</span>
-							<span class="name">{nameOf(b.type)}</span>
-							<span class="sum">
-								{blockSummary(
-									componentOf(schema, b.type),
-									b.fields,
-								)}
-							</span>
-						</button>
-					</li>
-				{/each}
-			</ol>
-		</nav>
+		<BlockOutline {schema} field={o.field} blocks={o.blocks} />
 	{/each}
 
 	{#if !isNew && multiSite && canEdit}
@@ -284,48 +258,5 @@
 		margin: 0 0 -6px;
 		font-size: var(--fs-sm);
 		font-weight: 600;
-	}
-
-	.outline {
-		gap: 8px;
-
-		ol {
-			margin: 0;
-			padding: 0;
-			list-style: none;
-		}
-
-		button {
-			display: grid;
-			grid-template-columns: 22px auto minmax(0, 1fr);
-			align-items: baseline;
-			gap: 6px;
-			width: 100%;
-			padding: 5px 4px;
-			border: none;
-			background: none;
-			text-align: left;
-			font-weight: 400;
-		}
-
-		.n {
-			color: var(--subtle);
-			font-family: var(--mono);
-			font-size: 10px;
-		}
-
-		.name {
-			font-size: var(--fs-md);
-			font-weight: 500;
-		}
-
-		.sum {
-			overflow: hidden;
-			color: var(--subtle);
-			font-size: var(--fs-xs);
-			text-align: right;
-			text-overflow: ellipsis;
-			white-space: nowrap;
-		}
 	}
 </style>

@@ -16,7 +16,13 @@ function enough(has: Access | null | undefined, need: Access) {
 
 /** The name of the user's role, `Admin` without one. */
 export function roleName(schema: Schema): string {
-	return isAdmin(schema) ? 'Admin' : (role(schema)?.name ?? schema.me.role!);
+	return roleNameOf(schema, schema.me.role);
+}
+
+/** The name of a role, `null` is an admin. */
+export function roleNameOf(schema: Schema, handle: string | null): string {
+	if (handle === null) return 'Admin';
+	return schema.roles.find(r => r.handle === handle)?.name ?? handle;
 }
 
 /** What the user may do in a section, for showing it. */

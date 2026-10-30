@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Field, Refs, Schema, Values } from '../api';
 	import Fields from './Fields.svelte';
+	import { componentOf } from '../lib/schema';
 
 	/** The fields of another component under one name, always there. */
 	let {
@@ -22,9 +23,9 @@
 	} = $props();
 
 	const comp = $derived(
-		schema.components.find(
-			c => field.kind === 'group' && c.handle === field.component,
-		),
+		field.kind === 'group'
+			? componentOf(schema, field.component)
+			: undefined,
 	);
 
 	// the group is an object, also when it was never filled in

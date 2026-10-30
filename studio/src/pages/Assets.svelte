@@ -5,6 +5,7 @@
 	import AssetGrid from '../lib/AssetGrid.svelte';
 	import AssetDetail from '../lib/AssetDetail.svelte';
 	import SearchInput from '../lib/SearchInput.svelte';
+	import { Busy } from '../lib/busy.svelte';
 	import UploadButton from '../lib/UploadButton.svelte';
 
 	let { schema }: { schema: Schema } = $props();
@@ -14,7 +15,7 @@
 	let search = $state('');
 	let loaded = $state(false);
 	let error = $state('');
-	let uploading = $state(false);
+	const uploading = new Busy();
 	let current = $state<Asset | null>(null);
 
 	function load() {
@@ -32,15 +33,8 @@
 
 	async function upload(files: FileList | null) {
 		if (!files?.length) return;
-		uploading = true;
-		try {
-			await uploadAssets(files);
-			load();
-		} catch (e: any) {
-			error = e.message;
-		} finally {
-			uploading = false;
-		}
+		await uploading.run(() => uploadAssets(files));
+		load();
 	}
 
 	function open(a: Asset) {
@@ -64,13 +58,15 @@
 		{#snippet actions()}
 			{#if canEdit}
 				<UploadButton onfiles={upload} multiple primary>
-					{uploading ? 'Uploading…' : 'Upload'}
+					{uploading.busy ? 'Uploading…' : 'Upload'}
 				</UploadButton>
 			{/if}
 		{/snippet}
 	</PageTop>
 
-	{#if error}<p class="error">{error}</p>{/if}
+	{#if error || uploading.error}
+		<p class="error">{error || uploading.error}</p>
+	{/if}
 
 	<div class="card">
 		<div class="search">

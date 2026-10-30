@@ -9,6 +9,8 @@
 		type User,
 	} from '../api';
 	import { shown } from '../route.svelte';
+	import { roleNameOf } from '../lib/access';
+	import { Busy } from '../lib/busy.svelte';
 
 	/**
 	 * The users of the studio, for admins: who has which role. The roles
@@ -17,7 +19,7 @@
 	let { schema }: { schema: Schema } = $props();
 
 	let users = $state<User[]>([]);
-	let error = $state('');
+	const action = new Busy();
 	let email = $state('');
 	let password = $state('');
 	let role = $state<string | null>(null);
@@ -29,17 +31,15 @@
 	async function load() {
 		users = await listUsers();
 	}
-	load().catch(e => (error = e.message));
 
-	async function run(f: () => Promise<unknown>) {
-		error = '';
-		try {
+	/** Changes the users, then shows them again. */
+	const run = (f: () => Promise<unknown>) =>
+		action.run(async () => {
 			await f();
 			await load();
-		} catch (e: any) {
-			error = e.message;
-		}
-	}
+		});
+
+	run(async () => {});
 
 	function add(e: SubmitEvent) {
 		e.preventDefault();
@@ -49,16 +49,11 @@
 			password = '';
 		});
 	}
-
-	const roleName = (h: string | null) =>
-		h === null
-			? 'Admin'
-			: (schema.roles.find(r => r.handle === h)?.name ?? h);
 </script>
 
 <PageTop title="Users" />
 
-{#if error}<p class="error">{error}</p>{/if}
+{#if action.error}<p class="error">{action.error}</p>{/if}
 
 <div class="card">
 	<table class="table">
@@ -68,7 +63,7 @@
 					<td>{u.email}</td>
 					<td>
 						{#if u.id === schema.me.id}
-							{roleName(u.role)}
+							{roleNameOf(schema, u.role)}
 							<span class="muted">(you)</span>
 						{:else}
 							<select
@@ -125,7 +120,7 @@
 			<option value={r.handle}>{r.name}</option>
 		{/each}
 	</select>
-	<button class="primary">Save</button>
+	<button class="primary" disabled={action.busy}>Save</button>
 </form>
 
 <style>

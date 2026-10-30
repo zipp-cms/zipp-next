@@ -1,27 +1,23 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import {
 		assetUrl,
-		assetUsage,
-		deleteAsset,
-		replaceAsset,
-		updateAsset,
-		type Asset,
-		type AssetUsage,
-		NO_EDITS,
-		noEdits,
 		transparentEdges,
-		type Edits,
+		type Asset,
 		type Schema,
 	} from '../api';
-	import Flyout from './Flyout.svelte';
-	import UploadButton from './UploadButton.svelte';
+	import { entryPath } from '../route.svelte';
 	import { canAssets } from './access';
+	import { AssetForm } from './assetForm.svelte';
+	import Flyout from './Flyout.svelte';
+	import { closeFlyout } from './flyout.svelte';
 	import { fileSize, time } from './format';
 	import Icon from './Icon.svelte';
 	import ImageEditor from './image/ImageEditor.svelte';
+	import { plural } from './list';
+	import { sectionName } from './schema';
 	import Thumb from './Thumb.svelte';
-	import { closeFlyout } from './flyout.svelte';
-	import { entryPath } from '../route.svelte';
+	import UploadButton from './UploadButton.svelte';
 
 	/**
 	 * A file like Craft's asset panel: the image editor, title, alt text
@@ -45,93 +41,30 @@
 
 	const canEdit = $derived(canAssets(schema, 'edit'));
 	const canDelete = $derived(canAssets(schema, 'delete'));
-
-	// svelte-ignore state_referenced_locally
-	let current = $state(asset);
-	// svelte-ignore state_referenced_locally
-	let title = $state(asset.title);
-	// svelte-ignore state_referenced_locally
-	let alt = $state(asset.alt);
-	// svelte-ignore state_referenced_locally
-	let filename = $state(asset.filename);
-	// svelte-ignore state_referenced_locally
-	let focal = $state({ x: asset.focalX, y: asset.focalY });
-	// svelte-ignore state_referenced_locally
-	let edits = $state<Edits>({ ...NO_EDITS, ...(asset.edits ?? {}) });
-	let error = $state('');
-	let busy = $state(false);
+	// the flyout is keyed by the asset
+	const form = untrack(() => new AssetForm(asset));
+	const current = $derived(form.current);
 	let copied = $state(false);
-	let usage = $state<AssetUsage[] | null>(null);
 
-	$effect(() => {
-		assetUsage(current.id)
-			.then(u => (usage = u))
-			.catch(() => (usage = []));
-	});
-
-	const form = () =>
-		JSON.stringify({
-			title,
-			alt,
-			filename,
-			focal,
-			edits: $state.snapshot(edits),
-		});
-	// what Cancel would throw away
-	let initial = $state(form());
-	const dirty = $derived(form() !== initial);
+	/** Whether the changes may go: none, or the editor says so. */
+	const mayLeave = () => !form.dirty || confirm('Discard the changes?');
 
 	function cancel() {
-		if (dirty && !confirm('Discard the changes?')) return;
-		onclose();
+		if (mayLeave()) onclose();
 	}
 
 	async function save() {
-		busy = true;
-		error = '';
-		try {
-			onsaved(
-				await updateAsset(current.id, {
-					title,
-					alt,
-					filename,
-					focalX: focal.x,
-					focalY: focal.y,
-					edits: noEdits(edits) ? null : $state.snapshot(edits),
-				}),
-			);
-		} catch (e: any) {
-			error = e.message;
-		} finally {
-			busy = false;
-		}
+		const saved = await form.save();
+		if (saved) onsaved(saved);
 	}
 
 	async function remove() {
-		const used = usage?.length
-			? ` It is used in ${usage.length} ${usage.length === 1 ? 'entry' : 'entries'}.`
+		const n = form.usage?.length ?? 0;
+		const used = n
+			? ` It is used in ${plural(n, 'entry', 'entries')}.`
 			: '';
 		if (!confirm(`Delete ${current.filename}?${used}`)) return;
-		await deleteAsset(current.id);
-		ondeleted();
-	}
-
-	async function replace(files: FileList) {
-		const file = files?.[0];
-		if (!file) return;
-		busy = true;
-		error = '';
-		try {
-			current = await replaceAsset(current.id, file);
-			filename = current.filename;
-			focal = { x: current.focalX, y: current.focalY };
-			edits = { ...NO_EDITS };
-			initial = form();
-		} catch (e: any) {
-			error = e.message;
-		} finally {
-			busy = false;
-		}
+		if (await form.remove()) ondeleted();
 	}
 
 	async function copyUrl() {
@@ -141,14 +74,11 @@
 		copied = true;
 		setTimeout(() => (copied = false), 1500);
 	}
-
-	const sectionName = (h: string) =>
-		schema.sections.find(s => s.handle === h)?.name ?? h;
 </script>
 
 {#snippet actions()}
 	<button type="button" onclick={cancel}>Cancel</button>
-	<button type="button" class="primary" disabled={busy} onclick={save}>
+	<button type="button" class="primary" disabled={form.busy} onclick={save}>
 		<Icon name="save" size={14} /> Save
 	</button>
 {/snippet}
@@ -164,8 +94,8 @@
 				{#key current.filename + current.size}
 					<ImageEditor
 						src={assetUrl(current, false, true)}
-						bind:edits
-						bind:focal
+						bind:edits={form.edits}
+						bind:focal={form.focal}
 						editable={canEdit}
 					/>
 				{/key}
@@ -176,27 +106,27 @@
 
 		<aside>
 			<div class="card fields">
-				<label>
+				<label class="stacked">
 					Title
 					<input
-						bind:value={title}
+						bind:value={form.title}
 						placeholder="From the filename"
 						disabled={!canEdit}
 					/>
 				</label>
-				<label>
+				<label class="stacked">
 					Alt text
 					<input
-						bind:value={alt}
+						bind:value={form.alt}
 						placeholder="What the image shows"
 						disabled={!canEdit}
 					/>
 				</label>
-				<label>
+				<label class="stacked">
 					Filename
-					<input bind:value={filename} disabled={!canEdit} />
+					<input bind:value={form.filename} disabled={!canEdit} />
 				</label>
-				{#if error}<p class="error">{error}</p>{/if}
+				{#if form.error}<p class="error">{form.error}</p>{/if}
 			</div>
 
 			<div class="card">
@@ -242,7 +172,10 @@
 						{copied ? 'Copied' : 'Copy URL'}
 					</button>
 					{#if canEdit}
-						<UploadButton onfiles={replace} icon="replace">
+						<UploadButton
+							onfiles={f => form.replace(f[0])}
+							icon="replace"
+						>
 							Replace file
 						</UploadButton>
 					{/if}
@@ -251,27 +184,23 @@
 
 			<div class="card">
 				<h3>Used in</h3>
-				{#if usage === null}
-					<p class="note">Loading…</p>
+				{#if form.usage === null}
+					<p class="empty">Loading…</p>
 				{:else}
-					<ul>
-						{#each usage as u (u.id)}
+					<ul class="plain usage">
+						{#each form.usage as u (u.id)}
 							<li>
 								<a
 									href="/admin{entryPath(u.section, u.id)}"
 									onclick={e => {
-										if (
-											dirty &&
-											!confirm('Discard the changes?')
-										)
-											e.preventDefault();
-										else closeFlyout();
+										if (mayLeave()) closeFlyout();
+										else e.preventDefault();
 									}}
 								>
 									{u.title}
 								</a>
 								<span class="note">
-									{sectionName(u.section)} · {u.sites
+									{sectionName(schema, u.section)} · {u.sites
 										.map(s => s.toUpperCase())
 										.join(' ')}
 								</span>
@@ -324,14 +253,6 @@
 		padding: 12px;
 	}
 
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 5px;
-		font-size: var(--fs-sm);
-		font-weight: 600;
-	}
-
 	dl {
 		display: grid;
 		grid-template-columns: auto 1fr;
@@ -361,13 +282,10 @@
 		font-weight: 600;
 	}
 
-	ul {
+	.usage {
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
-		margin: 0;
-		padding: 0;
-		list-style: none;
 		font-size: var(--fs-md);
 
 		li {
