@@ -9,7 +9,8 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::content::{FieldError, check_link, new_block_id, validate_fields};
+use crate::content::validate::validate_block;
+use crate::content::{FieldError, check_link, link_is_empty};
 use crate::schema::{FieldKind, LinkKind, Schema};
 
 /// The links a rich text knows, everything but assets.
@@ -98,7 +99,7 @@ pub fn validate(
 			// yet is left out.
 			"button" if allowed.buttons => {
 				let link = &node["attrs"]["link"];
-				if link["value"] == Value::Null || link["value"] == "" {
+				if link_is_empty(link) {
 					continue;
 				}
 				let ok = link
@@ -110,36 +111,27 @@ pub fn validate(
 				}
 				Some(json!({ "type": "button", "attrs": { "link": link } }))
 			}
+			// a block like in a blocks field; its errors show on the rich
+			// text, the studio has no place for them in the block
 			"embed" => {
-				let attrs = &node["attrs"];
-				let bt = attrs["type"].as_str().unwrap_or_default();
-				let comp = match schema.get(bt) {
-					Some(c) if allowed.blocks.iter().any(|b| b == bt) => c,
-					_ => {
-						err(format!("block {bt:?} isn't allowed here"));
-						continue;
-					}
-				};
-				let mut block_errors = vec![];
-				let prefix = format!("{path}.{i}.");
-				let fields = validate_fields(
-					schema,
-					comp,
-					&attrs["fields"],
-					&prefix,
-					&mut block_errors,
-				);
-				for e in block_errors {
-					err(format!("{}: {} {}", comp.name, e.path, e.message));
+				let bt = node["attrs"]["type"].as_str().unwrap_or_default();
+				if !allowed.blocks.iter().any(|b| b == bt) {
+					err(format!("block {bt:?} isn't allowed here"));
+					continue;
 				}
-				let id = match attrs["id"].as_str() {
-					Some(id) if !id.is_empty() => id.to_string(),
-					_ => new_block_id(),
-				};
-				Some(json!({
-					"type": "embed",
-					"attrs": { "id": id, "type": bt, "fields": fields },
-				}))
+				let mut nested = vec![];
+				let block = validate_block(
+					schema,
+					allowed.blocks,
+					&node["attrs"],
+					&format!("{path}.{i}"),
+					&mut nested,
+				);
+				let name = schema.get(bt).map_or(bt, |c| c.name.as_str());
+				for e in nested {
+					err(format!("{name}: {} {}", e.path, e.message));
+				}
+				Some(json!({ "type": "embed", "attrs": block }))
 			}
 			_ => {
 				err(format!("{ty} isn't allowed here"));
@@ -152,8 +144,6 @@ pub fn validate(
 	json!({ "type": "doc", "content": out })
 }
 
-/// A paragraph or heading with only allowed inline content, `None` if it
-/// is empty.
 /// A no-break space between two words stays, it keeps them on one line
 /// (`der\u{a0}Kataraktchirurgie`); next to a space or at an end the editor
 /// only made space with it, that becomes a space.
@@ -176,6 +166,8 @@ fn loose_nbsp(text: &str) -> String {
 		.collect()
 }
 
+/// A paragraph or heading with only allowed inline content, `None` if it
+/// is empty.
 fn clean_inline(
 	node: &Value,
 	allowed: &Allowed,

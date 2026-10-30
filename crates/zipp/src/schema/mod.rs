@@ -36,6 +36,7 @@ pub(crate) mod tests;
 pub use field::Choice;
 pub use field::Field;
 pub use field::FieldKind;
+pub use field::Holds;
 pub use field::LinkKind;
 use field::*;
 pub use field::{Column, ColumnKind};
@@ -191,6 +192,14 @@ pub struct Component {
 	/// in the studio's lists and menus, only looks like the tabs
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub icon: Option<Icon>,
+}
+
+/// How an indexed field is compared and sorted, see
+/// [`Schema::index_kind`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum IndexKind {
+	Text,
+	Number,
 }
 
 /// A tab of an entry type in the editor, see [`Schema::entry_tabs`].
@@ -433,5 +442,17 @@ impl Schema {
 
 	pub fn primary_site(&self) -> &Site {
 		&self.sites[0]
+	}
+
+	/// The number of a site, its position from 1 like Craft's site ids;
+	/// GraphQL and crelte know sites by it.
+	pub fn site_id(&self, handle: &str) -> Option<i64> {
+		let i = self.sites.iter().position(|s| s.handle == handle)?;
+		Some(i as i64 + 1)
+	}
+
+	/// The site of a number of [`Schema::site_id`].
+	pub fn site_by_id(&self, id: i64) -> Option<&Site> {
+		self.sites.get(usize::try_from(id).ok()?.checked_sub(1)?)
 	}
 }

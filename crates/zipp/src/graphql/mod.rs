@@ -169,6 +169,19 @@ struct Block {
 	fields: Value,
 }
 
+/// A block of a blocks field or a rich text, `{ "id", "type", "fields" }`,
+/// as its `<type>_Block`.
+fn block_of(b: &Value, site: &str) -> FieldValue<'static> {
+	let ty = b["type"].as_str().unwrap_or_default().to_string();
+	FieldValue::owned_any(Block {
+		id: b["id"].as_str().unwrap_or_default().into(),
+		ty: ty.clone(),
+		site: site.into(),
+		fields: b["fields"].clone(),
+	})
+	.with_type(format!("{ty}_Block"))
+}
+
 pub fn build(
 	schema: Arc<Schema>,
 	db: Db,

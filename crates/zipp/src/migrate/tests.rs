@@ -2,6 +2,7 @@ use serde_json::json;
 
 use super::*;
 use crate::schema::tests::site;
+use crate::schema::{Column, LinkKind};
 
 fn apply_all(old: &Schema, ops: &[Op]) -> Schema {
 	let mut s = old.clone();
@@ -212,4 +213,35 @@ fn migration_file_roundtrip() {
 	let back: Migration = serde_json::from_str(&s).unwrap();
 	assert_eq!(back.ops, m.ops);
 	assert_eq!(next_name(&[back], Some("init")), "0002_init");
+}
+
+#[test]
+fn only_blocks_are_blocks() {
+	// a block type named like a kind of link, next to a navigation and a
+	// table whose rows have a `type` too
+	let s = site().block("url", "Url", []).entry(
+		"menu",
+		"Menu",
+		[
+			Field::blocks("body", ["url"]),
+			Field::navigation("nav", [LinkKind::Url]),
+			Field::table("rows", [Column::text("type")]),
+		],
+	);
+	let op = Op::RemoveComponent {
+		component: "url".into(),
+	};
+	let mut ty = "menu".to_string();
+	let link =
+		json!({ "type": "url", "value": "https://x.ch", "children": [] });
+	let row = json!({ "type": "url" });
+	let mut fields = json!({
+		"body": [{ "id": "a", "type": "url", "fields": {} }],
+		"nav": [link],
+		"rows": [row],
+	});
+	op.apply_entry(&s, &mut ty, &mut fields);
+	assert_eq!(fields["body"], json!([]));
+	assert_eq!(fields["nav"], json!([link]));
+	assert_eq!(fields["rows"], json!([row]));
 }

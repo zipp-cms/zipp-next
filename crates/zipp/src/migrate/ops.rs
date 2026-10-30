@@ -93,12 +93,10 @@ impl Op {
 				if ty == component {
 					return false;
 				}
-				walk_mut(schema, comp, fields, &mut |_, obj| {
-					for v in obj.values_mut() {
-						for_blocks(v, &mut |list| {
-							list.retain(|b| b["type"] != component.as_str())
-						});
-					}
+				walk_mut(schema, comp, fields, &mut |c, obj| {
+					block_lists(c, obj, &mut |list| {
+						list.retain(|b| b["type"] != component.as_str())
+					});
 				});
 			}
 			Self::RenameComponent { from, to } => {
@@ -110,17 +108,15 @@ impl Op {
 					*ty = to.clone();
 				}
 				let comp = after.get(ty).unwrap();
-				walk_mut(&after, comp, fields, &mut |_, obj| {
-					for v in obj.values_mut() {
-						for_blocks(v, &mut |list| {
-							for b in list
-								.iter_mut()
-								.filter(|b| b["type"] == from.as_str())
-							{
-								b["type"] = to.clone().into();
-							}
-						});
-					}
+				walk_mut(&after, comp, fields, &mut |c, obj| {
+					block_lists(c, obj, &mut |list| {
+						for b in list
+							.iter_mut()
+							.filter(|b| b["type"] == from.as_str())
+						{
+							b["type"] = to.clone().into();
+						}
+					});
 				});
 			}
 			Self::RemoveField { component, field } => {
@@ -219,38 +215,54 @@ impl Op {
 	}
 }
 
-/// Calls `f` with the blocks of a value: a blocks list as it is, the
-/// blocks of a rich text as their attrs (they look the same: id, type,
-/// fields). Afterwards the rich text gets them back.
-pub(super) fn for_blocks(v: &mut Value, f: &mut impl FnMut(&mut Vec<Value>)) {
-	match v {
-		Value::Array(list) => f(list),
-		Value::Object(o) if o.get("type").is_some_and(|t| t == "doc") => {
-			let Some(Value::Array(content)) = o.get_mut("content") else {
-				return;
-			};
-			let mut attrs: Vec<Value> = content
-				.iter()
-				.filter(|n| n["type"] == "embed")
-				.map(|n| n["attrs"].clone())
-				.collect();
-			f(&mut attrs);
-
-			// put the changed blocks back, the removed ones go away
-			let mut out = vec![];
-			for node in content.drain(..) {
-				if node["type"] != "embed" {
-					out.push(node);
-				} else if let Some(a) =
-					attrs.iter().find(|a| a["id"] == node["attrs"]["id"])
-				{
-					out.push(
-						serde_json::json!({ "type": "embed", "attrs": a }),
-					);
+/// Calls `f` with each list of blocks in the fields of `comp`: a blocks
+/// field, the blocks embedded in a rich text (taken out and written back,
+/// removed ones leave the document). Values that only look like blocks,
+/// navigation items or table rows with a `type`, stay as they are; a
+/// group's fields come with `walk_mut`.
+fn block_lists(
+	comp: &Component,
+	obj: &mut Map<String, Value>,
+	f: &mut impl FnMut(&mut Vec<Value>),
+) {
+	for field in &comp.fields {
+		let Some(v) = obj.get_mut(&field.handle) else {
+			continue;
+		};
+		match field.kind.holds() {
+			Holds::Blocks => {
+				if let Value::Array(list) = v {
+					f(list)
 				}
 			}
-			*content = out;
+			Holds::RichText => embedded_blocks(v, f),
+			Holds::Group(_) | Holds::Nothing => {}
 		}
-		_ => {}
 	}
+}
+
+/// The blocks of a rich text document as one list for `f`.
+fn embedded_blocks(doc: &mut Value, f: &mut impl FnMut(&mut Vec<Value>)) {
+	let Some(Value::Array(content)) = doc.get_mut("content") else {
+		return;
+	};
+	let mut attrs: Vec<Value> = content
+		.iter()
+		.filter(|n| n["type"] == "embed")
+		.map(|n| n["attrs"].clone())
+		.collect();
+	f(&mut attrs);
+
+	// put the changed blocks back, the removed ones go away
+	let mut out = vec![];
+	for node in content.drain(..) {
+		if node["type"] != "embed" {
+			out.push(node);
+		} else if let Some(a) =
+			attrs.iter().find(|a| a["id"] == node["attrs"]["id"])
+		{
+			out.push(serde_json::json!({ "type": "embed", "attrs": a }));
+		}
+	}
+	*content = out;
 }

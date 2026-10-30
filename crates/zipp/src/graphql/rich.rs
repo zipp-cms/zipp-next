@@ -101,22 +101,7 @@ pub(super) fn rich_text_object() -> Object {
 								FieldValue::value(GqlValue::Object(o))
 									.with_type("Buttons")
 							}
-							Chunk::Block(attrs) => {
-								let ty = attrs["type"]
-									.as_str()
-									.unwrap_or_default()
-									.to_string();
-								FieldValue::owned_any(Block {
-									id: attrs["id"]
-										.as_str()
-										.unwrap_or_default()
-										.into(),
-									ty: ty.clone(),
-									site: rt.site.clone(),
-									fields: attrs["fields"].clone(),
-								})
-								.with_type(format!("{ty}_Block"))
-							}
+							Chunk::Block(attrs) => block_of(&attrs, &rt.site),
 						});
 					}
 					Ok(Some(FieldValue::list(out)))

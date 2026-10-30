@@ -62,9 +62,8 @@ pub(super) fn validate_value(
 		Value::Null => true,
 		Value::String(s) => s.is_empty(),
 		Value::Array(a) => a.is_empty(),
-		// a link without a target
-		Value::Object(o) if matches!(field.kind, FieldKind::Link { .. }) => {
-			o.get("value").is_none_or(|v| v.is_null() || v == "")
+		Value::Object(_) if matches!(field.kind, FieldKind::Link { .. }) => {
+			link_is_empty(value)
 		}
 		_ => false,
 	};
@@ -283,13 +282,9 @@ pub(crate) fn check_link(
 	link: &Map<String, Value>,
 ) -> Result<(), String> {
 	let ty = link.get("type").and_then(Value::as_str).unwrap_or_default();
-	let kind = match ty {
-		"entry" => LinkKind::Entry,
-		"url" => LinkKind::Url,
-		"email" => LinkKind::Email,
-		"phone" => LinkKind::Phone,
-		"asset" => LinkKind::Asset,
-		_ => return Err(format!("unknown link type {ty:?}")),
+	let kind = link.get("type").and_then(|t| LinkKind::deserialize(t).ok());
+	let Some(kind) = kind else {
+		return Err(format!("unknown link type {ty:?}"));
 	};
 	if !to.contains(&kind) {
 		return Err(format!("can't link to {ty}"));

@@ -36,8 +36,8 @@ pub(super) fn link_relation(
 	link: &Value,
 	path: &str,
 ) -> Option<RelationRef> {
-	let target = match link["type"].as_str() {
-		Some("entry") => Target::Entries(
+	let target = match link_kind(link)? {
+		LinkKind::Entry => Target::Entries(
 			schema
 				.components
 				.iter()
@@ -45,11 +45,11 @@ pub(super) fn link_relation(
 				.map(|c| c.handle.clone())
 				.collect(),
 		),
-		Some("asset") => Target::Assets {
+		LinkKind::Asset => Target::Assets {
 			images: false,
 			extensions: vec![],
 		},
-		_ => return None,
+		LinkKind::Url | LinkKind::Email | LinkKind::Phone => return None,
 	};
 	Some(RelationRef {
 		path: path.into(),
@@ -67,103 +67,73 @@ pub(super) fn collect_relations(
 ) {
 	for field in &comp.fields {
 		let path = format!("{prefix}{}", field.handle);
+		let value = &fields[&field.handle];
+		let ids = || value.as_array().into_iter().flatten();
+		let ids = || ids().filter_map(Value::as_i64).collect::<Vec<_>>();
 
-		// links in a rich text and the relations of its blocks
-		if let FieldKind::RichText { .. } = field.kind {
-			let doc = &fields[&field.handle];
-			for link in richtext::links(doc) {
-				out.extend(link_relation(schema, link, &path));
-			}
-			let content = doc["content"].as_array().into_iter().flatten();
-			for (i, node) in content.enumerate() {
-				let bt = node["attrs"]["type"].as_str().unwrap_or_default();
-				if let (true, Some(c)) =
-					(node["type"] == "embed", schema.get(bt))
-				{
-					let prefix = format!("{path}.{i}.");
-					collect_relations(
-						schema,
-						c,
-						&node["attrs"]["fields"],
-						&prefix,
-						out,
-					);
-				}
-			}
-			continue;
-		}
-
-		if let FieldKind::Group { component } = &field.kind {
-			if let (Some(c), Some(group)) =
-				(schema.get(component), fields.get(&field.handle))
-			{
-				collect_relations(schema, c, group, &format!("{path}."), out);
-			}
-			continue;
-		}
-
-		// a link to an entry or an asset is a relation too
-		if let FieldKind::Link { .. } = field.kind {
-			out.extend(link_relation(schema, &fields[&field.handle], &path));
-			continue;
-		}
-		// a field type of another crate says what it relates to
-		if let FieldKind::Custom { ty, options } = &field.kind {
-			let value = &fields[&field.handle];
-			let ty = schema.field_types.get(ty);
-			for r in ty.map_or(vec![], |t| t.relations(options, value)) {
-				out.push(RelationRef {
-					path: match r.path.is_empty() {
-						true => path.clone(),
-						false => format!("{path}.{}", r.path),
-					},
-					target: r.target,
-					ids: r.ids,
-				});
-			}
-			continue;
-		}
-		if let FieldKind::Navigation { .. } = field.kind {
-			nav_relations(schema, &fields[&field.handle], &path, out);
-			continue;
-		}
-
-		let Some(Value::Array(items)) = fields.get(&field.handle) else {
-			continue;
-		};
-
+		// the field's own, every kind says
 		match &field.kind {
-			FieldKind::Relation { types, .. } => out.push(RelationRef {
-				path,
-				target: Target::Entries(types.clone()),
-				ids: items.iter().filter_map(Value::as_i64).collect(),
-			}),
+			FieldKind::Relation { types, .. } if value.is_array() => {
+				out.push(RelationRef {
+					path: path.clone(),
+					target: Target::Entries(types.clone()),
+					ids: ids(),
+				})
+			}
 			FieldKind::Assets {
 				images, extensions, ..
-			} => out.push(RelationRef {
-				path,
+			} if value.is_array() => out.push(RelationRef {
+				path: path.clone(),
 				target: Target::Assets {
 					images: *images,
 					extensions: extensions.clone(),
 				},
-				ids: items.iter().filter_map(Value::as_i64).collect(),
+				ids: ids(),
 			}),
-			FieldKind::Blocks { .. } => {
-				for (i, block) in items.iter().enumerate() {
-					let ty = block["type"].as_str().unwrap_or_default();
-					if let Some(c) = schema.get(ty) {
-						let prefix = format!("{path}.{i}.");
-						collect_relations(
-							schema,
-							c,
-							&block["fields"],
-							&prefix,
-							out,
-						);
-					}
+			// a link to an entry or an asset is a relation too
+			FieldKind::Link { .. } => {
+				out.extend(link_relation(schema, value, &path))
+			}
+			FieldKind::RichText { .. } => {
+				for link in richtext::links(value) {
+					out.extend(link_relation(schema, link, &path));
 				}
 			}
-			_ => {}
+			FieldKind::Navigation { .. } => {
+				nav_relations(schema, value, &path, out)
+			}
+			// a field type of another crate says what it relates to
+			FieldKind::Custom { ty, options } => {
+				let ty = schema.field_types.get(ty);
+				for r in ty.map_or(vec![], |t| t.relations(options, value)) {
+					out.push(RelationRef {
+						path: match r.path.is_empty() {
+							true => path.clone(),
+							false => format!("{path}.{}", r.path),
+						},
+						target: r.target,
+						ids: r.ids,
+					});
+				}
+			}
+			FieldKind::Relation { .. }
+			| FieldKind::Assets { .. }
+			| FieldKind::Text { .. }
+			| FieldKind::Number { .. }
+			| FieldKind::Boolean
+			| FieldKind::Markdown
+			| FieldKind::Checkboxes { .. }
+			| FieldKind::Table { .. }
+			| FieldKind::Texts { .. }
+			| FieldKind::Dropdown { .. }
+			| FieldKind::Blocks { .. }
+			| FieldKind::Group { .. } => {}
+		}
+
+		// and those of its blocks and groups
+		for inner in inner(schema, field, value) {
+			let prefix = inner.prefix(&path);
+			collect_relations(schema, inner.comp, inner.fields, &prefix, out);
 		}
 	}
 }

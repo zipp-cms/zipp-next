@@ -214,18 +214,8 @@ pub(super) fn content_field(
 					)))
 				}
 				FieldKind::Blocks { .. } => {
-					let blocks = value.as_array().cloned().unwrap_or_default();
-					let blocks = blocks.into_iter().map(|b| {
-						let ty =
-							b["type"].as_str().unwrap_or_default().to_string();
-						FieldValue::owned_any(Block {
-							id: b["id"].as_str().unwrap_or_default().into(),
-							ty: ty.clone(),
-							site: site.clone(),
-							fields: b["fields"].clone(),
-						})
-						.with_type(format!("{ty}_Block"))
-					});
+					let blocks = value.as_array().into_iter().flatten();
+					let blocks = blocks.map(|b| block_of(b, &site));
 					Ok(Some(FieldValue::list(blocks)))
 				}
 				FieldKind::Group { component } if value.is_object() => {
@@ -278,8 +268,19 @@ pub(super) fn content_field(
 					let json = serde_json::to_string(&texts)?;
 					Ok(Some(FieldValue::value(GqlValue::from(json))))
 				}
-				_ if value.is_null() => Ok(None),
-				_ => Ok(Some(FieldValue::value(GqlValue::from_json(value)?))),
+				// a value of another shape (a draft, an older migration) is
+				// none rather than JSON in the place of an object
+				FieldKind::Group { .. }
+				| FieldKind::Markdown
+				| FieldKind::RichText { .. }
+				| FieldKind::Link { .. } => Ok(None),
+				FieldKind::Text { .. }
+				| FieldKind::Number { .. }
+				| FieldKind::Boolean
+				| FieldKind::Dropdown { .. } => match value {
+					Value::Null => Ok(None),
+					v => Ok(Some(FieldValue::value(GqlValue::from_json(v)?))),
+				},
 			}
 		})
 	})

@@ -111,15 +111,7 @@ pub(super) fn nav_item_object() -> Object {
 
 pub(super) fn link_object() -> Object {
 	let field = |name: &'static str, ty: TypeRef| {
-		GqlField::new(name, ty, move |ctx| {
-			FieldFuture::new(async move {
-				let GqlValue::Object(o) = ctx.parent_value.try_to_value()?
-				else {
-					return Ok(None);
-				};
-				Ok(o.get(name).cloned().map(FieldValue::value))
-			})
-		})
+		GqlField::new(name, ty, move |ctx| value_field(ctx, name))
 	};
 	let s = || TypeRef::named(TypeRef::STRING);
 	Object::new("Link")

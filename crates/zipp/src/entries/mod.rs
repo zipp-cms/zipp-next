@@ -15,7 +15,7 @@ use crate::auth::Authed;
 use crate::content::{
 	FieldError, Target, index_values, relations, share, validate,
 };
-use crate::db::now;
+use crate::db::{marks, now};
 use crate::drafts::record_revision;
 use crate::error::{Error, Result};
 use crate::query::Query;
@@ -205,31 +205,21 @@ pub fn refs(
 	site: &str,
 	published_only: bool,
 ) -> Result<BTreeMap<i64, EntryRef>> {
-	let marks = vec!["?"; ids.len()].join(", ");
 	let sql = format!(
 		"SELECT DISTINCT e.id, e.section, e.type, s.title, s.slug, s.uri,
 			s.published
 		FROM entry_relations r
 		JOIN entries e ON e.id = r.target_id
 		JOIN entry_sites s ON s.entry_id = e.id AND s.site = r.site
-		WHERE r.site = ? AND r.entry_id IN ({marks}) {}",
+		WHERE r.site = ? AND r.entry_id IN ({}) {}",
+		marks(ids.len()),
 		if published_only {
 			"AND s.published = 1"
 		} else {
 			""
 		}
 	);
-	let mut stmt = conn.prepare(&sql)?;
-	let mut params = vec![rusqlite::types::Value::Text(site.into())];
-	params.extend(ids.iter().map(|i| rusqlite::types::Value::Integer(*i)));
-	let rows = stmt.query_map(params_from_iter(params), entry_ref)?;
-
-	let mut out = BTreeMap::new();
-	for r in rows {
-		let r = r?;
-		out.insert(r.id, r);
-	}
-	Ok(out)
+	refs_by(conn, &sql, site, ids)
 }
 
 /// The entries of these ids as they show in a site, for chips.
@@ -238,13 +228,23 @@ pub fn refs_of(
 	ids: &[i64],
 	site: &str,
 ) -> Result<BTreeMap<i64, EntryRef>> {
-	let marks = vec!["?"; ids.len()].join(", ");
 	let sql = format!(
 		"SELECT e.id, e.section, e.type, s.title, s.slug, s.uri, s.published
 		FROM entries e JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?
-		WHERE e.id IN ({marks})"
+		WHERE e.id IN ({})",
+		marks(ids.len())
 	);
-	let mut stmt = conn.prepare(&sql)?;
+	refs_by(conn, &sql, site, ids)
+}
+
+/// The refs of a query whose params are the site, then the ids.
+fn refs_by(
+	conn: &Connection,
+	sql: &str,
+	site: &str,
+	ids: &[i64],
+) -> Result<BTreeMap<i64, EntryRef>> {
+	let mut stmt = conn.prepare(sql)?;
 	let mut params = vec![rusqlite::types::Value::Text(site.into())];
 	params.extend(ids.iter().map(|i| rusqlite::types::Value::Integer(*i)));
 	let rows = stmt.query_map(params_from_iter(params), entry_ref)?;
@@ -258,9 +258,10 @@ pub fn refs_of(
 
 /// Which of the entries have a draft.
 pub fn with_drafts(conn: &Connection, ids: &[i64]) -> Result<Vec<i64>> {
-	let marks = vec!["?"; ids.len()].join(", ");
-	let sql =
-		format!("SELECT entry_id FROM drafts WHERE entry_id IN ({marks})");
+	let sql = format!(
+		"SELECT entry_id FROM drafts WHERE entry_id IN ({})",
+		marks(ids.len())
+	);
 	let mut stmt = conn.prepare(&sql)?;
 	let rows = stmt.query_map(params_from_iter(ids), |r| r.get(0))?;
 	Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -271,10 +272,10 @@ pub fn published_per_site(
 	conn: &Connection,
 	ids: &[i64],
 ) -> Result<BTreeMap<i64, BTreeMap<String, bool>>> {
-	let marks = vec!["?"; ids.len()].join(", ");
 	let sql = format!(
 		"SELECT entry_id, site, published FROM entry_sites
-		WHERE entry_id IN ({marks})"
+		WHERE entry_id IN ({})",
+		marks(ids.len())
 	);
 	let mut stmt = conn.prepare(&sql)?;
 	let rows = stmt.query_map(params_from_iter(ids), |r| {

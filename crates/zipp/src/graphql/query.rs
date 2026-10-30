@@ -96,13 +96,7 @@ pub(super) fn sites_field(name: &str) -> GqlField {
 pub(super) fn site_object() -> Object {
 	let field = |name: &'static str, ty: &'static str| {
 		GqlField::new(name, TypeRef::named_nn(ty), move |ctx| {
-			FieldFuture::new(async move {
-				let v = ctx.parent_value.try_to_value()?;
-				let GqlValue::Object(o) = v else {
-					return Ok(None);
-				};
-				Ok(o.get(name).cloned().map(FieldValue::value))
-			})
+			value_field(ctx, name)
 		})
 	};
 	Object::new("Site")
@@ -174,8 +168,8 @@ pub(super) fn params_from_args(
 			"siteId" => {
 				let Some(v) = first(&value)? else { continue };
 				let schema = ctx.data::<Arc<Schema>>()?;
-				let site = match v.parse::<usize>() {
-					Ok(n) => schema.sites.get(n.wrapping_sub(1)),
+				let site = match v.parse::<i64>() {
+					Ok(n) => schema.site_by_id(n),
 					Err(_) => schema.get_site(&v),
 				};
 				let site = site.ok_or_else(|| {
@@ -229,12 +223,7 @@ pub(super) fn site_id(
 	site: &str,
 ) -> async_graphql::Result<i64> {
 	let schema = ctx.data::<Arc<Schema>>()?;
-	let i = schema
-		.sites
-		.iter()
-		.position(|s| s.handle == site)
-		.unwrap_or(0);
-	Ok(i as i64 + 1)
+	Ok(schema.site_id(site).unwrap_or(1))
 }
 
 pub(super) fn site_params<const N: usize>(

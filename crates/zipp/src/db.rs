@@ -154,6 +154,11 @@ const MIGRATIONS: &[&str] = &[r#"
 	);
 "#];
 
+/// `?, ?, ?` for an `IN` of `n` values.
+pub(crate) fn marks(n: usize) -> String {
+	vec!["?"; n].join(", ")
+}
+
 #[derive(Clone)]
 pub struct Db {
 	conn: Arc<Mutex<Connection>>,

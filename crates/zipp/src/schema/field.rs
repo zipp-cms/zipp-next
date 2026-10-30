@@ -189,6 +189,44 @@ pub enum FieldKind {
 	},
 }
 
+/// Where a field keeps components of its own, see [`FieldKind::holds`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Holds<'a> {
+	Nothing,
+	/// a list of blocks, `{ "id", "type", "fields" }`
+	Blocks,
+	/// blocks embedded in a rich text document
+	RichText,
+	/// the fields of this component
+	Group(&'a str),
+}
+
+impl FieldKind {
+	/// Where a value of this kind keeps components: the one place that
+	/// knows it, content walks, relations and migrations go by it. Every
+	/// kind is named, a new one has to say.
+	pub fn holds(&self) -> Holds<'_> {
+		match self {
+			Self::Blocks { .. } => Holds::Blocks,
+			Self::RichText { .. } => Holds::RichText,
+			Self::Group { component } => Holds::Group(component),
+			Self::Text { .. }
+			| Self::Number { .. }
+			| Self::Boolean
+			| Self::Relation { .. }
+			| Self::Assets { .. }
+			| Self::Link { .. }
+			| Self::Markdown
+			| Self::Checkboxes { .. }
+			| Self::Table { .. }
+			| Self::Navigation { .. }
+			| Self::Texts { .. }
+			| Self::Dropdown { .. }
+			| Self::Custom { .. } => Holds::Nothing,
+		}
+	}
+}
+
 impl Field {
 	fn new(handle: &str, kind: FieldKind) -> Self {
 		Self {

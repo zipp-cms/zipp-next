@@ -15,9 +15,8 @@
 
 use rusqlite::types::Value;
 
-use crate::field_type::{GraphqlType, Scalar};
-use crate::schema::SectionKind;
-use crate::schema::{FieldKind, Schema};
+use crate::db::marks;
+use crate::schema::{IndexKind, Schema, SectionKind};
 
 /// The most entries of one query.
 pub const MAX_LIMIT: i64 = 1000;
@@ -284,16 +283,7 @@ impl Query {
 			.iter()
 			.find(|f| f.handle == field && f.indexed)
 			.ok_or_else(|| format!("{ty}.{field} is not indexed"))?;
-		Ok(match &f.kind {
-			FieldKind::Text { .. } | FieldKind::Dropdown { .. } => false,
-			// a custom type is compared like the scalar GraphQL shows
-			FieldKind::Custom { ty, .. } => {
-				schema.field_types.get(ty).is_none_or(|t| {
-					t.graphql() != GraphqlType::Scalar(Scalar::String)
-				})
-			}
-			_ => true,
-		})
+		Ok(schema.index_kind(&f.kind) == Some(IndexKind::Number))
 	}
 
 	fn filter(
@@ -359,13 +349,13 @@ impl Query {
 			cond("e.type = ?".into(), vec![text(&self.ty)]);
 		}
 		if !self.types.is_empty() {
-			let marks = vec!["?"; self.types.len()].join(", ");
+			let marks = marks(self.types.len());
 			let values =
 				self.types.iter().map(|t| Value::Text(t.clone())).collect();
 			cond(format!("e.type IN ({marks})"), values);
 		}
 		if !self.not_ids.is_empty() {
-			let marks = vec!["?"; self.not_ids.len()].join(", ");
+			let marks = marks(self.not_ids.len());
 			let values =
 				self.not_ids.iter().map(|i| Value::Integer(*i)).collect();
 			cond(format!("e.id NOT IN ({marks})"), values);
@@ -377,7 +367,7 @@ impl Query {
 			cond("s.uri = ?".into(), vec![text(&self.uri)]);
 		}
 		if let Some(ids) = &self.ids {
-			let marks = vec!["?"; ids.len()].join(", ");
+			let marks = marks(ids.len());
 			let values = ids.iter().map(|i| Value::Integer(*i)).collect();
 			cond(format!("e.id IN ({marks})"), values);
 		}
@@ -401,7 +391,7 @@ impl Query {
 			} else if r.any || r.ids.is_empty() {
 				cond(format!("e.id IN ({of})"), vec![field]);
 			} else {
-				let marks = vec!["?"; r.ids.len()].join(",");
+				let marks = marks(r.ids.len());
 				let mut values = vec![field];
 				values.extend(r.ids.iter().map(|i| Value::Integer(*i)));
 				cond(

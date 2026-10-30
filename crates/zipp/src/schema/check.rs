@@ -1,4 +1,5 @@
 use super::*;
+use crate::field_type::Scalar;
 
 impl Schema {
 	/// Finds mistakes a compiler can't: unknown or duplicate handles and
@@ -181,10 +182,7 @@ impl Schema {
 			if !section.types.contains(ty) {
 				return Err(format!("uri of {ty}: not a type of the section"));
 			}
-			let parts = uri.replace("{slug}", "").replace("{parent.uri}", "");
-			if parts.contains(['{', '}']) {
-				return Err("the uri knows only {slug} and {parent.uri}".into());
-			}
+			known_placeholders(uri)?;
 		}
 
 		for (site, uri) in &section.site_uris {
@@ -194,10 +192,7 @@ impl Schema {
 			if section.uri.is_none() {
 				return Err(format!("uri in {site}: the section has no uri"));
 			}
-			let parts = uri.replace("{slug}", "").replace("{parent.uri}", "");
-			if parts.contains(['{', '}']) {
-				return Err("the uri knows only {slug} and {parent.uri}".into());
-			}
+			known_placeholders(uri)?;
 		}
 		if let Some(f) = &section.uri_if {
 			for t in &section.types {
@@ -211,7 +206,6 @@ impl Schema {
 		}
 
 		let uri = section.uri.as_deref().unwrap_or_default();
-		let parts = uri.replace("{slug}", "").replace("{parent.uri}", "");
 		match section.kind {
 			SectionKind::Single if section.types.len() > 1 => {
 				Err("a single has one entry type".into())
@@ -227,10 +221,7 @@ impl Schema {
 			{
 				Err("the uri needs {slug}".into())
 			}
-			_ if parts.contains(['{', '}']) => {
-				Err("the uri knows only {slug} and {parent.uri}".into())
-			}
-			_ => Ok(()),
+			_ => known_placeholders(uri),
 		}
 	}
 
@@ -350,14 +341,7 @@ impl Schema {
 			if !comp.entry {
 				return Err("only fields of entries can be indexed".into());
 			}
-			if !matches!(
-				field.kind,
-				FieldKind::Text { .. }
-					| FieldKind::Number { .. }
-					| FieldKind::Boolean
-					| FieldKind::Dropdown { .. }
-			) && !self.custom_scalar(&field.kind)
-			{
+			if self.index_kind(&field.kind).is_none() {
 				return Err(
 					"only text, number, boolean and dropdowns can be indexed"
 						.into(),
@@ -390,15 +374,48 @@ impl Schema {
 		}
 	}
 
-	/// Whether a field is of a custom type GraphQL shows as a scalar.
-	pub(crate) fn custom_scalar(&self, kind: &FieldKind) -> bool {
-		let FieldKind::Custom { ty, .. } = kind else {
-			return false;
-		};
-		self.field_types
-			.get(ty)
-			.is_some_and(|t| matches!(t.graphql(), GraphqlType::Scalar(_)))
+	/// How a field of this kind is indexed, `None`: it can't be. A
+	/// custom type is like the scalar GraphQL shows. Every kind is named,
+	/// a new one has to say.
+	pub fn index_kind(&self, kind: &FieldKind) -> Option<IndexKind> {
+		match kind {
+			FieldKind::Text { .. } | FieldKind::Dropdown { .. } => {
+				Some(IndexKind::Text)
+			}
+			FieldKind::Number { .. } | FieldKind::Boolean => {
+				Some(IndexKind::Number)
+			}
+			FieldKind::Custom { ty, .. } => {
+				match self.field_types.get(ty)?.graphql() {
+					GraphqlType::Scalar(Scalar::String) => {
+						Some(IndexKind::Text)
+					}
+					GraphqlType::Scalar(_) => Some(IndexKind::Number),
+					_ => None,
+				}
+			}
+			FieldKind::Relation { .. }
+			| FieldKind::Assets { .. }
+			| FieldKind::Link { .. }
+			| FieldKind::RichText { .. }
+			| FieldKind::Group { .. }
+			| FieldKind::Markdown
+			| FieldKind::Checkboxes { .. }
+			| FieldKind::Table { .. }
+			| FieldKind::Navigation { .. }
+			| FieldKind::Texts { .. }
+			| FieldKind::Blocks { .. } => None,
+		}
 	}
+}
+
+/// A uri has no other placeholders than `{slug}` and `{parent.uri}`.
+fn known_placeholders(uri: &str) -> Result<(), String> {
+	let rest = uri.replace("{slug}", "").replace("{parent.uri}", "");
+	if rest.contains(['{', '}']) {
+		return Err("the uri knows only {slug} and {parent.uri}".into());
+	}
+	Ok(())
 }
 
 pub(super) fn check_handle(handle: &str) -> Result<(), String> {

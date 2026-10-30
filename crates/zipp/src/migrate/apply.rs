@@ -6,7 +6,7 @@
 use rusqlite::{Connection, params};
 use serde_json::Value;
 
-use crate::db::now;
+use crate::db::{marks, now};
 use crate::drafts::Doc;
 use crate::entries::{refresh_uris, reindex};
 use crate::error::{Error, Result};
@@ -106,7 +106,7 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 					[&section.handle],
 				)?;
 			}
-			let marks = vec!["?"; section.types.len()].join(", ");
+			let marks = marks(section.types.len());
 			let mut values = vec![section.handle.clone()];
 			values.extend(section.types.iter().cloned());
 			conn.execute(

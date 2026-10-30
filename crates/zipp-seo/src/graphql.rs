@@ -139,12 +139,18 @@ pub(crate) fn root_fields() -> [GqlField; 2] {
 		GqlField::new(name, ty, |ctx| {
 			FieldFuture::new(async move {
 				let schema = ext::schema(&ctx)?;
-				let by_id = ctx
-					.args
-					.get("siteId")
-					.and_then(|v| v.i64().ok())
-					.and_then(|i| schema.sites.get((i - 1).max(0) as usize))
-					.map(|s| s.handle.clone());
+				let by_id = match ctx.args.get("siteId") {
+					Some(v) => {
+						let id = v.i64()?;
+						let site = schema.site_by_id(id).ok_or_else(|| {
+							zipp::async_graphql::Error::new(format!(
+								"unknown site {id}"
+							))
+						})?;
+						Some(site.handle.clone())
+					}
+					None => None,
+				};
 				let by_handle = ctx
 					.args
 					.get("site")

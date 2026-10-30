@@ -12,10 +12,12 @@
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use crate::content::walk_mut;
-use crate::schema::{Component, Field, FieldKind, Schema, Section, Site};
+use crate::schema::{
+	Component, Field, FieldKind, Holds, Schema, Section, Site,
+};
 
 pub mod apply;
 mod diff;
@@ -158,7 +160,6 @@ impl Migrations {
 	}
 }
 
-/// `0003` or `0003_name` after two existing migrations.
 /// What changed in the code since the last migration, nothing when the
 /// migrations are up to date.
 pub fn unmigrated(
@@ -172,6 +173,7 @@ pub fn unmigrated(
 	diff(&last, schema, &[])
 }
 
+/// `0003` or `0003_name` after two existing migrations.
 pub fn next_name(existing: &[Migration], name: Option<&str>) -> String {
 	let n = format!("{:04}", existing.len() + 1);
 	match name {
