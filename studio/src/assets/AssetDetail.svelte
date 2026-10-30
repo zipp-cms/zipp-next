@@ -14,7 +14,8 @@
 	import { AssetForm } from './assetForm.svelte';
 	import Flyout from 'zipp-ui/Flyout.svelte';
 	import { closeFlyout } from '../core/flyout.svelte';
-	import { fileSize, time, plural } from '../core/format';
+	import { fileSize, time } from '../core/format';
+	import { confirmDelete, copyUrl as copyAssetUrl } from './actions';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import ImageEditor from './image/ImageEditor.svelte';
 	import { sectionName } from '../core/schema';
@@ -64,18 +65,12 @@
 	}
 
 	async function remove() {
-		const n = form.usage?.length ?? 0;
-		const used = n
-			? ` It is used in ${plural(n, 'entry', 'entries')}.`
-			: '';
-		if (!confirm(`Delete ${current.filename}?${used}`)) return;
+		if (!confirmDelete(current, form.usage?.length ?? 0)) return;
 		if (await form.remove()) ondeleted();
 	}
 
 	async function copyUrl() {
-		await navigator.clipboard.writeText(
-			location.origin + assetUrl(current),
-		);
+		await copyAssetUrl(current);
 		copied = true;
 		setTimeout(() => (copied = false), 1500);
 	}

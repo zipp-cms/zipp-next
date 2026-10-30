@@ -111,17 +111,30 @@ export function linkInput(type: LinkKind): {
 	}
 }
 
-/** Where a link goes, in words: the title of its entry or its value. */
+/** Where a link goes, short: the entry's title, a url's host. */
 export function linkTarget(link: Link, refs: Refs): string {
-	if (link.value === null || link.value === '') return 'no target';
 	if (link.type === 'entry' && typeof link.value === 'number')
 		return refs[link.value]?.title ?? `#${link.value}`;
+	if (link.type === 'url') {
+		try {
+			return new URL(String(link.value)).host || String(link.value);
+		} catch {
+			return String(link.value);
+		}
+	}
 	return String(link.value);
 }
 
-/** What a link says: its label, else where it goes. */
-export function linkLabel(link: Link, refs: Refs, fallback = 'Link'): string {
-	if (link.label) return link.label;
-	if (link.value === null || link.value === '') return fallback;
-	return linkTarget(link, refs);
+/**
+ * Whether a field's value counts as empty, like the server's required
+ * check: nothing, an empty text or list, a link without a target, a
+ * rich text without content.
+ */
+export function isEmpty(kind: string, v: unknown): boolean {
+	if (v === undefined || v === null || v === '') return true;
+	if (Array.isArray(v)) return !v.length;
+	if (kind === 'link') return !hasTarget(v as Link);
+	if (kind === 'richText')
+		return !(v as { content?: unknown[] }).content?.length;
+	return false;
 }

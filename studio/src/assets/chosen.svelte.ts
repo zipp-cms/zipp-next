@@ -16,7 +16,7 @@ export function chosenAssets(ids: () => number[]) {
 		closed = flyout.saved;
 		const missing = again ? want : want.filter(id => !(id in cache));
 		if (!missing.length) return;
-		listAssets({ ids: missing.join(',') })
+		listAssets({ ids: missing })
 			.then(found => {
 				for (const id of missing)
 					cache[id] = found.find(a => a.id === id) ?? null;

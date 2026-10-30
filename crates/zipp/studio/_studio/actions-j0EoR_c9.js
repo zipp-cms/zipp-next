@@ -1,1 +1,0 @@
-import{I as o,j as c,ao as i,l as d,as as m}from"./index-WImM2iSR.js";function j(e,n,s){o(()=>{var r=c(()=>n(e,s==null?void 0:s())||{});if(s&&(r!=null&&r.update)){var f=!1,t={};i(()=>{var a=s();d(a),f&&m(t,a)&&(t=a,r.update(a))}),f=!0}if(r!=null&&r.destroy)return()=>r.destroy()})}export{j as a};

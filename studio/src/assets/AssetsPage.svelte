@@ -10,14 +10,14 @@
 
 	/** The folders and the newest assets of the one in the url. */
 	export async function loadProps(_: unknown, lp: LoadProps) {
-		const folder = folderOf(lp.req.search.get('folder'));
+		const asked = folderOf(lp.req.search.get('folder'));
 		const [{ folders, top }, first] = await Promise.all([
 			listFolders(),
-			list({ search: '', folder: folder === null ? 'top' : `${folder}` }),
+			list({ folder: asked }),
 		]);
 		// a deleted folder
-		const known = folder === null || folders.some(f => f.id === folder);
-		return { folders, top, first, folder: known ? folder : null };
+		const known = asked === null || folders.some(f => f.id === asked);
+		return { folders, top, first, folder: known ? asked : null };
 	}
 </script>
 
@@ -25,12 +25,9 @@
 	import { untrack } from 'svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import {
-		assetUrl,
+		ROOT,
 		assetUsage,
 		deleteAsset,
-		ROOT,
-		folderRows,
-		listAssets,
 		moveAssets,
 		updateAsset,
 		type Asset,
@@ -41,12 +38,13 @@
 	import { canAssets } from '../core/access';
 	import AssetGrid from './AssetGrid.svelte';
 	import AssetDetail from './AssetDetail.svelte';
-	import SearchInput, { SEARCH_DELAY_MS } from 'zipp-ui/SearchInput.svelte';
+	import SearchInput from 'zipp-ui/SearchInput.svelte';
 	import { Busy } from '../core/busy.svelte';
 	import DropOverlay from './DropOverlay.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
 	import type { MenuItem } from 'zipp-ui/Menu.svelte';
-	import { plural } from '../core/format';
+	import { Library } from './library.svelte';
+	import { confirmDelete, linkItems } from './actions';
 	import {
 		FileDrag,
 		fromInput,
@@ -57,9 +55,9 @@
 	let {
 		schema,
 		first,
-		folders: firstFolders,
-		folder: firstFolder,
-		top: firstTop,
+		folders,
+		folder,
+		top,
 	}: {
 		schema: Schema;
 		first: Asset[];
@@ -70,84 +68,39 @@
 	const canEdit = $derived(canAssets(schema, 'edit'));
 	const canDelete = $derived(canAssets(schema, 'delete'));
 
-	let assets = $state<Asset[]>(untrack(() => first));
-	let folders = $state<Folder[]>(untrack(() => firstFolders));
-	let top = $state(untrack(() => firstTop));
-	/** null: the top */
-	let folder = $state<number | null>(untrack(() => firstFolder));
-	/** `Library / Photos / Events` */
-	const path = $derived(
-		[ROOT, folderRows(folders).find(r => r.folder.id === folder)?.path]
-			.filter(Boolean)
-			.join(' / '),
-	);
-	let search = $state('');
-	let error = $state('');
+	// what came with the page
+	const lib = new Library();
+	untrack(() => {
+		Object.assign(lib, { folders, top, folder, assets: first });
+		lib.loaded = true;
+	});
 	const action = new Busy();
 	let current = $state<Asset | null>(null);
 
-	/** The assets of the folder, a search looks in all of them. */
-	function load() {
-		const q = search;
-		const f = folder;
-		const params: Record<string, string> = { search: q };
-		if (!q) params.folder = f === null ? 'top' : `${f}`;
-		listAssets(params)
-			.then(a => {
-				if (q === search && f === folder) assets = a;
-			})
-			.catch(e => (error = e.message));
-	}
-
-	/** The folders with their counts. */
-	function loadFolders() {
-		listFolders()
-			.then(f => {
-				folders = f.folders;
-				top = f.top;
-			})
-			.catch(e => (error = e.message));
+	/** All again: what the list shows and the counts of the folders. */
+	function reload() {
+		lib.load();
+		lib.loadFolders();
 	}
 
 	/** Another folder, in the url too, without loading the page again. */
 	function select(id: number | null) {
-		if (id === folder && !search) return;
-		folder = id;
-		search = '';
-		searched = '';
+		if (id === lib.folder && !lib.search) return;
+		lib.select(id);
 		const url = id === null ? location.pathname : `?folder=${id}`;
 		history.replaceState(history.state, '', url);
-		load();
 	}
 
 	async function move(ids: number[], to: number | null) {
 		await action.run(() => moveAssets(ids, to));
-		load();
-		loadFolders();
+		reload();
 	}
 
-	// the first assets came with the page
-	let searched = '';
-	// a moment after the last key, not with every one
-	$effect(() => {
-		if (search === searched) return;
-		const wait = setTimeout(() => {
-			searched = search;
-			load();
-		}, SEARCH_DELAY_MS);
-		return () => clearTimeout(wait);
-	});
-
 	/** Files, or folders with theirs, into a folder of the tree. */
-	async function upload(items: Upload[], into = folder) {
-		if (!items.length) return;
-		const made = items.some(i => i.dir.length);
+	async function upload(items: Upload[], into = lib.folder) {
 		// the new folders show while the files go up
-		const run = uploads.run(items, into);
-		if (made) setTimeout(loadFolders, 500);
-		await run;
-		load();
-		loadFolders();
+		await uploads.run(items, into, () => lib.loadFolders());
+		reload();
 	}
 
 	// files dropped anywhere on the page but on a folder go into the open one
@@ -160,6 +113,7 @@
 		current = a;
 	}
 
+	/** Only the name, the rest as it is. */
 	async function rename(a: Asset, filename: string): Promise<boolean> {
 		const saved = await action.run(() =>
 			updateAsset(a.id, {
@@ -171,19 +125,16 @@
 				edits: a.edits,
 			}),
 		);
-		if (saved) assets = assets.map(x => (x.id === a.id ? saved : x));
+		if (saved)
+			lib.assets = lib.assets.map(x => (x.id === a.id ? saved : x));
 		return !!saved;
 	}
 
 	async function remove(a: Asset) {
 		const n = (await assetUsage(a.id).catch(() => [])).length;
-		const used = n
-			? ` It is used in ${plural(n, 'entry', 'entries')}.`
-			: '';
-		if (!confirm(`Delete ${a.filename}?${used}`)) return;
+		if (!confirmDelete(a, n)) return;
 		await action.run(() => deleteAsset(a.id));
-		load();
-		loadFolders();
+		reload();
 	}
 
 	function menu(a: Asset, startRename: () => void): MenuItem[] {
@@ -192,22 +143,7 @@
 		];
 		if (canEdit)
 			items.push({ label: 'Rename', icon: 'edit', onclick: startRename });
-		items.push(
-			{
-				label: 'Download',
-				icon: 'download',
-				href: assetUrl(a, false, true),
-				download: a.filename,
-			},
-			{
-				label: 'Copy URL',
-				icon: 'copy-url',
-				onclick: () =>
-					navigator.clipboard.writeText(
-						location.origin + assetUrl(a),
-					),
-			},
-		);
+		items.push(...linkItems(a));
 		if (canEdit && a.folderId !== null)
 			items.push({
 				label: `Move to ${ROOT}`,
@@ -255,21 +191,21 @@
 		{/snippet}
 	</PageTop>
 
-	{#if error || action.error}
-		<p class="error">{error || action.error}</p>
+	{#if lib.error || action.error}
+		<p class="error">{lib.error || action.error}</p>
 	{/if}
 
 	<div class="library">
 		<aside class="folders">
 			<FolderTree
-				{folders}
-				{top}
-				current={folder}
-				searching={!!search}
+				folders={lib.folders}
+				top={lib.top}
+				current={lib.folder}
+				searching={!!lib.search}
 				onselect={select}
 				editable={canEdit}
 				deletable={canDelete}
-				onchange={loadFolders}
+				onchange={() => lib.loadFolders()}
 				onmove={move}
 				onupload={upload}
 			/>
@@ -277,23 +213,22 @@
 
 		<div class="card files">
 			{#if drag.over}
-				<DropOverlay label="Drop to upload into {path}" />
+				<DropOverlay label="Drop to upload into {lib.path}" />
 			{/if}
 			<div class="top">
-				<h2>{search ? 'In all folders' : path}</h2>
-				<SearchInput bind:value={search} placeholder="Search files" />
+				<h2>{lib.search ? 'In all folders' : lib.path}</h2>
+				<SearchInput
+					bind:value={() => lib.search, v => lib.type(v)}
+					placeholder="Search files"
+				/>
 			</div>
 			<AssetGrid
-				{assets}
+				assets={lib.assets}
 				onpick={open}
 				draggable={canEdit}
 				{menu}
 				onrename={rename}
-				empty={search
-					? 'Nothing found'
-					: folder === null
-						? 'No assets yet'
-						: 'No files in this folder'}
+				empty={lib.empty}
 			/>
 		</div>
 	</div>
@@ -303,26 +238,22 @@
 	{#key current.id}
 		<AssetDetail
 			{schema}
-			{folders}
+			folders={lib.folders}
 			asset={current}
 			onsaved={a => {
 				const moved = a.folderId !== current?.folderId;
-				assets = assets.map(x => (x.id === a.id ? a : x));
+				lib.assets = lib.assets.map(x => (x.id === a.id ? a : x));
 				current = null;
-				if (moved) {
-					load();
-					loadFolders();
-				}
+				if (moved) reload();
 			}}
 			ondeleted={() => {
 				current = null;
-				load();
-				loadFolders();
+				reload();
 			}}
 			onclose={() => {
 				// a replaced file has a new thumbnail
 				current = null;
-				load();
+				lib.load();
 			}}
 		/>
 	{/key}

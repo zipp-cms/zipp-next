@@ -4,25 +4,20 @@
 </script>
 
 <script lang="ts">
-	import {
-		folderByPath,
-		listAssets,
-		listFolders,
-		type Asset,
-		type Folder,
-	} from './api';
+	import { untrack } from 'svelte';
+	import { folderByPath, type Asset } from './api';
 	import FolderTree from './FolderTree.svelte';
 	import AssetGrid from './AssetGrid.svelte';
-	import { Busy } from '../core/busy.svelte';
 	import Flyout from 'zipp-ui/Flyout.svelte';
 	import SearchInput from 'zipp-ui/SearchInput.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
 	import DropOverlay from './DropOverlay.svelte';
+	import { Library } from './library.svelte';
 	import {
 		FileDrag,
 		acceptOf,
-		allows,
 		pathDirs,
+		prepare,
 		fromInput,
 		uploads,
 		type Upload,
@@ -50,62 +45,32 @@
 		onclose: () => void;
 	} = $props();
 
-	let library = $state<Asset[]>([]);
-	let search = $state('');
-	let loaded = $state(false);
-	let folders = $state<Folder[]>([]);
-	let top = $state(0);
-	/** null: the top; a search looks in all folders */
-	let folder = $state<number | null>(null);
-	let foldersLoaded = $state(false);
+	const lib = untrack(() => new Library({ images, extensions }));
 
-	listFolders()
-		.then(({ folders: f, top: t }) => {
-			folders = f;
-			top = t;
-			// the field's folder first, else where the picker was
-			const own = folderByPath(f, folderPath);
-			if (own) folder = own.id;
-			else if (f.some(f => f.id === lastFolder)) folder = lastFolder;
-			foldersLoaded = true;
-		})
-		.catch(e => (action.error = e.message));
-
-	$effect(() => {
-		if (!foldersLoaded) return;
-		const q = search;
-		const f = folder;
-		const params: Record<string, string> = { search: q };
-		if (!q) params.folder = f === null ? 'top' : `${f}`;
-		if (images) params.kind = 'image';
-		if (extensions?.length) params.extensions = extensions.join(',');
-		listAssets(params)
-			.then(a => {
-				if (q !== search || f !== folder) return;
-				library = a;
-				loaded = true;
-			})
-			.catch(e => (action.error = e.message));
+	// the field's folder first, else where the picker was
+	lib.loadFolders().then(() => {
+		const own = folderByPath(lib.folders, folderPath);
+		const last = lib.folders.some(f => f.id === lastFolder);
+		lib.select(own ? own.id : last ? lastFolder : null);
 	});
 
 	function select(id: number | null) {
-		folder = lastFolder = id;
-		search = '';
+		lastFolder = id;
+		lib.select(id);
 	}
 
-	const action = new Busy();
-
-	/** Into the open folder, and picked. */
+	/**
+	 * Into the open folder, and picked; on the top with a folder of the
+	 * field, into that (made when missing).
+	 */
 	async function upload(items: Upload[]) {
-		items = items.filter(i => allows({ images, extensions }, i.file));
-		if (!multiple) items = items.slice(0, 1);
-		// a dropped folder's files go into the open one; on the top with
-		// a folder of the field, into that (made when missing)
-		const dir = folder === null ? pathDirs(folderPath) : [];
-		items = items.map(i => ({ ...i, dir }));
-		const added = await uploads.run(items, folder);
-		if (dir.length) listFolders().then(r => (folders = r.folders));
-		library = [...added, ...library];
+		const dir = lib.folder === null ? pathDirs(folderPath) : [];
+		const room = multiple ? items.length : 1;
+		items = prepare(items, { images, extensions }, room, dir);
+		const added = await uploads.run(items, lib.folder, () =>
+			lib.loadFolders(),
+		);
+		lib.assets = [...added, ...lib.assets];
 		for (const a of added) onpick(a);
 	}
 
@@ -134,12 +99,15 @@
 		<button type="button" class="primary" onclick={onclose}>Done</button>
 	{/snippet}
 	<div class="search">
-		<SearchInput bind:value={search} placeholder="Search files" />
+		<SearchInput
+			bind:value={() => lib.search, v => lib.type(v)}
+			placeholder="Search files"
+		/>
 	</div>
-	{#if action.error}<p class="error">{action.error}</p>{/if}
+	{#if lib.error}<p class="error">{lib.error}</p>{/if}
 	<div
 		class="library"
-		class:flat={!folders.length}
+		class:flat={!lib.folders.length}
 		role="region"
 		aria-label="Files"
 		ondragenter={drag.dragenter}
@@ -147,12 +115,12 @@
 		ondragover={drag.dragover}
 		ondrop={drag.drop}
 	>
-		{#if folders.length}
+		{#if lib.folders.length}
 			<FolderTree
-				{folders}
-				{top}
-				current={folder}
-				searching={!!search}
+				folders={lib.folders}
+				top={lib.top}
+				current={lib.folder}
+				searching={!!lib.search}
 				onselect={select}
 			/>
 		{/if}
@@ -161,14 +129,10 @@
 				<DropOverlay label="Drop to upload" />
 			{/if}
 			<AssetGrid
-				assets={library}
+				assets={lib.assets}
 				{selected}
-				loading={!loaded}
-				empty={search
-					? 'Nothing found'
-					: folder === null
-						? 'No assets yet'
-						: 'No files in this folder'}
+				loading={!lib.loaded}
+				empty={lib.empty}
 				{onpick}
 			/>
 		</div>

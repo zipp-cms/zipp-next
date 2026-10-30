@@ -84,6 +84,23 @@ export function pathDirs(path: string | undefined): string[] {
 		.filter(n => n);
 }
 
+/**
+ * The files a field or the picker takes: the allowed ones, as many as
+ * there is room for, into `dir` (the field's folder; the folders of a
+ * dropped folder are left out).
+ */
+export function prepare(
+	items: Upload[],
+	allowed: Allowed,
+	room: number,
+	dir: string[],
+): Upload[] {
+	return items
+		.filter(i => allows(allowed, i.file))
+		.slice(0, Math.max(room, 0))
+		.map(i => ({ ...i, dir }));
+}
+
 /** How many files go up at the same time. */
 const PARALLEL = 3;
 
@@ -108,12 +125,18 @@ class Uploads {
 	 * made below it where missing. The uploaded assets, without the
 	 * failed ones.
 	 */
-	async run(items: Upload[], folder: number | null): Promise<Asset[]> {
+	async run(
+		items: Upload[],
+		folder: number | null,
+		/** once the folders of `dir` are made, before the files go up */
+		onfolders?: () => void,
+	): Promise<Asset[]> {
 		if (!items.length) return [];
 		clearTimeout(this.hide);
 		if (!this.active) this.reset();
+		const bytes = items.reduce((n, i) => n + i.file.size, 0);
 		this.files += items.length;
-		this.total += items.reduce((n, i) => n + i.file.size, 0);
+		this.total += bytes;
 
 		let dirs: Map<string, number | null>;
 		try {
@@ -121,9 +144,11 @@ class Uploads {
 		} catch (e) {
 			this.errors.push((e as Error).message);
 			this.done += items.length;
+			this.sent += bytes;
 			this.end();
 			return [];
 		}
+		if (dirs.size > 1) onfolders?.();
 
 		const added: Asset[] = [];
 		const queue = [...items];

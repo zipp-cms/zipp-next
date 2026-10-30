@@ -10,7 +10,7 @@
 	import SortLine from 'zipp-ui/SortLine.svelte';
 	import { Sortable, moved } from 'zipp-ui/sortable';
 	import AssetCard from '../assets/AssetCard.svelte';
-	import { assetUrl } from '../assets/api';
+	import { linkItems } from '../assets/actions';
 	import { chosenAssets } from '../assets/chosen.svelte';
 	import { openAsset } from '../core/flyout.svelte';
 	import { inserted, isFull, removed } from '../core/list';
@@ -19,7 +19,7 @@
 	import {
 		FileDrag,
 		acceptOf,
-		allows,
+		prepare,
 		pathDirs,
 		fromInput,
 		uploads,
@@ -65,10 +65,8 @@
 	 * library, the ones it takes, as many as fit.
 	 */
 	async function upload(items: Upload[]) {
-		items = items.filter(i => allows(field, i.file));
 		const room = max ? max - ids.length : items.length;
-		const dir = pathDirs(field.folder);
-		items = items.slice(0, Math.max(room, 0)).map(i => ({ ...i, dir }));
+		items = prepare(items, field, room, pathDirs(field.folder));
 		const added = await uploads.run(items, null);
 		let next = ids;
 		for (const a of added)
@@ -131,12 +129,7 @@
 								icon: 'edit',
 								onclick: () => openAsset(a.id),
 							},
-							{
-								label: 'Download',
-								icon: 'download',
-								href: assetUrl(a, false, true),
-								download: a.filename,
-							},
+							...linkItems(a),
 							{
 								label: 'Remove',
 								icon: 'close',

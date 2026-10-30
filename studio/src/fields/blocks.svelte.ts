@@ -1,7 +1,7 @@
 import type { Component, Link, Values } from '../core/schema';
 import type { Refs } from '../entries/api';
 import { plural } from '../core/format';
-import { hasTarget } from './link/link';
+import { hasTarget, isEmpty, linkTarget } from './link/link';
 
 /**
  * A block the outline of the editor asks to show: the path of its blocks
@@ -20,20 +20,6 @@ function docText(doc: any): string {
 	if (!doc || typeof doc !== 'object') return '';
 	if (typeof doc.text === 'string') return doc.text;
 	return (doc.content ?? []).map(docText).join(' ');
-}
-
-/** Where a link goes, short: the entry's title, a url's host. */
-function linkTarget(link: Link, refs: Refs): string {
-	if (link.type === 'entry' && typeof link.value === 'number')
-		return refs[link.value]?.title ?? '';
-	if (link.type === 'url') {
-		try {
-			return new URL(String(link.value)).host || String(link.value);
-		} catch {
-			return String(link.value);
-		}
-	}
-	return String(link.value);
 }
 
 /**
@@ -84,16 +70,8 @@ export function blockMissing(
 ): string {
 	for (const f of comp?.fields ?? []) {
 		if (!f.required) continue;
-		const v = fields[f.handle];
-		if (f.kind === 'link') {
-			if (!v || !hasTarget(v as Link)) return 'No link yet';
-		} else if (
-			v === undefined ||
-			v === null ||
-			v === '' ||
-			(Array.isArray(v) && !v.length)
-		)
-			return `${f.label} is missing`;
+		if (!isEmpty(f.kind, fields[f.handle])) continue;
+		return f.kind === 'link' ? 'No link yet' : `${f.label} is missing`;
 	}
 	return '';
 }

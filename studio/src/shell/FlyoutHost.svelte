@@ -31,7 +31,7 @@
 						kind: 'entry',
 						editor,
 					}))
-				: listAssets({ ids: String(open.id) }).then(([asset]) =>
+				: listAssets({ ids: [open.id] }).then(([asset]) =>
 						asset
 							? { kind: 'asset', asset }
 							: {

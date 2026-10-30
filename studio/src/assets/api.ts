@@ -100,8 +100,26 @@ export function replaceAsset(id: number, file: File): Promise<Asset> {
 	return request('POST', `/assets/${id}/file`, form);
 }
 
-export function listAssets(params: Record<string, string>): Promise<Asset[]> {
-	return request('GET', '/assets?' + new URLSearchParams(params));
+/** What to list: a search looks in all folders, else in `folder`. */
+export type AssetQuery = {
+	search?: string;
+	/** these, in this order */
+	ids?: number[];
+	/** null: the top, none: all folders */
+	folder?: number | null;
+	images?: boolean;
+	extensions?: string[];
+};
+
+export function listAssets(q: AssetQuery): Promise<Asset[]> {
+	const p = new URLSearchParams();
+	if (q.search) p.set('search', q.search);
+	if (q.ids) p.set('ids', q.ids.join(','));
+	if (q.folder !== undefined)
+		p.set('folder', q.folder === null ? 'top' : `${q.folder}`);
+	if (q.images) p.set('kind', 'image');
+	if (q.extensions?.length) p.set('extensions', q.extensions.join(','));
+	return request('GET', '/assets?' + p);
 }
 
 export function updateAsset(
