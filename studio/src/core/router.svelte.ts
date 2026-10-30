@@ -254,9 +254,10 @@ export function startRouter(pages: Fallbacks, onfirst: () => void) {
 				const history =
 					first || req.origin === 'pop' ? 'replace' : 'push';
 				router.open(r.redirect, {}, { history });
-				// the request ends, the new one replaced it
+				// the request ends, the new one replaced it; only its data step:
+				// chuchi stops a replaced request there, its domReady never
+				// comes and the loader would wait for it
 				await routing.dataReady();
-				await routing.domReady();
 				return;
 			}
 			if (await routing.dataReady()) return;
