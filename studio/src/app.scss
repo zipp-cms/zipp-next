@@ -409,7 +409,8 @@ fieldset {
 	border: 0;
 }
 
-ul.plain {
+ul.plain,
+ol.plain {
 	margin: 0;
 	padding: 0;
 	list-style: none;
