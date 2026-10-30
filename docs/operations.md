@@ -15,6 +15,8 @@ SQLite database, default `zipp.db`):
 - `user <email> [--role r]`: adds a user or sets a new password and role,
   reads the password from stdin; without a role an admin
 - `types`: prints TypeScript types of the content
+- `mail <to> [--smtp-url url --mail-from from]`: sends a test mail, see
+  Mail below
 - `import-craft <export.json> [--volume handle=dir] [--site craft=zipp]`:
   imports a Craft site into a database without content, see below
 
@@ -48,6 +50,19 @@ password.
 | `--noindex` | `ZIPP_NOINDEX` | a staging site: noindex everywhere, robots.txt disallows all |
 | `--openrouter-key-file` | | turns on the AI chat |
 | `--frame-ancestor` | | a site that may show the studio in a frame |
+| `--smtp-url` | `ZIPP_SMTP_URL` | the SMTP server of mails, see below; without it mails are only logged |
+| `--mail-from` | `ZIPP_MAIL_FROM` | their sender, `Website <cms@example.ch>`, needed with `--smtp-url` |
+
+### Mail
+
+The cms sends mails over SMTP (lettre): `--smtp-url
+smtp://user:pass@mail.example.ch:587?tls=required` for STARTTLS,
+`smtps://…:465` for TLS, `smtp://localhost:1025` for a local catcher.
+`<cms> mail you@example.ch` (with the same options or environment)
+sends a test mail from the shell; admins see the server in Setup →
+Sites, transforms and roles and send themselves one there. In
+development Mailpit catches them: `mailpit --smtp 127.0.0.1:1025`, its
+inbox on `http://127.0.0.1:8025`.
 
 A release build is a single binary with the api, the studio and the
 migrations; debug builds read the migrations from disk.

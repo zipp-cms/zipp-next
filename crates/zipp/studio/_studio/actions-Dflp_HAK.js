@@ -1,0 +1,1 @@
+import{I as c,j as o,at as i,l as d,ax as m}from"./index-6XZH37uk.js";function x(e,n,a){c(()=>{var r=o(()=>n(e,a==null?void 0:a())||{});if(a&&(r!=null&&r.update)){var s=!1,t={};i(()=>{var f=a();d(f),s&&m(t,f)&&(t=f,r.update(f))}),s=!0}if(r!=null&&r.destroy)return()=>r.destroy()})}export{x as a};

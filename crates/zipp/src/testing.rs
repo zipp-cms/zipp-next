@@ -61,6 +61,7 @@ impl TestServer {
 		.unwrap();
 		let state = AppState {
 			graphql_token: Some(Arc::new("test-token".into())),
+			mail: crate::mail::Mailer::memory(),
 			..AppState::new(db, schema, gql, files)
 		};
 		Self {
@@ -119,6 +120,11 @@ impl TestServer {
 			app: self.app.clone(),
 			token: Some(token),
 		}
+	}
+
+	/// The mails sent so far: a test server keeps them.
+	pub fn mails(&self) -> Vec<crate::mail::Mail> {
+		self.state.mail.sent()
 	}
 
 	pub fn admin(&self) -> Client {

@@ -17,7 +17,9 @@ pub(super) async fn serve(
 		graphql_token,
 		dev,
 		noindex,
+		mail,
 	} = args;
+	let mail = mail.mailer()?;
 	if graphql_token.is_none() && !dev {
 		tracing::warn!(
 			"GraphQL is closed: set ZIPP_GRAPHQL_TOKEN for the frontends"
@@ -70,6 +72,7 @@ pub(super) async fn serve(
 		dev,
 		indexing: !dev && !noindex,
 		ai,
+		mail,
 		hooks: Arc::new(hooks),
 		..AppState::new(db, schema, gql, files)
 	};
@@ -95,6 +98,7 @@ pub(crate) fn app(state: AppState, routes: Router<AppState>) -> Router {
 		.merge(ai::routes())
 		.merge(assets::api_routes())
 		.merge(trash::routes())
+		.merge(mail::routes())
 		.merge(graphql::routes());
 	let mut app = Router::new()
 		.merge(assets::file_routes())

@@ -3,8 +3,12 @@
 	import { isAdmin, roleName } from '../core/access';
 	import { accessText, visibleRoles, visibleSections } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
+	import MailCard from './MailCard.svelte';
 
-	/** The sites, the image transforms and the roles of the code. */
+	/**
+	 * The sites, the image transforms and the roles of the code, for
+	 * admins how mails are sent.
+	 */
 	let { schema }: { schema: Schema } = $props();
 
 	const sections = $derived(visibleSections(schema));
@@ -73,4 +77,8 @@
 			{/snippet}
 		</Table>
 	</div>
+
+	{#if isAdmin(schema)}
+		<MailCard />
+	{/if}
 </div>

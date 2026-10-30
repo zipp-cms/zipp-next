@@ -14,6 +14,7 @@ pub mod drafts;
 pub mod entries;
 pub mod error;
 pub mod graphql;
+pub mod mail;
 pub mod migrate;
 pub mod plugin;
 pub mod schema;
@@ -108,6 +109,8 @@ pub struct AppState {
 	pub indexing: bool,
 	/// the AI chat, if there is an api key
 	pub ai: Option<ai::AiConfig>,
+	/// sends mails, see [`mail`]
+	pub mail: mail::Mailer,
 	/// the svgs of the schema's Lucide icons, see [`studio::schema_icons`]
 	#[from_ref(skip)]
 	pub icons: Arc<std::collections::BTreeMap<String, String>>,
@@ -160,6 +163,7 @@ impl AppState {
 			dev: false,
 			indexing: true,
 			ai: None,
+			mail: Default::default(),
 			hooks: Default::default(),
 		}
 	}
@@ -278,6 +282,7 @@ impl Cms {
 			Cmd::User { email, role } => {
 				add_user(&schema, &opts.db, &email, role.as_deref())
 			}
+			Cmd::Mail { to, mail } => test_mail(&to, &mail),
 		};
 
 		if let Err(e) = res {

@@ -15,6 +15,11 @@ Cms::new(schema(), zipp::migrations!())
 
 A hook runs in the request, spawn anything slow.
 
+`state.mail` sends mails, e.g. of a contact form of the site:
+`state.mail.send(Mail::new(to, "Thanks", text).html(html)
+.reply_to(sender)).await?` (`zipp::mail::Mail`); how they are sent is
+`serve`'s, see operations.md.
+
 ## Field types of other crates
 
 A crate implements `FieldType`:
@@ -151,7 +156,8 @@ assert_eq!(err, Error::Forbidden);
 ```
 
 `ts.routes(...)` adds the site's routes, `ts.dev()` development mode,
-`client.send(...)` any request and `client.upload(...)` files. The
+`client.send(...)` any request and `client.upload(...)` files;
+`ts.mails()` are the mails sent, a test server keeps them. The
 example (`example/cms/src/tests.rs`) and the plugins test themselves this
 way.
 

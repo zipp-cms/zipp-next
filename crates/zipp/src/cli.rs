@@ -43,6 +43,31 @@ pub(super) struct ServeArgs {
 	/// in development)
 	#[arg(long, env = "ZIPP_NOINDEX")]
 	pub(super) noindex: bool,
+	#[command(flatten)]
+	pub(super) mail: MailArgs,
+}
+
+/// Where mails go, see [`crate::mail`].
+#[derive(Debug, clap::Args)]
+pub(super) struct MailArgs {
+	/// The SMTP server for mails:
+	/// `smtp://user:pass@mail.example.ch:587?tls=required`, `smtps://`
+	/// for TLS; without it mails are only logged
+	#[arg(long, env = "ZIPP_SMTP_URL", hide_env_values = true)]
+	pub(super) smtp_url: Option<String>,
+	/// The sender of the mails: `Website <cms@example.ch>`
+	#[arg(long, env = "ZIPP_MAIL_FROM")]
+	pub(super) mail_from: Option<String>,
+}
+
+impl MailArgs {
+	pub(super) fn mailer(&self) -> Result<crate::mail::Mailer, String> {
+		match (&self.smtp_url, &self.mail_from) {
+			(Some(url), Some(from)) => crate::mail::Mailer::smtp(url, from),
+			(Some(_), None) => Err("--smtp-url needs --mail-from".into()),
+			(None, _) => Ok(Default::default()),
+		}
+	}
 }
 
 #[derive(Debug, Subcommand)]
@@ -89,6 +114,27 @@ pub(super) enum Cmd {
 		#[arg(long)]
 		role: Option<String>,
 	},
+	/// Send a test mail, to check `--smtp-url` and `--mail-from`.
+	Mail {
+		to: String,
+		#[command(flatten)]
+		mail: MailArgs,
+	},
+}
+
+/// See [`Cmd::Mail`].
+pub(super) fn test_mail(to: &str, args: &MailArgs) -> Result<(), String> {
+	// the transport's pool lives in the runtime
+	tokio::runtime::Runtime::new().unwrap().block_on(async {
+		let mailer = args.mailer()?;
+		if !mailer.configured() {
+			return Err("no --smtp-url, the mail would only be logged".into());
+		}
+		let mail = crate::mail::test_mail(to);
+		mailer.send(mail).await.map_err(|e| e.to_string())?;
+		println!("sent to {to} over {}", mailer.server().unwrap_or("?"));
+		Ok(())
+	})
 }
 
 pub(super) fn makemigration(

@@ -39,6 +39,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Folders, file types | Assets · Events → Programm (PDF) | folders for the library; the event's program takes only PDFs and puts them into Events/Programs, its image picker opens in Events |
 | Icons | the navigation, Pages, a page's blocks | entry types, blocks and nav groups with Lucide icons from the code |
 | Globals | Settings → Header, Footer | singles without a url, crelte reads them like Craft's globals |
+| Mail | Setup → Sites, transforms and roles → Mail (admins) | where mails go; **Send a test mail to me**. Without `--smtp-url` they are only logged |
 | Translations | Settings → Translations | the keys come from the code, editors only translate |
 | SEO | Settings → SEO, a page → SEO | the search result preview; on the website title, meta, JSON-LD, `/sitemap.xml` and `/robots.txt` from the npm package `meierlabs-seo` (the demo is noindex) |
 | Roles | Users (admins) | log in as `second@meierlabs.dev` (Author): only events and news, as drafts someone else publishes; pages and categories read only |
