@@ -107,6 +107,11 @@
 		gap: 1rem;
 	}
 
+	// the whole row, not one card's column
+	.empty {
+		grid-column: 1 / -1;
+	}
+
 	.rename {
 		flex: 1;
 		min-width: 0;
