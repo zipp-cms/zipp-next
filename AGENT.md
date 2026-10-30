@@ -48,10 +48,44 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   `lib.rs` is the public api, `cli.rs` the commands, `server.rs` the
   router, `testing.rs` the test server. Plugin crates have the same
   files.
-- `studio/src`: `api/` (one file per area, `index.ts` re-exports),
-  `pages/` (`edit/` for the editor), `fields/` (one component per field
-  kind), `lib/` (shared components and helpers). Shared styles are in
+- `studio/src`: `api/` (one file per area, `index.ts` re-exports;
+  `client.ts` sends requests and reads streams), `pages/` (a folder per
+  page with parts: `edit/`, `setup/`, `ai/`), `fields/` (one component
+  per field kind, `registry.ts` maps the kinds, `rich/` the rich text),
+  `lib/` (shared components and the logic in `.ts`: `image/` the image
+  editor, `nav/` the sidebar). Tokens and shared classes are in
   `app.scss`.
+
+## The studio
+
+- One component per piece of UI, one look. Before building something,
+  use what `lib/` has:
+  - overlays: `Flyout` (the panel from the right, also for pickers),
+    `Popover` (menus, pickers under their button; Escape and a click
+    outside close it, `layers.ts` closes only the top one), `Menu` (⋯),
+    `SearchList` in a popover, `.popup-item` for its lines;
+  - pages: `PageTop` (crumbs or title, state, actions), `.with-aside`
+    and `.cards` for the layout, `SiteBadges`, `.empty` for nothing and
+    Loading…, `.error` for errors;
+  - fields: `ItemCard` (blocks, embeds, nav items), `ItemActions` (move,
+    duplicate, remove in every list), `EntryChip` and `AssetChip` (a
+    chosen entry or file), `AddButton`, `UploadButton`, `SearchInput`,
+    `Segmented` (tabs and short choices), `EntrySearch`,
+    `AssetPicker`;
+  - text: `.muted`, `.note`, `.truncate`, `label.stacked`, `label.check`.
+- A component renders; what it does goes into a `.ts` (or `.svelte.ts`
+  for state) next to it when it is more than a few lines: geometry,
+  loading and saving, streams, trees, lookups. Classes with `$state`
+  fields work well for a page's state (`entryEditor.svelte.ts`,
+  `assetForm.svelte.ts`, `chat.svelte.ts`); `Busy` runs an action with
+  its busy state and error.
+- CSS uses the tokens of `app.scss` (colors, `--fs-*`, `--radius*`,
+  shadows, z-index layers), no hex colors or pixel font sizes in
+  components; a component styles only its own layout.
+- Lookups by handle: `lib/schema.ts`; lists of a field: `lib/list.ts`;
+  links: `lib/link.ts`; dates and sizes: `lib/format.ts`.
+- A field never writes its value when it mounts (opening an entry must
+  not make a draft); new fields go into `fields/registry.ts`.
 
 ## Decisions
 
