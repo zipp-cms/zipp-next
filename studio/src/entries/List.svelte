@@ -243,6 +243,7 @@
 	{#if total > entries.length}
 		<p class="empty">{entries.length} of {total}</p>
 	{/if}
+	<SortLine sortable={sort} />
 </div>
 
 <style lang="scss">
