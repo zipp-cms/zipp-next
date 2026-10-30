@@ -14,6 +14,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Sections: single, channel, structure | Settings → Header, Footer · News, Events · Pages, Categories | a single opens its entry, a channel is a list, a structure a tree |
 | Like the crelte tutorial | Pages, News, Categories | pages and articles start with the **Intro** tab (a rich text intro, an image), the blocks are in **Content**; the news page on the website lists the articles and filters them by category (`?category=`) |
 | The home page in the tree | Pages → Willkommen | the entry type `home` gets the uri `/` (`uri_of`) |
+| Change the type | a page → Type in the sidebar → News | the intro stays, the blocks go after asking; the website keeps the page until **Publish** |
 | Drag and drop | Pages | drag the handle before a title: before, after or into a page |
 | Sites and languages | the language switch top right | titles, slugs and text per site; fields marked *all sites* are shared |
 | Status per site | every list | `DE EN`: a badge per site, grey where it is not published |

@@ -8,8 +8,9 @@ use crate::error::Error;
 use crate::schema::tests::site_with_roles;
 use crate::testing::{Client, TestServer};
 
-fn content(title: &str, fields: serde_json::Value) -> SiteDoc {
+fn content(ty: &str, title: &str, fields: serde_json::Value) -> SiteDoc {
 	SiteDoc {
+		ty: ty.into(),
 		dates: Default::default(),
 		title: title.into(),
 		slug: crate::entries::slugify(title),
@@ -18,12 +19,12 @@ fn content(title: &str, fields: serde_json::Value) -> SiteDoc {
 	}
 }
 
-fn put(id: i64, title: &str, base: Option<i64>) -> PutReq {
+fn put(id: i64, ty: &str, title: &str, base: Option<i64>) -> PutReq {
 	PutReq {
 		id,
 		site: "de".into(),
 		base,
-		content: content(title, json!({})),
+		content: content(ty, title, json!({})),
 	}
 }
 
@@ -43,7 +44,7 @@ async fn drafts_until_published() {
 	let editor = ts.user(Some("editor"));
 	let id = create(&editor, "pages", "page").await;
 
-	let draft = editor.call(&put(id, "Draft", None)).await.unwrap();
+	let draft = editor.call(&put(id, "page", "Draft", None)).await.unwrap();
 	assert_eq!(draft.doc["de"].title, "Draft");
 	assert!(draft.user.unwrap().starts_with("editor"));
 	let got = editor.call(&GetReq { id, site: None }).await.unwrap();
@@ -88,17 +89,19 @@ async fn two_editors_conflict() {
 	let (a, b) = (ts.admin(), ts.admin());
 	let id = create(&a, "pages", "page").await;
 
-	let first = a.call(&put(id, "A", None)).await.unwrap();
-	let err = b.call(&put(id, "B", None)).await.unwrap_err();
+	let first = a.call(&put(id, "page", "A", None)).await.unwrap();
+	let err = b.call(&put(id, "page", "B", None)).await.unwrap_err();
 	assert!(
 		matches!(err, Error::Conflict(m) if m.ends_with("changed this entry"))
 	);
 	// after reloading b knows the draft
-	b.call(&put(id, "B", Some(first.updated_at))).await.unwrap();
+	b.call(&put(id, "page", "B", Some(first.updated_at)))
+		.await
+		.unwrap();
 
 	a.call(&PublishReq { id }).await.unwrap();
 	let err = b
-		.call(&put(id, "B2", Some(first.updated_at)))
+		.call(&put(id, "page", "B2", Some(first.updated_at)))
 		.await
 		.unwrap_err();
 	assert_eq!(
@@ -117,7 +120,7 @@ async fn publishing_checks_the_content() {
 		id,
 		site: "de".into(),
 		base: None,
-		content: content("Bad", body),
+		content: content("page", "Bad", body),
 	};
 	// a draft may be unfinished, publishing not
 	admin.call(&req).await.unwrap();
@@ -126,7 +129,7 @@ async fn publishing_checks_the_content() {
 
 	let unknown = PutReq {
 		site: "fr".into(),
-		..put(id, "X", None)
+		..put(id, "page", "X", None)
 	};
 	assert!(matches!(
 		admin.call(&unknown).await.unwrap_err(),
@@ -143,7 +146,10 @@ async fn roles_on_drafts() {
 	let event = create(&author, "events", "event").await;
 
 	// an author drafts events and someone else publishes them
-	author.call(&put(event, "Jazz", None)).await.unwrap();
+	author
+		.call(&put(event, "event", "Jazz", None))
+		.await
+		.unwrap();
 	let err = author.call(&PublishReq { id: event }).await.unwrap_err();
 	assert_eq!(err, Error::Forbidden);
 	editor.call(&PublishReq { id: event }).await.unwrap();
@@ -159,7 +165,10 @@ async fn roles_on_drafts() {
 	author.call(&RevisionsReq { id: page }).await.unwrap();
 	author.call(&PreviewReq { id: page }).await.unwrap();
 	let forbidden = [
-		author.call(&put(page, "X", None)).await.unwrap_err(),
+		author
+			.call(&put(page, "page", "X", None))
+			.await
+			.unwrap_err(),
 		author.call(&DiscardReq { id: page }).await.unwrap_err(),
 		author
 			.call(&RestoreReq { id: page, rev: 1 })
@@ -196,7 +205,7 @@ async fn a_draft_knows_the_entries_only_it_links_to() {
 		id: event,
 		site: "de".into(),
 		base: None,
-		content: content("Jazz", json!({ "page": [page.id] })),
+		content: content("event", "Jazz", json!({ "page": [page.id] })),
 	};
 	admin.call(&req).await.unwrap();
 

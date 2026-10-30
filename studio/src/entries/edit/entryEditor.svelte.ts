@@ -1,6 +1,11 @@
 import { ApiError } from '../../core/client';
 import { Busy } from '../../core/busy.svelte';
-import { type Schema, type Values } from '../../core/schema';
+import {
+	componentOf,
+	sameKind,
+	type Schema,
+	type Values,
+} from '../../core/schema';
 import {
 	deleteEntry,
 	getEntry,
@@ -180,6 +185,7 @@ export class EntryEditor {
 		const live = this.live;
 		if (!this.draft || !live) return new Set<string>();
 		const set = changedPaths(live.fields, $state.snapshot(this.fields));
+		if (this.ty !== live.type) set.add('type');
 		if (this.title !== live.title) set.add('title');
 		if (this.slug !== live.slug) set.add('slug');
 		if (this.published !== live.published) set.add('published');
@@ -197,12 +203,12 @@ export class EntryEditor {
 				getDraftWithRefs(id, this.site),
 			]);
 		this.sec = entry.section;
-		this.ty = entry.type;
 		this.uri = entry.uri;
 		this.parentId = entry.parentId;
 		this.refs = { ...relations, ...drafted };
 		this.draft = d;
 		this.live = {
+			type: entry.type,
 			title: entry.title,
 			slug: entry.slug,
 			published: entry.published,
@@ -211,6 +217,8 @@ export class EntryEditor {
 			expiryDate: entry.expiryDate,
 		};
 		const content = d?.doc[this.site] ?? entry;
+		// a draft may change the type
+		this.ty = content.type;
 		this.#title = content.title;
 		this.#slug = content.slug;
 		// a live entry's url stays when its title changes
@@ -253,12 +261,42 @@ export class EntryEditor {
 	 */
 	snapshot(): string {
 		return JSON.stringify([
+			this.ty,
 			this.title,
 			this.slug,
 			this.published,
 			this.dates,
 			clean($state.snapshot(this.fields)),
 		]);
+	}
+
+	/**
+	 * Another type of the section, like Craft's: a field with the same
+	 * handle and kind keeps its content, the others go, after asking.
+	 * The draft converts the other sites the same way. Whether it changed.
+	 */
+	changeType(to: string): boolean {
+		const from = componentOf(this.schema, this.ty);
+		const into = componentOf(this.schema, to);
+		if (!into || to === this.ty) return false;
+		const kept = (handle: string) => {
+			const a = from?.fields.find(f => f.handle === handle);
+			const b = into.fields.find(f => f.handle === handle);
+			return !!a && !!b && sameKind(a, b);
+		};
+		const values = (clean($state.snapshot(this.fields)) ?? {}) as Values;
+		const lost = Object.keys(values)
+			.filter(h => !kept(h))
+			.map(h => from?.fields.find(f => f.handle === h)?.label ?? h);
+		const question =
+			`Change the type to ${into.name}? It has no field like ` +
+			`${lost.join(', ')}: their content is removed in every site.`;
+		if (lost.length && !confirm(question)) return false;
+		this.fields = Object.fromEntries(
+			Object.entries(this.fields).filter(([h]) => kept(h)),
+		);
+		this.ty = to;
+		return true;
 	}
 
 	/** Called on every change: the draft is saved a moment later. */
@@ -310,6 +348,7 @@ export class EntryEditor {
 	private async saveDraft(snap: string): Promise<boolean> {
 		if (this.id === null) return false;
 		const content = {
+			type: this.ty,
 			title: this.title,
 			slug: this.slug,
 			published: this.published,
@@ -448,6 +487,7 @@ export class EntryEditor {
 		const set = new Set<string>();
 		if (now && old) {
 			changedPaths(old.fields, now.fields, '', set);
+			if (now.type !== old.type) set.add('type');
 			if (now.title !== old.title) set.add('title');
 			if (now.slug !== old.slug) set.add('slug');
 		}

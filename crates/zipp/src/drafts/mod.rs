@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::AppState;
-use crate::content::{FieldError, share};
+use crate::content::{FieldError, convert, share};
 use crate::db::now;
 use crate::entries::{Dates, EntryInput, check, get_entry, write};
 use crate::error::{Error, Result};
@@ -58,6 +58,9 @@ const MAX_REVISIONS: i64 = 50;
 /// The content of an entry in one site.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SiteDoc {
+	/// the entry type, the same in every site: a draft can change it
+	#[serde(rename = "type")]
+	pub ty: String,
 	pub title: String,
 	pub slug: String,
 	pub published: bool,
@@ -86,19 +89,14 @@ pub struct Draft {
 pub fn draft_refs(
 	conn: &Connection,
 	schema: &Schema,
-	id: i64,
 	draft: &Draft,
 	site: &str,
 ) -> Result<BTreeMap<i64, crate::entries::EntryRef>> {
-	let ty: String =
-		conn.query_row("SELECT type FROM entries WHERE id = ?1", [id], |r| {
-			r.get(0)
-		})?;
-	let Some(comp) = schema.entry_type(&ty) else {
-		return Ok(BTreeMap::new());
-	};
 	let mut ids = vec![];
 	for doc in draft.doc.values() {
+		let Some(comp) = schema.entry_type(&doc.ty) else {
+			continue;
+		};
 		for r in crate::content::relations(schema, comp, &doc.fields) {
 			if let crate::content::Target::Entries(_) = r.target {
 				ids.extend(r.ids);
@@ -114,7 +112,7 @@ pub fn draft_refs(
 pub fn live_doc(conn: &Connection, id: i64) -> Result<Doc> {
 	let mut stmt = conn.prepare(
 		"SELECT s.site, s.title, s.slug, s.published, s.fields, e.post_date,
-		e.expiry_date FROM entry_sites s JOIN entries e ON e.id = s.entry_id
+		e.expiry_date, e.type FROM entry_sites s JOIN entries e ON e.id = s.entry_id
 		WHERE s.entry_id = ?1",
 	)?;
 	let rows = stmt.query_map([id], |r| {
@@ -122,6 +120,7 @@ pub fn live_doc(conn: &Connection, id: i64) -> Result<Doc> {
 		Ok((
 			r.get::<_, String>(0)?,
 			SiteDoc {
+				ty: r.get(7)?,
 				title: r.get(1)?,
 				slug: r.get(2)?,
 				published: r.get(3)?,
@@ -186,6 +185,10 @@ fn store_draft(
 /// Shared fields go to the other sites of the draft too. Nothing is
 /// validated here, a draft may be half done.
 ///
+/// The type is that of every site: another type of the section changes
+/// it in all of them, their fields converted (see [`convert`]). The
+/// editor sends `content` already converted.
+///
 /// `base` is the version of the draft the editor started from (its
 /// `updated_at`, `None` without a draft). If someone else changed the
 /// draft since, or published or discarded it, nothing is saved: the
@@ -203,9 +206,18 @@ pub fn put_draft(
 		return Err(Error::Request(format!("unknown site {site}")));
 	}
 	let entry = get_entry(conn, id, site)?;
-	let comp = schema.entry_type(&entry.ty).ok_or_else(|| {
-		Error::Internal(format!("{} is no type of the schema", entry.ty))
+	let section = schema.get_section(&entry.section).ok_or_else(|| {
+		Error::Internal(format!("{} is no section", entry.section))
 	})?;
+	let comp = schema
+		.entry_type(&content.ty)
+		.filter(|_| section.types.contains(&content.ty))
+		.ok_or_else(|| {
+			Error::Request(format!(
+				"no type {} in section {}",
+				content.ty, entry.section
+			))
+		})?;
 
 	let current = get_draft(conn, id)?;
 	match (&current, base) {
@@ -226,6 +238,12 @@ pub fn put_draft(
 		None => live_doc(conn, id)?,
 	};
 	for (_, sd) in doc.iter_mut().filter(|(s, _)| s.as_str() != site) {
+		if sd.ty != content.ty {
+			if let Some(from) = schema.entry_type(&sd.ty) {
+				sd.fields = convert(from, comp, &sd.fields);
+			}
+			sd.ty = content.ty.clone();
+		}
 		sd.fields = share(comp, &content.fields, &sd.fields);
 		sd.dates = content.dates;
 	}
@@ -257,7 +275,7 @@ pub fn publish(
 		let sd = &draft.doc[site];
 		let input = EntryInput {
 			section: entry.section.clone(),
-			ty: entry.ty.clone(),
+			ty: sd.ty.clone(),
 			site: Some(site.clone()),
 			title: sd.title.clone(),
 			slug: sd.slug.clone(),

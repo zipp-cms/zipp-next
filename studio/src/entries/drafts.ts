@@ -4,6 +4,8 @@ import { request, token } from '../core/client';
 import { type Values } from '../core/schema';
 
 export type SiteDoc = Dates & {
+	/** the entry type, the same in every site */
+	type: string;
 	title: string;
 	slug: string;
 	published: boolean;
@@ -16,7 +18,7 @@ export type Draft = {
 	updatedAt: number;
 };
 
-/** A field (or title, slug, published) that changed, in which sites. */
+/** A field (or type, title, slug, …) that changed, in which sites. */
 export type FieldChange = { field: string; sites: string[] };
 
 export type Revision = {

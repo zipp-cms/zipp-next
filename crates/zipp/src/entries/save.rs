@@ -2,8 +2,9 @@ use super::*;
 
 /// Creates an entry in all sites, or updates it in one site when `id` is
 /// given, with a revision of who did it (`None`: the system). Shared
-/// fields are copied to the other sites. Section and type of an entry
-/// can't change.
+/// fields are copied to the other sites. The section of an entry can't
+/// change, its type can to another of the section: the fields of the
+/// other sites are converted (see [`convert`]).
 pub fn save(
 	conn: &Connection,
 	schema: &Schema,
@@ -47,9 +48,9 @@ pub fn check(
 	let parent_id = match id {
 		Some(id) => {
 			let e = get_entry(conn, id, &site)?;
-			if e.section != input.section || e.ty != input.ty {
+			if e.section != input.section {
 				return Err(Error::Request(
-					"section and type of an entry can't change".into(),
+					"the section of an entry can't change".into(),
 				));
 			}
 			e.parent_id
@@ -156,6 +157,14 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 	let now = now();
 	let id = match c.id {
 		Some(id) => {
+			let was: String = conn.query_row(
+				"SELECT type FROM entries WHERE id = ?1",
+				[id],
+				|r| r.get(0),
+			)?;
+			// another type converts the other sites, the uris may change
+			let retyped = was != c.ty;
+			let from = schema.entry_type(&was).filter(|_| retyped);
 			conn.execute(
 				"UPDATE entry_sites SET title = ?1, slug = ?2, uri = ?3,
 				published = ?4, fields = ?5, updated_at = ?6
@@ -180,7 +189,11 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 					params![id, other.handle],
 					|r| r.get(0),
 				)?;
-				let theirs = serde_json::from_str(&theirs).unwrap_or_default();
+				let mut theirs =
+					serde_json::from_str(&theirs).unwrap_or_default();
+				if let Some(from) = from {
+					theirs = convert(from, comp, &theirs);
+				}
 				let theirs = share(comp, fields, &theirs);
 				conn.execute(
 					"UPDATE entry_sites SET fields = ?1
@@ -192,11 +205,12 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 
 			// a post date once published, kept when the input has none
 			conn.execute(
-				"UPDATE entries SET updated_at = ?1,
-				post_date = COALESCE(?2, post_date, CASE WHEN ?3 THEN ?1 END),
-				expiry_date = ?4 WHERE id = ?5",
+				"UPDATE entries SET updated_at = ?1, type = ?2,
+				post_date = COALESCE(?3, post_date, CASE WHEN ?4 THEN ?1 END),
+				expiry_date = ?5 WHERE id = ?6",
 				params![
 					now,
+					c.ty,
 					c.dates.post_date,
 					c.published,
 					c.dates.expiry_date,
@@ -205,7 +219,8 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 			)?;
 			// children follow the uri of their parent, the uri of other
 			// sites a field that is the same in all of them
-			if section.kind == SectionKind::Structure
+			if retyped
+				|| section.kind == SectionKind::Structure
 				|| section.uri_if.is_some()
 			{
 				refresh_uris(conn, schema, section)?;

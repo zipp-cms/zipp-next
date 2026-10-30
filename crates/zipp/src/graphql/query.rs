@@ -266,6 +266,7 @@ pub(super) fn load(
 		Some(Preview::Entry(id, doc)) => {
 			for e in entries.iter_mut().filter(|e| e.id == *id) {
 				if let Some(sd) = doc.get(&e.site) {
+					e.ty = sd.ty.clone();
 					e.title = sd.title.clone();
 					e.fields = sd.fields.clone();
 				}
@@ -278,6 +279,7 @@ pub(super) fn load(
 				if let Some(sd) =
 					draft.as_ref().and_then(|d| d.doc.get(&e.site))
 				{
+					e.ty = sd.ty.clone();
 					e.title = sd.title.clone();
 					e.fields = sd.fields.clone();
 				}

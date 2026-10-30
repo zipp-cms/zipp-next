@@ -252,6 +252,7 @@ async fn preview_shows_the_draft() {
 		e.published = false;
 		let e = save(&conn, &s, None, e, None).unwrap();
 		let sd = crate::drafts::SiteDoc {
+			ty: "page".into(),
 			dates: Default::default(),
 			title: "Draft".into(),
 			slug: "live".into(),
@@ -286,6 +287,7 @@ async fn site_preview_shows_every_draft() {
 	let preview = {
 		let conn = db.conn();
 		let draft = |title: &str, published: bool| crate::drafts::SiteDoc {
+			ty: "page".into(),
 			dates: Default::default(),
 			title: title.into(),
 			slug: title.to_lowercase(),

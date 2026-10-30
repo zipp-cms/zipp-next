@@ -75,6 +75,28 @@ export type Field = FieldKind & {
 	instructions?: string;
 };
 
+/** What a field is besides its kind and options, see [`sameKind`]. */
+const FIELD_KEYS = [
+	'handle',
+	'label',
+	'required',
+	'indexed',
+	'translatable',
+	'instructions',
+];
+
+/**
+ * Whether two fields take the same values: their kind and its options
+ * are equal. Another entry type keeps a field's content then.
+ */
+export function sameKind(a: Field, b: Field): boolean {
+	const kind = (f: Field) =>
+		JSON.stringify(
+			Object.entries(f).filter(([k]) => !FIELD_KEYS.includes(k)),
+		);
+	return kind(a) === kind(b);
+}
+
 /** A field of one kind, what the component of that kind gets. */
 export type FieldOf<K extends Field['kind']> = Extract<Field, { kind: K }>;
 

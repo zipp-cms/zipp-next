@@ -73,7 +73,7 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 				params![site.handle, primary.handle],
 			)?;
 			// a draft gets the new site too, revisions stay as they were
-			change_docs(conn, &["drafts"], |doc, _| {
+			change_docs(conn, &["drafts"], |doc| {
 				if let Some(sd) = doc.get(&primary.handle).cloned() {
 					doc.insert(site.handle.clone(), sd);
 				}
@@ -91,7 +91,7 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 					[site],
 				)?;
 			}
-			change_docs(conn, &["drafts", "revisions"], |doc, _| {
+			change_docs(conn, &["drafts", "revisions"], |doc| {
 				doc.remove(site);
 			})?;
 		}
@@ -119,9 +119,11 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 		}
 		_ => {
 			change_content(conn, schema, op)?;
-			change_docs(conn, &["drafts", "revisions"], |doc, ty| {
+			change_docs(conn, &["drafts", "revisions"], |doc| {
+				// each with its own type, a draft or revision may have
+				// another than the entry
 				for sd in doc.values_mut() {
-					op.apply_entry(schema, &mut ty.to_string(), &mut sd.fields);
+					op.apply_entry(schema, &mut sd.ty, &mut sd.fields);
 				}
 			})?;
 			if let Op::ChangeField { component, field } = op {
@@ -175,27 +177,24 @@ fn change_content(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 	Ok(())
 }
 
-/// Changes the content of drafts and revisions, `f` gets the type of the
-/// entry.
+/// Changes the content of drafts and revisions.
 fn change_docs(
 	conn: &Connection,
 	tables: &[&str],
-	mut f: impl FnMut(&mut Doc, &str),
+	mut f: impl FnMut(&mut Doc),
 ) -> Result<()> {
 	for table in tables {
 		let key = if *table == "drafts" { "entry_id" } else { "id" };
-		let mut stmt = conn.prepare(&format!(
-			"SELECT d.{key}, d.doc, e.type FROM {table} d
-			JOIN entries e ON e.id = d.entry_id"
-		))?;
+		let mut stmt =
+			conn.prepare(&format!("SELECT {key}, doc FROM {table}"))?;
 		let rows = stmt
-			.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
-			.collect::<rusqlite::Result<Vec<(i64, String, String)>>>()?;
+			.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+			.collect::<rusqlite::Result<Vec<(i64, String)>>>()?;
 		drop(stmt);
 
-		for (id, doc, ty) in rows {
+		for (id, doc) in rows {
 			let mut doc: Doc = serde_json::from_str(&doc).unwrap_or_default();
-			f(&mut doc, &ty);
+			f(&mut doc);
 			conn.execute(
 				&format!("UPDATE {table} SET doc = ?1 WHERE {key} = ?2"),
 				params![serde_json::to_string(&doc).unwrap(), id],
@@ -352,6 +351,7 @@ mod tests {
 				.unwrap();
 
 		let sd = crate::drafts::SiteDoc {
+			ty: "event".into(),
 			dates: Default::default(),
 			title: "E".into(),
 			slug: "e".into(),

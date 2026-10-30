@@ -41,6 +41,7 @@ async fn authors_write_editors_publish() {
 	let jazz = author.call(&event("Jazz", "2099-01-01")).await.unwrap();
 	assert!(!jazz.published);
 	let live = SiteDoc {
+		ty: jazz.ty,
 		dates: Default::default(),
 		title: jazz.title,
 		slug: jazz.slug,

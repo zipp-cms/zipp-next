@@ -221,6 +221,20 @@ pub fn texts_of(
 		.collect()
 }
 
+/// The fields of an entry of type `from` as one of type `to`: a field
+/// stays when `to` has one of the same handle and kind, the rest goes.
+pub fn convert(from: &Component, to: &Component, fields: &Value) -> Value {
+	fn kind<'a>(c: &'a Component, handle: &str) -> Option<&'a FieldKind> {
+		c.fields
+			.iter()
+			.find(|f| f.handle == handle)
+			.map(|f| &f.kind)
+	}
+	let same = |h: &str| kind(from, h).is_some_and(|k| kind(to, h) == Some(k));
+	let out = fields.as_object().cloned().unwrap_or_default();
+	Value::Object(out.into_iter().filter(|(k, _)| same(k)).collect())
+}
+
 /// The fields of `into` with the shared (not translatable) ones taken
 /// from `from`, so every site has the same shared values.
 pub fn share(comp: &Component, from: &Value, into: &Value) -> Value {

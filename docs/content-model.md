@@ -20,6 +20,12 @@ then. Nothing is saved when a date passes, `serve` tells the
 clear. A block can be switched off (`"enabled": false`): it stays in the
 entry, the website leaves it out.
 
+The type of an entry can change to another of its section, like
+Craft's: a field with the same handle and kind (and options) keeps its
+content, the others are dropped in every site; blocks keep theirs. In
+the studio it is a draft change (the editor asks before content goes),
+publishing writes the type, its uris and index.
+
 `uri_of("home", "")` gives one entry type another uri, `uri_in("fr",
 "offres/{slug}")` one site, `uri_if("hasPage")` gives only entries with
 that boolean field on a page, like Craft's `{% if hasPage %}` in a uri

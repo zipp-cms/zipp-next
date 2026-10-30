@@ -14,7 +14,7 @@ async fn get_route(
 		.site
 		.unwrap_or_else(|| state.schema.primary_site().handle.clone());
 	let relations = match &draft {
-		Some(d) => draft_refs(&conn, &state.schema, req.id, d, &site)?,
+		Some(d) => draft_refs(&conn, &state.schema, d, &site)?,
 		None => Default::default(),
 	};
 	Ok(Json(DraftResp { draft, relations }))

@@ -14,7 +14,7 @@
 
 	/**
 	 * Next to the content like Craft's sidebar: the status in each site,
-	 * slug, type and parent, the outline of the blocks, copying from
+	 * type, parent and slug, the outline of the blocks, copying from
 	 * another site and the revisions. A global has no page and is always
 	 * live, it has no status, slug or type.
 	 */
@@ -102,9 +102,20 @@
 
 			<fieldset class="inline" disabled={!may.edit}>
 				<label>
-					<span>Type</span>
-					{#if isNew && secDef.types.length > 1}
-						<select bind:value={ed.ty}>
+					<span>
+						{#if ed.changed.has('type')}<span
+								class="changed-dot"
+							></span>{/if}Type
+					</span>
+					{#if secDef.types.length > 1}
+						<select
+							value={ed.ty}
+							onchange={e => {
+								// asked first when content would go
+								if (!ed.changeType(e.currentTarget.value))
+									e.currentTarget.value = ed.ty;
+							}}
+						>
 							{#each secDef.types as t (t)}
 								<option value={t}>
 									{componentName(schema, t)}

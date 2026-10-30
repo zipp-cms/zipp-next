@@ -157,7 +157,8 @@
 				<div class="card">
 					<RevisionView
 						{schema}
-						{comp}
+						comp={componentOf(schema, ed.viewing.doc?.type ?? '') ??
+							comp}
 						refs={ed.refs}
 						{single}
 						rev={ed.viewing.rev}

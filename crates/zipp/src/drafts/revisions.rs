@@ -10,7 +10,7 @@ pub struct Revision {
 	pub changes: Vec<FieldChange>,
 }
 
-/// A field (or title, slug, published, postDate, expiryDate) that
+/// A field (or type, title, slug, published, postDate, expiryDate) that
 /// changed, and in which sites.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FieldChange {
@@ -35,6 +35,9 @@ pub fn diff_docs(old: &Doc, new: &Doc) -> Vec<FieldChange> {
 
 	for (site, n) in new {
 		let Some(o) = old.get(site) else { continue };
+		if o.ty != n.ty {
+			add("type", site);
+		}
 		if o.title != n.title {
 			add("title", site);
 		}
