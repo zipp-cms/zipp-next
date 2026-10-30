@@ -297,6 +297,10 @@ pub fn reindex(
 		"DELETE FROM entry_relations WHERE entry_id = ?1 AND site = ?2",
 		params![id, site],
 	)?;
+	conn.execute(
+		"DELETE FROM asset_relations WHERE entry_id = ?1 AND site = ?2",
+		params![id, site],
+	)?;
 
 	for v in index_values(comp, fields) {
 		conn.execute(
@@ -306,6 +310,19 @@ pub fn reindex(
 		)?;
 	}
 	let rels = relations(schema, comp, fields);
+	// where an asset is used, for the studio
+	for rel in rels
+		.iter()
+		.filter(|r| matches!(r.target, Target::Assets(_)))
+	{
+		for asset in &rel.ids {
+			conn.execute(
+				"INSERT INTO asset_relations (entry_id, site, path, asset_id)
+				VALUES (?1, ?2, ?3, ?4)",
+				params![id, site, rel.path, asset],
+			)?;
+		}
+	}
 	for rel in rels
 		.iter()
 		.filter(|r| matches!(r.target, Target::Entries(_)))

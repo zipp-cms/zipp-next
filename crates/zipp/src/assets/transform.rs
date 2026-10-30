@@ -42,7 +42,8 @@ pub fn crop_rect(
 	(x.round() as u32, y.round() as u32, cw, ch)
 }
 
-/// Writes the transform of an image to `out`.
+/// Writes the transform of an image to `out`, made of the image with its
+/// edits.
 pub(super) fn generate(
 	asset: &Asset,
 	original: &FsPath,
@@ -51,7 +52,14 @@ pub(super) fn generate(
 ) -> Result<()> {
 	let internal = |e: &dyn std::fmt::Display| Error::Internal(e.to_string());
 	let img = image::open(original).map_err(|e| internal(&e))?;
-	let format = ImageFormat::from_path(original).map_err(|e| internal(&e))?;
+	let img = match &asset.edits {
+		Some(e) => e.apply(img),
+		None => img,
+	};
+	let format = match asset.output_mime() {
+		"image/png" => ImageFormat::Png,
+		_ => ImageFormat::from_path(original).map_err(|e| internal(&e))?,
+	};
 	let (w, h) = (img.width(), img.height());
 	let (out_w, out_h) = transform_size(w, h, t);
 

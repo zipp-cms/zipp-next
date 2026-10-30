@@ -438,7 +438,7 @@ impl Importer<'_> {
 				}
 			};
 			let name = a.path.rsplit('/').next().unwrap_or(&a.path);
-			let stored = match assets::store(conn, files, name, &data) {
+			let stored = match assets::store(conn, files, name, &data, None) {
 				Ok(s) => s,
 				Err(e) => {
 					self.skip(format!("asset {}: {e}", a.path));

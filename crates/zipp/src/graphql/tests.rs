@@ -125,7 +125,8 @@ async fn assets_with_transforms() {
 		.unwrap();
 	{
 		let conn = db.conn();
-		let a = crate::assets::store(&conn, &dir, "hero.png", &png).unwrap();
+		let a =
+			crate::assets::store(&conn, &dir, "hero.png", &png, None).unwrap();
 		let fields = json!({ "city": "Bern", "image": [a.id] });
 		save(&conn, &s, None, input("events", "event", "Jazz", fields))
 			.unwrap();
@@ -742,7 +743,8 @@ async fn craft_arguments_and_fields() {
 			)
 			.unwrap();
 		let img =
-			crate::assets::store(&conn, &dir, "piano-night.png", &png).unwrap();
+			crate::assets::store(&conn, &dir, "piano-night.png", &png, None)
+				.unwrap();
 		let a = save(
 			&conn,
 			&s,

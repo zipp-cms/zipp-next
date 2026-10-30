@@ -41,6 +41,7 @@ pub(super) async fn serve(
 	for name in applied {
 		info!("applied migration {name}");
 	}
+	assets::index_usage(&db.conn(), &schema).map_err(|e| e.to_string())?;
 	if !migrate::unmigrated(&migrations, &schema)?.is_empty() {
 		return Err("The schema changed since the last migration, run \
 			`makemigration` first"

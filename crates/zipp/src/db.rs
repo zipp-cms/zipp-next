@@ -7,7 +7,8 @@ use rusqlite::Connection;
 /// Tables of zipp itself, every entry is applied once, tracked with
 /// `PRAGMA user_version`. Only ever append to this list. Changes of the
 /// content model are schema migrations (`migrate.rs`), not these.
-const MIGRATIONS: &[&str] = &[r#"
+const MIGRATIONS: &[&str] = &[
+	r#"
 	CREATE TABLE entries (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		section TEXT NOT NULL,
@@ -122,7 +123,22 @@ const MIGRATIONS: &[&str] = &[r#"
 		name TEXT PRIMARY KEY,
 		applied_at INTEGER NOT NULL
 	);
-"#];
+"#,
+	// the image editor, who uploaded, where assets are used
+	r#"
+	ALTER TABLE assets ADD COLUMN edits TEXT;
+	ALTER TABLE assets ADD COLUMN uploaded_by INTEGER
+		REFERENCES users(id) ON DELETE SET NULL;
+	CREATE TABLE asset_relations (
+		entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+		site TEXT NOT NULL,
+		path TEXT NOT NULL,
+		asset_id INTEGER NOT NULL
+	);
+	CREATE INDEX asset_relations_asset ON asset_relations(asset_id);
+	CREATE INDEX asset_relations_entry ON asset_relations(entry_id);
+"#,
+];
 
 #[derive(Clone)]
 pub struct Db {
