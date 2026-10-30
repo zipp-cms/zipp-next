@@ -62,6 +62,7 @@ impl TestServer {
 		let state = AppState {
 			graphql_token: Some(Arc::new("test-token".into())),
 			mail: crate::mail::Mailer::memory(),
+			public_url: Arc::new("http://zipp.test".into()),
 			..AppState::new(db, schema, gql, files)
 		};
 		Self {

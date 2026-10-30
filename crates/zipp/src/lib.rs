@@ -111,6 +111,8 @@ pub struct AppState {
 	pub ai: Option<ai::AiConfig>,
 	/// sends mails, see [`mail`]
 	pub mail: mail::Mailer,
+	/// where the cms is, `serve --public-url`: links in mails
+	pub public_url: Arc<String>,
 	/// the svgs of the schema's Lucide icons, see [`studio::schema_icons`]
 	#[from_ref(skip)]
 	pub icons: Arc<std::collections::BTreeMap<String, String>>,
@@ -164,6 +166,7 @@ impl AppState {
 			indexing: true,
 			ai: None,
 			mail: Default::default(),
+			public_url: Default::default(),
 			hooks: Default::default(),
 		}
 	}

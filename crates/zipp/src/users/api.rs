@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::Account;
+use crate::auth::links::LinkKind;
 use crate::request;
 
 /// All users, for admins.
@@ -17,11 +18,13 @@ pub struct GetReq {
 
 request!(GetReq, GET "/users/{id}" => Account);
 
-/// A new user, for admins.
+/// A new user, for admins; without a password invited, see
+/// [`PasswordLinkReq`].
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateReq {
 	pub email: String,
 	pub name: String,
+	#[serde(default)]
 	pub password: String,
 	/// `None` is an admin
 	pub role: Option<String>,
@@ -61,3 +64,33 @@ pub struct EndSessionsReq {
 }
 
 request!(EndSessionsReq, DELETE "/users/{id}/sessions" => ());
+
+/// A link for the user to set a password, for admins: an invite while
+/// the user has none, else a password reset. `send` mails it.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PasswordLinkReq {
+	pub id: i64,
+	#[serde(default)]
+	pub send: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkResp {
+	pub kind: LinkKind,
+	pub url: String,
+	pub expires_at: i64,
+	/// whether it was mailed
+	pub sent: bool,
+}
+
+request!(PasswordLinkReq, POST "/users/{id}/password-link" => LinkResp);
+
+/// A link that logs in as the user, for admins and users who aren't
+/// admins; it works once, in any browser.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LoginAsLinkReq {
+	pub id: i64,
+}
+
+request!(LoginAsLinkReq, POST "/users/{id}/login-as" => LinkResp);

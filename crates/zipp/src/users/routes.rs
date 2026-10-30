@@ -5,6 +5,7 @@ use super::api::*;
 use super::{check, check_role, create, delete, get, list, set_role, update};
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
+use crate::auth::links::{LinkKind, create_link, link_mail, link_url};
 use crate::auth::{
 	Admin, Authed, end_sessions, hash_password, password_matches,
 	set_password_hash,
@@ -35,12 +36,16 @@ async fn create_route(
 	Req(req): Req<CreateReq>,
 ) -> ApiResult<CreateReq> {
 	check_role(&state.schema, req.role.as_deref())?;
-	let errors =
-		check(&state.db.conn(), None, &req.email, Some(&req.password))?;
+	// without a password the user is invited
+	let password = Some(req.password.as_str()).filter(|p| !p.is_empty());
+	let errors = check(&state.db.conn(), None, &req.email, password)?;
 	if !errors.is_empty() {
 		return Err(Error::Invalid(errors));
 	}
-	let hash = hash_password(req.password).await?;
+	let hash = match password {
+		Some(_) => hash_password(req.password).await?,
+		None => String::new(),
+	};
 	let conn = state.db.conn();
 	let id = create(&conn, &req.email, &req.name, &hash, req.role.as_deref())?;
 	Ok(Json(get(&conn, id)?))
@@ -120,6 +125,65 @@ async fn end_sessions_route(
 	Ok(Json(()))
 }
 
+async fn password_link_route(
+	State(state): State<AppState>,
+	Admin(auth): Admin,
+	Req(req): Req<PasswordLinkReq>,
+) -> ApiResult<PasswordLinkReq> {
+	let (kind, token, expires_at, to, by) = {
+		let conn = state.db.conn();
+		let account = get(&conn, req.id)?;
+		let kind = match account.invited {
+			true => LinkKind::Invite,
+			false => LinkKind::Reset,
+		};
+		// without the url of the cms there is no link to make
+		link_url(&state.public_url, kind, "")?;
+		let (token, expires_at) =
+			create_link(&conn, req.id, kind, Some(auth.user_id))?;
+		let by = get(&conn, auth.user_id)?.user;
+		let by = if by.name.is_empty() {
+			by.email
+		} else {
+			by.name
+		};
+		(kind, token, expires_at, account.user.email, by)
+	};
+	let url = link_url(&state.public_url, kind, &token)?;
+	if req.send {
+		let mail = link_mail(&state.public_url, kind, &to, &url, Some(&by));
+		state.mail.send(mail).await?;
+	}
+	Ok(Json(LinkResp {
+		kind,
+		url,
+		expires_at,
+		sent: req.send,
+	}))
+}
+
+async fn login_as_route(
+	State(state): State<AppState>,
+	Admin(auth): Admin,
+	Req(req): Req<LoginAsLinkReq>,
+) -> ApiResult<LoginAsLinkReq> {
+	let conn = state.db.conn();
+	// an admin sees everything already
+	if get(&conn, req.id)?.user.role.is_none() {
+		return Err(Error::Request("you can't log in as an admin".into()));
+	}
+	let kind = LinkKind::LoginAs;
+	link_url(&state.public_url, kind, "")?;
+	let (token, expires_at) =
+		create_link(&conn, req.id, kind, Some(auth.user_id))?;
+	Ok(Json(LinkResp {
+		kind,
+		url: link_url(&state.public_url, kind, &token)?,
+		expires_at,
+		sent: false,
+	}))
+}
+
 pub fn routes() -> Router<AppState> {
 	Router::new()
 		.api::<ListReq, _>(list_route)
@@ -128,4 +192,6 @@ pub fn routes() -> Router<AppState> {
 		.api::<UpdateReq, _>(update_route)
 		.api::<DeleteReq, _>(delete_route)
 		.api::<EndSessionsReq, _>(end_sessions_route)
+		.api::<PasswordLinkReq, _>(password_link_route)
+		.api::<LoginAsLinkReq, _>(login_as_route)
 }

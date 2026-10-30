@@ -9,10 +9,18 @@ export type User = {
 	role: string | null;
 };
 
-type Authenticated = {
-	session: { token: string; expiresAt: number };
+export type Authenticated = {
+	session: {
+		token: string;
+		expiresAt: number;
+		/** the email of the admin who logged in as the user */
+		impersonatedBy: string | null;
+	};
 	user: User;
 };
+
+/** The admin's token while they are logged in as someone else. */
+const BEFORE = 'zipp-token-before';
 
 /**
  * Who is logged in: the session's token, when it ends and its user. The
@@ -24,6 +32,8 @@ export class Session {
 	token = $state<string | null>(null);
 	expiresAt = $state<Date | null>(null);
 	user = $state<User | null>(null);
+	/** the admin who is logged in as the user, see `loginAs` */
+	impersonatedBy = $state<string | null>(null);
 
 	get loggedIn(): boolean {
 		return this.user !== null;
@@ -50,8 +60,39 @@ export class Session {
 			email,
 			password,
 		});
+		this.use(auth, remember);
+	}
+
+	/** A session the api gave, e.g. after setting a password. */
+	use(auth: Authenticated, remember = true) {
 		this.set(auth);
 		setToken(auth.session.token, remember);
+	}
+
+	/**
+	 * Logs in with a link an admin made for another user; the own
+	 * session waits for `endLoginAs`.
+	 */
+	async loginAs(link: string) {
+		const auth = await request<Authenticated>(
+			'POST',
+			`/auth/links/${link}/login-as`,
+		);
+		const own = token();
+		if (own && !this.impersonatedBy) localStorage.setItem(BEFORE, own);
+		this.use(auth);
+	}
+
+	/** Back to the own session of before, if there was one; whether. */
+	async endLoginAs(): Promise<boolean> {
+		await request('POST', '/auth/logout').catch(() => {});
+		const before = localStorage.getItem(BEFORE);
+		localStorage.removeItem(BEFORE);
+		this.invalidate();
+		if (!before) return false;
+		setToken(before);
+		await this.init();
+		return this.loggedIn;
 	}
 
 	async logout() {
@@ -64,6 +105,7 @@ export class Session {
 		this.token = null;
 		this.expiresAt = null;
 		this.user = null;
+		this.impersonatedBy = null;
 		setToken(null);
 	}
 
@@ -71,6 +113,7 @@ export class Session {
 		this.token = auth.session.token;
 		this.expiresAt = new Date(auth.session.expiresAt);
 		this.user = auth.user;
+		this.impersonatedBy = auth.session.impersonatedBy;
 	}
 }
 

@@ -19,6 +19,9 @@ use crate::schema::{Access, Role, Schema};
 pub mod api;
 #[cfg(test)]
 mod api_tests;
+pub mod links;
+#[cfg(test)]
+mod links_tests;
 mod routes;
 #[cfg(test)]
 mod tests;
@@ -275,18 +278,22 @@ pub struct Session {
 	pub user_id: i64,
 	/// in milliseconds
 	pub expires_at: i64,
+	/// the admin logged in as the user, see [`links`]
+	pub impersonated_by: Option<i64>,
 }
 
 fn get_session(conn: &Connection, token: &str) -> Result<Option<Session>> {
 	Ok(conn
 		.query_row(
-			"SELECT token, user_id, expires_at FROM sessions WHERE token = ?1",
+			"SELECT token, user_id, expires_at, impersonated_by FROM sessions
+			WHERE token = ?1",
 			[token],
 			|r| {
 				Ok(Session {
 					token: r.get(0)?,
 					user_id: r.get(1)?,
 					expires_at: r.get(2)?,
+					impersonated_by: r.get(3)?,
 				})
 			},
 		)
@@ -299,7 +306,8 @@ pub fn renew_session(conn: &Connection, token: &str) -> Result<Session> {
 	let mut s = get_session(conn, token)?
 		.filter(|s| s.expires_at > now())
 		.ok_or(Error::InvalidSessionToken)?;
-	if s.expires_at - now() < RENEW_BELOW_MS {
+	// logging in as someone ends when it ends
+	if s.expires_at - now() < RENEW_BELOW_MS && s.impersonated_by.is_none() {
 		s.expires_at = now() + SESSION_DURATION_MS;
 		conn.execute(
 			"UPDATE sessions SET expires_at = ?1 WHERE token = ?2",
@@ -386,6 +394,7 @@ pub fn new_session(conn: &Connection, user_id: i64) -> Result<Session> {
 		token: random_token(),
 		user_id,
 		expires_at: now() + SESSION_DURATION_MS,
+		impersonated_by: None,
 	};
 	conn.execute(
 		"INSERT INTO sessions (token, user_id, created_at, expires_at)

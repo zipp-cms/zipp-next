@@ -5,6 +5,8 @@ import {
 	deleteUser,
 	endSessions,
 	getUser,
+	loginAsLink,
+	passwordLink,
 	updateUser,
 	type Account,
 } from './api';
@@ -21,6 +23,10 @@ export class UserForm extends Busy {
 	role = $state<string | null>(null);
 	password = $state('');
 	currentPassword = $state('');
+	/** a new user without a password gets the invite by mail */
+	sendInvite = $state(true);
+	/** what the last link did, shown under its buttons */
+	linkNote = $state('');
 	/** what Save would change */
 	private initial = $state('');
 
@@ -59,13 +65,20 @@ export class UserForm extends Busy {
 		const { name, email, role } = this;
 		const password = this.password || null;
 		const saved = await this.run(async () => {
-			if (!this.account)
-				return createUser({
+			if (!this.account) {
+				const created = await createUser({
 					name,
 					email,
 					role,
 					password: password ?? '',
 				});
+				// the user is there even if the mail fails, its page sends again
+				if (!password && this.sendInvite)
+					await passwordLink(created.id, true).catch(e =>
+						alert(`The invite mail failed: ${e.message}`),
+					);
+				return created;
+			}
 			const current = this.own && password ? this.currentPassword : null;
 			return updateUser(this.account.id, {
 				name,
@@ -97,5 +110,42 @@ export class UserForm extends Busy {
 			endSessions(id).then(() => getUser(id)),
 		);
 		if (account) this.account = account;
+	}
+
+	/**
+	 * The invite or reset link of the user: mailed, or copied to paste
+	 * somewhere; the note says which and how long it works.
+	 */
+	async link(send: boolean) {
+		const id = this.account!.id;
+		const link = await this.run(() => passwordLink(id, send));
+		if (!link) return;
+		const what = link.kind === 'invite' ? 'The invite' : 'The reset link';
+		const until = new Date(link.expiresAt).toLocaleString();
+		if (send) {
+			this.linkNote = `${what} is sent to ${this.account!.email}, it works until ${until}.`;
+		} else {
+			await navigator.clipboard.writeText(link.url);
+			this.linkNote = `${what} is copied, it works once until ${until}.`;
+		}
+	}
+
+	/**
+	 * Logs in as the user here, or copies the link for another browser
+	 * (a private window keeps the own login).
+	 */
+	async loginAs(copy: boolean) {
+		const id = this.account!.id;
+		const link = await this.run(() => loginAsLink(id));
+		if (!link) return;
+		if (copy) {
+			await navigator.clipboard.writeText(link.url);
+			this.linkNote =
+				'The login link is copied: open it once, in the next 10 minutes.';
+			return;
+		}
+		const token = link.url.split('/').pop()!;
+		await this.run(() => session.loginAs(token));
+		if (session.impersonatedBy) location.assign('/admin');
 	}
 }

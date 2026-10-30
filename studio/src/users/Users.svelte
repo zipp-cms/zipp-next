@@ -49,6 +49,7 @@
 				{#if u.id === session.user?.id}
 					<span class="muted">(you)</span>
 				{/if}
+				{#if u.invited}<span class="badge">Invited</span>{/if}
 			</td>
 			<td>{roleNameOf(schema, u.role)}</td>
 			<td class="muted">

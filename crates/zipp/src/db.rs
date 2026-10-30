@@ -141,6 +141,7 @@ const MIGRATIONS: &[&str] = &[r#"
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		-- Anna@x.ch and anna@x.ch are one user
 		email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+		-- empty: invited, the user sets one with the invite link
 		password_hash TEXT NOT NULL,
 		-- a role of the schema, NULL is an admin
 		role TEXT,
@@ -154,6 +155,19 @@ const MIGRATIONS: &[&str] = &[r#"
 		user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 		created_at INTEGER NOT NULL,
 		-- using the studio pushes it back
+		expires_at INTEGER NOT NULL,
+		-- an admin who logged in as the user, see auth/links.rs
+		impersonated_by INTEGER REFERENCES users(id) ON DELETE CASCADE
+	);
+
+	-- one-time links of a user: invite, password reset, logging in as
+	CREATE TABLE user_links (
+		token TEXT PRIMARY KEY,
+		user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		kind TEXT NOT NULL,
+		-- the admin who made it, for logging in as
+		created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		created_at INTEGER NOT NULL,
 		expires_at INTEGER NOT NULL
 	);
 

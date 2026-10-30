@@ -62,10 +62,11 @@ pub(super) async fn serve(
 	let gql = graphql::build(
 		schema.clone(),
 		db.clone(),
-		public_url,
+		public_url.clone(),
 		site_urls.clone(),
 	)?;
 	let state = AppState {
+		public_url: Arc::new(public_url.trim_end_matches('/').into()),
 		site_urls: Arc::new(site_urls),
 		frame_ancestors: Arc::new(frame_ancestor),
 		graphql_token: graphql_token.map(Arc::new),

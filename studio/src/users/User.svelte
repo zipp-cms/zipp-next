@@ -26,7 +26,9 @@
 	/**
 	 * A user's account: name and email, the role and what it may do, a new
 	 * password, the sessions. Admins see everyone, a user their own (from
-	 * the user menu), without changing the role.
+	 * the user menu), without changing the role. Admins invite a new user
+	 * without a password, send or copy a reset link and log in as a user
+	 * who isn't an admin.
 	 */
 	let { schema, account }: { schema: Schema; account: Account | null } =
 		$props();
@@ -151,7 +153,11 @@
 
 		<div class="card">
 			<h2>Password</h2>
-			{#if !isNew}
+			{#if isNew}
+				<p class="muted">
+					Without one the user gets an invite link to choose it.
+				</p>
+			{:else}
 				<p class="muted">
 					Leave it empty to keep the current one. A new password logs {form.own
 						? 'you'
@@ -166,12 +172,17 @@
 					autocomplete="new-password"
 					placeholder="At least 8 characters"
 					bind:value={form.password}
-					required={isNew}
 				/>
 				{#if form.fields.password}
 					<span class="error">{form.fields.password}</span>
 				{/if}
 			</label>
+			{#if isNew && !form.password}
+				<label class="check">
+					<input type="checkbox" bind:checked={form.sendInvite} />
+					Send the invite by mail
+				</label>
+			{/if}
 			{#if form.own && form.password}
 				<label class="stacked">
 					Your current password
@@ -228,11 +239,56 @@
 						: 'Log out everywhere'}
 				</button>
 			{/if}
-		{:else}
-			<p class="note">
-				zipp sends no mails: tell the new user their email and password
-				yourself.
-			</p>
+			{#if admin && !form.own}
+				<div class="access">
+					<h3>Access</h3>
+					{#if form.account.invited}
+						<p class="note">Invited, no password yet.</p>
+					{/if}
+					<div class="buttons">
+						<button
+							onclick={() => form.link(true)}
+							disabled={form.busy}
+						>
+							<Icon name="mail" />
+							{form.account.invited
+								? 'Send the invite again'
+								: 'Send a password reset'}
+						</button>
+						<button
+							class="light"
+							onclick={() => form.link(false)}
+							disabled={form.busy}
+						>
+							<Icon name="copy-url" />
+							{form.account.invited
+								? 'Copy the invite link'
+								: 'Copy a reset link'}
+						</button>
+						{#if form.account.role !== null}
+							<button
+								onclick={() => form.loginAs(false)}
+								disabled={form.busy}
+							>
+								<Icon name="users" />
+								Log in as {title}
+							</button>
+							<button
+								class="light"
+								onclick={() => form.loginAs(true)}
+								disabled={form.busy}
+								title="To open in a private window, your login stays"
+							>
+								<Icon name="copy-url" />
+								Copy a login link
+							</button>
+						{/if}
+					</div>
+					{#if form.linkNote}
+						<p class="note" role="status">{form.linkNote}</p>
+					{/if}
+				</div>
+			{/if}
 		{/if}
 	</aside>
 </div>
@@ -304,5 +360,30 @@
 
 	aside button {
 		align-self: flex-start;
+	}
+
+	.access {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding-top: 0.875rem;
+		border-top: 1px solid var(--line);
+
+		h3 {
+			margin: 0;
+			font-size: var(--fs-sm);
+			font-weight: 600;
+		}
+
+		p {
+			margin: 0;
+		}
+	}
+
+	.buttons {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.375rem;
 	}
 </style>

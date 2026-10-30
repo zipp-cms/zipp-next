@@ -16,6 +16,7 @@
 	import FlyoutHost from './FlyoutHost.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import UploadProgress from '../assets/UploadProgress.svelte';
+	import LoginAsBar from './LoginAsBar.svelte';
 	import { sideNav } from './sideNav.svelte';
 	import { layer } from 'zipp-ui/layers';
 
@@ -37,11 +38,17 @@
 	const close = () => (sideNav.open = false);
 
 	async function onlogout() {
+		// logged in as someone: back to the own account
+		if (session.impersonatedBy) {
+			const ok = await session.endLoginAs();
+			return location.assign(ok ? '/admin/users' : '/admin/login');
+		}
 		await session.logout();
 		endSession();
 	}
 </script>
 
+<LoginAsBar />
 <!-- the AI chat and the website take the whole page -->
 <div class="layout" class:wide>
 	{#if !wide}<Sidebar {schema} {onlogout} />{/if}

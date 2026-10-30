@@ -18,6 +18,18 @@ Pending and Expired), type and parent, copying the content
 from another site, and the revisions. A global (a single without a page)
 has no title and only the copying and revisions there.
 
+## Users
+
+Admins manage the users on the Users page. A new user without a
+password is invited: the mail (or a copied link) lets them choose one
+within a week. "Forgot your password?" on the login mails a link for an
+hour; an admin sends or copies one on the user's page too. Links work
+once and need `serve --public-url` (and `--smtp-url` to mail them, see
+operations.md). An admin can log in as a user who isn't an admin, like
+Craft's impersonation: here, or with a copied link in a private window
+(ten minutes, once). The session lasts two hours, a bar shows it with
+"Back to your account"; what is saved meanwhile is the user's.
+
 ## Trash
 
 Like Craft's, deleting an entry (in a structure with the entries below

@@ -36,11 +36,14 @@ pub struct Account {
 	pub last_login_at: Option<i64>,
 	/// sessions that haven't ended: browsers it is logged in
 	pub sessions: i64,
+	/// invited, no password yet: the invite link sets it
+	pub invited: bool,
 }
 
 const ACCOUNT: &str = "SELECT id, email, name, role, created_at, last_login_at,
 	(SELECT COUNT(*) FROM sessions s
-		WHERE s.user_id = users.id AND s.expires_at > ?1)
+		WHERE s.user_id = users.id AND s.expires_at > ?1),
+	password_hash = ''
 	FROM users";
 
 fn account(r: &rusqlite::Row) -> rusqlite::Result<Account> {
@@ -54,6 +57,7 @@ fn account(r: &rusqlite::Row) -> rusqlite::Result<Account> {
 		created_at: r.get(4)?,
 		last_login_at: r.get(5)?,
 		sessions: r.get(6)?,
+		invited: r.get(7)?,
 	})
 }
 
@@ -114,7 +118,8 @@ pub fn password_error(password: &str) -> Option<&'static str> {
 	(password.chars().count() < 8).then_some("At least 8 characters")
 }
 
-/// A new user with a password's hash, see `auth::hash_password`.
+/// A new user with a password's hash, see `auth::hash_password`; an
+/// empty one is invited.
 pub fn create(
 	conn: &Connection,
 	email: &str,

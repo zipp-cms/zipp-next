@@ -10,6 +10,17 @@ export type Account = User & {
 	lastLoginAt: number | null;
 	/** browsers it is logged in */
 	sessions: number;
+	/** invited, no password yet: the invite link sets it */
+	invited: boolean;
+};
+
+/** A link for a user, see `passwordLink` and `loginAsLink`. */
+export type UserLink = {
+	kind: 'invite' | 'reset' | 'loginAs';
+	url: string;
+	expiresAt: number;
+	/** whether it was mailed */
+	sent: boolean;
 };
 
 export function listUsers(): Promise<Account[]> {
@@ -20,6 +31,7 @@ export function getUser(id: number): Promise<Account> {
 	return request('GET', `/users/${id}`);
 }
 
+/** A new user; an empty password invites them, see `passwordLink`. */
 export function createUser(user: {
 	email: string;
 	name: string;
@@ -53,6 +65,19 @@ export function deleteUser(id: number): Promise<void> {
 /** Logs the user out everywhere, oneself except here. */
 export function endSessions(id: number): Promise<void> {
 	return request('DELETE', `/users/${id}/sessions`);
+}
+
+/**
+ * A link for the user to choose a password: an invite while they have
+ * none, else a reset; `send` mails it.
+ */
+export function passwordLink(id: number, send: boolean): Promise<UserLink> {
+	return request('POST', `/users/${id}/password-link`, { send });
+}
+
+/** A link that logs in as the user once, for admins. */
+export function loginAsLink(id: number): Promise<UserLink> {
+	return request('POST', `/users/${id}/login-as`);
 }
 
 /** The name of a user, else the email. */
