@@ -162,7 +162,6 @@
 		padding: 1rem;
 		border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 		background: var(--surface-2);
-
 		border-top: 1px solid var(--line);
 	}
 
