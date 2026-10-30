@@ -54,6 +54,8 @@
 			editor ? ([...editor.view.dom.children] as HTMLElement[]) : [],
 		depths: () =>
 			editor ? Array(editor.state.doc.childCount).fill(0) : [],
+		// the empty line at the end stays last
+		keepLast: () => 1,
 		onmove: (from, drop) => editor && moveNode(editor, from, drop.index),
 	});
 
@@ -112,7 +114,7 @@
 
 	.editor {
 		position: relative;
-		padding: 0.25rem 0.75rem;
+		padding: 0.75rem;
 		min-height: 5.25rem;
 
 		:global(.tiptap) {

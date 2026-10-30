@@ -33,6 +33,8 @@ export type SortableOptions = {
 	indent?: number;
 	/** pixels from the container's left to the rows' start */
 	inset?: number;
+	/** rows at the end that stay last, nothing goes below them */
+	keepLast?: () => number;
 	onmove: (from: number, drop: Drop) => void;
 };
 
@@ -164,6 +166,7 @@ export class Sortable {
 			return e.clientY < r.top + r.height / 2;
 		});
 		if (k < 0) k = others.length;
+		k = Math.min(k, others.length - (this.o.keepLast?.() ?? 0));
 
 		const own = depths.slice(from, from + n);
 		const below = Math.max(...own) - depths[from];
@@ -214,10 +217,12 @@ export class Sortable {
 				return sibBefore < 0
 					? null
 					: { index: at(sibBefore), depth: d };
-			case 'down':
-				return sibAfter < 0
-					? null
-					: { index: at(end(sibAfter)), depth: d };
+			case 'down': {
+				// not below the rows that stay last
+				const max = depths.length - n - (this.o.keepLast?.() ?? 0);
+				const index = sibAfter < 0 ? -1 : at(end(sibAfter));
+				return index < 0 || index > max ? null : { index, depth: d };
+			}
 			case 'out':
 				return d === 0 || parent < 0
 					? null

@@ -1,4 +1,10 @@
-import { Mark, Node, type NodeViewRendererProps } from '@tiptap/core';
+import {
+	Extension,
+	Mark,
+	Node,
+	type NodeViewRendererProps,
+} from '@tiptap/core';
+import { Plugin } from '@tiptap/pm/state';
 import { mount, unmount, type Component } from 'svelte';
 import type { Schema } from '../../core/schema';
 import type { Refs } from '../../entries/api';
@@ -166,5 +172,28 @@ export const Block = Node.create<Options>({
 	},
 	addNodeView() {
 		return svelteView(BlockNode, this.options);
+	},
+});
+
+/**
+ * An empty line at the end, always: "Continue writing …" shows there,
+ * after a block or button too. Saving leaves it out (see `trimmed`).
+ */
+export const EndLine = Extension.create({
+	name: 'endLine',
+	addProseMirrorPlugins() {
+		return [
+			new Plugin({
+				appendTransaction: (_, __, state) => {
+					const last = state.doc.lastChild;
+					if (last?.type.name === 'paragraph' && !last.content.size)
+						return null;
+					const line = state.schema.nodes.paragraph.create();
+					return state.tr
+						.insert(state.doc.content.size, line)
+						.setMeta('addToHistory', false);
+				},
+			}),
+		];
 	},
 });

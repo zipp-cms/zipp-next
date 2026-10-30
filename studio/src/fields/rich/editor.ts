@@ -3,7 +3,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { Placeholder } from '@tiptap/extensions';
 import type { FieldOf, Link, Schema } from '../../core/schema';
 import type { Refs } from '../../entries/api';
-import { Block, Button, ZippLink } from './extensions.svelte';
+import { Block, Button, EndLine, ZippLink } from './extensions.svelte';
 import type { Sortable } from 'zipp-ui/sortable';
 
 /** What a rich text field allows: its field. */
@@ -77,6 +77,7 @@ export function createEditor(o: {
 					editor.isEmpty ? 'Write …' : 'Continue writing …',
 				showOnlyCurrent: false,
 			}),
+			EndLine,
 			Button.configure(nodeOptions),
 			Block.configure(nodeOptions),
 		],
