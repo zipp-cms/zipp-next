@@ -45,10 +45,23 @@ name is the section's.
 Relations and entry links choose with a button that lists the entries of
 their types, with a search. A chosen entry or image opens in a flyout from
 the right, like Craft's slideout: the entry with its whole editor, an image
-with its title, alt text and focal point; Done or Escape closes it and the
+with its details (below); Done or Escape closes it and the
 page behind stays as it was. In rich text, buttons and blocks are cards
 that open their form with edit, with + Line above and below to write
 before or after them.
+
+## Images and files
+
+An image opens with an editor, like Craft's: crop (free, the original
+ratio, square, 16:9, 4:3, 3:2, also upright), rotate, flip, a new size
+(also bigger), a canvas around it in a color or transparent (a JPEG
+with a transparent canvas is delivered as PNG) and the focal point the
+crops of the transforms keep in view. The uploaded file stays as it
+was: the edits are stored next to it, every transform starts from the
+edited image, Reset brings the original back. Next to it: title, alt
+text and the filename, size, dimensions (edited and uploaded), who
+uploaded it and when, download the original, copy the url, replace the
+file (resets the edits) and the entries the file is used in.
 
 ## AI chat
 

@@ -65,6 +65,9 @@ pub struct Asset {
 	pub edits: Option<Edits>,
 	/// the email of who uploaded it
 	pub uploaded_by: Option<String>,
+	/// changes with the edits and the focal point, urls carry it so
+	/// browsers don't keep showing the image from before; empty without
+	pub version: String,
 	/// like Craft's asset title, empty for one from the filename
 	pub title: String,
 	pub alt: String,
@@ -74,11 +77,15 @@ pub struct Asset {
 }
 
 impl Asset {
-	/// The path of the original or of a transform.
+	/// The path of the image or of a transform.
 	pub fn url(&self, transform: Option<&str>) -> String {
-		match transform {
+		let path = match transform {
 			Some(t) => format!("/assets/{}/{t}/{}", self.id, self.filename),
 			None => format!("/assets/{}/{}", self.id, self.filename),
+		};
+		match self.version.as_str() {
+			"" => path,
+			v => format!("{path}?v={v}"),
 		}
 	}
 
@@ -113,7 +120,9 @@ fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 		(Some(e), Some(w), Some(h)) => Some(e.size(w, h)),
 		_ => width.zip(height),
 	};
+	let (focal_x, focal_y): (f64, f64) = (r.get(8)?, r.get(9)?);
 	Ok(Asset {
+		version: version(&edits, focal_x, focal_y),
 		id: r.get(0)?,
 		filename: r.get(1)?,
 		kind: r.get(2)?,
@@ -126,11 +135,24 @@ fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 		edits,
 		uploaded_by: r.get(13)?,
 		alt: r.get(7)?,
-		focal_x: r.get(8)?,
-		focal_y: r.get(9)?,
+		focal_x,
+		focal_y,
 		created_at: r.get(10)?,
 		title: r.get(11)?,
 	})
+}
+
+/// A short hash of what changes the image, empty for an untouched one.
+fn version(edits: &Option<Edits>, focal_x: f64, focal_y: f64) -> String {
+	use std::hash::{Hash, Hasher};
+	if edits.is_none() && (focal_x, focal_y) == (0.5, 0.5) {
+		return String::new();
+	}
+	let mut h = std::collections::hash_map::DefaultHasher::new();
+	serde_json::to_string(edits).unwrap_or_default().hash(&mut h);
+	focal_x.to_bits().hash(&mut h);
+	focal_y.to_bits().hash(&mut h);
+	format!("{:x}", h.finish() & 0xffff_ffff)
 }
 
 pub fn get_asset(conn: &Connection, id: i64) -> Result<Asset> {

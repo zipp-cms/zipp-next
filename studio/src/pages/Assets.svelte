@@ -81,7 +81,11 @@
 {#if current}
 	<Flyout
 		title={current.title || current.filename}
-		onclose={() => (current = null)}
+		onclose={() => {
+			// a replaced file has a new thumbnail
+			current = null;
+			load();
+		}}
 	>
 		{#key current.id}
 			<AssetDetail
@@ -136,5 +140,4 @@
 			width: 340px;
 		}
 	}
-
 </style>
