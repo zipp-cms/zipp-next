@@ -83,7 +83,7 @@
 		title="Bold"
 		onclick={() => chain().toggleBold().run()}
 	>
-		<b>B</b>
+		<Icon name="bold" size={16} />
 	</button>
 	<button
 		type="button"
@@ -91,7 +91,7 @@
 		title="Italic"
 		onclick={() => chain().toggleItalic().run()}
 	>
-		<i class="italic">I</i>
+		<Icon name="italic" size={16} />
 	</button>
 	{#if opts.lists}
 		<button
@@ -108,7 +108,7 @@
 			title="Numbered list"
 			onclick={() => chain().toggleOrderedList().run()}
 		>
-			<span class="num">1.</span>
+			<Icon name="numbered" size={16} />
 		</button>
 	{/if}
 	{#if opts.links}
@@ -212,15 +212,6 @@
 		font-size: var(--fs-md);
 		border-color: var(--border);
 		border-radius: var(--radius-sm);
-	}
-
-	.italic {
-		font-family: Georgia, serif;
-	}
-
-	.num {
-		font-size: var(--fs-sm);
-		font-weight: 600;
 	}
 
 	.insert {
