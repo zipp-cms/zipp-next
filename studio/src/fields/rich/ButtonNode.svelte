@@ -44,7 +44,7 @@
 			labels
 			onchange={link => update({ link })}
 			onremove={remove}
-			removeTitle="Remove the button"
+			removeTitle="Delete button"
 		>
 			{#snippet handle()}
 				{#if editable && sortable}

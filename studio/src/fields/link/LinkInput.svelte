@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import type { Link, LinkKind, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
-	import Icon from 'zipp-ui/Icon.svelte';
+	import Menu from 'zipp-ui/Menu.svelte';
 	import { chosenAssets } from '../../assets/chosen.svelte';
 	import LinkAdd from './LinkAdd.svelte';
 	import LinkEditor from './LinkEditor.svelte';
@@ -64,25 +64,26 @@
 		),
 	);
 
+	// what holds the link goes too, like a button of a rich text
+	const removeItem = $derived(
+		onremove
+			? [
+					{
+						label: removeTitle,
+						icon: 'delete',
+						onclick: onremove,
+						danger: true,
+					},
+				]
+			: [],
+	);
+
 	function add(type: LinkKind) {
 		const { label } = link;
 		onchange({ type, value: null, ...(label ? { label } : {}) });
 		editing = true;
 	}
 </script>
-
-{#snippet removeButton()}
-	{#if onremove}
-		<button
-			type="button"
-			class="icon remove"
-			title={removeTitle}
-			onclick={onremove}
-		>
-			<Icon name="delete" size={15} />
-		</button>
-	{/if}
-{/snippet}
 
 {#if !filled && !editing}
 	<div class="link-input empty" class:required>
@@ -92,38 +93,37 @@
 		</span>
 		<span class="end">
 			<LinkAdd {to} onadd={add} />
-			{@render removeButton()}
+			<Menu items={removeItem} label="Actions" />
 		</span>
 	</div>
 {:else}
 	<div class="link-input" class:editing>
 		{#if filled}
 			<div class="row">
-				<LinkRow {link} {summary} {newTab} {handle}>
-					{#snippet actions()}
-						<button
-							type="button"
-							class="icon"
-							class:on={editing}
-							title="Edit the link"
-							onclick={() => (editing = !editing)}
-						>
-							<Icon name="edit" size={15} />
-						</button>
-						<button
-							type="button"
-							class="icon remove"
-							title="Remove the link"
-							onclick={() => {
+				<LinkRow
+					{link}
+					{summary}
+					{newTab}
+					{handle}
+					{editing}
+					onedit={() => (editing = !editing)}
+					menu={[
+						{
+							label: 'Edit',
+							icon: 'edit',
+							onclick: () => (editing = true),
+						},
+						{
+							label: 'Remove link',
+							icon: 'unlink',
+							onclick: () => {
 								editing = false;
 								onchange({ type: link.type, value: null });
-							}}
-						>
-							<Icon name="unlink" size={15} />
-						</button>
-						{@render removeButton()}
-					{/snippet}
-				</LinkRow>
+							},
+						},
+						...removeItem,
+					]}
+				/>
 			</div>
 		{/if}
 		{#if editing}
@@ -167,15 +167,6 @@
 		.row + & {
 			border-top: 1px solid var(--line);
 		}
-	}
-
-	button.on {
-		background: var(--accent-soft);
-		color: var(--accent);
-	}
-
-	.remove {
-		color: var(--danger);
 	}
 
 	.message {

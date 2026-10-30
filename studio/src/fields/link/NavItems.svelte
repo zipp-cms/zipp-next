@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Icon from 'zipp-ui/Icon.svelte';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
 	import { Sortable, placeIn, type Drop } from 'zipp-ui/sortable';
@@ -150,6 +149,21 @@
 					{link}
 					summary={linkSummary(schema, link, refs)}
 					{newTab}
+					editing={editing === i}
+					onedit={() => (editing = editing === i ? null : i)}
+					menu={[
+						{
+							label: 'Edit',
+							icon: 'edit',
+							onclick: () => (editing = i),
+						},
+						{
+							label: 'Delete',
+							icon: 'delete',
+							onclick: () => remove(i),
+							danger: true,
+						},
+					]}
 				>
 					{#snippet handle()}
 						<DragHandle
@@ -157,25 +171,6 @@
 							index={i}
 							label="Move the link"
 						/>
-					{/snippet}
-					{#snippet actions()}
-						<button
-							type="button"
-							class="icon"
-							class:on={editing === i}
-							title="Edit the link"
-							onclick={() => (editing = editing === i ? null : i)}
-						>
-							<Icon name="edit" size={15} />
-						</button>
-						<button
-							type="button"
-							class="icon remove"
-							title="Remove the link"
-							onclick={() => remove(i)}
-						>
-							<Icon name="delete" size={15} />
-						</button>
 					{/snippet}
 				</LinkRow>
 			</div>
@@ -240,15 +235,6 @@
 		border: 1px solid var(--accent);
 		border-radius: var(--radius-lg);
 		background: var(--surface-2);
-	}
-
-	button.on {
-		background: var(--accent-soft);
-		color: var(--accent);
-	}
-
-	.remove {
-		color: var(--danger);
 	}
 
 	.add {

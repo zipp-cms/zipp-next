@@ -3,7 +3,6 @@
 	import { untrack } from 'svelte';
 	import type { Link, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
-	import Icon from 'zipp-ui/Icon.svelte';
 	import { openAsset, openEntry } from '../../core/flyout.svelte';
 	import LinkEditor from '../link/LinkEditor.svelte';
 	import LinkRow from '../link/LinkRow.svelte';
@@ -154,34 +153,22 @@
 				link={shown}
 				summary={linkSummary(schema, shown, refs)}
 				newTab={opensInNewTab(schema, shown, true)}
-			>
-				{#snippet actions()}
-					<button
-						type="button"
-						class="icon"
-						title="Open the target"
-						onclick={() => open(shown)}
-					>
-						<Icon name="external" size={15} />
-					</button>
-					<button
-						type="button"
-						class="icon"
-						title="Edit the link"
-						onclick={edit}
-					>
-						<Icon name="edit" size={15} />
-					</button>
-					<button
-						type="button"
-						class="icon remove"
-						title="Remove the link"
-						onclick={() => apply({ type: 'url', value: null })}
-					>
-						<Icon name="unlink" size={15} />
-					</button>
-				{/snippet}
-			</LinkRow>
+				onedit={edit}
+				menu={[
+					{ label: 'Edit', icon: 'edit', onclick: edit },
+					{
+						label: 'Open the target',
+						icon: 'external',
+						onclick: () => open(shown),
+					},
+					{
+						label: 'Remove link',
+						icon: 'unlink',
+						onclick: () => apply({ type: 'url', value: null }),
+						danger: true,
+					},
+				]}
+			/>
 		{/if}
 	</div>
 {/if}
@@ -201,9 +188,5 @@
 		&.editing {
 			padding: 1rem;
 		}
-	}
-
-	.remove {
-		color: var(--danger);
 	}
 </style>
