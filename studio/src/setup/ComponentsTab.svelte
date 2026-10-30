@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
+	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import { gqlType, usedIn, visibleEntryTypes } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
 
@@ -22,7 +23,10 @@
 	>
 		{#snippet row(c)}
 			<td>
-				<a href="/admin/setup/{tab}/{c.handle}">{c.name}</a>
+				<a class="name" href="/admin/setup/{tab}/{c.handle}">
+					<SchemaIcon icon={c.icon} size={14} />
+					{c.name}
+				</a>
 			</td>
 			<td><code>{c.handle}</code></td>
 			<td>{c.fields.length}</td>
@@ -38,3 +42,11 @@
 		{/snippet}
 	</Table>
 </div>
+
+<style lang="scss">
+	.name {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+</style>

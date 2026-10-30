@@ -164,6 +164,25 @@ export function moveAssets(ids: number[], folderId: number | null) {
 	return request<void>('POST', '/assets/move', { ids, folderId });
 }
 
+/** The folder of a path like `Photos/Events`, if it exists. */
+export function folderByPath(
+	folders: Folder[],
+	path: string | undefined,
+): Folder | undefined {
+	let parent: number | null = null;
+	let found: Folder | undefined;
+	for (const name of (path ?? '').split('/').filter(n => n.trim())) {
+		found = folders.find(
+			f =>
+				f.parentId === parent &&
+				f.name.toLowerCase() === name.trim().toLowerCase(),
+		);
+		if (!found) return undefined;
+		parent = found.id;
+	}
+	return found;
+}
+
 /** The folders in the order of the tree, with their depth and path. */
 export function folderRows(
 	folders: Folder[],

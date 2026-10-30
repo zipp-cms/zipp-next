@@ -1,6 +1,7 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
-import { readFileSync } from 'node:fs';
+import { cpSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // the studio is part of the zipp crate, it has its version
@@ -15,11 +16,37 @@ const version = cargo.match(/^version = "(.+)"/m)![1];
 const vars = fileURLToPath(new URL('./ui/vars.scss', import.meta.url));
 const ui = fileURLToPath(new URL('./ui/', import.meta.url));
 
+// the Lucide icons for the icons of a schema, plain files next to the
+// build, in a folder of their version: the studio fetches the ones it
+// shows (in dev from node_modules)
+const lucide = JSON.parse(
+	readFileSync(
+		new URL('./node_modules/lucide-static/package.json', import.meta.url),
+		'utf8',
+	),
+).version;
+const lucideIcons: Plugin = {
+	name: 'lucide-icons',
+	apply: 'build',
+	writeBundle(options) {
+		cpSync(
+			fileURLToPath(
+				new URL('./node_modules/lucide-static/icons', import.meta.url),
+			),
+			join(options.dir!, '_studio', `lucide-${lucide}`),
+			{ recursive: true },
+		);
+	},
+};
+
 // the build is embedded in the zipp crate, in dev the api runs on
 // `example-cms serve`
 export default defineConfig({
-	plugins: [svelte()],
-	define: { __ZIPP_VERSION__: JSON.stringify(version) },
+	plugins: [svelte(), lucideIcons],
+	define: {
+		__ZIPP_VERSION__: JSON.stringify(version),
+		__LUCIDE_VERSION__: JSON.stringify(lucide),
+	},
 	css: {
 		preprocessorOptions: {
 			scss: {

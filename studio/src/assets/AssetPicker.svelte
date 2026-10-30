@@ -4,7 +4,13 @@
 </script>
 
 <script lang="ts">
-	import { listAssets, listFolders, type Asset, type Folder } from './api';
+	import {
+		folderByPath,
+		listAssets,
+		listFolders,
+		type Asset,
+		type Folder,
+	} from './api';
 	import FolderTree from './FolderTree.svelte';
 	import AssetGrid from './AssetGrid.svelte';
 	import { Busy } from '../core/busy.svelte';
@@ -14,6 +20,9 @@
 	import DropOverlay from './DropOverlay.svelte';
 	import {
 		FileDrag,
+		acceptOf,
+		allows,
+		pathDirs,
 		fromInput,
 		uploads,
 		type Upload,
@@ -22,6 +31,8 @@
 	/** The asset library in a flyout, to pick assets or upload new ones. */
 	let {
 		images,
+		extensions,
+		folderPath,
 		multiple,
 		selected,
 		onpick,
@@ -29,6 +40,10 @@
 	}: {
 		/** only images */
 		images: boolean;
+		/** only files that end so */
+		extensions?: string[];
+		/** the field's folder: the picker opens there, uploads go there */
+		folderPath?: string;
 		multiple: boolean;
 		selected: number[];
 		onpick: (a: Asset) => void;
@@ -48,7 +63,10 @@
 		.then(({ folders: f, top: t }) => {
 			folders = f;
 			top = t;
-			if (f.some(f => f.id === lastFolder)) folder = lastFolder;
+			// the field's folder first, else where the picker was
+			const own = folderByPath(f, folderPath);
+			if (own) folder = own.id;
+			else if (f.some(f => f.id === lastFolder)) folder = lastFolder;
 			foldersLoaded = true;
 		})
 		.catch(e => (action.error = e.message));
@@ -60,6 +78,7 @@
 		const params: Record<string, string> = { search: q };
 		if (!q) params.folder = f === null ? 'top' : `${f}`;
 		if (images) params.kind = 'image';
+		if (extensions?.length) params.extensions = extensions.join(',');
 		listAssets(params)
 			.then(a => {
 				if (q !== search || f !== folder) return;
@@ -78,11 +97,14 @@
 
 	/** Into the open folder, and picked. */
 	async function upload(items: Upload[]) {
-		if (images) items = items.filter(i => i.file.type.startsWith('image/'));
+		items = items.filter(i => allows({ images, extensions }, i.file));
 		if (!multiple) items = items.slice(0, 1);
-		// a dropped folder's files go into the open one
-		items = items.map(i => ({ ...i, dir: [] }));
+		// a dropped folder's files go into the open one; on the top with
+		// a folder of the field, into that (made when missing)
+		const dir = folder === null ? pathDirs(folderPath) : [];
+		items = items.map(i => ({ ...i, dir }));
 		const added = await uploads.run(items, folder);
+		if (dir.length) listFolders().then(r => (folders = r.folders));
 		library = [...added, ...library];
 		for (const a of added) onpick(a);
 	}
@@ -105,7 +127,7 @@
 		<UploadButton
 			onfiles={f => upload(fromInput(f))}
 			{multiple}
-			accept={images ? 'image/*' : undefined}
+			accept={acceptOf({ images, extensions })}
 		>
 			{uploads.active ? 'Uploading…' : 'Upload'}
 		</UploadButton>

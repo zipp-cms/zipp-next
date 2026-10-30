@@ -33,6 +33,8 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Boolean, number, indexed fields | Events | *sold out*, price; the website filters and sorts by them |
 | Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them |
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |
+| Folders, file types | Assets · Events → Programm (PDF) | folders for the library; the event's program takes only PDFs and puts them into Events/Programs, its image picker opens in Events |
+| Icons | the navigation, Pages, a page's blocks | entry types, blocks and nav groups with Lucide icons from the code |
 | Globals | Settings → Header, Footer | singles without a url, crelte reads them like Craft's globals |
 | Translations | Settings → Translations | the keys come from the code, editors only translate |
 | SEO | Settings → SEO, a page → SEO | the search result preview; on the website title, meta, JSON-LD, `/sitemap.xml` and `/robots.txt` from the npm package `meierlabs-seo` (the demo is noindex) |

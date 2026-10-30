@@ -186,11 +186,19 @@ pub(super) async fn list_route(
 		)),
 	};
 	let search_for = req.search.unwrap_or_default();
+	let extensions: Vec<String> = req
+		.extensions
+		.iter()
+		.flat_map(|e| e.split(','))
+		.map(|e| e.trim().trim_start_matches('.').to_lowercase())
+		.filter(|e| !e.is_empty())
+		.collect();
 	Ok(Json(search(
 		&conn,
 		&search_for,
 		req.kind.as_deref(),
 		folder,
+		&extensions,
 	)?))
 }
 

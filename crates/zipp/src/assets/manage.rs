@@ -11,26 +11,46 @@ pub enum InFolder {
 	Folder(Option<i64>),
 }
 
+/// With `extensions` only files that end so (lowercase, without dot).
 pub fn search(
 	conn: &Connection,
 	search: &str,
 	kind: Option<&str>,
 	folder: InFolder,
+	extensions: &[String],
 ) -> Result<Vec<Asset>> {
 	let (any, folder) = match folder {
 		InFolder::All => (true, None),
 		InFolder::Folder(f) => (false, f),
 	};
+	// one LIKE per extension, after the four params
+	let ends = if extensions.is_empty() {
+		String::new()
+	} else {
+		let likes: Vec<String> = (0..extensions.len())
+			.map(|i| format!("lower(filename) LIKE ?{}", i + 5))
+			.collect();
+		format!("AND ({})", likes.join(" OR "))
+	};
 	let sql = format!(
 		"SELECT {COLUMNS} FROM assets
 		WHERE filename LIKE ?1 AND (?2 IS NULL OR kind = ?2)
-		AND (?3 OR folder_id IS ?4)
+		AND (?3 OR folder_id IS ?4) {ends}
 		ORDER BY id DESC LIMIT 200"
 	);
 	let search = format!("%{search}%");
+	let mut values: Vec<Box<dyn rusqlite::ToSql>> = vec![
+		Box::new(search),
+		Box::new(kind.map(String::from)),
+		Box::new(any),
+		Box::new(folder),
+	];
+	for e in extensions {
+		values.push(Box::new(format!("%.{e}")));
+	}
 	let mut stmt = conn.prepare(&sql)?;
 	let assets = stmt
-		.query_map(params![search, kind, any, folder], from_row)?
+		.query_map(rusqlite::params_from_iter(values), from_row)?
 		.collect::<rusqlite::Result<_>>()?;
 	Ok(assets)
 }

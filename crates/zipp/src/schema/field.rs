@@ -109,10 +109,16 @@ pub enum FieldKind {
 		types: Vec<String>,
 		max: Option<u32>,
 	},
-	/// Ids of assets, with `images` only images.
+	/// Ids of assets, with `images` only images, with `extensions` only
+	/// files that end so; new ones go into `folder` (a path, `Photos/
+	/// Events`, made when missing), the picker opens there.
 	Assets {
 		images: bool,
 		max: Option<u32>,
+		#[serde(default, skip_serializing_if = "Option::is_none")]
+		folder: Option<String>,
+		#[serde(default, skip_serializing_if = "Vec::is_empty")]
+		extensions: Vec<String>,
 	},
 	/// One link to an entry, a url, an email, a phone number or an asset,
 	/// with an optional label. External urls and files open in a new tab
@@ -427,6 +433,8 @@ impl Field {
 			FieldKind::Assets {
 				images: false,
 				max: None,
+				folder: None,
+				extensions: vec![],
 			},
 		)
 	}
@@ -438,6 +446,8 @@ impl Field {
 			FieldKind::Assets {
 				images: true,
 				max: None,
+				folder: None,
+				extensions: vec![],
 			},
 		)
 	}
@@ -501,6 +511,35 @@ impl Field {
 		match &mut self.kind {
 			FieldKind::Blocks { min, .. } => *min = Some(n),
 			_ => panic!("{}: min is only for blocks", self.handle),
+		}
+		self
+	}
+
+	/// Where new files of an asset field go and its picker opens: a path
+	/// of folders, `Photos/Events`, made when missing.
+	pub fn folder(mut self, path: &str) -> Self {
+		match &mut self.kind {
+			FieldKind::Assets { folder, .. } => {
+				*folder = Some(path.trim_matches('/').into())
+			}
+			_ => panic!("{}: folder is only for assets", self.handle),
+		}
+		self
+	}
+
+	/// Only files with these extensions in an asset field: `["pdf"]`.
+	pub fn extensions<'a>(
+		mut self,
+		allowed: impl IntoIterator<Item = &'a str>,
+	) -> Self {
+		match &mut self.kind {
+			FieldKind::Assets { extensions, .. } => {
+				*extensions = allowed
+					.into_iter()
+					.map(|e| e.trim_start_matches('.').to_lowercase())
+					.collect()
+			}
+			_ => panic!("{}: extensions are only for assets", self.handle),
 		}
 		self
 	}

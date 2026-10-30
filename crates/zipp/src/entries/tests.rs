@@ -2,6 +2,7 @@ use serde_json::json;
 
 use super::*;
 use crate::db::Db;
+use crate::schema::Field;
 use crate::schema::tests::site;
 
 pub fn input(
@@ -200,4 +201,39 @@ fn unpublished_are_hidden() {
 #[test]
 fn slugs() {
 	assert_eq!(slugify("  Hello, World -- 2026 "), "hello-world-2026");
+}
+
+#[test]
+fn asset_fields_take_their_kinds_of_files() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let mut s = site().block(
+		"form",
+		"Form",
+		[Field::assets("pdf").extensions(["pdf"])],
+	);
+	let page = |fields| {
+		let body = json!([{ "type": "form", "fields": fields }]);
+		input("pages", "page", "P", json!({ "body": body }))
+	};
+	for (name, kind) in [("a.PDF", "file"), ("b.png", "image")] {
+		conn.execute(
+			"INSERT INTO assets (filename, kind, mime, size, created_at)
+				VALUES (?1, ?2, '', 1, 0)",
+			[name, kind],
+		)
+		.unwrap();
+	}
+	s.get_mut("page").unwrap().fields[1] =
+		Field::blocks("body", ["text", "button", "form"]).translatable();
+
+	let Err(Error::Invalid(errs)) =
+		save(&conn, &s, None, page(json!({ "pdf": [1, 2] })))
+	else {
+		panic!("should fail");
+	};
+	assert_eq!(errs.len(), 1);
+	assert_eq!(errs[0].path, "body.0.pdf");
+	assert_eq!(errs[0].message, "asset 2 is no pdf");
+	save(&conn, &s, None, page(json!({ "pdf": [1] }))).unwrap();
 }

@@ -13,6 +13,7 @@
 	import SiteSwitch from './SiteSwitch.svelte';
 	import UserMenu from './UserMenu.svelte';
 	import { SETUP_TABS, groupIcon, groupItems } from './nav';
+	import SchemaIcon from '../core/SchemaIcon.svelte';
 
 	/**
 	 * The sidebar: the site, the groups of the schema's navigation with
@@ -48,7 +49,7 @@
 				href={navHref(schema, g.sections[0])}
 				class:active={open}
 			>
-				<Icon name={groupIcon(schema, g)} />
+				<SchemaIcon icon={g.icon} fallback={groupIcon(schema, g)} />
 				{g.name}
 			</a>
 			{#if open}

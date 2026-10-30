@@ -238,7 +238,8 @@ pub(super) fn field_error(path: &str, message: &str) -> FieldError {
 }
 
 /// Relations must point to existing entries of the allowed types, asset
-/// fields to existing assets (images if they only take images).
+/// fields to existing assets (images if they only take images, files
+/// with the allowed extensions).
 pub(super) fn check_relations(
 	conn: &Connection,
 	schema: &Schema,
@@ -253,9 +254,10 @@ pub(super) fn check_relations(
 			Target::Entries(_) => {
 				("SELECT type FROM entries WHERE id = ?1", "entry")
 			}
-			Target::Assets(_) => {
-				("SELECT kind FROM assets WHERE id = ?1", "asset")
-			}
+			Target::Assets { .. } => (
+				"SELECT kind || ' ' || filename FROM assets WHERE id = ?1",
+				"asset",
+			),
 		};
 		for id in rel.ids {
 			let found: Option<String> =
@@ -265,8 +267,16 @@ pub(super) fn check_relations(
 				(Target::Entries(types), Some(t)) if !types.contains(&t) => {
 					format!("entry {id} is a {t}, not allowed here")
 				}
-				(Target::Assets(true), Some(k)) if k != "image" => {
+				(Target::Assets { images: true, .. }, Some(k))
+					if !k.starts_with("image ") =>
+				{
 					format!("asset {id} is not an image")
+				}
+				(Target::Assets { extensions, .. }, Some(k))
+					if !extensions.is_empty()
+						&& !has_extension(&k, extensions) =>
+				{
+					format!("asset {id} is no {}", extensions.join(", "))
 				}
 				_ => continue,
 			};
@@ -275,6 +285,12 @@ pub(super) fn check_relations(
 	}
 
 	Ok(errors)
+}
+
+/// Whether a filename ends with one of the extensions (lowercase).
+pub(crate) fn has_extension(filename: &str, extensions: &[String]) -> bool {
+	let ext = filename.rsplit_once('.').map(|(_, e)| e.to_lowercase());
+	ext.is_some_and(|e| extensions.contains(&e))
 }
 
 /// Rewrites the index rows of an entry in a site from its fields.
@@ -313,7 +329,7 @@ pub fn reindex(
 	// where an asset is used, for the studio
 	for rel in rels
 		.iter()
-		.filter(|r| matches!(r.target, Target::Assets(_)))
+		.filter(|r| matches!(r.target, Target::Assets { .. }))
 	{
 		for asset in &rel.ids {
 			conn.execute(

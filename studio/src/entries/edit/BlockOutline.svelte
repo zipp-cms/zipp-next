@@ -6,6 +6,7 @@
 		showBlock,
 	} from '../../fields/blocks.svelte';
 	import { componentName, componentOf } from '../../core/schema';
+	import SchemaIcon from '../../core/SchemaIcon.svelte';
 	import type { Refs } from '../api';
 
 	/** The blocks of a field as a list; a click opens one and goes there. */
@@ -30,7 +31,10 @@
 					onclick={() => showBlock(field.handle, i)}
 				>
 					<span class="n">{String(i + 1).padStart(2, '0')}</span>
-					<span class="name">{componentName(schema, b.type)}</span>
+					<span class="name">
+						<SchemaIcon icon={comp?.icon} size={13} />
+						{componentName(schema, b.type)}
+					</span>
 					<span class="note truncate" class:missing>
 						{missing
 							? 'Missing'
@@ -73,6 +77,9 @@
 	}
 
 	.name {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3125rem;
 		font-size: var(--fs-md);
 		font-weight: 500;
 	}

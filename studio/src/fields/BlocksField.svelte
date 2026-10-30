@@ -14,6 +14,7 @@
 	import { rememberOpen, wasOpen } from './opened';
 	import { inserted, isFull, removed } from '../core/list';
 	import { componentOf } from '../core/schema';
+	import SchemaIcon from '../core/SchemaIcon.svelte';
 
 	/**
 	 * Blocks as cards that open: the type, a summary when closed, the
@@ -130,8 +131,13 @@
 			<BlockMenu {types} inline onpick={t => add(t, i)} />
 		{/if}
 		<div class="block" data-sort class:sort-dragging={sort.dragging === i}>
+			{#snippet kindIcon()}<SchemaIcon
+					icon={comp?.icon}
+					size={12}
+				/>{/snippet}
 			<ItemCard
 				kind={comp?.name ?? block.type}
+				kindIcon={comp?.icon ? kindIcon : undefined}
 				bind:open={() => isOpen(block), v => setOpen(block, v)}
 				invalid={hasError(i)}
 				changed={changed.has(`${path}.${i}`)}

@@ -46,7 +46,8 @@
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
 	import { Sortable, placeIn } from 'zipp-ui/sortable';
-	import { componentName, sectionOf } from '../core/schema';
+	import { componentName, componentOf, sectionOf } from '../core/schema';
+	import SchemaIcon from '../core/SchemaIcon.svelte';
 
 	let {
 		schema,
@@ -230,6 +231,10 @@
 			</span>
 			{#if types}
 				<span class="type hide-small">
+					<SchemaIcon
+						icon={componentOf(schema, e.type)?.icon}
+						size={14}
+					/>
 					{componentName(schema, e.type)}
 				</span>
 			{/if}
@@ -334,6 +339,9 @@
 	}
 
 	.type {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
 		font-size: var(--fs-base);
 	}
 

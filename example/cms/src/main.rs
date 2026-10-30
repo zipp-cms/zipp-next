@@ -72,6 +72,9 @@ fn schema() -> Schema {
 			"Settings",
 			["header", "footer", "translations", "seoSettings"],
 		)
+		// icons of the studio, Lucide's by name or an svg of its own
+		.nav_icon("Content", "folder-open")
+		.nav_icon("Settings", "sliders-horizontal")
 		// the SEO plugin, like the Craft plugin meierlabs-seo: the global
 		// settings are the single seoSettings, defaults per section and
 		// entry type here
@@ -184,7 +187,13 @@ fn schema() -> Schema {
 				.label("Sprache"),
 				Field::number("price").range(0.0, 1000.0).indexed(),
 				Field::boolean("soldOut").indexed(),
-				Field::images("image").max(1),
+				// new images of events go into their folder
+				Field::images("image").max(1).folder("Events"),
+				Field::assets("program")
+					.extensions(["pdf"])
+					.max(1)
+					.folder("Events/Programs")
+					.label("Programm (PDF)"),
 				Field::markdown("description").translatable(),
 				Field::relation("page", ["page"]).max(1).label("More info"),
 			],
@@ -262,6 +271,17 @@ fn schema() -> Schema {
 			"Upcoming events",
 			[Field::text("city").label("Only in city")],
 		)
+		// in the lists, the add menus and the blocks' heads
+		.icon("home", "house")
+		.icon("page", "file-text")
+		.icon("news", "newspaper")
+		.icon("article", "notebook-pen")
+		.icon("category", "tag")
+		.icon("event", "calendar")
+		.icon("text", "text")
+		.icon("images", "images")
+		.icon("button", "mouse-pointer-click")
+		.icon("events", "calendar-days")
 }
 
 /// A route of the site next to zipp's: the upcoming events as JSON, for a

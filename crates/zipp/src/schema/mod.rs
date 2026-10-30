@@ -93,6 +93,32 @@ pub struct DocPage {
 pub struct NavGroup {
 	pub name: String,
 	pub sections: Vec<String>,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub icon: Option<Icon>,
+}
+
+/// An icon in the studio: a Lucide icon by its name (`calendar`, see
+/// lucide.dev/icons), or an svg of its own, drawn with `currentColor` to
+/// take the color of the text.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Icon {
+	Lucide(String),
+	Svg(String),
+}
+
+impl Icon {
+	/// An svg of its own, e.g. `Icon::svg(include_str!("logo.svg"))`.
+	pub fn svg(svg: &str) -> Self {
+		Self::Svg(svg.into())
+	}
+}
+
+/// A Lucide icon by its name.
+impl From<&str> for Icon {
+	fn from(name: &str) -> Self {
+		Self::Lucide(name.into())
+	}
 }
 
 /// An image size, generated on its first request and cached. Without a
@@ -162,6 +188,9 @@ pub struct Component {
 	/// migrations' ops.
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub tabs: Vec<Tab>,
+	/// in the studio's lists and menus, only looks like the tabs
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub icon: Option<Icon>,
 }
 
 /// A tab of an entry type in the editor, see [`Schema::entry_tabs`].
@@ -212,7 +241,29 @@ impl Schema {
 		self.nav.push(NavGroup {
 			name: name.into(),
 			sections: sections.into_iter().map(Into::into).collect(),
+			icon: None,
 		});
+		self
+	}
+
+	/// The icon of a group of the studio's navigation, after its `nav`:
+	/// `.nav_icon("Content", "folder-open")`.
+	pub fn nav_icon(mut self, group: &str, icon: impl Into<Icon>) -> Self {
+		let Some(g) = self.nav.iter_mut().find(|g| g.name == group) else {
+			panic!("nav_icon: there is no group {group}");
+		};
+		g.icon = Some(icon.into());
+		self
+	}
+
+	/// The icon of an entry type or a block, after it:
+	/// `.icon("event", "calendar")` or
+	/// `.icon("logo", Icon::svg(include_str!("logo.svg")))`.
+	pub fn icon(mut self, component: &str, icon: impl Into<Icon>) -> Self {
+		let Some(c) = self.get_mut(component) else {
+			panic!("icon: there is no entry type or block {component}");
+		};
+		c.icon = Some(icon.into());
 		self
 	}
 
@@ -355,6 +406,7 @@ impl Schema {
 			entry,
 			fields: fields.into_iter().collect(),
 			tabs: vec![],
+			icon: None,
 		});
 		self
 	}

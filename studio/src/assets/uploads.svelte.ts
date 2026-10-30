@@ -54,6 +54,29 @@ export async function fromDrop(data: DataTransfer): Promise<Upload[]> {
 	return out;
 }
 
+/** What an asset field takes: only images, only some extensions. */
+export type Allowed = { images: boolean; extensions?: string[] };
+
+/** Whether a file fits the field. */
+export function allows(allowed: Allowed, file: File): boolean {
+	if (allowed.images && !file.type.startsWith('image/')) return false;
+	const exts = allowed.extensions ?? [];
+	const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+	return !exts.length || (file.name.includes('.') && exts.includes(ext));
+}
+
+/** The file dialog's `accept` of a field. */
+export function acceptOf(allowed: Allowed): string | undefined {
+	if (allowed.extensions?.length)
+		return allowed.extensions.map(e => '.' + e).join(',');
+	return allowed.images ? 'image/*' : undefined;
+}
+
+/** The folders of a path like `Photos/Events`, for `Upload.dir`. */
+export function pathDirs(path: string | undefined): string[] {
+	return (path ?? '').split('/').filter(n => n.trim());
+}
+
 /** How many files go up at the same time. */
 const PARALLEL = 3;
 

@@ -30,6 +30,13 @@ the editor, like Craft's field layout; the title is in the first tab. Tabs
 are only looks: the fields are one list, moving a field to another tab
 needs no migration. Setup shows each type's editor as editors see it.
 
+`.icon("event", "calendar")` gives an entry type or a block an icon of
+[Lucide](https://lucide.dev/icons) by its name, `.icon("logo",
+Icon::svg(include_str!("logo.svg")))` one of its own (drawn with
+`currentColor`); `.nav_icon("Content", "folder-open")` one of the
+studio's nav groups. The studio shows them in lists, menus and the
+blocks' heads; they are only looks like the tabs.
+
 ## Content is JSON
 
 An entry's fields are stored as one JSON document,
@@ -94,6 +101,11 @@ alt }`. Only named transforms exist, so nobody can make the server
 render arbitrary sizes. `--public-url` makes the urls absolute for
 frontends on other domains. Like in Craft an asset has a title (GraphQL
 `title`, from the filename while it is empty) and an alt text.
+
+In the studio assets are in folders (only there, urls don't change). An
+asset field can say where its uploads go and its picker opens,
+`.folder("Events/Programs")` (made on the first upload), and which
+files it takes, `.extensions(["pdf"])`; saving checks it.
 
 ## Translations
 

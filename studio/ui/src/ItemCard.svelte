@@ -9,6 +9,7 @@
 	 */
 	let {
 		kind,
+		kindIcon,
 		summary,
 		open = $bindable(true),
 		collapsible = true,
@@ -20,6 +21,8 @@
 		id,
 	}: {
 		kind: string;
+		/** before the kind, e.g. the icon of a block type */
+		kindIcon?: Snippet;
 		summary?: Snippet;
 		open?: boolean;
 		collapsible?: boolean;
@@ -48,7 +51,7 @@
 			onclick={toggle}
 		>
 			{#if changed}<span class="dot" title="Changed"></span>{/if}
-			<span class="kind">{kind}</span>
+			<span class="kind">{@render kindIcon?.()}{kind}</span>
 			{#if summary}
 				<span class="summary truncate">{@render summary()}</span>
 			{/if}
@@ -111,6 +114,9 @@
 	}
 
 	.kind {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
 		flex-shrink: 0;
 		padding: 1px 0.4375rem;
 		border-radius: var(--radius-sm);

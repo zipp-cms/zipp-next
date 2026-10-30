@@ -18,6 +18,9 @@
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
 	import {
 		FileDrag,
+		acceptOf,
+		allows,
+		pathDirs,
 		fromInput,
 		uploads,
 		type Upload,
@@ -57,11 +60,15 @@
 		if (max === 1) picking = false;
 	}
 
-	/** New files into Files, added as far as the field takes them. */
+	/**
+	 * New files into the field's folder (made when missing) or the
+	 * library, the ones it takes, as many as fit.
+	 */
 	async function upload(items: Upload[]) {
-		if (images) items = items.filter(i => i.file.type.startsWith('image/'));
+		items = items.filter(i => allows(field, i.file));
 		const room = max ? max - ids.length : items.length;
-		items = items.slice(0, Math.max(room, 0)).map(i => ({ ...i, dir: [] }));
+		const dir = pathDirs(field.folder);
+		items = items.slice(0, Math.max(room, 0)).map(i => ({ ...i, dir }));
 		const added = await uploads.run(items, null);
 		let next = ids;
 		for (const a of added)
@@ -70,7 +77,13 @@
 	}
 
 	const drag = new FileDrag(upload, () => !full);
-	const kind = $derived(images ? 'images' : 'files');
+	const kind = $derived(
+		field.extensions?.length
+			? field.extensions.map(e => e.toUpperCase()).join(', ') + ' files'
+			: images
+				? 'images'
+				: 'files',
+	);
 </script>
 
 {#snippet itemActions(i: number)}
@@ -162,7 +175,7 @@
 				<UploadButton
 					onfiles={f => upload(fromInput(f))}
 					multiple={max !== 1}
-					accept={images ? 'image/*' : undefined}
+					accept={acceptOf(field)}
 					icon="upload"
 				>
 					Upload
@@ -175,6 +188,8 @@
 {#if picking}
 	<AssetPicker
 		{images}
+		extensions={field.extensions}
+		folderPath={field.folder}
 		multiple={max !== 1}
 		selected={ids}
 		onpick={toggle}

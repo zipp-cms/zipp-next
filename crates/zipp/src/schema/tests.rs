@@ -201,3 +201,56 @@ fn tabs_keep_the_fields_in_order() {
 	let empty = news().entry_tabs("news", "News", [("Content", vec![])]);
 	assert!(empty.check().unwrap_err().contains("no fields"));
 }
+
+#[test]
+fn icons_of_types_and_nav_groups() {
+	let s = site()
+		.icon("event", "calendar")
+		.icon("text", Icon::svg("<svg/>"))
+		.nav("Content", ["home", "pages", "events"])
+		.nav_icon("Content", "folder-open");
+	s.check().unwrap();
+	assert_eq!(s.get("event").unwrap().icon, Some(Icon::from("calendar")));
+	let json = serde_json::to_value(&s).unwrap();
+	let event = json["components"]
+		.as_array()
+		.unwrap()
+		.iter()
+		.find(|c| c["handle"] == "event")
+		.unwrap();
+	assert_eq!(event["icon"], serde_json::json!({ "lucide": "calendar" }));
+	assert_eq!(json["nav"][0]["icon"]["lucide"], "folder-open");
+	// without one the json stays as before
+	let page = json["components"].as_array().unwrap();
+	assert!(
+		page.iter()
+			.any(|c| c["handle"] == "page" && c["icon"].is_null())
+	);
+}
+
+#[test]
+#[should_panic(expected = "there is no entry type or block nope")]
+fn icon_of_an_unknown_type() {
+	let _ = site().icon("nope", "calendar");
+}
+
+#[test]
+fn asset_fields_with_a_folder_and_extensions() {
+	let f = Field::assets("docs")
+		.folder("/Docs/Forms/")
+		.extensions([".PDF"]);
+	let FieldKind::Assets {
+		folder, extensions, ..
+	} = &f.kind
+	else {
+		unreachable!()
+	};
+	assert_eq!(folder.as_deref(), Some("Docs/Forms"));
+	assert_eq!(extensions, &["pdf"]);
+	site().block("d", "D", [f]).check().unwrap();
+
+	let s = site().block("d", "D", [Field::assets("x").folder("A//B")]);
+	assert!(s.check().unwrap_err().contains("a path like"));
+	let s = site().block("d", "D", [Field::assets("x").extensions(["p f"])]);
+	assert!(s.check().unwrap_err().contains("like pdf"));
+}

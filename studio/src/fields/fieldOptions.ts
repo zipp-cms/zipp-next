@@ -64,8 +64,16 @@ export function fieldOptions(
 			add('Max entries', or(f.max, 'Any'));
 			break;
 		case 'assets':
-			add('Files', f.images ? 'Images only' : 'Any file');
+			add(
+				'Files',
+				f.extensions?.length
+					? f.extensions.map(e => e.toUpperCase()).join(', ')
+					: f.images
+						? 'Images only'
+						: 'Any file',
+			);
 			add('Max files', or(f.max, 'Any'));
+			add('Upload to', f.folder ?? 'Library');
 			break;
 		case 'link':
 			add('Links to', f.to.map(k => LINK_NAMES[k]).join(', '));

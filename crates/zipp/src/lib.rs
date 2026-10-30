@@ -52,8 +52,8 @@ pub use crate::field_type::{
 };
 pub use crate::plugin::{EntryField, GraphqlExt, Plugin, PluginStudio};
 pub use crate::schema::{
-	Access, Choice, Column, Field, FieldKind, LinkKind, Role, Schema, Section,
-	Transform,
+	Access, Choice, Column, Field, FieldKind, Icon, LinkKind, Role, Schema,
+	Section, Transform,
 };
 pub use async_graphql;
 pub use axum;

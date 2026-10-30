@@ -27,7 +27,15 @@ export type FieldKind =
 	| { kind: 'number'; min: number | null; max: number | null }
 	| { kind: 'boolean' }
 	| { kind: 'relation'; types: string[]; max: number | null }
-	| { kind: 'assets'; images: boolean; max: number | null }
+	| {
+			kind: 'assets';
+			images: boolean;
+			max: number | null;
+			/** where new files go and the picker opens, `Photos/Events` */
+			folder?: string;
+			/** only these, lowercase without the dot */
+			extensions?: string[];
+	  }
 	| { kind: 'link'; to: LinkKind[]; labels: boolean; newTab: boolean }
 	| { kind: 'group'; component: string }
 	| { kind: 'markdown' }
@@ -72,7 +80,11 @@ export type Component = {
 	fields: Field[];
 	/** the tabs of the editor, none is one tab */
 	tabs?: Tab[];
+	icon?: SchemaIcon;
 };
+
+/** An icon of the code: a Lucide icon by its name, or an svg of its own. */
+export type SchemaIcon = { lucide: string } | { svg: string };
 
 /** A tab of the editor with the handles of its fields. */
 export type Tab = { name: string; fields: string[] };
@@ -101,7 +113,11 @@ export type Transform = {
 	crop: boolean;
 };
 
-export type NavGroup = { name: string; sections: string[] };
+export type NavGroup = {
+	name: string;
+	sections: string[];
+	icon?: SchemaIcon;
+};
 
 export type Schema = {
 	sites: Site[];

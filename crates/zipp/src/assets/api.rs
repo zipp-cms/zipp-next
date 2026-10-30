@@ -19,6 +19,8 @@ pub struct ListReq {
 	pub kind: Option<String>,
 	/// a folder's id, `top` for the ones in none
 	pub folder: Option<String>,
+	/// `pdf,docx`, only files that end so
+	pub extensions: Option<String>,
 }
 
 request!(ListReq, GET "/assets" => Vec<Asset>);

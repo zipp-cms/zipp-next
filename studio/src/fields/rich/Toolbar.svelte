@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Editor } from '@tiptap/core';
 	import type { Component, Link, Schema } from '../../core/schema';
+	import SchemaIcon from '../../core/SchemaIcon.svelte';
 	import type { Refs } from '../../entries/api';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Popover from 'zipp-ui/Popover.svelte';
@@ -162,6 +163,7 @@
 					class="popup-item"
 					onclick={() => insert(() => insertBlock(editor, b.handle))}
 				>
+					<SchemaIcon icon={b.icon} size={14} />
 					{b.name}
 				</button>
 			{/each}

@@ -284,6 +284,23 @@ impl Schema {
 				}
 			}
 		}
+		if let FieldKind::Assets {
+			folder, extensions, ..
+		} = &field.kind
+		{
+			// the folders are names, the api refuses a `/` in them
+			if folder
+				.as_deref()
+				.is_some_and(|f| f.split('/').any(|n| n.trim().is_empty()))
+			{
+				return Err("a folder is a path like Photos/Events".into());
+			}
+			if extensions.iter().any(|e| {
+				e.is_empty() || !e.chars().all(|c| c.is_alphanumeric())
+			}) {
+				return Err("extensions are like pdf or jpg".into());
+			}
+		}
 		if let FieldKind::Table { columns } = &field.kind {
 			if columns.is_empty() {
 				return Err("a table needs columns".into());

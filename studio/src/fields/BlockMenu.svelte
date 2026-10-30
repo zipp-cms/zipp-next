@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Component } from '../core/schema';
+	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import AddGroup from 'zipp-ui/AddGroup.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Popover from 'zipp-ui/Popover.svelte';
@@ -53,7 +54,9 @@
 			key={t => t.handle}
 			onpick={t => pick(t.handle)}
 		>
-			{#snippet item(t)}{t.name}{/snippet}
+			{#snippet item(t)}
+				<SchemaIcon icon={t.icon} size={14} />{t.name}
+			{/snippet}
 		</SearchList>
 	{:else}
 		{#each found as t (t.handle)}
@@ -62,6 +65,7 @@
 				class="popup-item"
 				onclick={() => pick(t.handle)}
 			>
+				<SchemaIcon icon={t.icon} size={14} />
 				{t.name}
 			</button>
 		{/each}

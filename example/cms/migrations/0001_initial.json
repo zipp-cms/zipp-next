@@ -756,7 +756,10 @@
               "seo"
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "house"
+        }
       }
     },
     {
@@ -836,7 +839,10 @@
               "seo"
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "file-text"
+        }
       }
     },
     {
@@ -894,7 +900,10 @@
               "seo"
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "newspaper"
+        }
       }
     },
     {
@@ -987,7 +996,10 @@
               "seo"
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "notebook-pen"
+        }
       }
     },
     {
@@ -996,7 +1008,10 @@
         "handle": "category",
         "name": "Category",
         "entry": true,
-        "fields": []
+        "fields": [],
+        "icon": {
+          "lucide": "tag"
+        }
       }
     },
     {
@@ -1130,7 +1145,22 @@
             "translatable": false,
             "kind": "assets",
             "images": true,
-            "max": 1
+            "max": 1,
+            "folder": "Events"
+          },
+          {
+            "handle": "program",
+            "label": "Programm (PDF)",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": false,
+            "max": 1,
+            "folder": "Events/Programs",
+            "extensions": [
+              "pdf"
+            ]
           },
           {
             "handle": "description",
@@ -1152,7 +1182,10 @@
             ],
             "max": 1
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "calendar"
+        }
       }
     },
     {
@@ -1243,7 +1276,10 @@
               "images"
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "text"
+        }
       }
     },
     {
@@ -1295,7 +1331,10 @@
               }
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "images"
+        }
       }
     },
     {
@@ -1322,7 +1361,10 @@
             "labels": true,
             "newTab": true
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "mouse-pointer-click"
+        }
       }
     },
     {
@@ -1342,7 +1384,10 @@
             "max": null,
             "multiline": false
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "calendar-days"
+        }
       }
     },
     {
@@ -2295,7 +2340,10 @@
               "seo"
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "house"
+        }
       },
       {
         "handle": "page",
@@ -2372,7 +2420,10 @@
               "seo"
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "file-text"
+        }
       },
       {
         "handle": "news",
@@ -2427,7 +2478,10 @@
               "seo"
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "newspaper"
+        }
       },
       {
         "handle": "article",
@@ -2517,13 +2571,19 @@
               "seo"
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "notebook-pen"
+        }
       },
       {
         "handle": "category",
         "name": "Category",
         "entry": true,
-        "fields": []
+        "fields": [],
+        "icon": {
+          "lucide": "tag"
+        }
       },
       {
         "handle": "event",
@@ -2654,7 +2714,22 @@
             "translatable": false,
             "kind": "assets",
             "images": true,
-            "max": 1
+            "max": 1,
+            "folder": "Events"
+          },
+          {
+            "handle": "program",
+            "label": "Programm (PDF)",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": false,
+            "max": 1,
+            "folder": "Events/Programs",
+            "extensions": [
+              "pdf"
+            ]
           },
           {
             "handle": "description",
@@ -2676,7 +2751,10 @@
             ],
             "max": 1
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "calendar"
+        }
       },
       {
         "handle": "header",
@@ -2758,7 +2836,10 @@
               "images"
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "text"
+        }
       },
       {
         "handle": "images",
@@ -2807,7 +2888,10 @@
               }
             ]
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "images"
+        }
       },
       {
         "handle": "button",
@@ -2831,7 +2915,10 @@
             "labels": true,
             "newTab": true
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "mouse-pointer-click"
+        }
       },
       {
         "handle": "events",
@@ -2848,7 +2935,10 @@
             "max": null,
             "multiline": false
           }
-        ]
+        ],
+        "icon": {
+          "lucide": "calendar-days"
+        }
       }
     ],
     "transforms": [
@@ -2892,7 +2982,10 @@
           "news",
           "categories",
           "events"
-        ]
+        ],
+        "icon": {
+          "lucide": "folder-open"
+        }
       },
       {
         "name": "Settings",
@@ -2901,7 +2994,10 @@
           "footer",
           "translations",
           "seoSettings"
-        ]
+        ],
+        "icon": {
+          "lucide": "sliders-horizontal"
+        }
       }
     ]
   }

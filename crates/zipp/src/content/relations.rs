@@ -12,8 +12,11 @@ pub struct RelationRef {
 pub enum Target {
 	/// entries of these types
 	Entries(Vec<String>),
-	/// assets, only images if true
-	Assets(bool),
+	/// assets, only images if `images`, only these extensions if any
+	Assets {
+		images: bool,
+		extensions: Vec<String>,
+	},
 }
 
 /// All relations to entries and assets, also those inside blocks.
@@ -42,7 +45,10 @@ pub(super) fn link_relation(
 				.map(|c| c.handle.clone())
 				.collect(),
 		),
-		Some("asset") => Target::Assets(false),
+		Some("asset") => Target::Assets {
+			images: false,
+			extensions: vec![],
+		},
 		_ => return None,
 	};
 	Some(RelationRef {
@@ -132,9 +138,14 @@ pub(super) fn collect_relations(
 				target: Target::Entries(types.clone()),
 				ids: items.iter().filter_map(Value::as_i64).collect(),
 			}),
-			FieldKind::Assets { images, .. } => out.push(RelationRef {
+			FieldKind::Assets {
+				images, extensions, ..
+			} => out.push(RelationRef {
 				path,
-				target: Target::Assets(*images),
+				target: Target::Assets {
+					images: *images,
+					extensions: extensions.clone(),
+				},
 				ids: items.iter().filter_map(Value::as_i64).collect(),
 			}),
 			FieldKind::Blocks { .. } => {

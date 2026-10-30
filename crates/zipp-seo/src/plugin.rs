@@ -224,7 +224,10 @@ impl FieldType for SeoField {
 					.collect();
 				(!ids.is_empty()).then(|| FieldRelation {
 					path: key.into(),
-					target: Target::Assets(true),
+					target: Target::Assets {
+						images: true,
+						extensions: vec![],
+					},
 					ids,
 				})
 			})

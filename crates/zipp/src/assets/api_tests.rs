@@ -279,3 +279,26 @@ async fn only_roles_with_assets_see_folders() {
 	let err = ts.anonymous().call(&FoldersReq {}).await.unwrap_err();
 	assert_eq!(err, Error::MissingSessionToken);
 }
+
+#[tokio::test]
+async fn lists_files_by_extension() {
+	let ts = TestServer::new(site_with_roles());
+	let editor = ts.user(Some("editor"));
+	upload(&editor, "a.png", &png(2, 2)).await.unwrap();
+	upload(&editor, "Form.PDF", b"%PDF-1.4").await.unwrap();
+	upload(&editor, "notes.txt", b"hi").await.unwrap();
+
+	let names = |list: Vec<Asset>| {
+		let mut n: Vec<_> = list.into_iter().map(|a| a.filename).collect();
+		n.sort();
+		n
+	};
+	let by = |ext: &str| ListReq {
+		extensions: Some(ext.into()),
+		..Default::default()
+	};
+	let pdf = editor.call(&by("pdf")).await.unwrap();
+	assert_eq!(names(pdf), ["Form.PDF"]);
+	let two = editor.call(&by(".txt, png")).await.unwrap();
+	assert_eq!(names(two), ["a.png", "notes.txt"]);
+}
