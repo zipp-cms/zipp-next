@@ -43,11 +43,17 @@ export async function request(method: string, path: string, body?: unknown) {
 	const data = text ? JSON.parse(text) : null;
 
 	if (!resp.ok) {
-		if (resp.status === 401 || resp.status === 403) {
+		// a session that is missing or gone logs out, a role that may
+		// not do something only gets the error
+		const type = data?.error?.type;
+		if (
+			type === 'MISSING_SESSION_TOKEN' ||
+			type === 'INVALID_SESSION_TOKEN'
+		) {
 			setToken(null);
 			toLogin();
 		}
-		const fields = data?.error?.type === 'INVALID' ? data.error.detail : [];
+		const fields = type === 'INVALID' ? data.error.detail : [];
 		throw new ApiError(
 			resp.status,
 			data?.message ?? resp.statusText,
