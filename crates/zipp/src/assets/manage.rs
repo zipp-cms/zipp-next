@@ -4,20 +4,33 @@
 use super::*;
 
 /// The newest assets whose filename contains `search`, of a kind.
+/// Where to look for assets: all folders, or one (`None` the top).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum InFolder {
+	All,
+	Folder(Option<i64>),
+}
+
 pub fn search(
 	conn: &Connection,
 	search: &str,
 	kind: Option<&str>,
+	folder: InFolder,
 ) -> Result<Vec<Asset>> {
+	let (any, folder) = match folder {
+		InFolder::All => (true, None),
+		InFolder::Folder(f) => (false, f),
+	};
 	let sql = format!(
 		"SELECT {COLUMNS} FROM assets
 		WHERE filename LIKE ?1 AND (?2 IS NULL OR kind = ?2)
+		AND (?3 OR folder_id IS ?4)
 		ORDER BY id DESC LIMIT 200"
 	);
 	let search = format!("%{search}%");
 	let mut stmt = conn.prepare(&sql)?;
 	let assets = stmt
-		.query_map(params![search, kind], from_row)?
+		.query_map(params![search, kind, any, folder], from_row)?
 		.collect::<rusqlite::Result<_>>()?;
 	Ok(assets)
 }

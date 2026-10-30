@@ -178,3 +178,101 @@ async fn usage_shows_what_the_role_sees() {
 	let media = ts.user(Some("media"));
 	assert!(media.call(&UsageReq { id: a.id }).await.unwrap().is_empty());
 }
+
+fn in_folder(folder: &str) -> ListReq {
+	ListReq {
+		folder: Some(folder.into()),
+		..Default::default()
+	}
+}
+
+#[tokio::test]
+async fn folders_hold_assets() {
+	let ts = TestServer::new(site_with_roles());
+	let editor = ts.user(Some("editor"));
+	let author = ts.user(Some("author"));
+
+	// nested, with a name of their own in their place
+	let create = |parent_id, name: &str| CreateFolderReq {
+		parent_id,
+		name: name.into(),
+	};
+	let photos = author.call(&create(None, "Photos")).await.unwrap();
+	let events = author.call(&create(Some(photos.id), " Events ")).await;
+	let events = events.unwrap();
+	assert_eq!(events.name, "Events");
+	assert_eq!(events.parent_id, Some(photos.id));
+	let twice = author.call(&create(Some(photos.id), "events")).await;
+	assert!(matches!(twice.unwrap_err(), Error::Request(_)));
+	let missing = author.call(&create(Some(999), "x")).await;
+	assert_eq!(missing.unwrap_err(), Error::NotFound);
+
+	// renamed and moved, not into itself
+	let rename = UpdateFolderReq {
+		id: photos.id,
+		parent_id: None,
+		name: "Pictures".into(),
+	};
+	assert_eq!(author.call(&rename).await.unwrap().name, "Pictures");
+	let into_own = UpdateFolderReq {
+		id: photos.id,
+		parent_id: Some(events.id),
+		name: "Pictures".into(),
+	};
+	let err = author.call(&into_own).await.unwrap_err();
+	assert!(matches!(err, Error::Request(_)));
+
+	// an upload into a folder, one on the top, and a move
+	let resp = author
+		.upload(
+			&format!("/assets?folder={}", events.id),
+			&[("a.png", &png(2, 2))],
+		)
+		.await;
+	let a = Client::json::<Vec<Asset>>(resp).await.unwrap().remove(0);
+	assert_eq!(a.folder_id, Some(events.id));
+	let top = upload(&author, "b.png", &png(2, 2)).await.unwrap();
+	assert_eq!(top.folder_id, None);
+	let ids = |list: Vec<Asset>| list.iter().map(|a| a.id).collect::<Vec<_>>();
+	let here = in_folder(&events.id.to_string());
+	assert_eq!(ids(author.call(&here).await.unwrap()), [a.id]);
+	assert_eq!(ids(author.call(&in_folder("top")).await.unwrap()), [top.id]);
+	assert_eq!(author.call(&ListReq::default()).await.unwrap().len(), 2);
+
+	let moved = MoveReq {
+		ids: vec![top.id],
+		folder_id: Some(photos.id),
+	};
+	author.call(&moved).await.unwrap();
+	let all = author.call(&FoldersReq {}).await.unwrap();
+	let count = |id| all.iter().find(|f| f.id == id).unwrap().assets;
+	assert_eq!((count(photos.id), count(events.id)), (1, 1));
+
+	// only empty folders go, and not for who may only edit
+	let delete = DeleteFolderReq { id: events.id };
+	assert_eq!(author.call(&delete).await.unwrap_err(), Error::Forbidden);
+	let err = editor.call(&delete).await.unwrap_err();
+	assert!(matches!(err, Error::Request(_)));
+	let out = MoveReq {
+		ids: vec![a.id],
+		folder_id: None,
+	};
+	editor.call(&out).await.unwrap();
+	editor.call(&delete).await.unwrap();
+	assert_eq!(editor.call(&FoldersReq {}).await.unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn only_roles_with_assets_see_folders() {
+	let ts = TestServer::new(site_with_roles());
+	let none = ts.user(Some("nobody"));
+	let err = none.call(&FoldersReq {}).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	let create = CreateFolderReq {
+		parent_id: None,
+		name: "x".into(),
+	};
+	assert_eq!(none.call(&create).await.unwrap_err(), Error::Forbidden);
+	let err = ts.anonymous().call(&FoldersReq {}).await.unwrap_err();
+	assert_eq!(err, Error::MissingSessionToken);
+}

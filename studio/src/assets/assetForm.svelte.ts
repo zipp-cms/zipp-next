@@ -2,6 +2,7 @@ import {
 	NO_EDITS,
 	assetUsage,
 	deleteAsset,
+	moveAssets,
 	noEdits,
 	replaceAsset,
 	updateAsset,
@@ -13,8 +14,8 @@ import { Busy } from '../core/busy.svelte';
 
 /**
  * What the asset panel changes: title, alt text, filename, focal point
- * and the image's edits, saved together; whether there is something to
- * save, replacing the file, where the asset is used.
+ * the image's edits and the folder, saved together; whether there is
+ * something to save, replacing the file, where the asset is used.
  */
 export class AssetForm extends Busy {
 	current = $state<Asset>() as Asset;
@@ -23,6 +24,8 @@ export class AssetForm extends Busy {
 	filename = $state('');
 	focal = $state({ x: 0.5, y: 0.5 });
 	edits = $state<Edits>({ ...NO_EDITS });
+	/** null: no folder */
+	folder = $state<number | null>(null);
 	usage = $state<AssetUsage[] | null>(null);
 	/** what Cancel would throw away */
 	private initial = $state('');
@@ -42,6 +45,7 @@ export class AssetForm extends Busy {
 		this.filename = asset.filename;
 		this.focal = { x: asset.focalX, y: asset.focalY };
 		this.edits = { ...NO_EDITS, ...(asset.edits ?? {}) };
+		this.folder = asset.folderId;
 		this.initial = this.form();
 	}
 
@@ -52,6 +56,7 @@ export class AssetForm extends Busy {
 			filename: this.filename,
 			focal: this.focal,
 			edits: $state.snapshot(this.edits),
+			folder: this.folder,
 		});
 	}
 
@@ -59,16 +64,21 @@ export class AssetForm extends Busy {
 
 	/** The saved asset, undefined when it failed (see `error`). */
 	save(): Promise<Asset | undefined> {
-		return this.run(() =>
-			updateAsset(this.current.id, {
+		const { id, folderId } = this.current;
+		const folder = this.folder;
+		return this.run(async () => {
+			const saved = await updateAsset(id, {
 				title: this.title,
 				alt: this.alt,
 				filename: this.filename,
 				focalX: this.focal.x,
 				focalY: this.focal.y,
 				edits: noEdits(this.edits) ? null : $state.snapshot(this.edits),
-			}),
-		);
+			});
+			if (folder === folderId) return saved;
+			await moveAssets([id], folder);
+			return { ...saved, folderId: folder };
+		});
 	}
 
 	/** Another file; the title and alt text stay, the rest starts new. */

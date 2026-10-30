@@ -33,6 +33,7 @@ pub mod api;
 #[cfg(test)]
 mod api_tests;
 mod edits;
+mod folders;
 mod manage;
 mod routes;
 #[cfg(test)]
@@ -40,7 +41,12 @@ pub(crate) mod tests;
 mod transform;
 
 pub use edits::{Canvas, Crop, Edits, Resize};
-pub use manage::{AssetChange, Usage, delete, replace, search, update, usage};
+pub use folders::{
+	Folder, create_folder, delete_folder, folders, move_assets, update_folder,
+};
+pub use manage::{
+	AssetChange, InFolder, Usage, delete, replace, search, update, usage,
+};
 
 pub use routes::api_routes;
 #[cfg(test)]
@@ -72,6 +78,8 @@ pub struct Asset {
 	/// changes with the edits and the focal point, urls carry it so
 	/// browsers don't keep showing the image from before; empty without
 	pub version: String,
+	/// the folder it is in, `None` on the top
+	pub folder_id: Option<i64>,
 	/// like Craft's asset title, empty for one from the filename
 	pub title: String,
 	pub alt: String,
@@ -112,7 +120,7 @@ impl Asset {
 
 const COLUMNS: &str = "id, filename, kind, mime, size, width, height, alt, \
 	focal_x, focal_y, created_at, title, edits, \
-	(SELECT email FROM users WHERE id = uploaded_by)";
+	(SELECT email FROM users WHERE id = uploaded_by), folder_id";
 
 fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 	let (width, height): (Option<u32>, Option<u32>) = (r.get(5)?, r.get(6)?);
@@ -138,6 +146,7 @@ fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 		original_height: height,
 		edits,
 		uploaded_by: r.get(13)?,
+		folder_id: r.get(14)?,
 		alt: r.get(7)?,
 		focal_x,
 		focal_y,

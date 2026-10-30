@@ -107,12 +107,23 @@ pub(super) fn file_response(mime: &str, data: Vec<u8>) -> Response {
 pub(super) static GENERATING: tokio::sync::Semaphore =
 	tokio::sync::Semaphore::const_new(2);
 
-/// `POST /assets`, multipart: the files of the upload.
+#[derive(Deserialize)]
+pub(super) struct UploadParams {
+	/// the folder the files go into, the top without
+	folder: Option<i64>,
+}
+
+/// `POST /assets?folder=<id>`, multipart: the files of the upload.
 pub(super) async fn upload(
 	State(state): State<AppState>,
 	AssetAccess { auth, .. }: AssetAccess<Edit>,
+	Query(params): Query<UploadParams>,
 	mut multipart: Multipart,
 ) -> Result<Json<Vec<Asset>>> {
+	// the folder is there, before a file is stored
+	if let Some(f) = params.folder {
+		move_assets(&state.db.conn(), &[], Some(f))?;
+	}
 	let mut assets = vec![];
 	while let Some(field) = multipart
 		.next_field()
@@ -125,13 +136,10 @@ pub(super) async fn upload(
 			.await
 			.map_err(|e| Error::Request(e.to_string()))?;
 		let conn = state.db.conn();
-		assets.push(store(
-			&conn,
-			&state.files,
-			&filename,
-			&data,
-			Some(auth.user_id),
-		)?);
+		let asset =
+			store(&conn, &state.files, &filename, &data, Some(auth.user_id))?;
+		move_assets(&conn, &[asset.id], params.folder)?;
+		assets.push(get_asset(&conn, asset.id)?);
 	}
 	Ok(Json(assets))
 }
@@ -169,8 +177,21 @@ pub(super) async fn list_route(
 			ids.split(',').filter_map(|i| i.parse().ok()).collect();
 		return Ok(Json(get_many(&conn, &ids)?));
 	}
+	let folder = match req.folder.as_deref() {
+		None | Some("") => InFolder::All,
+		Some("top") => InFolder::Folder(None),
+		Some(id) => InFolder::Folder(Some(
+			id.parse()
+				.map_err(|_| Error::Request("folder: an id or top".into()))?,
+		)),
+	};
 	let search_for = req.search.unwrap_or_default();
-	Ok(Json(search(&conn, &search_for, req.kind.as_deref())?))
+	Ok(Json(search(
+		&conn,
+		&search_for,
+		req.kind.as_deref(),
+		folder,
+	)?))
 }
 
 pub(super) async fn update_route(
@@ -207,6 +228,55 @@ pub(super) async fn delete_route(
 	Ok(Json(()))
 }
 
+pub(super) async fn folders_route(
+	State(state): State<AppState>,
+	_access: AssetAccess<View>,
+	Req(_): Req<FoldersReq>,
+) -> ApiResult<FoldersReq> {
+	Ok(Json(folders(&state.db.conn())?))
+}
+
+pub(super) async fn create_folder_route(
+	State(state): State<AppState>,
+	_access: AssetAccess<Edit>,
+	Req(req): Req<CreateFolderReq>,
+) -> ApiResult<CreateFolderReq> {
+	let conn = state.db.conn();
+	Ok(Json(create_folder(&conn, req.parent_id, &req.name)?))
+}
+
+pub(super) async fn update_folder_route(
+	State(state): State<AppState>,
+	_access: AssetAccess<Edit>,
+	Req(req): Req<UpdateFolderReq>,
+) -> ApiResult<UpdateFolderReq> {
+	let conn = state.db.conn();
+	Ok(Json(update_folder(
+		&conn,
+		req.id,
+		req.parent_id,
+		&req.name,
+	)?))
+}
+
+pub(super) async fn delete_folder_route(
+	State(state): State<AppState>,
+	_access: AssetAccess<Delete>,
+	Req(req): Req<DeleteFolderReq>,
+) -> ApiResult<DeleteFolderReq> {
+	delete_folder(&state.db.conn(), req.id)?;
+	Ok(Json(()))
+}
+
+pub(super) async fn move_route(
+	State(state): State<AppState>,
+	_access: AssetAccess<Edit>,
+	Req(req): Req<MoveReq>,
+) -> ApiResult<MoveReq> {
+	move_assets(&state.db.conn(), &req.ids, req.folder_id)?;
+	Ok(Json(()))
+}
+
 /// The api, under `/api`.
 pub fn api_routes() -> Router<AppState> {
 	let big = || DefaultBodyLimit::max(200 * 1024 * 1024);
@@ -217,6 +287,11 @@ pub fn api_routes() -> Router<AppState> {
 		.api::<UpdateReq, _>(update_route)
 		.api::<DeleteReq, _>(delete_route)
 		.api::<UsageReq, _>(usage_route)
+		.api::<FoldersReq, _>(folders_route)
+		.api::<CreateFolderReq, _>(create_folder_route)
+		.api::<UpdateFolderReq, _>(update_folder_route)
+		.api::<DeleteFolderReq, _>(delete_folder_route)
+		.api::<MoveReq, _>(move_route)
 }
 
 /// The files, under `/assets`.

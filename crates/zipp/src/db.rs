@@ -148,6 +148,18 @@ const MIGRATIONS: &[&str] = &[
 	ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT '';
 	ALTER TABLE users ADD COLUMN last_login_at INTEGER;
 "#,
+	// folders of assets, a file in one or on the top
+	r#"
+	CREATE TABLE asset_folders (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		parent_id INTEGER REFERENCES asset_folders(id),
+		name TEXT NOT NULL,
+		created_at INTEGER NOT NULL
+	);
+	ALTER TABLE assets ADD COLUMN folder_id INTEGER
+		REFERENCES asset_folders(id);
+	CREATE INDEX assets_folder ON assets(folder_id);
+"#,
 ];
 
 #[derive(Clone)]

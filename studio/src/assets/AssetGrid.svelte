@@ -2,19 +2,32 @@
 	import type { Asset } from './api';
 	import Thumb from './Thumb.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import { ASSETS_DRAG } from './FolderTree.svelte';
 
-	/** Thumbnails, files show their name. */
+	/**
+	 * Thumbnails, files show their name. With `draggable` a tile drags
+	 * onto a folder of the tree.
+	 */
 	let {
 		assets,
 		selected = [],
 		loading = false,
+		draggable = false,
+		empty = 'No assets yet',
 		onpick,
 	}: {
 		assets: Asset[];
 		loading?: boolean;
 		selected?: number[];
+		draggable?: boolean;
+		empty?: string;
 		onpick: (a: Asset) => void;
 	} = $props();
+
+	function ondragstart(e: DragEvent, a: Asset) {
+		e.dataTransfer!.setData(ASSETS_DRAG, JSON.stringify([a.id]));
+		e.dataTransfer!.effectAllowed = 'move';
+	}
 </script>
 
 <div class="grid">
@@ -24,6 +37,8 @@
 			class:selected={selected.includes(a.id)}
 			onclick={() => onpick(a)}
 			title={a.filename}
+			draggable={draggable ? 'true' : undefined}
+			ondragstart={e => draggable && ondragstart(e, a)}
 		>
 			<Thumb asset={a} />
 			<span class="caption">{a.title || a.filename}</span>
@@ -32,7 +47,7 @@
 			{/if}
 		</button>
 	{:else}
-		<p class="empty">{loading ? 'Loading…' : 'No assets yet'}</p>
+		<p class="empty">{loading ? 'Loading…' : empty}</p>
 	{/each}
 </div>
 

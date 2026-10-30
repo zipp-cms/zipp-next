@@ -22,6 +22,8 @@ export type Asset = {
 	uploadedBy: string | null;
 	/** changes with the edits and the focal point, for the browser's cache */
 	version: string;
+	/** null: on the top, not in a folder */
+	folderId: number | null;
 };
 
 /**
@@ -102,10 +104,15 @@ export function listAssets(params: Record<string, string>): Promise<Asset[]> {
 	return request('GET', '/assets?' + new URLSearchParams(params));
 }
 
-export function uploadAssets(files: FileList | File[]): Promise<Asset[]> {
+/** Into a folder, or on the top without one. */
+export function uploadAssets(
+	files: FileList | File[],
+	folder: number | null = null,
+): Promise<Asset[]> {
 	const form = new FormData();
 	for (const f of files) form.append('file', f, f.name);
-	return request('POST', '/assets', form);
+	const into = folder === null ? '' : `?folder=${folder}`;
+	return request('POST', '/assets' + into, form);
 }
 
 export function updateAsset(
@@ -124,4 +131,58 @@ export function updateAsset(
 
 export function deleteAsset(id: number): Promise<void> {
 	return request('DELETE', '/assets/' + id);
+}
+
+/** A folder of the asset library, only in the studio, urls stay. */
+export type Folder = {
+	id: number;
+	parentId: number | null;
+	name: string;
+	/** the assets right in it, not in its subfolders */
+	assets: number;
+};
+
+export function listFolders(): Promise<Folder[]> {
+	return request('GET', '/asset-folders');
+}
+
+export function createFolder(
+	parentId: number | null,
+	name: string,
+): Promise<Folder> {
+	return request('POST', '/asset-folders', { parentId, name });
+}
+
+export function updateFolder(
+	id: number,
+	parentId: number | null,
+	name: string,
+): Promise<Folder> {
+	return request('PUT', '/asset-folders/' + id, { parentId, name });
+}
+
+/** Only an empty one. */
+export function deleteFolder(id: number): Promise<void> {
+	return request('DELETE', '/asset-folders/' + id);
+}
+
+/** Into a folder, or null for the top. */
+export function moveAssets(ids: number[], folderId: number | null) {
+	return request<void>('POST', '/assets/move', { ids, folderId });
+}
+
+/** The folders in the order of the tree, with their depth and path. */
+export function folderRows(
+	folders: Folder[],
+): { folder: Folder; depth: number; path: string }[] {
+	const rows: { folder: Folder; depth: number; path: string }[] = [];
+	const add = (parent: number | null, depth: number, path: string) => {
+		for (const f of folders.filter(f => f.parentId === parent)) {
+			const here = path ? `${path} / ${f.name}` : f.name;
+			rows.push({ folder: f, depth, path: here });
+			add(f.id, depth + 1, here);
+		}
+	};
+	add(null, 0, '');
+	return rows;
 }

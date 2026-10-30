@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { assetUrl, transparentEdges, type Asset } from './api';
+	import {
+		assetUrl,
+		folderRows,
+		transparentEdges,
+		type Asset,
+		type Folder,
+	} from './api';
 	import { type Schema } from '../core/schema';
 	import { entryPath } from '../core/router.svelte';
 	import { canAssets } from '../core/access';
@@ -17,17 +23,20 @@
 	/**
 	 * A file like Craft's asset panel: the image editor, title, alt text
 	 * and filename, what it is and who uploaded it, download, copy the
-	 * url, replace the file, and where it is used. In a flyout with Save
-	 * and Cancel.
+	 * url, replace the file, its folder, and where it is used. In a
+	 * flyout with Save and Cancel.
 	 */
 	let {
 		schema,
+		folders = [],
 		asset,
 		onsaved,
 		ondeleted,
 		onclose,
 	}: {
 		schema: Schema;
+		/** to move it into another folder, none: no folder select */
+		folders?: Folder[];
 		asset: Asset;
 		onsaved: (a: Asset) => void;
 		ondeleted: () => void;
@@ -121,6 +130,17 @@
 					Filename
 					<input bind:value={form.filename} disabled={!canEdit} />
 				</label>
+				{#if folders.length}
+					<label class="stacked">
+						Folder
+						<select bind:value={form.folder} disabled={!canEdit}>
+							<option value={null}>Files (no folder)</option>
+							{#each folderRows(folders) as r (r.folder.id)}
+								<option value={r.folder.id}>{r.path}</option>
+							{/each}
+						</select>
+					</label>
+				{/if}
 				{#if form.error}<p class="error">{form.error}</p>{/if}
 			</div>
 
