@@ -51,6 +51,16 @@
 		else if (after) preview.refresh();
 	}
 
+	/** The textarea as high as its text, up to a third of the window. */
+	function grow(el: HTMLTextAreaElement, _value: string) {
+		const fit = () => {
+			el.style.height = 'auto';
+			el.style.height = `${Math.min(el.scrollHeight, innerHeight / 3)}px`;
+		};
+		fit();
+		return { update: fit };
+	}
+
 	function onkeydown(e: KeyboardEvent) {
 		// not while an input method composes a character
 		if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) send(e);
@@ -79,8 +89,9 @@
 				<button
 					onclick={() => chat.clear()}
 					disabled={chat.busy || !chat.lines.length}
+					title="Start over, this chat is only kept in this tab"
 				>
-					New
+					<Icon name="add" size={14} /> New chat
 				</button>
 			{/snippet}
 		</PageTop>
@@ -133,17 +144,32 @@
 			{/if}
 		</div>
 
+		<!-- one box: the text grows with it, the send button in its corner -->
 		<form onsubmit={send}>
-			<textarea
-				bind:value={input}
-				{onkeydown}
-				rows="3"
-				placeholder="What should change?"
-				spellcheck="false"
-			></textarea>
-			<button class="primary" disabled={chat.busy || !input.trim()}>
-				Send
-			</button>
+			<div class="composer">
+				<textarea
+					bind:value={input}
+					{onkeydown}
+					rows="1"
+					placeholder="What should change?"
+					aria-label="Message"
+					spellcheck="false"
+					use:grow={input}
+				></textarea>
+				<div class="bottom">
+					<span class="keys">
+						Enter sends, Shift+Enter a new line
+					</span>
+					<button
+						class="send"
+						title="Send"
+						aria-label="Send"
+						disabled={chat.busy || !input.trim()}
+					>
+						<Icon name="arrow-up" size={16} />
+					</button>
+				</div>
+			</div>
 		</form>
 	</section>
 
@@ -230,13 +256,69 @@
 	}
 
 	form {
-		display: flex;
-		gap: 0.5rem;
-		align-items: flex-end;
-		padding: 1rem;
+		padding: 0.75rem 1rem 1rem;
+	}
 
+	.composer {
+		border: 1px solid var(--border-strong);
+		border-radius: var(--radius-lg);
+		background: var(--input);
+
+		&:focus-within {
+			@include focus-ring(-1px);
+			border-color: var(--accent);
+		}
+
+		// the box has the border and the focus
 		textarea {
+			min-height: 0;
+			padding: 0.625rem 0.75rem 0.25rem;
+			border: none;
+			background: none;
+			line-height: 1.45;
 			resize: none;
+
+			&:focus {
+				outline: none;
+				box-shadow: none;
+			}
+		}
+	}
+
+	.bottom {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		padding: 0 0.375rem 0.375rem 0.75rem;
+	}
+
+	.keys {
+		color: var(--subtle);
+		font-size: var(--fs-xs);
+	}
+
+	.send {
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		padding: 0;
+		border: none;
+		border-radius: 50%;
+		background: var(--accent);
+		color: var(--on-accent);
+
+		@include hover {
+			&:hover:not(:disabled) {
+				background: var(--accent-hover);
+				color: var(--on-accent);
+			}
+		}
+
+		&:disabled {
+			background: var(--surface-2);
+			color: var(--subtle);
 		}
 	}
 
