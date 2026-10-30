@@ -214,7 +214,6 @@ export type Role = {
 	ai: boolean;
 };
 
-/** The logged in user, `role: null` is an admin. */
 /** Lookups in the schema by handle. */
 
 export function componentOf(

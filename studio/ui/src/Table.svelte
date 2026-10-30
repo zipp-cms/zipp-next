@@ -68,10 +68,18 @@
 	{/if}
 	<tbody>
 		{#each rows as r, i (key(r))}
+			<!-- a row that opens takes the focus, Enter or Space opens it -->
 			<tr
 				id={id?.(r)}
 				aria-expanded={ontoggle ? !!isOpen?.(r) : undefined}
+				tabindex={ontoggle ? 0 : undefined}
 				onclick={e => click(e, r)}
+				onkeydown={e => {
+					if (!ontoggle || e.target !== e.currentTarget) return;
+					if (e.key !== 'Enter' && e.key !== ' ') return;
+					e.preventDefault();
+					ontoggle(r);
+				}}
 			>
 				{@render row(r, i)}
 			</tr>

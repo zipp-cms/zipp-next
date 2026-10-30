@@ -36,7 +36,8 @@
 	import SearchInput, { SEARCH_DELAY_MS } from 'zipp-ui/SearchInput.svelte';
 	import SiteBadges from './SiteBadges.svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
-	import { can, sectionCrumbs } from '../core/access';
+	import { can } from '../core/access';
+	import { sectionCrumbs } from '../core/paths';
 	import { entryUrl, type Schema } from '../core/schema';
 	import { deleteEntry, listEntries, moveEntry, type Entry } from './api';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';

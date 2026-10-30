@@ -20,7 +20,13 @@
 
 <span class="search">
 	<Icon name="search" size={14} />
-	<input type="search" {placeholder} bind:value {onkeydown} />
+	<input
+		type="search"
+		{placeholder}
+		aria-label={placeholder}
+		bind:value
+		{onkeydown}
+	/>
 </span>
 
 <style lang="scss">

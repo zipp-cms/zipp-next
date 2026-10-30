@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { setupPath } from '../../core/paths';
 	import SiteBadges from '../SiteBadges.svelte';
 	import BlockOutline from './BlockOutline.svelte';
 	import { componentName } from '../../core/schema';
@@ -120,7 +121,7 @@
 					{:else}
 						<a
 							class="value"
-							href="/admin/setup/types/{comp.handle}"
+							href={setupPath('types', comp.handle)}
 							title="Its fields in Setup"
 						>
 							{comp.name}

@@ -73,30 +73,3 @@ export function hasAgent(schema: Schema): boolean {
 		schema.plugins.some(p => p.name === 'agent')
 	);
 }
-
-/** The page of a section or a doc. */
-export function navHref(schema: Schema, handle: string): string {
-	if (schema.docs.some(d => d.handle === handle))
-		return '/admin/docs/' + handle;
-	return '/admin/entries/' + handle;
-}
-
-/** The way to a section in the nav: its group, then the section. */
-export function sectionCrumbs(
-	schema: Schema,
-	section: string,
-): { label: string; href?: string }[] {
-	const group = visibleNav(schema).find(g => g.sections.includes(section));
-	const name =
-		schema.sections.find(s => s.handle === section)?.name ?? section;
-	const out: { label: string; href?: string }[] = [];
-	if (group && group.sections[0] !== section) {
-		// the first of a group may be a doc
-		out.push({
-			label: group.name,
-			href: navHref(schema, group.sections[0]),
-		});
-	}
-	out.push({ label: name, href: '/admin/entries/' + section });
-	return out;
-}

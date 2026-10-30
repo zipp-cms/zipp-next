@@ -6,9 +6,9 @@
 		canAssets,
 		hasAgent,
 		isAdmin,
-		navHref,
 		visibleNav,
 	} from '../core/access';
+	import { navHref } from '../core/paths';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import SiteSwitch from './SiteSwitch.svelte';
 	import UserMenu from './UserMenu.svelte';

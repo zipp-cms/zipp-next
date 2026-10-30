@@ -30,6 +30,29 @@
 
 	let panel = $state<HTMLElement>();
 	$effect(() => panel?.focus());
+
+	const FOCUSABLE =
+		'a[href], button:not(:disabled), input:not(:disabled), ' +
+		'select:not(:disabled), textarea:not(:disabled), ' +
+		'[tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
+
+	/** Tab stays in the flyout, it is modal: from the last to the first. */
+	function onkeydown(e: KeyboardEvent) {
+		if (e.key !== 'Tab' || !panel) return;
+		const all = [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+			el => el.offsetParent !== null,
+		);
+		if (!all.length) return;
+		const [first, last] = [all[0], all[all.length - 1]];
+		const at = document.activeElement;
+		if (e.shiftKey && (at === first || at === panel)) {
+			e.preventDefault();
+			last.focus();
+		} else if (!e.shiftKey && at === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
 </script>
 
 <div class="backdrop" role="presentation" onclick={onclose}></div>
@@ -42,6 +65,7 @@
 	tabindex="-1"
 	bind:this={panel}
 	use:layer={onclose}
+	{onkeydown}
 >
 	<div class="bar">
 		{#if bar.content}

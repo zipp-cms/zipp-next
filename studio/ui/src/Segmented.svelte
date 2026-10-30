@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends string | null">
-	import type { Snippet } from 'svelte';
+	import { tick, type Snippet } from 'svelte';
 
 	/**
 	 * A few choices side by side, one is on: the tabs of an entry, Write
@@ -22,6 +22,25 @@
 		tabs?: boolean;
 		item?: Snippet<[{ value: T; label: string }]>;
 	} = $props();
+
+	/**
+	 * One stop for Tab, the chosen one; the arrow keys choose the one next
+	 * to it, like radios and tabs do.
+	 */
+	function onkeydown(e: KeyboardEvent) {
+		const by = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[
+			e.key
+		];
+		if (!by) return;
+		e.preventDefault();
+		const i = options.findIndex(o => o.value === value);
+		const next = options[(i + by + options.length) % options.length];
+		onchange(next.value);
+		const group = (e.currentTarget as HTMLElement).parentElement;
+		tick().then(() =>
+			group?.querySelector<HTMLElement>('[tabindex="0"]')?.focus(),
+		);
+	}
 </script>
 
 <div
@@ -36,7 +55,9 @@
 			aria-selected={tabs ? o.value === value : undefined}
 			aria-checked={tabs ? undefined : o.value === value}
 			class:on={o.value === value}
+			tabindex={o.value === value ? 0 : -1}
 			onclick={() => onchange(o.value)}
+			{onkeydown}
 		>
 			{#if item}{@render item(o)}{:else}{o.label}{/if}
 		</button>

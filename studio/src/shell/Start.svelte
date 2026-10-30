@@ -1,7 +1,8 @@
 <script module lang="ts">
 	import type { LoadProps } from '../core/router.svelte';
 	import type { Schema } from '../core/schema';
-	import { navHref, visibleNav } from '../core/access';
+	import { visibleNav } from '../core/access';
+	import { navHref } from '../core/paths';
 
 	/** `/admin`: the first page of the navigation. */
 	export function loadProps(props: { schema: Schema }, lp: LoadProps) {

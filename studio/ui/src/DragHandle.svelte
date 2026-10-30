@@ -49,7 +49,7 @@
 </script>
 
 {#if sortable.movable()}
-	<Popover bind:open width="13rem" {label}>
+	<Popover bind:open width="13rem" {label} menu>
 		{#snippet trigger()}
 			<button
 				type="button"

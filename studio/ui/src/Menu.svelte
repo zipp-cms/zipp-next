@@ -55,7 +55,7 @@
 </script>
 
 {#if items.length}
-	<Popover bind:open bind:at align="end" width="9.625rem" {label}>
+	<Popover bind:open bind:at align="end" width="9.625rem" {label} menu>
 		{#snippet trigger({ toggle, open })}
 			<button
 				type="button"

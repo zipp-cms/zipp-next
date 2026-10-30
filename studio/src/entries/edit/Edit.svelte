@@ -16,9 +16,10 @@
 <script lang="ts">
 	import { onDestroy, untrack } from 'svelte';
 	import { entryUrl, type Schema } from '../../core/schema';
-	import { entryPath, go, site } from '../../core/router.svelte';
+	import { entryPath, go } from '../../core/router.svelte';
 	import Fields from '../../fields/Fields.svelte';
-	import { can, isAdmin, sectionCrumbs } from '../../core/access';
+	import { can, isAdmin } from '../../core/access';
+	import { sectionCrumbs, sectionPath, setupPath } from '../../core/paths';
 	import { EntryEditor } from './entryEditor.svelte';
 	import { setEditing } from '../../core/editing';
 	import { flyout } from '../../core/flyout.svelte';
@@ -104,7 +105,7 @@
 		if (!confirm(`Delete ${ed.title} in all sites?`)) return;
 		if (!(await ed.remove())) return;
 		if (onclose) onclose();
-		else go('/admin/entries/' + ed.sec);
+		else go(sectionPath(ed.sec));
 	}
 
 	async function view(rev: (typeof ed.revisions)[number]) {
@@ -194,7 +195,7 @@
 						{#if isAdmin(schema)}
 							<a
 								class="layout-link"
-								href="/admin/setup/types/{comp.handle}"
+								href={setupPath('types', comp.handle)}
 							>
 								Field layout «{comp.name}»
 							</a>
