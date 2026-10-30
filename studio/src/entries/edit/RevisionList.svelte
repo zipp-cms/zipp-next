@@ -52,7 +52,11 @@
 			justify-content: space-between;
 			align-items: center;
 			padding: 0.375rem 0;
-			border-bottom: 1px solid var(--line);
+		}
+
+		// a line between them, none under the last
+		li + li {
+			border-top: 1px solid var(--line);
 		}
 	}
 
