@@ -2,9 +2,9 @@
 	import { type Schema } from '../core/schema';
 	import { listEntries, type EntryRef } from './api';
 	import { site } from '../core/router.svelte';
-	import AddButton from '../ui/AddButton.svelte';
-	import Popover from '../ui/Popover.svelte';
-	import SearchList from '../ui/SearchList.svelte';
+	import AddButton from 'zipp-ui/AddButton.svelte';
+	import Popover from 'zipp-ui/Popover.svelte';
+	import SearchList from 'zipp-ui/SearchList.svelte';
 	import { componentName } from '../core/schema';
 
 	/**

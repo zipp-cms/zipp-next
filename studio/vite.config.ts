@@ -10,8 +10,10 @@ const cargo = readFileSync(
 );
 const version = cargo.match(/^version = "(.+)"/m)![1];
 
-// breakpoints and mixins in every style block, see sass/vars.scss
-const vars = fileURLToPath(new URL('./src/sass/vars.scss', import.meta.url));
+// breakpoints and mixins in every style block of the studio, see
+// ui/vars.scss; the components of zipp-ui load them themselves
+const vars = fileURLToPath(new URL('./ui/vars.scss', import.meta.url));
+const ui = fileURLToPath(new URL('./ui/', import.meta.url));
 
 // the build is embedded in the zipp crate, in dev the api runs on
 // `example-cms serve`
@@ -20,7 +22,12 @@ export default defineConfig({
 	define: { __ZIPP_VERSION__: JSON.stringify(version) },
 	css: {
 		preprocessorOptions: {
-			scss: { additionalData: `@use '${vars}' as *;\n` },
+			scss: {
+				additionalData: (source: string, file: string) =>
+					file.startsWith(ui)
+						? source
+						: `@use '${vars}' as *;\n${source}`,
+			},
 		},
 	},
 	// /assets are the uploaded files

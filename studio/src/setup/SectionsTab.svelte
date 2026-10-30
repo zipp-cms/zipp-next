@@ -3,7 +3,7 @@
 	import { listEntries } from '../entries/api';
 	import { accessOf } from '../core/access';
 	import { accessText, visibleSections } from './setup';
-	import Table from '../ui/Table.svelte';
+	import Table from 'zipp-ui/Table.svelte';
 
 	/** The sections the role sees, with how many entries each has. */
 	let { schema }: { schema: Schema } = $props();

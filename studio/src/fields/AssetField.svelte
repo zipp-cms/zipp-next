@@ -2,10 +2,10 @@
 	import type { Asset } from '../assets/api';
 	import type { FieldOf, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
-	import AddButton from '../ui/AddButton.svelte';
+	import AddButton from 'zipp-ui/AddButton.svelte';
 	import AssetChip from '../assets/AssetChip.svelte';
 	import AssetPicker from '../assets/AssetPicker.svelte';
-	import ItemActions from '../ui/ItemActions.svelte';
+	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import Thumb from '../assets/Thumb.svelte';
 	import { chosenAssets } from '../assets/chosen.svelte';
 	import { openAsset } from '../core/flyout.svelte';

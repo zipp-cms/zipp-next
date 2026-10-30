@@ -1,5 +1,5 @@
 <script lang="ts">
-	import PageTop from '../ui/PageTop.svelte';
+	import PageTop from 'zipp-ui/PageTop.svelte';
 </script>
 
 <main class="page">

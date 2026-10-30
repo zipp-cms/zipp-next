@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Link, LinkKind, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
-	import Icon from '../../ui/Icon.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 	import { chosenAssets } from '../../assets/chosen.svelte';
 	import LinkAdd from './LinkAdd.svelte';
 	import LinkEditor from './LinkEditor.svelte';

@@ -26,7 +26,7 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
 	import type { EntryList } from '../entries/api';
-	import PageTop from '../ui/PageTop.svelte';
+	import PageTop from 'zipp-ui/PageTop.svelte';
 	import { SETUP_TABS } from '../shell/nav';
 	import { componentOf, sectionOf } from '../core/schema';
 	import ComponentPage from './ComponentPage.svelte';

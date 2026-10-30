@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { FieldOf, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
-	import AddButton from '../ui/AddButton.svelte';
-	import ItemActions from '../ui/ItemActions.svelte';
+	import AddButton from 'zipp-ui/AddButton.svelte';
+	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import { inserted, moved, removed, replaced } from '../core/list';
 
 	/** Rows of the columns of the code, like Craft's table field. */

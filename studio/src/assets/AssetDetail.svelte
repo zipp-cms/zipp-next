@@ -5,14 +5,14 @@
 	import { entryPath } from '../core/router.svelte';
 	import { canAssets } from '../core/access';
 	import { AssetForm } from './assetForm.svelte';
-	import Flyout from '../ui/Flyout.svelte';
+	import Flyout from 'zipp-ui/Flyout.svelte';
 	import { closeFlyout } from '../core/flyout.svelte';
 	import { fileSize, time, plural } from '../core/format';
-	import Icon from '../ui/Icon.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 	import ImageEditor from './image/ImageEditor.svelte';
 	import { sectionName } from '../core/schema';
 	import Thumb from './Thumb.svelte';
-	import UploadButton from '../ui/UploadButton.svelte';
+	import UploadButton from 'zipp-ui/UploadButton.svelte';
 
 	/**
 	 * A file like Craft's asset panel: the image editor, title, alt text

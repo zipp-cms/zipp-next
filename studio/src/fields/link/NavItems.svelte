@@ -1,6 +1,6 @@
 <script lang="ts">
 	import NavItems from './NavItems.svelte';
-	import Icon from '../../ui/Icon.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 	import LinkAdd from './LinkAdd.svelte';
 	import LinkEditor from './LinkEditor.svelte';
 	import LinkRow from './LinkRow.svelte';

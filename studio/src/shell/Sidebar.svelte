@@ -9,7 +9,7 @@
 		navHref,
 		visibleNav,
 	} from '../core/access';
-	import Icon from '../ui/Icon.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 	import SiteSwitch from './SiteSwitch.svelte';
 	import UserMenu from './UserMenu.svelte';
 	import { SETUP_TABS, groupIcon, groupItems } from './nav';

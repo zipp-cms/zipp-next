@@ -6,8 +6,8 @@
 		transparentEdges,
 		type Edits,
 	} from '../api';
-	import Icon from '../../ui/Icon.svelte';
-	import Segmented from '../../ui/Segmented.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
+	import Segmented from 'zipp-ui/Segmented.svelte';
 	import BackgroundPicker from './BackgroundPicker.svelte';
 	import CropStage from './CropStage.svelte';
 	import SizeOptions from './SizeOptions.svelte';

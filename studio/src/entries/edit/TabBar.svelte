@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Tab } from '../../core/schema';
-	import Segmented from '../../ui/Segmented.svelte';
+	import Segmented from 'zipp-ui/Segmented.svelte';
 
 	/**
 	 * The tabs of an entry type, like Craft's: a dot on a tab with changes,

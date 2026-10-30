@@ -2,7 +2,7 @@
 	import type { Schema } from '../core/schema';
 	import { roleName } from '../core/access';
 	import { session } from '../core/session.svelte';
-	import Icon from '../ui/Icon.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 	import { displayName } from '../users/api';
 
 	/** Who is logged in, with the role, and the logout. */

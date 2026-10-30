@@ -5,8 +5,8 @@
 	import type { Refs } from '../entries/api';
 	import BlockMenu from './BlockMenu.svelte';
 	import Fields from './Fields.svelte';
-	import ItemActions from '../ui/ItemActions.svelte';
-	import ItemCard from '../ui/ItemCard.svelte';
+	import ItemActions from 'zipp-ui/ItemActions.svelte';
+	import ItemCard from 'zipp-ui/ItemCard.svelte';
 	import { blockMissing, blockSummary, focus } from './blocks.svelte';
 	import { inserted, isFull, moved, removed } from '../core/list';
 	import { componentOf } from '../core/schema';

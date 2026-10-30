@@ -10,7 +10,7 @@
 </script>
 
 <script lang="ts">
-	import PageTop from '../ui/PageTop.svelte';
+	import PageTop from 'zipp-ui/PageTop.svelte';
 	import type { Schema } from '../core/schema';
 
 	/** A markdown file of the code, read only. */

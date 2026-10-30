@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Component, Field, Schema } from '../core/schema';
 	import { isAdmin } from '../core/access';
-	import Icon from '../ui/Icon.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 
 	/**
 	 * The label of a field: a dot when the draft changed it, required,

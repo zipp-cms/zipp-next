@@ -1,6 +1,6 @@
 <script lang="ts">
-	import PageTop from '../../ui/PageTop.svelte';
-	import Icon from '../../ui/Icon.svelte';
+	import PageTop from 'zipp-ui/PageTop.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 	import { time } from '../../core/format';
 	import type { EntryEditor, May } from './entryEditor.svelte';
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Asset } from './api';
 	import Thumb from './Thumb.svelte';
-	import Icon from '../ui/Icon.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 
 	/** Thumbnails, files show their name. */
 	let {

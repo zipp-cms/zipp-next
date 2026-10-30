@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { Link } from '../../core/schema';
-	import Icon from '../../ui/Icon.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 	import { LINK_ICONS } from './link';
 
 	/**

@@ -54,20 +54,23 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   field kind, `registry.ts` maps the kinds, `rich/` the rich text),
   `setup/`, `ai/`, `users/`, `auth/`. An area has its `api.ts` (the
   requests of its server area), its pages and components and their
-  logic in `.ts`. What several areas use: `ui/` (components without an
-  area, the icons), `core/` (`client.ts` sends requests and reads
+  logic in `.ts`. What several areas use: `zipp-ui` (`studio/ui`, the
+  components without an area and the icons, a package that plugins use
+  too), `core/` (`client.ts` sends requests and reads
   streams, `schema.ts` the schema's types and lookups, `router` the
   pages, the path and the site, `access`, `format`, `list`, `busy`, `flyout`,
   `synced`), `shell/`
-  (the app with its pages, the sidebar). An area imports from `ui/`, `core/` and other areas'
-  `api.ts` and components; `ui/` and `core/` import no area. Tokens and
+  (the app with its pages, the sidebar). An area imports from `zipp-ui`,
+  `core/` and other areas' `api.ts` and components; `core/` imports no
+  area, `zipp-ui` nothing of the studio (plugins bundle it). Tokens and
   shared classes are in `sass/main.scss`, breakpoints and mixins in
-  `sass/vars.scss` (every style block has them, like zandi).
+  `ui/vars.scss` (every style block of the studio has them, like zandi;
+  a component of zipp-ui uses them with `@use '../vars' as *`).
 
 ## The studio
 
 - One component per piece of UI, one look. Before building something,
-  use what `ui/` and the areas have:
+  use what `zipp-ui` and the areas have:
   - overlays: `Flyout` (the panel from the right, also for pickers),
     `Popover` (menus, pickers under their button; Escape and a click
     outside close it, `layers.ts` closes only the top one), `Menu` (⋯),

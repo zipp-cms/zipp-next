@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { LinkKind } from '../../core/schema';
-	import AddGroup from '../../ui/AddGroup.svelte';
+	import AddGroup from 'zipp-ui/AddGroup.svelte';
 	import { LINK_NAMES } from './link';
 
 	/** Adds a link of one of the kinds: `+ Entry | URL`. */

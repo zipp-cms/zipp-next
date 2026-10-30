@@ -1,4 +1,6 @@
 <script>
+	import Table from 'zipp-ui/Table.svelte';
+
 	/**
 	 * The SEO of a section on its setup page: the defaults of the code for
 	 * the section and its entry types, read only like all of the setup.
@@ -23,47 +25,46 @@
 {#if pages}
 	<div class="card seo">
 		<h2>SEO</h2>
-		<table>
-			<thead>
-				<tr>
-					<th></th>
-					<th>Title</th>
-					<th>Description</th>
-					<th>Image from</th>
-					<th>Robots</th>
-					<th>Sitemap</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each rows as r (r.name)}
-					<tr>
-						<td>{r.name}</td>
-						<td>
-							<code>{val(r.d?.titlePattern)}</code>
-							{#if r.d?.titleFrom}
-								<br />from <code>{r.d.titleFrom}</code>
-							{/if}
-						</td>
-						<td>
-							{#if r.d?.descriptionFrom}
-								from <code>{r.d.descriptionFrom}</code>
-							{:else}
-								{val(r.d?.description)}
-							{/if}
-						</td>
-						<td><code>{val(r.d?.imageFrom)}</code></td>
-						<td>{val(r.d?.robots)}</td>
-						<td>{r.d?.sitemap === false ? 'No' : 'Yes'}</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+		<Table
+			{rows}
+			key={r => r.name}
+			columns={[
+				'',
+				'Title',
+				'Description',
+				'Image from',
+				'Robots',
+				'Sitemap',
+			]}
+		>
+			{#snippet row(r)}
+				<td>{r.name}</td>
+				<td>
+					<code>{val(r.d?.titlePattern)}</code>
+					{#if r.d?.titleFrom}
+						<br />
+						from
+						<code>{r.d.titleFrom}</code>
+					{/if}
+				</td>
+				<td>
+					{#if r.d?.descriptionFrom}
+						from <code>{r.d.descriptionFrom}</code>
+					{:else}
+						{val(r.d?.description)}
+					{/if}
+				</td>
+				<td><code>{val(r.d?.imageFrom)}</code></td>
+				<td>{val(r.d?.robots)}</td>
+				<td>{r.d?.sitemap === false ? 'No' : 'Yes'}</td>
+			{/snippet}
+		</Table>
 		<p class="muted">
-			The defaults of the code, from the SEO plugin. Editors override
-			them per site in the
+			The defaults of the code, from the SEO plugin. Editors override them
+			per site in the
 			<a href="/admin/entries/seoSettings">SEO settings</a>
-			(Per section and entry type), an entry's SEO field overrides both;
-			empty values come from the SEO settings.
+			(Per section and entry type), an entry's SEO field overrides both; empty
+			values come from the SEO settings.
 		</p>
 	</div>
 {/if}
@@ -72,29 +73,6 @@
 	.seo {
 		margin-bottom: 1.25rem;
 		overflow-x: auto;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.875rem;
-	}
-
-	th {
-		padding: 0.375rem 0.5rem;
-		text-align: left;
-		font-weight: 600;
-	}
-
-	td {
-		padding: 0.375rem 0.5rem;
-		border-top: 1px solid var(--line);
-		vertical-align: top;
-	}
-
-	code {
-		font-size: 0.8125rem;
-		color: var(--muted);
 	}
 
 	.muted {

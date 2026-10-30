@@ -28,6 +28,26 @@ studio loads the module from `/_fields/<type>.js` when a field needs it.
 `crates/zipp-button-group` is such a crate: Craft's button group, options
 in colors.
 
+## The studio's components
+
+The editors of field types and the modules of plugins look like the
+studio with `zipp-ui` (`studio/ui`), the components the studio itself is
+built of: `Table`, `Segmented`, `Popover`, `Flyout`, `ItemCard`,
+`ItemActions`, `AddGroup`, `SearchInput`, `Icon` and more. A module
+bundles them like its Svelte, they look right because they only use the
+studio's CSS variables, which are on the page:
+
+```js
+import Table from 'zipp-ui/Table.svelte';
+```
+
+The crates of this repository link it (`"zipp-ui":
+"file:../../../studio/ui"`), so a change of a component reaches them
+with their next build; others will get it from npm with the version of
+zipp. The components are scss: the module's `vite.config.js` needs
+`svelte({ preprocess: vitePreprocess() })` and `sass`, like
+`crates/zipp-seo/studio`.
+
 `host` is what the studio lends a module: `host.request(method, path,
 body)` calls the api as the logged in user, `host.mountField(target, {
 field, value, onchange })` mounts one of the studio's own fields (images

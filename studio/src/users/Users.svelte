@@ -7,9 +7,9 @@
 </script>
 
 <script lang="ts">
-	import PageTop from '../ui/PageTop.svelte';
-	import Icon from '../ui/Icon.svelte';
-	import Table from '../ui/Table.svelte';
+	import PageTop from 'zipp-ui/PageTop.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
+	import Table from 'zipp-ui/Table.svelte';
 	import type { Schema } from '../core/schema';
 	import type { Account } from './api';
 	import { displayName } from './api';

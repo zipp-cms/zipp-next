@@ -1,5 +1,5 @@
 <script lang="ts">
-	import PageTop from '../ui/PageTop.svelte';
+	import PageTop from 'zipp-ui/PageTop.svelte';
 
 	/** A page that couldn't load: its error, and a way back. */
 	let { loadError }: { loadError: unknown } = $props();

@@ -33,14 +33,14 @@
 
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import SearchInput, { SEARCH_DELAY_MS } from '../ui/SearchInput.svelte';
+	import SearchInput, { SEARCH_DELAY_MS } from 'zipp-ui/SearchInput.svelte';
 	import SiteBadges from './SiteBadges.svelte';
-	import PageTop from '../ui/PageTop.svelte';
+	import PageTop from 'zipp-ui/PageTop.svelte';
 	import { can, sectionCrumbs } from '../core/access';
 	import { entryUrl, type Schema } from '../core/schema';
 	import { deleteEntry, listEntries, moveEntry, type Entry } from './api';
-	import Menu, { type MenuItem } from '../ui/Menu.svelte';
-	import Icon from '../ui/Icon.svelte';
+	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 	import { date, plural } from '../core/format';
 	import { depth, dropTo, dropWhere, isBelow, type Where } from './tree';
 	import { componentName, sectionOf } from '../core/schema';

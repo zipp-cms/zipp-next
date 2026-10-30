@@ -474,7 +474,7 @@ ol.plain {
 	list-style: none;
 }
 
-// a box that floats next to what opened it, see ui/Popover.svelte
+// a box that floats next to what opened it, see zipp-ui's Popover.svelte
 .popup {
 	position: absolute;
 	z-index: var(--z-popup);

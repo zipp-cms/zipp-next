@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { FieldOf, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
-	import Segmented from '../ui/Segmented.svelte';
+	import Segmented from 'zipp-ui/Segmented.svelte';
 
 	/**
 	 * One of the options: up to three as buttons, more as a select. A

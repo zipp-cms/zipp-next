@@ -4,7 +4,7 @@
 	import type { EntryRef, Refs } from '../entries/api';
 	import EntryChip from '../entries/EntryChip.svelte';
 	import EntrySearch from '../entries/EntrySearch.svelte';
-	import ItemActions from '../ui/ItemActions.svelte';
+	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import { inserted, isFull, moved, removed } from '../core/list';
 
 	/** Entries in an order, each a chip that opens it. */

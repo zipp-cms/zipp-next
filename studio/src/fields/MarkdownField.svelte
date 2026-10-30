@@ -3,7 +3,7 @@
 	import { untrack } from 'svelte';
 	import type { FieldOf, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
-	import Segmented from '../ui/Segmented.svelte';
+	import Segmented from 'zipp-ui/Segmented.svelte';
 
 	/**
 	 * Markdown: shown rendered when there is text, so it reads like docs,

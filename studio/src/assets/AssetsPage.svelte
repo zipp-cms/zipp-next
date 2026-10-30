@@ -9,15 +9,15 @@
 
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import PageTop from '../ui/PageTop.svelte';
+	import PageTop from 'zipp-ui/PageTop.svelte';
 	import { listAssets, uploadAssets, type Asset } from './api';
 	import { type Schema } from '../core/schema';
 	import { canAssets } from '../core/access';
 	import AssetGrid from './AssetGrid.svelte';
 	import AssetDetail from './AssetDetail.svelte';
-	import SearchInput, { SEARCH_DELAY_MS } from '../ui/SearchInput.svelte';
+	import SearchInput, { SEARCH_DELAY_MS } from 'zipp-ui/SearchInput.svelte';
 	import { Busy } from '../core/busy.svelte';
-	import UploadButton from '../ui/UploadButton.svelte';
+	import UploadButton from 'zipp-ui/UploadButton.svelte';
 
 	let { schema, first }: { schema: Schema; first: Asset[] } = $props();
 	const canEdit = $derived(canAssets(schema, 'edit'));

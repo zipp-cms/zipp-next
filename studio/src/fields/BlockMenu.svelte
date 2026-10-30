@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { Component } from '../core/schema';
-	import AddGroup from '../ui/AddGroup.svelte';
-	import Icon from '../ui/Icon.svelte';
-	import Popover from '../ui/Popover.svelte';
-	import SearchList from '../ui/SearchList.svelte';
+	import AddGroup from 'zipp-ui/AddGroup.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
+	import Popover from 'zipp-ui/Popover.svelte';
+	import SearchList from 'zipp-ui/SearchList.svelte';
 
 	/**
 	 * Adds a block: as a bar with the types (the first ones as buttons,

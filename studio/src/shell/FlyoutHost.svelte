@@ -6,7 +6,7 @@
 	import { type Schema } from '../core/schema';
 	import Edit from '../entries/edit/Edit.svelte';
 	import { EntryEditor } from '../entries/edit/entryEditor.svelte';
-	import Flyout from '../ui/Flyout.svelte';
+	import Flyout from 'zipp-ui/Flyout.svelte';
 
 	/**
 	 * The entry or asset a field opened, over the page: loaded when it

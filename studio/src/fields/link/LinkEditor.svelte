@@ -2,12 +2,12 @@
 	import type { Asset } from '../../assets/api';
 	import type { Link, LinkKind, Schema } from '../../core/schema';
 	import type { EntryRef, Refs } from '../../entries/api';
-	import AddButton from '../../ui/AddButton.svelte';
+	import AddButton from 'zipp-ui/AddButton.svelte';
 	import AssetChip from '../../assets/AssetChip.svelte';
 	import AssetPicker from '../../assets/AssetPicker.svelte';
 	import EntrySearch from '../../entries/EntrySearch.svelte';
-	import Icon from '../../ui/Icon.svelte';
-	import Segmented from '../../ui/Segmented.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
+	import Segmented from 'zipp-ui/Segmented.svelte';
 	import { chosenAssets } from '../../assets/chosen.svelte';
 	import { sectionOf } from '../../core/schema';
 	import {

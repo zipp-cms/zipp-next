@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { assetUrl, type Asset } from './api';
-	import Icon from '../ui/Icon.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 
 	/** A square tile of a file: the image, or an icon with its name. */
 	let { asset }: { asset: Asset } = $props();

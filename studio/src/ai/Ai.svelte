@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy, untrack } from 'svelte';
 	import type { Schema } from '../core/schema';
-	import PageTop from '../ui/PageTop.svelte';
+	import PageTop from 'zipp-ui/PageTop.svelte';
 	import { hasAgent } from '../core/access';
 	import { Chat } from './chat.svelte';
 	import { markdown } from '../core/markdown';

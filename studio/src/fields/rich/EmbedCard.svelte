@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Icon from '../../ui/Icon.svelte';
-	import ItemActions from '../../ui/ItemActions.svelte';
-	import ItemCard from '../../ui/ItemCard.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
+	import ItemActions from 'zipp-ui/ItemActions.svelte';
+	import ItemCard from 'zipp-ui/ItemCard.svelte';
 
 	/**
 	 * Something in a rich text that isn't text: the card of a block, with

@@ -2,9 +2,9 @@
 	import { listAssets, uploadAssets, type Asset } from './api';
 	import AssetGrid from './AssetGrid.svelte';
 	import { Busy } from '../core/busy.svelte';
-	import Flyout from '../ui/Flyout.svelte';
-	import SearchInput from '../ui/SearchInput.svelte';
-	import UploadButton from '../ui/UploadButton.svelte';
+	import Flyout from 'zipp-ui/Flyout.svelte';
+	import SearchInput from 'zipp-ui/SearchInput.svelte';
+	import UploadButton from 'zipp-ui/UploadButton.svelte';
 
 	/** The asset library in a flyout, to pick assets or upload new ones. */
 	let {

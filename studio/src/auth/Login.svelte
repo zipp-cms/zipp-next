@@ -6,8 +6,8 @@
 <script lang="ts">
 	import { session } from '../core/session.svelte';
 	import { router } from '../core/router.svelte';
-	import Icon from '../ui/Icon.svelte';
-	import LogoIcon from '../ui/LogoIcon.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
+	import LogoIcon from 'zipp-ui/LogoIcon.svelte';
 	import logo from '../logo/full.svg';
 
 	/**

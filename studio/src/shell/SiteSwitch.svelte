@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
 	import { setSite, site } from '../core/router.svelte';
-	import Icon from '../ui/Icon.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 
 	/** The site the studio edits, and where it runs; the box opens a choice. */
 	let { schema }: { schema: Schema } = $props();

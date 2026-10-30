@@ -3,7 +3,7 @@
 	import { describeField } from '../fields/fieldKind';
 	import { gqlType, usedIn } from './setup';
 	import TypePreview from './TypePreview.svelte';
-	import Table from '../ui/Table.svelte';
+	import Table from 'zipp-ui/Table.svelte';
 
 	/**
 	 * An entry type or block: its editor as editors see it, its fields

@@ -6,7 +6,7 @@
 	import type { EntryList } from '../entries/api';
 	import { accessOf, isAdmin } from '../core/access';
 	import PluginCards from './PluginCards.svelte';
-	import Table from '../ui/Table.svelte';
+	import Table from 'zipp-ui/Table.svelte';
 	import { componentOf, sectionOf } from '../core/schema';
 
 	/**

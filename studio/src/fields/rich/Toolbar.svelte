@@ -2,8 +2,8 @@
 	import type { Editor } from '@tiptap/core';
 	import type { Component, Link, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
-	import Icon from '../../ui/Icon.svelte';
-	import Popover from '../../ui/Popover.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
+	import Popover from 'zipp-ui/Popover.svelte';
 	import LinkEditor from '../link/LinkEditor.svelte';
 	import { BUTTON_LINKS, opensInNewTab } from '../link/link';
 	import {

@@ -4,8 +4,8 @@
 	import type { Refs } from '../../entries/api';
 	import LinkInput from '../link/LinkInput.svelte';
 	import EmbedCard from './EmbedCard.svelte';
-	import AddButton from '../../ui/AddButton.svelte';
-	import ItemActions from '../../ui/ItemActions.svelte';
+	import AddButton from 'zipp-ui/AddButton.svelte';
+	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import { BUTTON_LINKS, linkLabel, linkTarget } from '../link/link';
 	import { moved, removed } from '../../core/list';
 	import { synced } from '../../core/synced.svelte';

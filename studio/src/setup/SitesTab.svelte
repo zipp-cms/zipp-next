@@ -2,7 +2,7 @@
 	import type { Schema } from '../core/schema';
 	import { isAdmin, roleName } from '../core/access';
 	import { accessText, visibleRoles, visibleSections } from './setup';
-	import Table from '../ui/Table.svelte';
+	import Table from 'zipp-ui/Table.svelte';
 
 	/** The sites, the image transforms and the roles of the code. */
 	let { schema }: { schema: Schema } = $props();

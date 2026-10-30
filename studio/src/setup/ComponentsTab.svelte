@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
 	import { gqlType, usedIn, visibleEntryTypes } from './setup';
-	import Table from '../ui/Table.svelte';
+	import Table from 'zipp-ui/Table.svelte';
 
 	/** The entry types or the blocks, with where they are used. */
 	let { schema, tab }: { schema: Schema; tab: 'types' | 'blocks' } = $props();
