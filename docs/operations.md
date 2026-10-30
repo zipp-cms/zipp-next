@@ -25,6 +25,16 @@ A login lasts 30 days; the studio renews it when it opens and less than
 session, a new password (`user`) ends all of the user's. After 10 wrong
 passwords an email waits 15 minutes.
 
+## Users
+
+Admins manage the users in the studio (Users): a page per user with
+name, email, role (and what it may do, from the code), a new password
+and the sessions, which "Log out everywhere" ends. Every user opens
+their own account from the user menu: name, email and password, not the
+role; a new password of one's own needs the current one and logs out
+the other browsers. zipp sends no mails, an admin tells a new user the
+password.
+
 ## serve
 
 | Option | Environment | |

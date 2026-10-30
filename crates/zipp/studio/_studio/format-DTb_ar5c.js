@@ -1,0 +1,1 @@
+function a(t){return new Date(t).toLocaleString()}function r(t){return new Date(t).toLocaleDateString()}function i(t){return t.charAt(0).toUpperCase()+t.slice(1)}function o(t){return t<1024*1024?`${Math.max(1,Math.round(t/1024))} KB`:`${(t/1024/1024).toFixed(1)} MB`}function u(t,e,n){return`${t} ${t===1?e:n}`}export{i as c,r as d,o as f,u as p,a as t};

@@ -417,6 +417,12 @@ label.stacked {
 	gap: 0.3125rem;
 	font-size: var(--fs-sm);
 	font-weight: 600;
+
+	// the label is small and bold, not what is typed or its error
+	:is(input, select, textarea, .error) {
+		font-size: var(--fs-base);
+		font-weight: 400;
+	}
 }
 
 // the line between groups of a toolbar

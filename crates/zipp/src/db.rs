@@ -143,6 +143,11 @@ const MIGRATIONS: &[&str] = &[
 	ALTER TABLE sessions ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0;
 	UPDATE sessions SET expires_at = created_at + 1000 * 60 * 60 * 24 * 30;
 "#,
+	// the account of a user: a name, when they logged in last
+	r#"
+	ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT '';
+	ALTER TABLE users ADD COLUMN last_login_at INTEGER;
+"#,
 ];
 
 #[derive(Clone)]

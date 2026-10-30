@@ -358,9 +358,13 @@ pub async fn login(db: &Db, email: &str, password: &str) -> Result<i64> {
 	Ok(user_id)
 }
 
-/// A new session of a user. Ended sessions go.
+/// A new session of a user, a login. Ended sessions go.
 pub fn new_session(conn: &Connection, user_id: i64) -> Result<Session> {
 	conn.execute("DELETE FROM sessions WHERE expires_at < ?1", [now()])?;
+	conn.execute(
+		"UPDATE users SET last_login_at = ?1 WHERE id = ?2",
+		params![now(), user_id],
+	)?;
 	let session = Session {
 		token: random_token(),
 		user_id,
@@ -377,6 +381,61 @@ pub fn new_session(conn: &Connection, user_id: i64) -> Result<Session> {
 pub fn end_session(conn: &Connection, token: &str) -> Result<()> {
 	conn.execute("DELETE FROM sessions WHERE token = ?1", [token])?;
 	Ok(())
+}
+
+/// Logs a user out everywhere, except in the session `keep`.
+pub fn end_sessions(
+	conn: &Connection,
+	user_id: i64,
+	keep: Option<&str>,
+) -> Result<()> {
+	conn.execute(
+		"DELETE FROM sessions WHERE user_id = ?1 AND token IS NOT ?2",
+		params![user_id, keep],
+	)?;
+	Ok(())
+}
+
+/// The bcrypt hash of a password; it takes a while, not on the async
+/// workers and not with the database locked.
+pub async fn hash_password(password: String) -> Result<String> {
+	tokio::task::spawn_blocking(move || bcrypt::hash(password, COST))
+		.await
+		.map_err(|e| Error::Internal(e.to_string()))?
+		.map_err(|e| Error::Internal(e.to_string()))
+}
+
+/// Whether the password is the one of the user, see [`hash_password`].
+pub async fn password_matches(
+	db: &Db,
+	user_id: i64,
+	password: &str,
+) -> Result<bool> {
+	let hash: String = db.conn().query_row(
+		"SELECT password_hash FROM users WHERE id = ?1",
+		[user_id],
+		|r| r.get(0),
+	)?;
+	let password = password.to_string();
+	tokio::task::spawn_blocking(move || {
+		bcrypt::verify(password, &hash).unwrap_or(false)
+	})
+	.await
+	.map_err(|e| Error::Internal(e.to_string()))
+}
+
+/// A new password: the user is logged out everywhere, except in `keep`.
+pub fn set_password_hash(
+	conn: &Connection,
+	user_id: i64,
+	hash: &str,
+	keep: Option<&str>,
+) -> Result<()> {
+	conn.execute(
+		"UPDATE users SET password_hash = ?1 WHERE id = ?2",
+		params![hash, user_id],
+	)?;
+	end_sessions(conn, user_id, keep)
 }
 
 /// Whether the email may try again, see [`MAX_FAILS`].

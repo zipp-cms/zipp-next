@@ -166,7 +166,6 @@
 	input:not([type='checkbox']) {
 		padding: 0.5625rem 0.75rem;
 		font-size: var(--fs-lg);
-		font-weight: 400;
 	}
 
 	// the eye inside the input, on its right

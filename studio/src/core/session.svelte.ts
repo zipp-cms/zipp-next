@@ -1,7 +1,13 @@
 import { ApiError, isSessionError, request, setToken, token } from './client';
 
 /** A user of the studio, `role` null is an admin. */
-export type User = { id: number; email: string; role: string | null };
+export type User = {
+	id: number;
+	email: string;
+	/** empty when it isn't set */
+	name: string;
+	role: string | null;
+};
 
 type Authenticated = {
 	session: { token: string; expiresAt: number };
