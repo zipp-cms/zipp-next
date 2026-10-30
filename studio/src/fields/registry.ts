@@ -5,6 +5,7 @@ import AssetField from './AssetField.svelte';
 import BlocksField from './BlocksField.svelte';
 import CheckboxesField from './CheckboxesField.svelte';
 import CustomField from './CustomField.svelte';
+import DateField from './DateField.svelte';
 import DropdownField from './DropdownField.svelte';
 import GroupField from './GroupField.svelte';
 import LinkField from './LinkField.svelte';
@@ -41,6 +42,7 @@ const FIELDS: { [K in Field['kind']]: Component<FieldProps<FieldOf<K>>> } = {
 	link: LinkField,
 	group: GroupField,
 	markdown: MarkdownField,
+	date: DateField,
 	richText: RichTextField,
 	texts: TextsField,
 	dropdown: DropdownField,
@@ -73,6 +75,7 @@ const HOSTED: {
 	checkboxes: CheckboxesField,
 	table: TableField,
 	markdown: MarkdownField,
+	date: DateField,
 };
 
 /** The component of a field in a plugin's module, null if it can't be. */

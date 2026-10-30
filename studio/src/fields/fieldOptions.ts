@@ -59,6 +59,14 @@ export function fieldOptions(
 			add('Min', or(f.min));
 			add('Max', or(f.max));
 			break;
+		case 'date':
+			add(
+				'Value',
+				f.time
+					? 'A day and time, 2026-11-14T20:00'
+					: 'A day, 2026-11-14',
+			);
+			break;
 		case 'relation':
 			add('Entry types', '', components(schema, f.types));
 			add('Max entries', or(f.max, 'Any'));

@@ -392,9 +392,10 @@ impl Schema {
 	/// a new one has to say.
 	pub fn index_kind(&self, kind: &FieldKind) -> Option<IndexKind> {
 		match kind {
-			FieldKind::Text { .. } | FieldKind::Dropdown { .. } => {
-				Some(IndexKind::Text)
-			}
+			// a date sorts as text, `2026-11-14T20:00`
+			FieldKind::Text { .. }
+			| FieldKind::Dropdown { .. }
+			| FieldKind::Date { .. } => Some(IndexKind::Text),
 			FieldKind::Number { .. } | FieldKind::Boolean => {
 				Some(IndexKind::Number)
 			}

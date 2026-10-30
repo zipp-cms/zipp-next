@@ -123,6 +123,7 @@ pub(super) fn collect_relations(
 			| FieldKind::Number { .. }
 			| FieldKind::Boolean
 			| FieldKind::Markdown
+			| FieldKind::Date { .. }
 			| FieldKind::Checkboxes { .. }
 			| FieldKind::Table { .. }
 			| FieldKind::Texts { .. }

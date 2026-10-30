@@ -40,6 +40,8 @@ export type FieldKind =
 	| { kind: 'link'; to: LinkKind[]; labels: boolean; newTab: boolean }
 	| { kind: 'group'; component: string }
 	| { kind: 'markdown' }
+	/** `2026-11-14`, with `time` `2026-11-14T20:00`, no time zone */
+	| { kind: 'date'; time: boolean }
 	/** texts of the frontend by key, [key, text of the code] */
 	| { kind: 'texts'; keys: [string, string][] }
 	| { kind: 'dropdown'; options: { value: string; label: string }[] }
@@ -164,6 +166,7 @@ export type ValueOf = {
 	link: Link;
 	group: Values;
 	markdown: string;
+	date: string;
 	/** the own texts by key */
 	texts: Record<string, string>;
 	dropdown: string;

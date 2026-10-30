@@ -1023,13 +1023,21 @@
         "fields": [
           {
             "handle": "date",
-            "label": "Date (YYYY-MM-DD)",
+            "label": "Date",
             "required": true,
             "indexed": true,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "date",
+            "time": false
+          },
+          {
+            "handle": "doors",
+            "label": "Doors open",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "date",
+            "time": true
           },
           {
             "handle": "city",
@@ -2592,13 +2600,21 @@
         "fields": [
           {
             "handle": "date",
-            "label": "Date (YYYY-MM-DD)",
+            "label": "Date",
             "required": true,
             "indexed": true,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "date",
+            "time": false
+          },
+          {
+            "handle": "doors",
+            "label": "Doors open",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "date",
+            "time": true
           },
           {
             "handle": "city",

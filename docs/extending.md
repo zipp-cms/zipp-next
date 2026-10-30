@@ -35,7 +35,8 @@ in colors.
 The editors of field types and the modules of plugins look like the
 studio with `zipp-ui` (`studio/ui`), the components the studio itself is
 built of: `Table`, `Segmented`, `Popover`, `Flyout`, `ItemCard`,
-`ItemActions`, `AddGroup`, `SearchInput`, `Icon` and more. A module
+`ItemActions`, `AddGroup`, `SearchInput`, `DatePicker` (a day, with
+`time` its time, like the date field), `Icon` and more. A module
 bundles them like its Svelte; they look right because they use the
 studio's CSS variables and some of its global classes, which are on the
 page (listed in `studio/ui/README.md`, they are part of the contract).
@@ -55,8 +56,8 @@ zipp. The components are scss: the module's `vite.config.js` needs
 `host` is what the studio lends a module: `host.request(method, path,
 body)` calls the api as the logged in user, `host.mountField(target, {
 field, value, onchange })` mounts one of the studio's own fields (images
-and files, texts, dropdowns, checkboxes, tables, markdown), like the image
-picker.
+and files, texts, dropdowns, checkboxes, tables, markdown, dates), like
+the image picker.
 
 ## Plugins
 

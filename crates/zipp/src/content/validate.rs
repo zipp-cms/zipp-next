@@ -91,6 +91,16 @@ pub(super) fn validate_value(
 		}
 		(FieldKind::Boolean, Value::Bool(_)) => {}
 		(FieldKind::Markdown, Value::String(_)) => {}
+		(FieldKind::Date { time }, Value::String(s)) => {
+			if !valid_date(s, *time) {
+				let want = if *time {
+					"a date and time like 2026-11-14T20:00"
+				} else {
+					"a date like 2026-11-14"
+				};
+				error(errors, path, want);
+			}
+		}
 		(FieldKind::Checkboxes { options }, Value::Array(values)) => {
 			let mut out: Vec<Value> = vec![];
 			for v in values {
@@ -267,6 +277,41 @@ pub(super) fn validate_block(
 		out["enabled"] = false.into();
 	}
 	out
+}
+
+/// Whether a date field may hold this: `2026-11-14`, with `time`
+/// `2026-11-14T20:00`, a day the calendar has.
+pub(crate) fn valid_date(s: &str, time: bool) -> bool {
+	let num = |r: std::ops::Range<usize>| -> Option<u32> {
+		let p = s.get(r)?;
+		p.bytes().all(|b| b.is_ascii_digit()).then(|| p.parse().ok())?
+	};
+	let len = if time { 16 } else { 10 };
+	if s.len() != len || &s[4..5] != "-" || &s[7..8] != "-" {
+		return false;
+	}
+	let (Some(y), Some(m), Some(d)) = (num(0..4), num(5..7), num(8..10))
+	else {
+		return false;
+	};
+	let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+	let days = match m {
+		2 if leap => 29,
+		2 => 28,
+		4 | 6 | 9 | 11 => 30,
+		1..=12 => 31,
+		_ => return false,
+	};
+	if d == 0 || d > days {
+		return false;
+	}
+	if !time {
+		return true;
+	}
+	&s[10..11] == "T"
+		&& &s[13..14] == ":"
+		&& num(11..13).is_some_and(|h| h < 24)
+		&& num(14..16).is_some_and(|min| min < 60)
 }
 
 /// A url a link may have: the web, or a path or anchor of the site. No

@@ -132,6 +132,8 @@ pub(super) fn content_field(
 		_ => None,
 	};
 	let ty = match &field.kind {
+		// as it is stored, `2026-11-14` or `2026-11-14T20:00`
+		FieldKind::Date { .. } => TypeRef::named(TypeRef::STRING),
 		FieldKind::Custom { .. } => {
 			match custom.as_ref().map(|(t, _)| t.graphql()) {
 				Some(GraphqlType::Object { name, .. }) => TypeRef::named(name),
@@ -289,6 +291,7 @@ pub(super) fn content_field(
 				FieldKind::Text { .. }
 				| FieldKind::Number { .. }
 				| FieldKind::Boolean
+				| FieldKind::Date { .. }
 				| FieldKind::Dropdown { .. } => match value {
 					Value::Null => Ok(None),
 					v => Ok(Some(FieldValue::value(GqlValue::from_json(v)?))),

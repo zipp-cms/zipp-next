@@ -150,3 +150,29 @@ fn index_values_of_entry() {
 	assert_eq!(vals[0].text.as_deref(), Some("Bern"));
 	assert_eq!(vals[1].num, Some(12.5));
 }
+
+#[test]
+fn dates_are_days_of_the_calendar() {
+	use super::valid_date;
+	assert!(valid_date("2026-11-14", false));
+	assert!(valid_date("2028-02-29", false));
+	assert!(!valid_date("2026-02-29", false));
+	assert!(!valid_date("2026-13-01", false));
+	assert!(!valid_date("2026-11-14T20:00", false));
+	assert!(!valid_date("14.11.2026", false));
+	assert!(valid_date("2026-11-14T20:00", true));
+	assert!(!valid_date("2026-11-14T24:00", true));
+	assert!(!valid_date("2026-11-14", true));
+
+	let s = crate::schema::tests::site().block(
+		"d",
+		"D",
+		[Field::date("day"), Field::date("at").time()],
+	);
+	let comp = s.get("d").unwrap();
+	let ok = json!({ "day": "2026-11-14", "at": "2026-11-14T20:00" });
+	assert!(validate(&s, comp, &ok).is_ok());
+	let errs = validate(&s, comp, &json!({ "day": "2026-11-14T20:00" }))
+		.unwrap_err();
+	assert_eq!(errs[0].path, "day");
+}

@@ -77,11 +77,12 @@ pub struct Dates {
 }
 
 /// The SQL of an entry `e` whose dates make it live now.
-/// Now in milliseconds like `db::now`, `strftime('%s')` has seconds.
+/// Now in whole milliseconds like `db::now` (`strftime('%s')` has
+/// seconds, julianday's float rounds below the millisecond it is).
 pub(crate) const LIVE_DATES: &str = "(e.post_date IS NULL \
-	OR e.post_date <= (julianday('now') - 2440587.5) * 86400000) \
+	OR e.post_date <= ROUND((julianday('now') - 2440587.5) * 86400000)) \
 	AND (e.expiry_date IS NULL \
-	OR e.expiry_date > (julianday('now') - 2440587.5) * 86400000)";
+	OR e.expiry_date > ROUND((julianday('now') - 2440587.5) * 86400000))";
 
 impl Dates {
 	/// Whether these dates make an entry live at `now`.

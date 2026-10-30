@@ -148,10 +148,10 @@ fn schema() -> Schema {
 			"event",
 			"Event",
 			[
-				Field::text("date")
-					.required()
-					.indexed()
-					.label("Date (YYYY-MM-DD)"),
+				// a day, sorted and filtered as 2026-11-14
+				Field::date("date").required().indexed(),
+				// a day and time, 2026-11-14T19:30
+				Field::date("doors").time().label("Doors open"),
 				Field::text("city").required().indexed(),
 				button_group(
 					"genre",

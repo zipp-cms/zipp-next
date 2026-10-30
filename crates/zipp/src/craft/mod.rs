@@ -487,6 +487,13 @@ impl Importer<'_> {
 	fn value(&mut self, field: &Field, v: &Value) -> Option<Value> {
 		let schema = self.schema;
 		match &field.kind {
+			// Craft's `2026-11-14T20:00:00+01:00`: the day and time as
+			// they are there, without the zone
+			FieldKind::Date { time } => {
+				let s = v.as_str().or_else(|| v["date"].as_str())?;
+				let s = s.get(..if *time { 16 } else { 10 })?;
+				crate::content::valid_date(s, *time).then(|| Value::from(s))
+			}
 			FieldKind::Text { .. }
 			| FieldKind::Markdown
 			| FieldKind::Dropdown { .. } => match v {

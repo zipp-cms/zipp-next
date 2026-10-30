@@ -20,6 +20,7 @@ pub use relations::Target;
 pub use relations::relations;
 pub(crate) use validate::check_link;
 pub(crate) use validate::safe_url;
+pub(crate) use validate::valid_date;
 pub use validate::validate;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

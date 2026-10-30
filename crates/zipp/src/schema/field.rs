@@ -106,6 +106,12 @@ pub enum FieldKind {
 		max: Option<f64>,
 	},
 	Boolean,
+	/// A day, `2026-11-14`, with `time` and a time of it,
+	/// `2026-11-14T20:00`: as the editor sees it, no time zone; it sorts
+	/// as text.
+	Date {
+		time: bool,
+	},
 	/// Ids of entries of the given types.
 	Relation {
 		types: Vec<String>,
@@ -219,6 +225,7 @@ impl FieldKind {
 			| Self::Assets { .. }
 			| Self::Link { .. }
 			| Self::Markdown
+			| Self::Date { .. }
 			| Self::Checkboxes { .. }
 			| Self::Table { .. }
 			| Self::Navigation { .. }
@@ -387,6 +394,20 @@ impl Field {
 
 	pub fn markdown(handle: &str) -> Self {
 		Self::new(handle, FieldKind::Markdown)
+	}
+
+	/// A day, `.time()` with a time of it.
+	pub fn date(handle: &str) -> Self {
+		Self::new(handle, FieldKind::Date { time: false })
+	}
+
+	/// A date field with a time too.
+	pub fn time(mut self) -> Self {
+		match &mut self.kind {
+			FieldKind::Date { time } => *time = true,
+			_ => panic!("{}: time is only for dates", self.handle),
+		}
+		self
 	}
 
 	pub(crate) fn texts<'a>(
