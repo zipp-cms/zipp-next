@@ -56,8 +56,8 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   requests of its server area), its pages and components and their
   logic in `.ts`. What several areas use: `ui/` (components without an
   area, the icons), `core/` (`client.ts` sends requests and reads
-  streams, `schema.ts` the schema's types and lookups, `route` the
-  page and site, `access`, `format`, `list`, `busy`, `flyout`), `shell/`
+  streams, `schema.ts` the schema's types and lookups, `router` the
+  pages, `route` the path and site, `access`, `format`, `list`, `busy`, `flyout`), `shell/`
   (the app with its pages, the sidebar). An area imports from `ui/`, `core/` and other areas'
   `api.ts` and components; `ui/` and `core/` import no area. Tokens and
   shared classes are in `app.scss`.
@@ -80,6 +80,16 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
     `entries/SiteBadges`,
     `assets/AssetPicker`;
   - text: `.muted`, `.note`, `.truncate`, `label.stacked`, `label.check`.
+- Pages: chuchi's router (`core/router.svelte.ts`, like hostdinghy).
+  Each area registers its pages in its `routes.ts` with a lazy import,
+  in a frame (`inLayout(Shell, [[path, () => import(...)]])`). A page
+  module exports in `<script module>`: `loadProps(props, lp)` for its
+  data, so it shows loaded (the bar at the top shows the loading), and
+  `isPublic` when no login is needed. The frame's `loadProps` gives
+  every page the `schema`; an error of a page's `loadProps` shows in the
+  frame. Links to `/admin/...` open without a reload, `go(path)` too.
+- Errors of the api are `ApiError` (`core/client.ts`): `type` and
+  `detail` like the server's `Error`, `fields` for INVALID.
 - A component renders; what it does goes into a `.ts` (or `.svelte.ts`
   for state) next to it when it is more than a few lines: geometry,
   loading and saving, streams, trees, lookups. Classes with `$state`

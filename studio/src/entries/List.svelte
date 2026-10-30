@@ -1,4 +1,39 @@
+<script module lang="ts">
+	import type { Schema as SchemaT } from '../core/schema';
+	import { listEntries as list, type EntryList } from './api';
+	import type { LoadProps } from '../core/router.svelte';
+	import { site as current } from '../core/site.svelte';
+
+	/** The entries of the section; a single opens its entry. */
+	export async function loadProps(
+		props: { schema: SchemaT; section: string },
+		lp: LoadProps,
+	) {
+		const sec = props.schema.sections.find(s => s.handle === props.section);
+		if (!sec) return;
+		const first = await list(
+			listParams(sec.kind, props.section, current.current, ''),
+		);
+		if (sec.kind === 'single' && first.entries[0])
+			lp.setRedirect(`/entries/${props.section}/${first.entries[0].id}`);
+		return { first };
+	}
+
+	function listParams(
+		kind: string,
+		section: string,
+		site: string,
+		search: string,
+	) {
+		const params: Record<string, string> = { section, site, limit: '500' };
+		if (kind === 'structure') params.order = 'structure';
+		if (search) params.search = search;
+		return params;
+	}
+</script>
+
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import SearchInput from '../ui/SearchInput.svelte';
 	import { plural } from '../core/list';
 	import SiteBadges from './SiteBadges.svelte';
@@ -13,7 +48,11 @@
 	import { depth, dropTo, dropWhere, isBelow, type Where } from './tree';
 	import { componentName, sectionOf } from '../core/schema';
 
-	let { schema, section }: { schema: Schema; section: string } = $props();
+	let {
+		schema,
+		section,
+		first,
+	}: { schema: Schema; section: string; first: EntryList } = $props();
 
 	const sec = $derived(sectionOf(schema, section)!);
 	const tree = $derived(sec.kind === 'structure');
@@ -23,48 +62,41 @@
 	const canMove = $derived(
 		tree && !search && can(schema, section, 'publish'),
 	);
-	let entries = $state<Entry[]>([]);
-	let published = $state<Record<number, Record<string, boolean>>>({});
+	let entries = $state<Entry[]>(untrack(() => first.entries));
+	let published = $state(untrack(() => first.published));
 	// the entries with unpublished changes
-	let drafts = $state<number[]>([]);
+	let drafts = $state(untrack(() => first.drafts));
 	// the type is worth a column only with several
 	const types = $derived(sec.types.length > 1);
 
 	$effect(() => {
 		shown.section = section;
 	});
-	let total = $state(0);
+	let total = $state(untrack(() => first.total));
 	let error = $state('');
-	let loaded = $state(false);
 
+	/** Loads the list again: after a search, a move, a delete. */
 	function load() {
-		const params: Record<string, string> = {
-			section,
-			site: site.current,
-			limit: '500',
-		};
-		if (tree) params.order = 'structure';
 		const q = search;
-		if (q) params.search = q;
-		listEntries(params)
+		listEntries(listParams(sec.kind, section, site.current, q))
 			.then(r => {
 				// an answer to an older search
 				if (q !== search) return;
-				// a single has no list, it opens its entry
-				if (sec.kind === 'single' && r.entries[0]) {
-					go(entryPath(section, r.entries[0].id), true);
-					return;
-				}
 				entries = r.entries;
 				total = r.total;
 				published = r.published;
 				drafts = r.drafts;
-				loaded = true;
 			})
 			.catch(e => (error = e.message));
 	}
 
-	$effect(load);
+	// the first list came with the page
+	let searched = '';
+	$effect(() => {
+		if (search === searched) return;
+		searched = search;
+		untrack(load);
+	});
 
 	// drag and drop in a structure: before or after a row, or into it
 	let dragged = $state<Entry | null>(null);
@@ -229,11 +261,7 @@
 		</div>
 	{:else}
 		<p class="empty">
-			{loaded
-				? search
-					? 'Nothing found'
-					: 'No entries yet'
-				: 'Loading…'}
+			{search ? 'Nothing found' : 'No entries yet'}
 		</p>
 	{/each}
 	{#if total > entries.length}

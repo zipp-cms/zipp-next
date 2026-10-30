@@ -17,9 +17,9 @@
 	 */
 	let {
 		schema,
-		tab,
-		handle,
-	}: { schema: Schema; tab: string; handle: string | null } = $props();
+		tab = 'sections',
+		handle = null,
+	}: { schema: Schema; tab?: string; handle?: string | null } = $props();
 
 	$effect(() => {
 		shown.section = '';

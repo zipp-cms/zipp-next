@@ -48,7 +48,7 @@
 			class="handle-code"
 			href="/admin/setup/{component.entry
 				? 'types'
-				: 'blocks'}/{component.handle}#{field.handle}"
+				: 'blocks'}/{component.handle}#field-{field.handle}"
 			title="The field in Setup"
 		>
 			{field.handle}

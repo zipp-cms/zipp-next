@@ -1,0 +1,1 @@
+import{V as c,j as o,a8 as i,l as d,a9 as m}from"./index-3XvNr1aa.js";function j(e,n,a){c(()=>{var r=o(()=>n(e,a==null?void 0:a())||{});if(a&&(r!=null&&r.update)){var s=!1,t={};i(()=>{var f=a();d(f),s&&m(t,f)&&(t=f,r.update(f))}),s=!0}if(r!=null&&r.destroy)return()=>r.destroy()})}export{j as a};

@@ -1,3 +1,18 @@
+<script module lang="ts">
+	import type { Schema as SchemaT } from '../../core/schema';
+	import { EntryEditor as Editor } from './entryEditor.svelte';
+
+	/** The entry, or a new one of the section, loaded before it shows. */
+	export async function loadProps(props: {
+		schema: SchemaT;
+		section: string;
+		id: string;
+	}) {
+		const id = props.id === 'new' ? null : Number(props.id);
+		return { editor: await Editor.open(props.schema, id, props.section) };
+	}
+</script>
+
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { entryUrl, type Schema } from '../../core/schema';
@@ -17,19 +32,19 @@
 
 	let {
 		schema,
-		id,
-		section,
+		editor,
 		onclose,
 	}: {
 		schema: Schema;
-		id: number | null;
-		section: string | null;
+		/** loaded, see `loadProps` */
+		editor: EntryEditor;
 		/** shown in the flyout, which this closes */
 		onclose?: () => void;
 	} = $props();
 
-	// the page is keyed by id, section and site, they don't change
-	const ed = untrack(() => new EntryEditor(schema, id, section));
+	// the page is new for another entry or site
+	const ed = untrack(() => editor);
+	const id = ed.id;
 
 	const secDef = $derived(sectionOf(schema, ed.sec));
 	const comp = $derived(componentOf(schema, ed.ty));
@@ -57,15 +72,6 @@
 	$effect(() => {
 		// in the flyout the nav stays at the page behind it
 		if (!onclose) shown.section = ed.sec;
-	});
-
-	$effect(() => {
-		if (id !== null) {
-			ed.load().catch(e => (ed.error = e.message));
-			return;
-		}
-		ed.ty = secDef?.types[0] ?? '';
-		if (secDef?.kind === 'structure') ed.loadParents();
 	});
 
 	// every change goes into the draft, a moment after the last key

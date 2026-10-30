@@ -55,7 +55,7 @@ export function usedIn(
 			if (uses)
 				out.push({
 					text: `${other.handle}.${f.handle}`,
-					href: `/admin/setup/${other.entry ? 'types' : 'blocks'}/${other.handle}#${f.handle}`,
+					href: `/admin/setup/${other.entry ? 'types' : 'blocks'}/${other.handle}#field-${f.handle}`,
 				});
 		}
 	}

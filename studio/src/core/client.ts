@@ -1,16 +1,52 @@
-import { toLogin } from './route.svelte';
-
 export type FieldError = { path: string; message: string };
 
-export class ApiError extends Error {
-	status: number;
-	fields: FieldError[];
+/** The errors of the server, `Error` of zipp's error.rs. */
+export type ErrorType =
+	| {
+			type:
+				| 'LOGIN_INCORRECT'
+				| 'MISSING_SESSION_TOKEN'
+				| 'INVALID_SESSION_TOKEN'
+				| 'MISSING_ENDPOINT_TOKEN'
+				| 'FORBIDDEN'
+				| 'NOT_FOUND';
+	  }
+	| { type: 'INVALID'; detail: FieldError[] }
+	| { type: 'INTERNAL' | 'REQUEST' | 'CONFLICT'; detail: string };
 
-	constructor(status: number, message: string, fields: FieldError[]) {
+/** An error of a request: the server's message and what it is. */
+export class ApiError extends Error {
+	constructor(
+		message: string,
+		readonly inner: ErrorType,
+		readonly status = 0,
+	) {
 		super(message);
-		this.status = status;
-		this.fields = fields;
 	}
+
+	get type(): ErrorType['type'] {
+		return this.inner.type;
+	}
+
+	/** The fields an INVALID error names. */
+	get fields(): FieldError[] {
+		return this.inner.type === 'INVALID' ? this.inner.detail : [];
+	}
+
+	/** From the JSON of an error response, `{ message, error }`. */
+	static fromJson(status: number, data: any, fallback: string): ApiError {
+		const inner: ErrorType = data?.error?.type
+			? data.error
+			: { type: 'REQUEST', detail: fallback };
+		return new ApiError(data?.message ?? fallback, inner, status);
+	}
+}
+
+let sessionLost = () => {};
+
+/** What happens when the session is missing or gone: the login. */
+export function onSessionLost(f: () => void) {
+	sessionLost = f;
 }
 
 export function token(): string | null {
@@ -46,10 +82,9 @@ function failed(resp: Response, data: any): ApiError {
 	const type = data?.error?.type;
 	if (type === 'MISSING_SESSION_TOKEN' || type === 'INVALID_SESSION_TOKEN') {
 		setToken(null);
-		toLogin();
+		sessionLost();
 	}
-	const fields = type === 'INVALID' ? data.error.detail : [];
-	return new ApiError(resp.status, data?.message ?? resp.statusText, fields);
+	return ApiError.fromJson(resp.status, data, resp.statusText);
 }
 
 export async function request(method: string, path: string, body?: unknown) {

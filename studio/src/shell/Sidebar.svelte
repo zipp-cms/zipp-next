@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
-	import { route, shown } from '../core/route.svelte';
+	import { current, shown } from '../core/route.svelte';
 	import {
 		canAi,
 		canAssets,
@@ -21,7 +21,8 @@
 	let { schema, onlogout }: { schema: Schema; onlogout: () => void } =
 		$props();
 
-	const page = $derived(route.current.page);
+	// the first part of the path: entries, assets, setup…
+	const page = $derived(current.path.split('/')[1] ?? '');
 	// the pages that aren't a group of the nav
 	const other = $derived(['assets', 'ai', 'users', 'setup'].includes(page));
 	// only the sections the role may see
@@ -32,13 +33,9 @@
 	);
 	const items = $derived(groupItems(schema, group));
 
-	function active(handle: string) {
-		const r = route.current;
-		return (
-			shown.section === handle ||
-			(r.page === 'doc' && r.handle === handle)
-		);
-	}
+	// a doc page is active by its handle, a section by what the page shows
+	const active = (handle: string) =>
+		shown.section === handle || current.path === `/docs/${handle}`;
 </script>
 
 <aside class="side">
@@ -94,8 +91,8 @@
 			<Icon name="settings" />
 			Setup
 		</a>
-		{#if route.current.page === 'setup'}
-			{@const tab = route.current.tab}
+		{#if page === 'setup'}
+			{@const tab = current.path.split('/')[2] ?? 'sections'}
 			<div class="sub">
 				{#each SETUP_TABS as [handle, name] (handle)}
 					<a

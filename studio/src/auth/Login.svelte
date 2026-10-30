@@ -1,6 +1,11 @@
+<script module lang="ts">
+	/** Anyone may open the login. */
+	export const isPublic = true;
+</script>
+
 <script lang="ts">
 	import { login } from './api';
-	import { back } from '../core/route.svelte';
+	import { router } from '../core/router.svelte';
 	import logo from '../logo/full.svg';
 
 	let email = $state('');
@@ -12,7 +17,11 @@
 		error = '';
 		try {
 			await login(email, password);
-			back();
+			// back to the page that wanted the login
+			const url = new URLSearchParams(location.search).get('url');
+			const back =
+				url?.startsWith('/admin') && !url.startsWith('/admin/login');
+			router.open(back ? url! : '/admin', {}, { history: 'replace' });
 		} catch (e: any) {
 			error = e.message;
 		}

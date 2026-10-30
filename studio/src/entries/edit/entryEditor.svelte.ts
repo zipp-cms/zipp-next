@@ -77,6 +77,26 @@ export class EntryEditor {
 		this.loaded = id === null;
 	}
 
+	/**
+	 * The editor of an entry, loaded; a new one (`id` null) of the
+	 * section with its first type and, in a structure, its parents.
+	 */
+	static async open(
+		schema: Schema,
+		id: number | null,
+		section: string | null,
+	): Promise<EntryEditor> {
+		const ed = new EntryEditor(schema, id, section);
+		if (id !== null) {
+			await ed.load();
+			return ed;
+		}
+		const sec = schema.sections.find(s => s.handle === section);
+		ed.ty = sec?.types[0] ?? '';
+		if (sec?.kind === 'structure') await ed.loadParents();
+		return ed;
+	}
+
 	/** What the draft changes against the live entry, also in blocks. */
 	changed = $derived.by(() => {
 		const live = this.live;
@@ -178,7 +198,7 @@ export class EntryEditor {
 			this.lastSaved = snap;
 			this.draftState = 'saved';
 		} catch (e: any) {
-			if (e instanceof ApiError && e.status === 409) {
+			if (e instanceof ApiError && e.type === 'CONFLICT') {
 				this.conflict = e.message;
 				this.draftState = '';
 			} else {

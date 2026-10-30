@@ -1,3 +1,14 @@
+<script module lang="ts">
+	import type { Schema as SchemaT } from '../core/schema';
+
+	/** A doc of the code by its handle. */
+	export function loadProps(props: { schema: SchemaT; handle: string }) {
+		const doc = props.schema.docs.find(d => d.handle === props.handle);
+		if (!doc) throw new Error(`There is no doc ${props.handle}`);
+		return { doc };
+	}
+</script>
+
 <script lang="ts">
 	import PageTop from '../ui/PageTop.svelte';
 	import type { Schema } from '../core/schema';

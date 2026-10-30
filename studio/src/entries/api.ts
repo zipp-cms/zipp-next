@@ -25,14 +25,19 @@ export type EntryRef = {
 
 export type Refs = Record<number, EntryRef>;
 
-export function listEntries(params: Record<string, string>): Promise<{
+/** A page of entries with what lists show of them. */
+export type EntryList = {
 	entries: Entry[];
 	total: number;
 	relations: Refs;
 	published: Record<number, Record<string, boolean>>;
 	/** the entries with unpublished changes */
 	drafts: number[];
-}> {
+};
+
+export function listEntries(
+	params: Record<string, string>,
+): Promise<EntryList> {
 	return request('GET', '/entries?' + new URLSearchParams(params));
 }
 

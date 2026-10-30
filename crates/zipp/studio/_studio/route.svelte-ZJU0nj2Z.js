@@ -1,0 +1,1 @@
+import{y as n,T as s,ap as a,I as e}from"./index-3XvNr1aa.js";function u(t,r){return`/entries/${t}/${r}`}function c(){const t=s.path.match(/^\/entries\/[^/]+\/(\d+)$/);return t?Number(t[1]):null}function i(t){a(t),e.currentRequest.get()&&e.reload()}const f=n({section:""});export{i as a,c,u as e,f as s};

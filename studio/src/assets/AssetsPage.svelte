@@ -1,4 +1,14 @@
+<script module lang="ts">
+	import { listAssets as list } from './api';
+
+	/** The newest assets. */
+	export async function loadProps() {
+		return { first: await list({ search: '' }) };
+	}
+</script>
+
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import PageTop from '../ui/PageTop.svelte';
 	import { listAssets, uploadAssets, type Asset } from './api';
 	import { type Schema } from '../core/schema';
@@ -9,12 +19,11 @@
 	import { Busy } from '../core/busy.svelte';
 	import UploadButton from '../ui/UploadButton.svelte';
 
-	let { schema }: { schema: Schema } = $props();
+	let { schema, first }: { schema: Schema; first: Asset[] } = $props();
 	const canEdit = $derived(canAssets(schema, 'edit'));
 
-	let assets = $state<Asset[]>([]);
+	let assets = $state<Asset[]>(untrack(() => first));
 	let search = $state('');
-	let loaded = $state(false);
 	let error = $state('');
 	const uploading = new Busy();
 	let current = $state<Asset | null>(null);
@@ -23,14 +32,18 @@
 		const q = search;
 		listAssets({ search: q })
 			.then(a => {
-				if (q !== search) return;
-				assets = a;
-				loaded = true;
+				if (q === search) assets = a;
 			})
 			.catch(e => (error = e.message));
 	}
 
-	$effect(load);
+	// the first assets came with the page
+	let searched = '';
+	$effect(() => {
+		if (search === searched) return;
+		searched = search;
+		untrack(load);
+	});
 
 	async function upload(files: FileList | null) {
 		if (!files?.length) return;
@@ -73,7 +86,7 @@
 		<div class="search">
 			<SearchInput bind:value={search} placeholder="Search files" />
 		</div>
-		<AssetGrid {assets} loading={!loaded} onpick={open} />
+		<AssetGrid {assets} onpick={open} />
 	</div>
 </div>
 

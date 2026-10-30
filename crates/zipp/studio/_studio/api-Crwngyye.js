@@ -1,0 +1,1 @@
+import{v as o,Z as t}from"./index-3XvNr1aa.js";async function i(a,n){const s=await o("POST","/auth/login",{email:a,password:n});t(s.token)}async function l(){await o("POST","/auth/logout"),t(null)}export{l as a,i as l};

@@ -44,7 +44,7 @@
 					</thead>
 					<tbody>
 						{#each c.fields as f (f.handle)}
-							<tr id={f.handle}>
+							<tr id="field-{f.handle}">
 								<td>{f.label}</td>
 								<td><code>{f.handle}</code></td>
 								{#if c.tabs?.length}<td>

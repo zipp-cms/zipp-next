@@ -1,4 +1,3 @@
-
 /** A date and time like the browser writes it. */
 export function time(ms: number): string {
 	return new Date(ms).toLocaleString();

@@ -1,4 +1,13 @@
+<script module lang="ts">
+	import { listUsers as list } from './api';
+
+	export async function loadProps() {
+		return { first: await list() };
+	}
+</script>
+
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import PageTop from '../ui/PageTop.svelte';
 	import { type Schema } from '../core/schema';
 	import { deleteUser, listUsers, saveUser, setRole, type User } from './api';
@@ -10,9 +19,9 @@
 	 * The users of the studio, for admins: who has which role. The roles
 	 * come from the code, a user without one is an admin.
 	 */
-	let { schema }: { schema: Schema } = $props();
+	let { schema, first }: { schema: Schema; first: User[] } = $props();
 
-	let users = $state<User[]>([]);
+	let users = $state<User[]>(untrack(() => first));
 	const action = new Busy();
 	let email = $state('');
 	let password = $state('');
@@ -32,8 +41,6 @@
 			await f();
 			await load();
 		});
-
-	run(async () => {});
 
 	function add(e: SubmitEvent) {
 		e.preventDefault();
