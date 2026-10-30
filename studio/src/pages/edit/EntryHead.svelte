@@ -30,7 +30,7 @@
 
 	.label {
 		color: var(--muted);
-		font-size: 11px;
+		font-size: var(--fs-xs);
 		font-weight: 600;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
@@ -42,7 +42,7 @@
 
 	input {
 		padding: 4px 0 8px;
-		font-size: 26px;
+		font-size: var(--fs-title);
 		font-weight: 700;
 		line-height: 1.25;
 		border: none;

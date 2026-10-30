@@ -239,7 +239,7 @@
 		min-height: 34px;
 		padding: 2px 4px 2px 12px;
 		border: 1px solid var(--border);
-		border-radius: 5px;
+		border-radius: var(--radius);
 		background: var(--surface);
 
 		.open {
@@ -265,7 +265,7 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		font-size: 14px;
+		font-size: var(--fs-base);
 		color: var(--muted);
 	}
 </style>

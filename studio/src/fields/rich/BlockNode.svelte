@@ -87,10 +87,4 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
-
-	fieldset {
-		margin: 0;
-		padding: 0;
-		border: none;
-	}
 </style>

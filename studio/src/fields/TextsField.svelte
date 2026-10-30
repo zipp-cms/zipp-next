@@ -61,12 +61,12 @@
 		width: 12rem;
 		padding-right: 12px;
 		font-family: monospace;
-		font-size: 13px;
+		font-size: var(--fs-md);
 		color: var(--muted);
 	}
 
 	/* not translated: the website shows the code's text */
 	input.empty {
-		box-shadow: inset 3px 0 #e8a33d;
+		box-shadow: inset 3px 0 var(--changed);
 	}
 </style>

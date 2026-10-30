@@ -328,7 +328,7 @@
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
-		background: white;
+		background: var(--surface);
 		border-right: 1px solid var(--line);
 	}
 
@@ -357,13 +357,13 @@
 	.msg {
 		margin: 12px 0;
 		padding: 10px 12px;
-		border-radius: 2px;
+		border-radius: var(--radius-sm);
 		line-height: 1.45;
 		overflow-wrap: anywhere;
 
 		&.user {
 			margin-left: 32px;
-			background: var(--dark);
+			background: var(--text);
 			color: white;
 			white-space: pre-wrap;
 		}
@@ -391,7 +391,7 @@
 		align-items: center;
 		gap: 10px;
 		margin: 8px 0;
-		font-size: 14px;
+		font-size: var(--fs-base);
 		color: var(--muted);
 
 		span {
@@ -403,7 +403,7 @@
 			width: 8px;
 			height: 8px;
 			border-radius: 50%;
-			background: #e8a33d;
+			background: var(--changed);
 		}
 	}
 
@@ -429,8 +429,8 @@
 		align-items: center;
 		gap: 12px;
 		padding: 8px 16px;
-		background: white;
-		font-size: 14px;
+		background: var(--surface);
+		font-size: var(--fs-base);
 
 		.url {
 			flex: 1;
@@ -445,7 +445,7 @@
 		flex: 1;
 		width: 100%;
 		border: none;
-		background: white;
+		background: var(--surface);
 	}
 
 	@media (max-width: 800px) {

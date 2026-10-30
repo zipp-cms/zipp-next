@@ -60,12 +60,12 @@
 			color 0.2s ease;
 
 		&:hover:not(:disabled) {
-			border-color: var(--dark);
+			border-color: var(--text);
 		}
 	}
 
 	.on {
-		background: var(--dark);
+		background: var(--text);
 		color: white;
 	}
 

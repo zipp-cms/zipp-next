@@ -92,8 +92,8 @@
 			<div class="results">
 				{#each shown as e (e.id)}
 					<button type="button" onclick={() => pick(e)}>
-						<span class="title">{e.title}</span>
-						<span class="muted">{typeName(e.type)}</span>
+						<span class="title truncate">{e.title}</span>
+						<span class="note type">{typeName(e.type)}</span>
 					</button>
 				{:else}
 					<p class="muted empty">
@@ -132,8 +132,8 @@
 		padding: 6px;
 		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: 8px;
-		box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-pop);
 	}
 
 	.field {
@@ -170,17 +170,9 @@
 		}
 	}
 
-	.title {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.muted {
+	.type {
 		margin-left: auto;
 		flex-shrink: 0;
-		color: var(--subtle);
-		font-size: 12px;
 	}
 
 	.empty {

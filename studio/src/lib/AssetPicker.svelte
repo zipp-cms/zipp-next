@@ -75,7 +75,7 @@
 		height: min(40rem, 90vh);
 		overflow: auto;
 		padding: 1rem;
-		background: white;
+		background: var(--surface);
 		box-shadow: var(--shadow);
 
 		header {
@@ -87,9 +87,9 @@
 	.upload {
 		cursor: pointer;
 		padding: 0.45rem 0.9rem;
-		border: 1px solid var(--dark);
-		border-radius: 2px;
-		font-size: 14px;
+		border: 1px solid var(--text);
+		border-radius: var(--radius-sm);
+		font-size: var(--fs-base);
 		white-space: nowrap;
 
 		input {

@@ -35,8 +35,8 @@
 		padding: 10px 14px;
 		color: var(--warn);
 		background: var(--warn-soft);
-		border: 1px solid #f1d58b;
-		border-radius: 8px;
+		border: 1px solid var(--warn-line);
+		border-radius: var(--radius-lg);
 
 		span {
 			margin-right: auto;

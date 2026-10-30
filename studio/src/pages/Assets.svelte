@@ -110,10 +110,10 @@
 		align-items: center;
 		gap: 6px;
 		padding: 6px 12px;
-		font-size: 13px;
+		font-size: var(--fs-md);
 		font-weight: 500;
 		cursor: pointer;
-		border-radius: 5px;
+		border-radius: var(--radius);
 		background: var(--accent);
 		color: white;
 

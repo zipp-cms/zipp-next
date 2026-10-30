@@ -104,7 +104,7 @@
 
 	.by {
 		color: var(--subtle);
-		font-size: 12px;
+		font-size: var(--fs-sm);
 	}
 
 	@media (max-width: 1100px) {

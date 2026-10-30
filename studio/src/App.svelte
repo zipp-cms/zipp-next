@@ -309,7 +309,7 @@
 		gap: 10px;
 		padding: 8px 10px;
 		border: 1px solid var(--border);
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		color: var(--muted);
 
 		.mark {
@@ -318,11 +318,11 @@
 			width: 28px;
 			height: 28px;
 			flex-shrink: 0;
-			border-radius: 6px;
+			border-radius: var(--radius);
 			background: var(--accent);
 			color: white;
 			font-weight: 700;
-			font-size: 13px;
+			font-size: var(--fs-md);
 		}
 
 		.site-name {
@@ -333,11 +333,11 @@
 
 			strong {
 				color: var(--text);
-				font-size: 13px;
+				font-size: var(--fs-md);
 			}
 
 			small {
-				font-size: 11px;
+				font-size: var(--fs-xs);
 			}
 		}
 
@@ -368,7 +368,7 @@
 		align-items: center;
 		gap: 10px;
 		padding: 7px 10px;
-		border-radius: 6px;
+		border-radius: var(--radius);
 		color: var(--text-2);
 		font-weight: 500;
 		text-decoration: none;
@@ -393,9 +393,9 @@
 
 		a {
 			padding: 5px 10px;
-			border-radius: 6px;
+			border-radius: var(--radius);
 			color: var(--muted);
-			font-size: 13px;
+			font-size: var(--fs-md);
 			text-decoration: none;
 
 			&:hover {
@@ -426,7 +426,7 @@
 			flex: 1;
 			min-width: 0;
 			padding: 4px 6px;
-			border-radius: 6px;
+			border-radius: var(--radius);
 			color: inherit;
 			text-decoration: none;
 
@@ -444,7 +444,7 @@
 			border-radius: 50%;
 			background: var(--accent-soft);
 			color: var(--accent);
-			font-size: 12px;
+			font-size: var(--fs-sm);
 			font-weight: 700;
 		}
 
@@ -457,13 +457,13 @@
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
-				font-size: 12px;
+				font-size: var(--fs-sm);
 				font-weight: 600;
 			}
 
 			small {
 				color: var(--muted);
-				font-size: 11px;
+				font-size: var(--fs-xs);
 			}
 		}
 	}

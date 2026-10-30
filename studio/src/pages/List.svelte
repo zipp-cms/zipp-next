@@ -301,7 +301,7 @@
 		.total {
 			margin-left: auto;
 			color: var(--muted);
-			font-size: 12px;
+			font-size: var(--fs-sm);
 		}
 	}
 
@@ -326,7 +326,7 @@
 	.columns {
 		min-height: 32px;
 		color: var(--muted);
-		font-size: 11px;
+		font-size: var(--fs-xs);
 		font-weight: 600;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
@@ -358,7 +358,7 @@
 	.type,
 	.date {
 		color: var(--muted);
-		font-size: 13px;
+		font-size: var(--fs-md);
 	}
 
 	.name {
@@ -396,7 +396,7 @@
 	}
 
 	.type {
-		font-size: 14px;
+		font-size: var(--fs-base);
 	}
 
 	.empty {

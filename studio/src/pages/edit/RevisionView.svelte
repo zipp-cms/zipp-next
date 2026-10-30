@@ -39,7 +39,7 @@
 		</small>
 	</span>
 	{#if onrestore}
-		<button class="dark" onclick={onrestore}>Restore</button>
+		<button class="primary" onclick={onrestore}>Restore</button>
 	{/if}
 	<button class="light" onclick={onback}>Back to editing</button>
 </div>
@@ -80,19 +80,9 @@
 		}
 	}
 
-	fieldset {
-		margin: 0;
-		padding: 0;
-		border: none;
-	}
-
-	.muted {
-		color: var(--muted);
-	}
-
 	.slug {
 		margin: -14px 0 30px;
 		color: var(--muted);
-		font-size: 14px;
+		font-size: var(--fs-base);
 	}
 </style>

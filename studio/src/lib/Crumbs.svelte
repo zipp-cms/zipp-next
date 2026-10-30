@@ -20,7 +20,7 @@
 		align-items: center;
 		gap: 6px;
 		min-width: 0;
-		font-size: 13px;
+		font-size: var(--fs-md);
 	}
 
 	a {

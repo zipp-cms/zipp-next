@@ -108,7 +108,7 @@
 		flex-wrap: wrap;
 		margin-top: 8px;
 		border: 1px solid var(--border-strong);
-		border-radius: 6px;
+		border-radius: var(--radius);
 		background: var(--surface);
 		overflow: hidden;
 
@@ -157,8 +157,8 @@
 		padding: 6px;
 		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: 8px;
-		box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-pop);
 		display: flex;
 		flex-direction: column;
 		gap: 2px;

@@ -85,8 +85,8 @@
 		margin: 12px 0;
 		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: 8px;
-		font-size: 13px;
+		border-radius: var(--radius-lg);
+		font-size: var(--fs-md);
 		line-height: 1.4;
 		white-space: normal;
 	}
@@ -98,7 +98,7 @@
 		z-index: 2;
 		gap: 3px;
 		padding: 1px 8px;
-		font-size: 11px;
+		font-size: var(--fs-xs);
 		color: var(--accent);
 		border-color: var(--border);
 		border-radius: 999px;

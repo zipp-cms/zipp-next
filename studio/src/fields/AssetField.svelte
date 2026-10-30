@@ -109,7 +109,7 @@
 	.caption {
 		overflow: hidden;
 		color: var(--muted);
-		font-size: 11px;
+		font-size: var(--fs-xs);
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
@@ -129,7 +129,7 @@
 		transition: opacity 0.15s;
 
 		&:hover:not(:disabled) {
-			background: white;
+			background: var(--surface);
 			color: var(--danger);
 		}
 	}

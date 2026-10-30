@@ -104,7 +104,10 @@
 					<dd>{KINDS[section.kind]}</dd>
 					{#if section.uri_if}
 						<dt>Pages</dt>
-						<dd>only entries with <code>{section.uri_if}</code> on</dd>
+						<dd>
+							only entries with <code>{section.uri_if}</code>
+							 on
+						</dd>
 					{/if}
 					<dt>Navigation</dt>
 					<dd>{group ?? '–'}</dd>
@@ -123,7 +126,7 @@
 
 			<div class="card">
 				<h2>Entry types</h2>
-				<table>
+				<table class="table">
 					<thead>
 						<tr>
 							<th>Name</th>
@@ -138,13 +141,17 @@
 							{@const uri = uriOf(t.handle)}
 							<tr>
 								<td>
-									<a href="/admin/setup/types/{t.handle}">{t.name}</a>
+									<a href="/admin/setup/types/{t.handle}">
+										{t.name}
+									</a>
 								</td>
 								<td><code>{t.handle}</code></td>
 								<td>{t.fields.length}</td>
 								<td>
 									<code>
-										{uri === null ? 'no pages' : uri || '/ (home)'}
+										{uri === null
+											? 'no pages'
+											: uri || '/ (home)'}
 									</code>
 								</td>
 								<td><code>{t.handle}_Entry</code></td>
@@ -156,7 +163,7 @@
 
 			<div class="card">
 				<h2>Sites</h2>
-				<table>
+				<table class="table">
 					<thead>
 						<tr>
 							<th>Site</th>
@@ -175,13 +182,18 @@
 										{@const uri = uriOf(t.handle, s.handle)}
 										<div>
 											{#if types.length > 1}
-												<span class="muted">{t.name}:</span>
+												<span class="muted">
+													{t.name}:
+												</span>
 											{/if}
 											<code>
 												{uri === null
 													? 'no pages'
-													: (entryUrl(schema, s.handle, uri) ??
-														'/' + uri)}
+													: (entryUrl(
+															schema,
+															s.handle,
+															uri,
+														) ?? '/' + uri)}
 											</code>
 										</div>
 									{/each}
@@ -199,7 +211,7 @@
 
 			<div class="card">
 				<h2>Access</h2>
-				<table>
+				<table class="table">
 					<thead>
 						<tr>
 							<th>Role</th>
@@ -219,7 +231,11 @@
 									{r.name}
 									<code>{r.handle}</code>
 								</td>
-								<td>{cap(r.sections[handle] ?? 'nothing, hidden')}</td>
+								<td>
+									{cap(
+										r.sections[handle] ?? 'nothing, hidden',
+									)}
+								</td>
 							</tr>
 						{/each}
 					</tbody>
@@ -242,7 +258,10 @@
 					<li style:padding-left="{depth(e) * 12}px">
 						<a href="/admin/entries/{handle}/{e.id}">{e.title}</a>
 						{#if drafts.includes(e.id)}
-							<span class="dot" title="Unpublished changes"></span>
+							<span
+								class="dot"
+								title="Unpublished changes"
+							></span>
 						{/if}
 						<span class="sites">
 							{#each schema.sites as s (s.handle)}
@@ -250,7 +269,9 @@
 								<span
 									class="badge"
 									class:draft={!on}
-									title="{s.name}: {on ? 'published' : 'not published'}"
+									title="{s.name}: {on
+										? 'published'
+										: 'not published'}"
 								>
 									{s.handle.toUpperCase()}
 								</span>
@@ -305,39 +326,11 @@
 		margin: 0;
 	}
 
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 14px;
-	}
-
-	th {
-		padding: 6px 8px;
-		text-align: left;
-		font-weight: 600;
-	}
-
-	td {
-		padding: 6px 8px;
-		border-top: 1px solid var(--line);
-		vertical-align: top;
-	}
-
-	code {
-		font-size: 13px;
-		color: var(--muted);
-	}
-
-	.muted {
-		color: var(--muted);
-		font-size: 14px;
-	}
-
 	ul {
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		font-size: 14px;
+		font-size: var(--fs-base);
 	}
 
 	li {
@@ -361,12 +354,11 @@
 		width: 7px;
 		height: 7px;
 		border-radius: 50%;
-		background: #e2a32b;
+		background: var(--changed);
 	}
 
 	.sites {
 		display: flex;
 		gap: 3px;
 	}
-
 </style>

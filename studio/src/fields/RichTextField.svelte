@@ -304,7 +304,7 @@
 	.rich {
 		background: var(--input);
 		border: 1px solid var(--border-strong);
-		border-radius: 5px;
+		border-radius: var(--radius);
 
 		&:focus-within {
 			border-color: var(--accent);
@@ -328,7 +328,7 @@
 			border: none;
 			background: none;
 			color: var(--text-2);
-			font-size: 12px;
+			font-size: var(--fs-sm);
 
 			&.on {
 				background: var(--accent-soft);
@@ -351,9 +351,9 @@
 			width: auto;
 			height: 28px;
 			padding: 0 6px;
-			font-size: 12px;
+			font-size: var(--fs-sm);
 			border-color: var(--border);
-			border-radius: 4px;
+			border-radius: var(--radius-sm);
 		}
 
 		.italic {
@@ -361,14 +361,14 @@
 		}
 
 		.num {
-			font-size: 11px;
+			font-size: var(--fs-xs);
 			font-weight: 600;
 		}
 
 		.insert-label {
 			padding: 0 4px;
 			color: var(--muted);
-			font-size: 11px;
+			font-size: var(--fs-xs);
 		}
 
 		.insert {
@@ -379,7 +379,7 @@
 
 	.link-edit {
 		padding: 12px;
-		background: white;
+		background: var(--surface);
 		border: 1px solid var(--line);
 
 		.actions {
@@ -427,7 +427,7 @@
 		}
 
 		:global(.ProseMirror-selectednode) {
-			outline: 2px solid var(--dark);
+			outline: 2px solid var(--text);
 		}
 	}
 

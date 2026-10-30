@@ -480,12 +480,6 @@
 {/if}
 
 <style lang="scss">
-	fieldset {
-		margin: 0;
-		padding: 0;
-		border: none;
-	}
-
 	.layout {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) 280px;
@@ -500,7 +494,7 @@
 
 	.global {
 		margin-bottom: 18px;
-		font-size: 26px;
+		font-size: var(--fs-title);
 		line-height: 1.25;
 		font-weight: 700;
 	}
@@ -516,7 +510,7 @@
 	.layout-link {
 		margin-left: auto;
 		color: var(--muted);
-		font-size: 12px;
+		font-size: var(--fs-sm);
 		text-decoration: none;
 
 		&:hover {

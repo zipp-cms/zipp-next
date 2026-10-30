@@ -388,7 +388,7 @@
 			onclick={() => (edits.background = null)}
 		>
 			<span class="swatch checker"></span>
-			 Transparent
+			Transparent
 		</button>
 		<!-- the button opens the color picker -->
 		<label class="button" class:on={background !== 'transparent'}>
@@ -681,7 +681,7 @@
 		padding: 4px;
 		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 
 		> button:not(.icon) {
 			border-color: transparent;
@@ -709,7 +709,7 @@
 		margin-left: auto;
 		color: var(--muted);
 		font-family: var(--mono);
-		font-size: 11px;
+		font-size: var(--fs-xs);
 	}
 
 	.sizes {
@@ -720,7 +720,7 @@
 			display: flex;
 			flex-direction: column;
 			gap: 3px;
-			font-size: 12px;
+			font-size: var(--fs-sm);
 			font-weight: 600;
 		}
 
@@ -734,7 +734,7 @@
 		flex-direction: row !important;
 		align-items: center;
 		gap: 6px !important;
-		font-size: 13px;
+		font-size: var(--fs-md);
 		font-weight: 500;
 	}
 
@@ -746,7 +746,7 @@
 		.label {
 			margin-right: 2px;
 			color: var(--muted);
-			font-size: 12px;
+			font-size: var(--fs-sm);
 		}
 
 		// a label that looks like the buttons, it opens the color picker
@@ -756,11 +756,11 @@
 			align-items: center;
 			gap: 6px;
 			padding: 6px 12px;
-			font-size: 13px;
+			font-size: var(--fs-md);
 			font-weight: 500;
 			font-family: var(--mono);
 			border: 1px solid var(--border-strong);
-			border-radius: 5px;
+			border-radius: var(--radius);
 			background: var(--surface);
 			cursor: pointer;
 
@@ -784,7 +784,7 @@
 	.swatch {
 		width: 14px;
 		height: 14px;
-		border-radius: 3px;
+		border-radius: var(--radius-sm);
 		box-shadow: inset 0 0 0 1px rgba(16, 24, 40, 0.2);
 
 		&.checker {
@@ -796,14 +796,14 @@
 	.note {
 		margin: 0;
 		color: var(--muted);
-		font-size: 12px;
+		font-size: var(--fs-sm);
 	}
 
 	.stage {
 		display: grid;
 		place-items: center;
 		padding: 16px;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		// a checkerboard: transparent parts show
 		background-color: #fff;
 		background-image:
@@ -861,9 +861,9 @@
 		position: absolute;
 		width: 14px;
 		height: 14px;
-		background: white;
+		background: var(--surface);
 		border: 2px solid var(--accent);
-		border-radius: 3px;
+		border-radius: var(--radius-sm);
 		touch-action: none;
 
 		&.nw {

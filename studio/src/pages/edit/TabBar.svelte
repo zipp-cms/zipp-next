@@ -51,13 +51,13 @@
 		padding: 3px;
 		background: var(--hover);
 		border: 1px solid var(--line);
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 
 		button {
 			gap: 6px;
 			padding: 5px 12px;
 			border: none;
-			border-radius: 6px;
+			border-radius: var(--radius);
 			background: none;
 			color: var(--muted);
 
@@ -84,7 +84,7 @@
 		border-radius: 999px;
 		background: var(--danger);
 		color: white;
-		font-size: 11px;
+		font-size: var(--fs-xs);
 		font-weight: 600;
 		line-height: 17px;
 		text-align: center;

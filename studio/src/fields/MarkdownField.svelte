@@ -44,13 +44,13 @@
 
 			&.on {
 				color: var(--text);
-				border-bottom: 2px solid var(--dark);
+				border-bottom: 2px solid var(--text);
 			}
 		}
 	}
 
 	textarea {
 		font-family: monospace;
-		font-size: 14px;
+		font-size: var(--fs-base);
 	}
 </style>

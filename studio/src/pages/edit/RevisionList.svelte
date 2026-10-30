@@ -25,8 +25,8 @@
 			<button class="link rev" onclick={() => onview(rev)}>
 				<span>
 					{time(rev.createdAt)}
-					{#if rev.user}<span class="muted">{rev.user}</span>{/if}
-					{#if i === 0}<span class="muted">live</span>{/if}
+					{#if rev.user}<span class="muted by">{rev.user}</span>{/if}
+					{#if i === 0}<span class="muted by">live</span>{/if}
 				</span>
 				<span class="what">{changeText(rev, comp, multiSite)}</span>
 			</button>
@@ -65,13 +65,11 @@
 	}
 
 	.what {
-		font-size: 13px;
+		font-size: var(--fs-md);
 		color: var(--muted);
 	}
 
-	.muted {
+	.by {
 		margin-left: 8px;
-		color: var(--muted);
-		font-size: 14px;
 	}
 </style>

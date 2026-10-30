@@ -92,7 +92,7 @@
 		min-height: 36px;
 		padding: 3px 4px 3px 12px;
 		border: 1px solid var(--border);
-		border-radius: 5px;
+		border-radius: var(--radius);
 		background: var(--surface);
 	}
 
@@ -119,10 +119,5 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-
-	.muted {
-		color: var(--muted);
-		font-size: 13px;
 	}
 </style>

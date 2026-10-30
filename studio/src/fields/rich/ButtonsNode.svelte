@@ -88,7 +88,13 @@
 	}
 </script>
 
-<EmbedCard kind="Buttons" {editable} bind:editing onremove={remove} oninsert={insertLine}>
+<EmbedCard
+	kind="Buttons"
+	{editable}
+	bind:editing
+	onremove={remove}
+	oninsert={insertLine}
+>
 	{#snippet preview()}
 		{#each items as { link }, i (i)}
 			<span class="button">
@@ -132,7 +138,7 @@
 	.none {
 		color: var(--muted);
 		font-family: var(--mono);
-		font-size: 11px;
+		font-size: var(--fs-xs);
 	}
 
 	.item {
@@ -150,11 +156,5 @@
 
 	.add {
 		color: var(--accent);
-	}
-
-	fieldset {
-		margin: 0;
-		padding: 0;
-		border: none;
 	}
 </style>

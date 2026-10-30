@@ -203,7 +203,7 @@
 		align-items: baseline;
 		gap: 6px;
 		flex-wrap: wrap;
-		font-size: 13px;
+		font-size: var(--fs-md);
 		font-weight: 600;
 		color: var(--text);
 	}
@@ -221,7 +221,7 @@
 		height: 7px;
 		margin-right: 4px;
 		border-radius: 50%;
-		background: #d98e04;
+		background: var(--changed);
 	}
 
 	.req {
@@ -239,7 +239,7 @@
 	/* the handle for developers, links to the field in Setup */
 	.handle {
 		font-family: var(--mono);
-		font-size: 11px;
+		font-size: var(--fs-xs);
 		font-weight: 400;
 		color: var(--subtle);
 		text-decoration: none;

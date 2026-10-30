@@ -84,7 +84,7 @@
 	th {
 		padding: 0 4px 4px;
 		text-align: left;
-		font-size: 13px;
+		font-size: var(--fs-md);
 		font-weight: normal;
 		color: var(--muted);
 	}

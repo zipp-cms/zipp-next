@@ -110,7 +110,7 @@
 	<SetupSection {schema} {handle} />
 {:else if tab === 'sections'}
 	<div class="card">
-		<table>
+		<table class="table">
 			<thead>
 				<tr>
 					<th>Name</th>
@@ -177,7 +177,7 @@
 						</code>
 					</h2>
 					{#if c.fields.length}
-						<table>
+						<table class="table">
 							<thead>
 								<tr>
 									<th>Label</th>
@@ -240,7 +240,7 @@
 	{/if}
 {:else if tab === 'types' || tab === 'blocks'}
 	<div class="card">
-		<table>
+		<table class="table">
 			<thead>
 				<tr>
 					<th>Name</th>
@@ -279,7 +279,7 @@
 {:else}
 	<div class="card">
 		<h2>Sites</h2>
-		<table>
+		<table class="table">
 			<thead>
 				<tr>
 					<th>Name</th>
@@ -309,7 +309,7 @@
 
 	<div class="card">
 		<h2>Image transforms</h2>
-		<table>
+		<table class="table">
 			<tbody>
 				{#each schema.transforms as t (t.handle)}
 					<tr>
@@ -332,7 +332,7 @@
 			drafts and creates new ones, Publish makes drafts live and moves
 			entries, Delete deletes them. Users without a role are admins.
 		</p>
-		<table>
+		<table class="table">
 			<thead>
 				<tr>
 					<th>Role</th>
@@ -385,7 +385,7 @@
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		font-size: 14px;
+		font-size: var(--fs-base);
 	}
 
 	li {
@@ -398,29 +398,6 @@
 		overflow-x: auto;
 	}
 
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 14px;
-	}
-
-	th {
-		padding: 6px 8px;
-		text-align: left;
-		font-weight: 600;
-	}
-
-	td {
-		padding: 6px 8px;
-		border-top: 1px solid var(--line);
-		vertical-align: top;
-	}
-
-	code {
-		font-size: 13px;
-		color: var(--muted);
-	}
-
 	h2 {
 		display: flex;
 		align-items: baseline;
@@ -429,11 +406,6 @@
 
 	.gql {
 		margin-left: auto;
-	}
-
-	.muted {
-		color: var(--muted);
-		font-size: 14px;
 	}
 
 	.flags {

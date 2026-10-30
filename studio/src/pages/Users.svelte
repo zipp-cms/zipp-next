@@ -62,7 +62,7 @@
 {#if error}<p class="error">{error}</p>{/if}
 
 <div class="card">
-	<table>
+	<table class="table">
 		<tbody>
 			{#each users as u (u.id)}
 				<tr>
@@ -126,31 +126,16 @@
 			<option value={r.handle}>{r.name}</option>
 		{/each}
 	</select>
-	<button class="dark">Save</button>
+	<button class="primary">Save</button>
 </form>
 
 <style>
-	table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-
-	td {
-		padding: 8px;
-		border-bottom: 1px solid var(--line);
-	}
-
 	select {
 		width: auto;
 	}
 
 	.actions {
 		text-align: right;
-	}
-
-	.muted {
-		color: var(--muted);
-		font-size: 14px;
 	}
 
 	.add {

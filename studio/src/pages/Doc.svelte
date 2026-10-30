@@ -25,7 +25,7 @@
 
 <div class="page-top">
 	<h1>{doc.name}</h1>
-	<span class="muted">Read only, from the code</span>
+	<span class="note">Read only, from the code</span>
 </div>
 
 <div class="card markdown-body" use:external>
@@ -33,11 +33,6 @@
 </div>
 
 <style>
-	.muted {
-		color: var(--muted);
-		font-size: 12px;
-	}
-
 	.card {
 		max-width: 900px;
 		padding: 24px 32px;

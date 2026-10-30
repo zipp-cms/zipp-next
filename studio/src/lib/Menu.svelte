@@ -105,8 +105,8 @@
 		padding: 4px;
 		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: 8px;
-		box-shadow: 0 8px 24px rgba(16, 24, 40, 0.14);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-pop);
 
 		a,
 		button {
@@ -116,10 +116,10 @@
 			width: 100%;
 			padding: 6px 10px;
 			border: none;
-			border-radius: 5px;
+			border-radius: var(--radius);
 			background: none;
 			color: var(--text);
-			font-size: 13px;
+			font-size: var(--fs-md);
 			font-weight: 500;
 			text-align: left;
 			text-decoration: none;

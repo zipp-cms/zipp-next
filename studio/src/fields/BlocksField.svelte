@@ -233,7 +233,7 @@
 		gap: 4px;
 		margin-bottom: 6px;
 		color: var(--muted);
-		font-size: 12px;
+		font-size: var(--fs-sm);
 
 		span {
 			margin-right: auto;
@@ -244,7 +244,7 @@
 		margin: 3px 0;
 		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: 6px;
+		border-radius: var(--radius);
 		scroll-margin-top: 64px;
 
 		&.invalid {
@@ -283,10 +283,10 @@
 	.type {
 		flex-shrink: 0;
 		padding: 1px 7px;
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 		background: var(--accent-soft);
 		color: var(--accent);
-		font-size: 11px;
+		font-size: var(--fs-xs);
 		font-weight: 600;
 	}
 

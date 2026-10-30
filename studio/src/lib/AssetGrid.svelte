@@ -49,7 +49,7 @@
 		gap: 6px;
 		padding: 0;
 		border: none;
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		background: none;
 		font-weight: 400;
 		text-align: left;
@@ -66,7 +66,7 @@
 	.caption {
 		overflow: hidden;
 		color: var(--text-2);
-		font-size: 12px;
+		font-size: var(--fs-sm);
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
@@ -87,9 +87,5 @@
 		border-radius: 50%;
 		background: var(--accent);
 		color: white;
-	}
-
-	.muted {
-		color: var(--muted);
 	}
 </style>

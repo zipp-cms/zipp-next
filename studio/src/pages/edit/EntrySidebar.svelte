@@ -130,7 +130,7 @@
 							></span>{/if}Slug
 					</span>
 					<input placeholder="from the title" bind:value={slug} />
-					{#if uri !== null}<span class="muted">/{uri}</span>{/if}
+					{#if uri !== null}<span class="note uri">/{uri}</span>{/if}
 					{#if errors.slug}<span class="error">
 							{errors.slug}
 						</span>{/if}
@@ -249,12 +249,6 @@
 		overflow-y: auto;
 	}
 
-	fieldset {
-		margin: 0;
-		border: none;
-		min-width: 0;
-	}
-
 	.card {
 		display: flex;
 		flex-direction: column;
@@ -268,7 +262,7 @@
 		gap: 5px;
 
 		> span:first-child {
-			font-size: 12px;
+			font-size: var(--fs-sm);
 			font-weight: 600;
 		}
 	}
@@ -279,7 +273,7 @@
 		gap: 8px;
 
 		> span:first-child {
-			font-size: 13px;
+			font-size: var(--fs-md);
 			font-weight: 500;
 		}
 	}
@@ -304,15 +298,13 @@
 		color: var(--text);
 	}
 
-	.muted {
-		color: var(--subtle);
-		font-size: 12px;
+	.uri {
 		word-break: break-all;
 	}
 
 	h3 {
 		margin: 0 0 -6px;
-		font-size: 12px;
+		font-size: var(--fs-sm);
 		font-weight: 600;
 	}
 
@@ -345,14 +337,14 @@
 		}
 
 		.name {
-			font-size: 13px;
+			font-size: var(--fs-md);
 			font-weight: 500;
 		}
 
 		.sum {
 			overflow: hidden;
 			color: var(--subtle);
-			font-size: 11px;
+			font-size: var(--fs-xs);
 			text-align: right;
 			text-overflow: ellipsis;
 			white-space: nowrap;

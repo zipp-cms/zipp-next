@@ -211,7 +211,7 @@
 						<dd>
 							{current.width} × {current.height}
 							{#if current.edits}
-								<span class="muted">
+								<span class="note">
 									uploaded {current.originalWidth} × {current.originalHeight}
 								</span>
 							{/if}
@@ -221,14 +221,14 @@
 					<dd>
 						{current.mime}
 						{#if current.edits && transparentEdges(current.edits) && current.mime !== 'image/png'}
-							<span class="muted">delivered as PNG</span>
+							<span class="note">delivered as PNG</span>
 						{/if}
 					</dd>
 					<dt>Uploaded</dt>
 					<dd>
 						{time(current.createdAt)}
 						{#if current.uploadedBy}
-							<span class="muted">by {current.uploadedBy}</span>
+							<span class="note">by {current.uploadedBy}</span>
 						{/if}
 					</dd>
 				</dl>
@@ -259,7 +259,7 @@
 			<div class="card">
 				<h3>Used in</h3>
 				{#if usage === null}
-					<p class="muted">Loading…</p>
+					<p class="note">Loading…</p>
 				{:else}
 					<ul>
 						{#each usage as u (u.id)}
@@ -277,14 +277,14 @@
 								>
 									{u.title}
 								</a>
-								<span class="muted">
+								<span class="note">
 									{sectionName(u.section)} · {u.sites
 										.map(s => s.toUpperCase())
 										.join(' ')}
 								</span>
 							</li>
 						{:else}
-							<li class="muted">Not used in any entry</li>
+							<li class="note">Not used in any entry</li>
 						{/each}
 					</ul>
 				{/if}
@@ -335,7 +335,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 5px;
-		font-size: 12px;
+		font-size: var(--fs-sm);
 		font-weight: 600;
 	}
 
@@ -344,7 +344,7 @@
 		grid-template-columns: auto 1fr;
 		gap: 4px 12px;
 		margin: 0;
-		font-size: 12px;
+		font-size: var(--fs-sm);
 	}
 
 	dt {
@@ -354,11 +354,6 @@
 	dd {
 		margin: 0;
 		word-break: break-word;
-	}
-
-	.muted {
-		color: var(--subtle);
-		font-size: 12px;
 	}
 
 	.actions {
@@ -379,7 +374,7 @@
 
 	h3 {
 		margin: 0;
-		font-size: 12px;
+		font-size: var(--fs-sm);
 		font-weight: 600;
 	}
 
@@ -390,7 +385,7 @@
 		margin: 0;
 		padding: 0;
 		list-style: none;
-		font-size: 13px;
+		font-size: var(--fs-md);
 
 		li {
 			display: flex;

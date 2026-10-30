@@ -41,12 +41,6 @@
 </fieldset>
 
 <style>
-	fieldset {
-		margin: 0;
-		padding: 0;
-		border: none;
-	}
-
 	.title {
 		display: flex;
 		flex-direction: column;

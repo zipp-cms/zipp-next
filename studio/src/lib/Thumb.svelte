@@ -27,7 +27,7 @@
 		aspect-ratio: 1;
 		background: var(--surface-2);
 		border: 1px solid var(--line);
-		border-radius: 6px;
+		border-radius: var(--radius);
 		overflow: hidden;
 	}
 
@@ -51,7 +51,7 @@
 
 	.name {
 		color: var(--text-2);
-		font-size: 11px;
+		font-size: var(--fs-xs);
 		text-align: center;
 		word-break: break-all;
 	}
@@ -66,6 +66,6 @@
 		line-height: 16px;
 		color: var(--text-2);
 		background: rgba(255, 255, 255, 0.88);
-		border-radius: 4px;
+		border-radius: var(--radius-sm);
 	}
 </style>

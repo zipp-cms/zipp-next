@@ -53,6 +53,6 @@
 		padding: 14px;
 		background: var(--surface);
 		border: 1px solid var(--border);
-		border-radius: 6px;
+		border-radius: var(--radius);
 	}
 </style>

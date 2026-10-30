@@ -68,7 +68,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 5px;
-		font-size: 12px;
+		font-size: var(--fs-sm);
 		font-weight: 600;
 	}
 
