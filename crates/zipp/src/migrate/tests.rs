@@ -245,3 +245,18 @@ fn only_blocks_are_blocks() {
 	assert_eq!(fields["nav"], json!([link]));
 	assert_eq!(fields["rows"], json!([row]));
 }
+
+#[test]
+fn instructions_need_no_migration() {
+	let s = site();
+	let mut s2 = s.clone();
+	s2.components[0].fields[0] = s2.components[0].fields[0]
+		.clone()
+		.instructions("What editors should **know**.");
+	assert_eq!(diff(&s, &s2, &[]).unwrap(), []);
+	let json = serde_json::to_value(&s2.components[0].fields[0]).unwrap();
+	assert_eq!(json["instructions"], "What editors should **know**.");
+	// none stays out of the JSON
+	let json = serde_json::to_value(&s.components[0].fields[0]).unwrap();
+	assert!(json.get("instructions").is_none());
+}

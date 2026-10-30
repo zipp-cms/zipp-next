@@ -28,3 +28,8 @@ const marked = new Marked({
 export function markdown(md: string): string {
 	return marked.parse(md, { async: false }) as string;
 }
+
+/** One line of markdown without its paragraph, for a hint in a label. */
+export function markdownInline(md: string): string {
+	return marked.parseInline(md, { async: false }) as string;
+}

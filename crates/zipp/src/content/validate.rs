@@ -284,14 +284,15 @@ pub(super) fn validate_block(
 pub(crate) fn valid_date(s: &str, time: bool) -> bool {
 	let num = |r: std::ops::Range<usize>| -> Option<u32> {
 		let p = s.get(r)?;
-		p.bytes().all(|b| b.is_ascii_digit()).then(|| p.parse().ok())?
+		p.bytes()
+			.all(|b| b.is_ascii_digit())
+			.then(|| p.parse().ok())?
 	};
 	let len = if time { 16 } else { 10 };
 	if s.len() != len || &s[4..5] != "-" || &s[7..8] != "-" {
 		return false;
 	}
-	let (Some(y), Some(m), Some(d)) = (num(0..4), num(5..7), num(8..10))
-	else {
+	let (Some(y), Some(m), Some(d)) = (num(0..4), num(5..7), num(8..10)) else {
 		return false;
 	};
 	let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;

@@ -692,6 +692,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
             "kind": "richText",
             "headings": [],
             "lists": false,
@@ -705,6 +706,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
             "kind": "assets",
             "images": true,
             "max": 1
@@ -775,6 +777,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
             "kind": "richText",
             "headings": [],
             "lists": false,
@@ -788,6 +791,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
             "kind": "assets",
             "images": true,
             "max": 1
@@ -858,6 +862,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
             "kind": "richText",
             "headings": [],
             "lists": false,
@@ -871,6 +876,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
             "kind": "assets",
             "images": true,
             "max": 1
@@ -919,6 +925,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
             "kind": "richText",
             "headings": [],
             "lists": false,
@@ -932,6 +939,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
             "kind": "assets",
             "images": true,
             "max": 1
@@ -1027,6 +1035,7 @@
             "required": true,
             "indexed": true,
             "translatable": false,
+            "instructions": "Past events leave the list of upcoming ones.",
             "kind": "date",
             "time": false
           },
@@ -1036,6 +1045,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "instructions": "Empty: the website shows none.",
             "kind": "date",
             "time": true
           },
@@ -2284,6 +2294,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
             "kind": "richText",
             "headings": [],
             "lists": false,
@@ -2297,6 +2308,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
             "kind": "assets",
             "images": true,
             "max": 1
@@ -2364,6 +2376,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
             "kind": "richText",
             "headings": [],
             "lists": false,
@@ -2377,6 +2390,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
             "kind": "assets",
             "images": true,
             "max": 1
@@ -2444,6 +2458,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
             "kind": "richText",
             "headings": [],
             "lists": false,
@@ -2457,6 +2472,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
             "kind": "assets",
             "images": true,
             "max": 1
@@ -2502,6 +2518,7 @@
             "required": false,
             "indexed": false,
             "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
             "kind": "richText",
             "headings": [],
             "lists": false,
@@ -2515,6 +2532,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
             "kind": "assets",
             "images": true,
             "max": 1
@@ -2604,6 +2622,7 @@
             "required": true,
             "indexed": true,
             "translatable": false,
+            "instructions": "Past events leave the list of upcoming ones.",
             "kind": "date",
             "time": false
           },
@@ -2613,6 +2632,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "instructions": "Empty: the website shows none.",
             "kind": "date",
             "time": true
           },

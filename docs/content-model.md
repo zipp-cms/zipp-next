@@ -32,6 +32,9 @@ number, boolean, date (`Field::date("date")`, a day `2026-11-14`;
 `.time()` a day and time `2026-11-14T19:30`, as the editor sees it,
 without a time zone, it sorts and filters as text), relation (ids of
 entries) and blocks (a list of blocks, nested as deep as needed).
+`.label("…")` names a field, `.instructions("…")` tells editors what
+to put there, under the label in the studio (markdown: bold, links);
+the AI chat reads them too. Both are only looks, no migration.
 
 `entry_tabs("page", "Page", [("Content", vec![...]), ("SEO",
 vec![seo_field("seo")])])` puts the fields of an entry type in tabs of

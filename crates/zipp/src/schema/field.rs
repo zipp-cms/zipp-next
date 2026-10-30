@@ -89,6 +89,10 @@ pub struct Field {
 	/// in all sites.
 	#[serde(default)]
 	pub translatable: bool,
+	/// What an editor should know about the field, under its label in
+	/// the studio, markdown; only looks like the label, no migration
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub instructions: Option<String>,
 	#[serde(flatten)]
 	pub kind: FieldKind,
 }
@@ -244,6 +248,7 @@ impl Field {
 			required: false,
 			indexed: false,
 			translatable: false,
+			instructions: None,
 			kind,
 		}
 	}
@@ -529,6 +534,13 @@ impl Field {
 
 	pub fn label(mut self, label: &str) -> Self {
 		self.label = label.into();
+		self
+	}
+
+	/// A hint for editors under the label, markdown:
+	/// `.instructions("Shown as the **teaser** on the home page.")`
+	pub fn instructions(mut self, text: &str) -> Self {
+		self.instructions = Some(text.into());
 		self
 	}
 

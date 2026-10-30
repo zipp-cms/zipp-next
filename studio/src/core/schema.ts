@@ -71,6 +71,8 @@ export type Field = FieldKind & {
 	required: boolean;
 	indexed: boolean;
 	translatable: boolean;
+	/** a hint for editors under the label, markdown */
+	instructions?: string;
 };
 
 /** A field of one kind, what the component of that kind gets. */

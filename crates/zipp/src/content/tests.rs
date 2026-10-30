@@ -172,7 +172,7 @@ fn dates_are_days_of_the_calendar() {
 	let comp = s.get("d").unwrap();
 	let ok = json!({ "day": "2026-11-14", "at": "2026-11-14T20:00" });
 	assert!(validate(&s, comp, &ok).is_ok());
-	let errs = validate(&s, comp, &json!({ "day": "2026-11-14T20:00" }))
-		.unwrap_err();
+	let errs =
+		validate(&s, comp, &json!({ "day": "2026-11-14T20:00" })).unwrap_err();
 	assert_eq!(errs[0].path, "day");
 }

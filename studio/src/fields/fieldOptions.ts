@@ -29,6 +29,9 @@ export function fieldOptions(
 	entry: boolean,
 ): FieldOption[] {
 	const out: FieldOption[] = [
+		...(f.instructions
+			? [{ name: 'Instructions', value: f.instructions }]
+			: []),
 		{ name: 'Required', value: yes(f.required) },
 		...(entry
 			? [

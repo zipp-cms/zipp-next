@@ -19,8 +19,15 @@ fn schema() -> Schema {
 	// is blocks
 	let intro = || {
 		vec![
-			Field::rich_text("intro").links().translatable(),
-			Field::images("hero").max(1),
+			Field::rich_text("intro")
+				.links()
+				.translatable()
+				.instructions(
+					"The first lines of the page, also its description for search engines.",
+				),
+			Field::images("hero").max(1).instructions(
+				"Wide, at least **1600 px**; it is cropped around the focal point.",
+			),
 		]
 	};
 	let content = || {
@@ -149,9 +156,14 @@ fn schema() -> Schema {
 			"Event",
 			[
 				// a day, sorted and filtered as 2026-11-14
-				Field::date("date").required().indexed(),
+				Field::date("date").required().indexed().instructions(
+					"Past events leave the list of upcoming ones.",
+				),
 				// a day and time, 2026-11-14T19:30
-				Field::date("doors").time().label("Doors open"),
+				Field::date("doors")
+					.time()
+					.label("Doors open")
+					.instructions("Empty: the website shows none."),
 				Field::text("city").required().indexed(),
 				button_group(
 					"genre",

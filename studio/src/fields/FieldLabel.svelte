@@ -2,10 +2,12 @@
 	import type { Component, Field, Schema } from '../core/schema';
 	import { isAdmin } from '../core/access';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import { markdownInline } from '../core/markdown';
 
 	/**
 	 * The label of a field: a dot when the draft changed it, required,
-	 * translated per site, and for admins its handle linking to Setup.
+	 * translated per site, for admins its handle linking to Setup, and
+	 * the field's instructions under it.
 	 */
 	let {
 		schema,
@@ -54,6 +56,12 @@
 			{field.handle}
 		</a>
 	{/if}
+	{#if field.instructions}
+		<!-- from the code, markdown without html or images -->
+		<span class="instructions">
+			{@html markdownInline(field.instructions)}
+		</span>
+	{/if}
 </label>
 
 <style lang="scss">
@@ -75,6 +83,19 @@
 		display: inline-flex;
 		align-self: center;
 		color: var(--subtle);
+	}
+
+	// on a line of its own under the name
+	.instructions {
+		flex-basis: 100%;
+		color: var(--muted);
+		font-size: var(--fs-sm);
+		font-weight: 400;
+		line-height: 1.4;
+
+		:global(a) {
+			color: inherit;
+		}
 	}
 
 	.req {
