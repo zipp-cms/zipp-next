@@ -1,8 +1,6 @@
 //! The plugin: what SEO adds to the content model, GraphQL, the routes
 //! and the studio.
 
-use std::sync::Arc;
-
 use serde_json::{Map, Value, json};
 use zipp::async_graphql::dynamic::{
 	FieldValue, ResolverContext, Scalar as GqlScalar, TypeRef,
@@ -121,17 +119,17 @@ impl Plugin for Seo {
 				.into(),
 		];
 		types.extend(seo_types().into_iter().map(Into::into));
-		let entry = |name: &'static str, ty: &'static str| EntryField {
-			name: name.into(),
-			ty: TypeRef::named(ty),
-			field: Arc::new(move || entry_seo_field(name, ty)),
+		let entry = |name: &'static str, ty: &'static str| {
+			EntryField::new(name, TypeRef::named(ty), move || {
+				entry_seo_field(name, ty)
+			})
 		};
-		GraphqlExt {
-			types,
+		GraphqlExt::new()
+			.types(types)
 			// `seo` like the plugin's, unless a type has a field so named
-			entry_fields: vec![entry("seoJson", SEO_JSON), entry("seo", "Seo")],
-			root_fields: root_fields().into(),
-		}
+			.entry_field(entry("seoJson", SEO_JSON))
+			.entry_field(entry("seo", "Seo"))
+			.root_fields(root_fields())
 	}
 
 	fn api_routes(&self) -> Router<AppState> {
@@ -143,11 +141,9 @@ impl Plugin for Seo {
 	}
 
 	fn studio(&self) -> Option<PluginStudio> {
-		Some(PluginStudio {
-			js: include_str!("../assets/seo.js"),
-			// the defaults of the code, the setup shows them
-			data: json!({ "sections": self.sections, "types": self.types }),
-		})
+		// the defaults of the code, the setup shows them
+		let data = json!({ "sections": self.sections, "types": self.types });
+		Some(PluginStudio::new(include_str!("../assets/seo.js")).data(data))
 	}
 }
 
@@ -222,14 +218,12 @@ impl FieldType for SeoField {
 					.iter()
 					.filter_map(Value::as_i64)
 					.collect();
-				(!ids.is_empty()).then(|| FieldRelation {
-					path: key.into(),
-					target: Target::Assets {
-						images: true,
-						extensions: vec![],
-					},
-					ids,
-				})
+				let images = Target::Assets {
+					images: true,
+					extensions: vec![],
+				};
+				(!ids.is_empty())
+					.then(|| FieldRelation::new(images, ids).at(key))
 			})
 			.collect()
 	}
@@ -242,8 +236,6 @@ impl FieldType for SeoField {
 	}
 
 	fn studio(&self) -> StudioModule {
-		StudioModule {
-			js: include_str!("../assets/seo.js"),
-		}
+		StudioModule::new(include_str!("../assets/seo.js"))
 	}
 }

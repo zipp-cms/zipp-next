@@ -1,46 +1,5 @@
 use super::*;
 
-/// Markdown to html, raw html in it is dropped (editors write text) and
-/// links and images only point to the web or the site.
-pub fn markdown_html(md: &str) -> String {
-	use pulldown_cmark::{Event, Options, Parser, Tag, html};
-	let safe =
-		|url: &str| crate::content::safe_url(url) || url.starts_with("mailto:");
-	let parser = Parser::new_ext(
-		md,
-		Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
-	)
-	.filter(|e| !matches!(e, Event::Html(_) | Event::InlineHtml(_)))
-	.map(|e| match e {
-		Event::Start(Tag::Link {
-			link_type,
-			dest_url,
-			title,
-			id,
-		}) if !safe(&dest_url) => Event::Start(Tag::Link {
-			link_type,
-			dest_url: "#".into(),
-			title,
-			id,
-		}),
-		Event::Start(Tag::Image {
-			link_type,
-			dest_url,
-			title,
-			id,
-		}) if !safe(&dest_url) => Event::Start(Tag::Image {
-			link_type,
-			dest_url: "".into(),
-			title,
-			id,
-		}),
-		e => e,
-	});
-	let mut out = String::new();
-	html::push_html(&mut out, parser);
-	out
-}
-
 /// What a chunk of a rich text is: html, a row of buttons or a block.
 pub(super) fn chunk_union(schema: &Schema) -> Union {
 	let mut u = Union::new("Chunk")

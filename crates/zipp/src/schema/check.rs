@@ -27,6 +27,19 @@ impl Schema {
 				.map_err(|e| format!("section {}: {e}", section.handle))?;
 		}
 
+		// code finds its plugin and field types by name
+		let plugins: Vec<&str> =
+			self.plugins.0.iter().map(|p| p.name()).collect();
+		let types: Vec<&str> =
+			self.field_types.0.iter().map(|t| t.name()).collect();
+		for names in [&plugins, &types] {
+			for (i, n) in names.iter().enumerate() {
+				if names[..i].contains(n) {
+					return Err(format!("two plugins or field types {n}"));
+				}
+			}
+		}
+
 		for (i, comp) in self.components.iter().enumerate() {
 			check_handle(&comp.handle)?;
 			if self.components[..i].iter().any(|c| c.handle == comp.handle) {

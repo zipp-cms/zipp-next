@@ -14,6 +14,7 @@ pub use crate::content::Target;
 
 /// A scalar of GraphQL.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Scalar {
 	String,
 	Int,
@@ -23,6 +24,7 @@ pub enum Scalar {
 
 /// How GraphQL shows the value of a field type.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum GraphqlType {
 	Scalar(Scalar),
 	/// An object type of the given name with these fields, the output is
@@ -38,6 +40,7 @@ pub enum GraphqlType {
 
 /// What a field of a custom type relates to, so assets in use are known.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub struct FieldRelation {
 	/// inside the value, like `image`, empty for the value itself
 	pub path: String,
@@ -45,13 +48,38 @@ pub struct FieldRelation {
 	pub ids: Vec<i64>,
 }
 
+impl FieldRelation {
+	/// Of the value itself, see [`FieldRelation::at`].
+	pub fn new(target: Target, ids: Vec<i64>) -> Self {
+		Self {
+			path: String::new(),
+			target,
+			ids,
+		}
+	}
+
+	/// Inside the value, like `image`.
+	pub fn at(mut self, path: &str) -> Self {
+		self.path = path.into();
+		self
+	}
+}
+
 /// The editor of a field type in the studio: an ES module that exports
-/// `mount(target, props)`, props are `{ field, value, onchange }`, and
-/// returns `{ update(props), destroy() }`. It brings its own framework
+/// `mount(target, props)`, props are `{ field, value, onchange, entryId,
+/// site, host }` (see docs/extending.md), and returns
+/// `{ update(props), destroy() }`. It brings its own framework
 /// and css, the studio only mounts it.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct StudioModule {
 	pub js: &'static str,
+}
+
+impl StudioModule {
+	pub fn new(js: &'static str) -> Self {
+		Self { js }
+	}
 }
 
 pub trait FieldType: Send + Sync + 'static {
@@ -113,7 +141,7 @@ pub trait FieldType: Send + Sync + 'static {
 
 /// The registered field types, part of the schema but not of its JSON.
 #[derive(Clone, Default)]
-pub struct FieldTypes(pub Vec<Arc<dyn FieldType>>);
+pub struct FieldTypes(pub(crate) Vec<Arc<dyn FieldType>>);
 
 impl FieldTypes {
 	pub fn get(&self, name: &str) -> Option<&Arc<dyn FieldType>> {

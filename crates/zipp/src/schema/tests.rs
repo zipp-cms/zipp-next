@@ -254,3 +254,15 @@ fn asset_fields_with_a_folder_and_extensions() {
 	let s = site().block("d", "D", [Field::assets("x").extensions(["p f"])]);
 	assert!(s.check().unwrap_err().contains("like pdf"));
 }
+
+#[test]
+fn a_plugin_once() {
+	struct Twice;
+	impl crate::Plugin for Twice {
+		fn name(&self) -> &'static str {
+			"twice"
+		}
+	}
+	let s = site().plugin(Twice).plugin(Twice);
+	assert_eq!(s.check().unwrap_err(), "two plugins or field types twice");
+}

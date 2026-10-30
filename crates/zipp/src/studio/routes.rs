@@ -142,7 +142,7 @@ async fn schema_route(
 			.map(|d| DocResp {
 				handle: d.handle.clone(),
 				name: d.name.clone(),
-				html: crate::graphql::markdown_html(&d.markdown),
+				html: crate::content::markdown_html(&d.markdown),
 			})
 			.collect(),
 	}))

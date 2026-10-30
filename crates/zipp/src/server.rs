@@ -63,20 +63,15 @@ pub(super) async fn serve(
 		public_url,
 		site_urls.clone(),
 	)?;
-	let icons = Arc::new(crate::studio::schema_icons(&schema));
 	let state = AppState {
-		db,
-		schema,
-		gql,
-		files,
 		site_urls: Arc::new(site_urls),
 		frame_ancestors: Arc::new(frame_ancestor),
 		graphql_token: graphql_token.map(Arc::new),
 		dev,
 		indexing: !dev && !noindex,
 		ai,
-		icons,
 		hooks: Arc::new(hooks),
+		..AppState::new(db, schema, gql, files)
 	};
 	let app = app(state, routes);
 

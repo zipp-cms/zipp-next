@@ -418,7 +418,7 @@ fn mapped_description(
 		.is_some_and(|f| f.kind == FieldKind::Markdown);
 	let text = match (markdown, value.as_str()) {
 		(true, Some(md)) => {
-			plain_text(&Value::from(zipp::graphql::markdown_html(md)))
+			plain_text(&Value::from(zipp::content::markdown_html(md)))
 		}
 		// plain text has no tags to take out
 		(false, Some(t)) => t.split_whitespace().collect::<Vec<_>>().join(" "),

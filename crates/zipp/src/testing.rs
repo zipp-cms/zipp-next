@@ -60,20 +60,9 @@ impl TestServer {
 			Default::default(),
 		)
 		.unwrap();
-		let icons = Arc::new(crate::studio::schema_icons(&schema));
 		let state = AppState {
-			db,
-			schema,
-			gql,
-			files,
-			site_urls: Default::default(),
-			frame_ancestors: Default::default(),
 			graphql_token: Some(Arc::new("test-token".into())),
-			dev: false,
-			indexing: true,
-			ai: None,
-			icons,
-			hooks: Default::default(),
+			..AppState::new(db, schema, gql, files)
 		};
 		Self {
 			app: server::app(state.clone(), Router::new()),

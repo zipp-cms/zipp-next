@@ -167,6 +167,46 @@ pub fn walk_mut(
 	}
 }
 
+/// Markdown to html, raw html in it is dropped (editors write text) and
+/// links and images only point to the web or the site.
+pub fn markdown_html(md: &str) -> String {
+	use pulldown_cmark::{Event, Options, Parser, Tag, html};
+	let safe = |url: &str| safe_url(url) || url.starts_with("mailto:");
+	let parser = Parser::new_ext(
+		md,
+		Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
+	)
+	.filter(|e| !matches!(e, Event::Html(_) | Event::InlineHtml(_)))
+	.map(|e| match e {
+		Event::Start(Tag::Link {
+			link_type,
+			dest_url,
+			title,
+			id,
+		}) if !safe(&dest_url) => Event::Start(Tag::Link {
+			link_type,
+			dest_url: "#".into(),
+			title,
+			id,
+		}),
+		Event::Start(Tag::Image {
+			link_type,
+			dest_url,
+			title,
+			id,
+		}) if !safe(&dest_url) => Event::Start(Tag::Image {
+			link_type,
+			dest_url: "".into(),
+			title,
+			id,
+		}),
+		e => e,
+	});
+	let mut out = String::new();
+	html::push_html(&mut out, parser);
+	out
+}
+
 /// The texts of a texts field with the code's text where none is saved.
 pub fn texts_of(
 	keys: &[(String, String)],

@@ -108,9 +108,7 @@ impl FieldType for ButtonGroup {
 	}
 
 	fn studio(&self) -> StudioModule {
-		StudioModule {
-			js: include_str!("../assets/button-group.js"),
-		}
+		StudioModule::new(include_str!("../assets/button-group.js"))
 	}
 }
 

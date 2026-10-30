@@ -66,7 +66,9 @@ pub trait Plugin: Any + Send + Sync + 'static {
 }
 
 /// GraphQL of a plugin: its types, fields of every entry and of the root.
+/// Made with [`GraphqlExt::new`] and its methods, so it can grow.
 #[derive(Default)]
+#[non_exhaustive]
 pub struct GraphqlExt {
 	pub types: Vec<Type>,
 	/// on every entry type and the `Entry` interface; an entry type with
@@ -75,11 +77,51 @@ pub struct GraphqlExt {
 	pub root_fields: Vec<GqlField>,
 }
 
+impl GraphqlExt {
+	pub fn new() -> Self {
+		Self::default()
+	}
+
+	pub fn types(mut self, types: impl IntoIterator<Item = Type>) -> Self {
+		self.types.extend(types);
+		self
+	}
+
+	pub fn entry_field(mut self, field: EntryField) -> Self {
+		self.entry_fields.push(field);
+		self
+	}
+
+	pub fn root_fields(
+		mut self,
+		fields: impl IntoIterator<Item = GqlField>,
+	) -> Self {
+		self.root_fields.extend(fields);
+		self
+	}
+}
+
 /// A field of every entry, made once per entry type.
+#[non_exhaustive]
 pub struct EntryField {
 	pub name: String,
 	pub ty: TypeRef,
 	pub field: Arc<dyn Fn() -> GqlField + Send + Sync>,
+}
+
+impl EntryField {
+	/// `field` makes the field for each entry type.
+	pub fn new(
+		name: &str,
+		ty: TypeRef,
+		field: impl Fn() -> GqlField + Send + Sync + 'static,
+	) -> Self {
+		Self {
+			name: name.into(),
+			ty,
+			field: Arc::new(field),
+		}
+	}
 }
 
 /// The module of a plugin in the studio, an ES module served as
@@ -88,14 +130,30 @@ pub struct EntryField {
 /// `sectionSetup(target, { schema, section, data, host })`, a card on
 /// the setup page of a section; `data` is the plugin's JSON for it.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct PluginStudio {
 	pub js: &'static str,
 	pub data: Value,
 }
 
+impl PluginStudio {
+	pub fn new(js: &'static str) -> Self {
+		Self {
+			js,
+			data: Value::Null,
+		}
+	}
+
+	/// What the module gets as `data`.
+	pub fn data(mut self, data: Value) -> Self {
+		self.data = data;
+		self
+	}
+}
+
 /// The plugins of a schema, code like field types.
 #[derive(Clone, Default)]
-pub struct Plugins(pub Vec<Arc<dyn Plugin>>);
+pub struct Plugins(pub(crate) Vec<Arc<dyn Plugin>>);
 
 impl Plugins {
 	pub fn get(&self, name: &str) -> Option<&Arc<dyn Plugin>> {

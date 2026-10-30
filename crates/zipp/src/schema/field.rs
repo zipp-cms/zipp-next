@@ -66,6 +66,7 @@ impl Column {
 /// What a link field can point to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub enum LinkKind {
 	Entry,
 	Url,
@@ -94,6 +95,7 @@ pub struct Field {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
+#[non_exhaustive]
 pub enum FieldKind {
 	Text {
 		max: Option<u32>,

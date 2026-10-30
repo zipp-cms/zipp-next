@@ -2,13 +2,13 @@
 //! crate that builds its [`Schema`] and calls [`run`]. The content is
 //! edited in the studio and read by any frontend over the api.
 
-pub mod ai;
+mod ai;
 pub mod api;
 pub mod assets;
 pub mod auth;
 mod cli;
 pub mod content;
-pub mod craft;
+mod craft;
 pub mod db;
 pub mod drafts;
 pub mod entries;
@@ -21,8 +21,8 @@ mod server;
 mod studio;
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
-pub mod typescript;
-pub mod users;
+mod typescript;
+mod users;
 
 pub use content::richtext;
 pub use entries::query;
@@ -115,6 +115,7 @@ pub struct AppState {
 
 /// What happened to an entry, for `Cms::on_change`.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub struct Change {
 	pub entry_id: i64,
 	pub section: String,
@@ -122,6 +123,7 @@ pub struct Change {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
 pub enum ChangeKind {
 	/// created or saved directly, without a draft
 	Saved,
@@ -134,6 +136,30 @@ pub enum ChangeKind {
 type Hook = Arc<dyn Fn(&Change) + Send + Sync>;
 
 impl AppState {
+	/// The state of a schema and its database: what follows from them is
+	/// made here, the settings of `serve` are set after.
+	pub(crate) fn new(
+		db: Db,
+		schema: Arc<Schema>,
+		gql: async_graphql::dynamic::Schema,
+		files: PathBuf,
+	) -> Self {
+		Self {
+			icons: Arc::new(studio::schema_icons(&schema)),
+			db,
+			schema,
+			gql,
+			files,
+			site_urls: Default::default(),
+			frame_ancestors: Default::default(),
+			graphql_token: None,
+			dev: false,
+			indexing: true,
+			ai: None,
+			hooks: Default::default(),
+		}
+	}
+
 	/// Tells the hooks of the site, after the change is written.
 	pub fn changed(&self, entry_id: i64, section: &str, kind: ChangeKind) {
 		let change = Change {

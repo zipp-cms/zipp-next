@@ -317,6 +317,8 @@ fn tool_create_entry(t: &Ctx, input: &Value) -> ToolResult {
 		},
 		Some(t.user_id),
 	)?;
+	// like a new entry of the studio
+	state.changed(entry.id, &entry.section, crate::ChangeKind::Saved);
 	for s in &schema.sites {
 		let base = get_draft(conn, entry.id)?.map(|d| d.updated_at);
 		let (mut content, _) = current(conn, entry.id, &s.handle)?;

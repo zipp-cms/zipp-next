@@ -75,6 +75,13 @@ A plugin is a crate that adds a whole feature, turned on with one line:
   `sectionSetup(target, { schema, section, data, host })` adds a card to
   the setup page of a section.
 
+What a plugin hands zipp is made with constructors (`GraphqlExt::new()`,
+`EntryField::new`, `PluginStudio::new(js).data(..)`,
+`StudioModule::new(js)`, `FieldRelation::new(..).at(..)`), and the enums
+it matches (`FieldKind`, `ChangeKind`, `Target`, `Error`, …) are
+`#[non_exhaustive]`: zipp can add to them without breaking a plugin.
+Names of plugins and field types are unique, `check` says so.
+
 `Schema::plugin_of::<T>()` finds a plugin's settings. `crates/zipp-seo`
 is the first plugin: SEO like the Craft plugin meierlabs-seo, see
 [SEO](seo.md).

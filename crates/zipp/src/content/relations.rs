@@ -9,6 +9,7 @@ pub struct RelationRef {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Target {
 	/// entries of these types
 	Entries(Vec<String>),

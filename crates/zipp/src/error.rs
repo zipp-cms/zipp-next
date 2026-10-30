@@ -9,6 +9,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "detail", rename_all = "SCREAMING_SNAKE_CASE")]
+#[non_exhaustive]
 pub enum Error {
 	#[error("Email or password incorrect")]
 	LoginIncorrect,

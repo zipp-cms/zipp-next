@@ -66,11 +66,11 @@ mod rich;
 pub(crate) mod tests;
 mod texts;
 
+pub(crate) use crate::content::markdown_html;
 use asset::*;
 use entry::*;
 use link::*;
 use query::*;
-pub use rich::markdown_html;
 use rich::*;
 use texts::*;
 
