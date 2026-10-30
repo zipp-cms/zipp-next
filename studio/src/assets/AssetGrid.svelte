@@ -1,14 +1,13 @@
 <script lang="ts">
 	import type { Asset } from './api';
-	import Thumb from './Thumb.svelte';
-	import Icon from 'zipp-ui/Icon.svelte';
-	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
+	import AssetCard from './AssetCard.svelte';
+	import type { MenuItem } from 'zipp-ui/Menu.svelte';
 	import { ASSETS_DRAG } from './uploads.svelte';
 
 	/**
-	 * Thumbnails, files show their name. With `draggable` a tile drags
-	 * onto a folder of the tree; with `menu` it has a ⋯ menu, where
-	 * `rename` turns the caption into an input for `onrename`.
+	 * The files as cards. With `draggable` a card drags onto a folder of
+	 * the tree; with `menu` it has a ⋯ menu, where `rename` turns the
+	 * title into an input for `onrename`.
 	 */
 	let {
 		assets,
@@ -77,41 +76,25 @@
 
 <div class="grid">
 	{#each assets as a (a.id)}
-		<div class="item" class:selected={selected.includes(a.id)}>
-			<button
-				class="tile"
-				onclick={() => onpick(a)}
-				title={a.filename}
-				draggable={draggable ? 'true' : undefined}
-				ondragstart={e => draggable && ondragstart(e, a)}
-			>
-				<Thumb asset={a} />
-				{#if renaming !== a.id}
-					<span class="caption">{a.title || a.filename}</span>
-				{/if}
-				{#if selected.includes(a.id)}
-					<span class="check"><Icon name="save" size={14} /></span>
-				{/if}
-			</button>
-			{#if renaming === a.id}
-				<input
-					class="rename"
-					bind:value={name}
-					aria-label="Filename"
-					use:focus
-					onkeydown={e => onkeydown(e, a)}
-					onblur={() => save(a)}
-				/>
-			{/if}
-			{#if menu}
-				<span class="menu">
-					<Menu
-						items={menu(a, () => rename(a))}
-						label="File actions"
-					/>
-				</span>
-			{/if}
-		</div>
+		<AssetCard
+			asset={a}
+			onopen={() => onpick(a)}
+			selected={selected.includes(a.id)}
+			{draggable}
+			ondragstart={e => draggable && ondragstart(e, a)}
+			menu={menu?.(a, () => rename(a))}
+			caption={renaming === a.id ? renameInput : undefined}
+		/>
+		{#snippet renameInput()}
+			<input
+				class="rename"
+				bind:value={name}
+				aria-label="Filename"
+				use:focus
+				onkeydown={e => onkeydown(e, a)}
+				onblur={() => save(a)}
+			/>
+		{/snippet}
 	{:else}
 		<p class="empty">{loading ? 'Loading…' : empty}</p>
 	{/each}
@@ -120,99 +103,14 @@
 <style lang="scss">
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(8.75rem, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
 		gap: 1rem;
 	}
 
-	.item {
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-
-	.tile {
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		align-items: stretch;
-		gap: 0.375rem;
-		padding: 0;
-		border: none;
-		border-radius: var(--radius-lg);
-		background: none;
-		font-weight: 400;
-		text-align: left;
-
-		@include hover {
-			&:hover:not(:disabled) {
-				background: none;
-			}
-		}
-
-		@include hover {
-			&:hover :global(.thumb) {
-				border-color: var(--border-strong);
-			}
-		}
-	}
-
-	.caption {
-		overflow: hidden;
-		color: var(--text-2);
-		font-size: var(--fs-sm);
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
 	.rename {
-		margin-top: 0.25rem;
+		flex: 1;
+		min-width: 0;
 		padding: 0.125rem 0.375rem;
 		font-size: var(--fs-sm);
-	}
-
-	.selected :global(.thumb) {
-		@include focus-ring(1px);
-	}
-
-	.check {
-		position: absolute;
-		top: 0.375rem;
-		right: 0.375rem;
-		display: grid;
-		place-items: center;
-		width: 1.375rem;
-		height: 1.375rem;
-		border-radius: 50%;
-		background: var(--accent);
-		color: var(--on-accent);
-	}
-
-	// over the thumbnail's corner, on hover
-	.menu {
-		position: absolute;
-		top: 0.375rem;
-		right: 0.375rem;
-		border-radius: var(--radius);
-		background: var(--surface);
-		box-shadow: var(--shadow);
-		opacity: 0;
-
-		:global(button.icon) {
-			width: 1.75rem;
-			height: 1.75rem;
-		}
-	}
-
-	.item:hover .menu,
-	.item:focus-within .menu,
-	.menu:has(:global([aria-expanded='true'])) {
-		opacity: 1;
-	}
-
-	@media (hover: none) {
-		.menu {
-			opacity: 1;
-		}
 	}
 </style>

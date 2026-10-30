@@ -2,8 +2,11 @@
 	import { assetUrl, type Asset } from './api';
 	import Icon from 'zipp-ui/Icon.svelte';
 
-	/** A square tile of a file: the image, or an icon with its name. */
-	let { asset }: { asset: Asset } = $props();
+	/**
+	 * A square tile of a file: the image, or an icon with its name
+	 * (without `named` only the icon, the name is next to it).
+	 */
+	let { asset, named = true }: { asset: Asset; named?: boolean } = $props();
 
 	const ext = $derived(asset.filename.split('.').pop()?.toUpperCase() ?? '');
 </script>
@@ -14,7 +17,7 @@
 	{:else}
 		<span class="file">
 			<Icon name="single" size={28} />
-			<span class="name">{asset.filename}</span>
+			{#if named}<span class="name">{asset.filename}</span>{/if}
 		</span>
 	{/if}
 	<span class="ext">{ext}</span>
