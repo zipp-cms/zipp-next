@@ -13,6 +13,27 @@ import BlockNode from './BlockNode.svelte';
 import ButtonNode from './ButtonNode.svelte';
 
 /**
+ * An attribute kept as JSON in a `data-` attribute of the html: copying
+ * and pasting go through html, also inside one editor, and keep it.
+ */
+function jsonAttr(name: string, fallback: unknown) {
+	return {
+		default: fallback,
+		parseHTML: (el: HTMLElement) => {
+			const v = el.getAttribute(`data-${name}`);
+			try {
+				return v === null ? fallback : JSON.parse(v);
+			} catch {
+				return fallback;
+			}
+		},
+		renderHTML: (attrs: Record<string, unknown>) => ({
+			[`data-${name}`]: JSON.stringify(attrs[name]),
+		}),
+	};
+}
+
+/**
  * A link like the link field (entry by id, url, email, phone), stored in
  * `attrs.link`; zipp resolves it to a url when queried.
  */
@@ -20,17 +41,13 @@ export const ZippLink = Mark.create({
 	name: 'link',
 	inclusive: false,
 	addAttributes() {
-		return { link: { default: null } };
+		return { link: jsonAttr('link', null) };
 	},
 	parseHTML() {
 		return [{ tag: 'a[data-link]' }];
 	},
-	renderHTML({ mark }) {
-		return [
-			'a',
-			{ 'data-link': JSON.stringify(mark.attrs.link), class: 'rt-link' },
-			0,
-		];
+	renderHTML({ HTMLAttributes }) {
+		return ['a', { ...HTMLAttributes, class: 'rt-link' }, 0];
 	},
 });
 
@@ -126,13 +143,13 @@ export const Button = Node.create<Options>({
 		};
 	},
 	addAttributes() {
-		return { link: { default: { type: 'entry', value: null } } };
+		return { link: jsonAttr('link', { type: 'entry', value: null }) };
 	},
 	parseHTML() {
 		return [{ tag: 'div[data-button]' }];
 	},
-	renderHTML() {
-		return ['div', { 'data-button': '' }];
+	renderHTML({ HTMLAttributes }) {
+		return ['div', { ...HTMLAttributes, 'data-button': '' }];
 	},
 	addNodeView() {
 		return svelteView(ButtonNode, this.options);
@@ -159,16 +176,21 @@ export const Block = Node.create<Options>({
 	},
 	addAttributes() {
 		return {
-			id: { default: null },
-			type: { default: null },
-			fields: { default: {} },
+			// a pasted block is a new one, saving gives it an id
+			id: {
+				default: null,
+				parseHTML: () => null,
+				renderHTML: () => ({}),
+			},
+			type: jsonAttr('type', null),
+			fields: jsonAttr('fields', {}),
 		};
 	},
 	parseHTML() {
 		return [{ tag: 'div[data-embed]' }];
 	},
-	renderHTML() {
-		return ['div', { 'data-embed': '' }];
+	renderHTML({ HTMLAttributes }) {
+		return ['div', { ...HTMLAttributes, 'data-embed': '' }];
 	},
 	addNodeView() {
 		return svelteView(BlockNode, this.options);

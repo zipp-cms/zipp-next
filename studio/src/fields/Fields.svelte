@@ -30,6 +30,25 @@
 		only?: string[] | null;
 	} = $props();
 
+	// kinds whose editor has no place for the errors inside its value
+	// (a cell of a table, a link of a navigation, a text), they show
+	// under the field: `#2 url: …`
+	const ROWS = ['table', 'navigation', 'texts'];
+
+	function inside(field: Component['fields'][number], path: string) {
+		if (!ROWS.includes(field.kind)) return [];
+		return Object.entries(errors)
+			.filter(([p]) => p.startsWith(path + '.'))
+			.map(([p, message]) => {
+				const at = p
+					.slice(path.length + 1)
+					.split('.')
+					.map(s => (/^\d+$/.test(s) ? `#${+s + 1}` : s))
+					.join(' ');
+				return `${at}: ${message}`;
+			});
+	}
+
 	const shown = $derived(
 		only
 			? component.fields.filter(f => only.includes(f.handle))
@@ -51,6 +70,7 @@
 		<div class="value">
 			<Input {schema} {field} {values} {errors} {refs} {path} {changed} />
 			{#if errors[path]}<p class="error">{errors[path]}</p>{/if}
+			{#each inside(field, path) as e (e)}<p class="error">{e}</p>{/each}
 		</div>
 	{/each}
 </div>

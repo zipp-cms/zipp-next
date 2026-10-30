@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import type { FieldOf, Schema, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
@@ -28,7 +29,15 @@
 
 	// a group never filled in gets its object with the first value, not
 	// when it shows: opening an entry changes nothing
-	const empty = $state<Values>({});
+	let empty = $state<Values>({});
+	// other values (a restored revision, another site's): the fallback
+	// starts empty again, it would bring back what was typed before
+	let owner = untrack(() => values);
+	$effect.pre(() => {
+		if (values === owner) return;
+		owner = values;
+		empty = {};
+	});
 	const group = $derived(valueOf(values, field) ?? empty);
 	$effect(() => {
 		if (!values[field.handle] && Object.keys(empty).length)

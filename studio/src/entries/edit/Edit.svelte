@@ -14,7 +14,7 @@
 </script>
 
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import { entryUrl, type Schema } from '../../core/schema';
 	import { entryPath, go, site } from '../../core/router.svelte';
 	import Fields from '../../fields/Fields.svelte';
@@ -96,6 +96,9 @@
 		if (confirm(`Replace the content with the one of ${name}?`))
 			ed.copyFrom(other);
 	}
+
+	// what was typed last is saved, the next editor waits for it
+	onDestroy(() => ed.flush());
 
 	async function remove() {
 		if (!confirm(`Delete ${ed.title} in all sites?`)) return;

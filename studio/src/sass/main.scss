@@ -373,6 +373,11 @@ button {
 		color: var(--warn);
 		background: var(--warn-soft);
 	}
+
+	&.failed {
+		color: var(--danger);
+		background: var(--danger-soft);
+	}
 }
 
 // a field the draft changes

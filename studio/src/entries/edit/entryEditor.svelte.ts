@@ -33,6 +33,26 @@ export type May = { edit: boolean; publish: boolean; delete: boolean };
 const SAVE_AFTER_MS = 700;
 
 /**
+ * The saves of all editors that didn't end yet: an editor that opens
+ * waits for them, so it loads what an editor just left behind (leaving,
+ * switching the site, the flyout) and doesn't save over it.
+ */
+const unsaved = new Set<Promise<unknown>>();
+
+function track(p: Promise<unknown>) {
+	unsaved.add(p);
+	p.finally(() => unsaved.delete(p));
+}
+
+/** Whether a draft still waits for its save, the tab asks before closing. */
+let waiting = 0;
+if (typeof window !== 'undefined') {
+	window.addEventListener('beforeunload', e => {
+		if (waiting || unsaved.size) e.preventDefault();
+	});
+}
+
+/**
  * The state of the entry editor and what it does: loading, saving drafts
  * while the editor types, publishing, conflicts with another editor,
  * revisions. The page renders it, Edit.svelte.
@@ -56,7 +76,8 @@ export class EntryEditor {
 	parents = $state<Entry[]>([]);
 	/** unpublished changes, saved while typing */
 	draft = $state<Draft | null>(null);
-	draftState = $state<'' | 'saving' | 'saved'>('');
+	/** `failed`: the last save didn't work, the error says why */
+	draftState = $state<'' | 'saving' | 'saved' | 'failed'>('');
 	revisions = $state<Revision[]>([]);
 	/** the live content of the site, to mark what the draft changes */
 	live = $state<SiteDoc | null>(null);
@@ -71,6 +92,8 @@ export class EntryEditor {
 
 	private lastSaved = '';
 	private timer: ReturnType<typeof setTimeout> | undefined;
+	/** the save running now, the next one waits for it */
+	private saving: Promise<boolean> | null = null;
 
 	/** the site it edits, the one of the start: the site may switch */
 	readonly site: string;
@@ -112,6 +135,7 @@ export class EntryEditor {
 		section: string | null,
 	): Promise<EntryEditor> {
 		const ed = new EntryEditor(schema, id, section);
+		await Promise.allSettled([...unsaved]);
 		if (id !== null) {
 			await ed.load();
 			return ed;
@@ -201,9 +225,43 @@ export class EntryEditor {
 		if (!this.loaded || this.id === null || this.conflict || !canEdit)
 			return;
 		if (snap === this.lastSaved) return this.cancelSave();
-		clearTimeout(this.timer);
+		this.stopTimer();
 		this.draftState = 'saving';
-		this.timer = setTimeout(() => this.saveDraft(snap), SAVE_AFTER_MS);
+		waiting++;
+		this.timer = setTimeout(() => {
+			this.timer = undefined;
+			waiting--;
+			this.flush();
+		}, SAVE_AFTER_MS);
+	}
+
+	/**
+	 * Saves what isn't saved yet, now, after the save that runs; whether
+	 * all is saved. Leaving the editor calls it, the next editor waits.
+	 */
+	flush(): Promise<boolean> {
+		this.stopTimer();
+		const before = this.saving;
+		const run = async () => {
+			if (before) await before;
+			if (this.id === null || this.conflict) return false;
+			const snap = this.snapshot();
+			return snap === this.lastSaved || this.saveDraft(snap);
+		};
+		const p = run();
+		this.saving = p;
+		track(p);
+		p.finally(() => {
+			if (this.saving === p) this.saving = null;
+		});
+		return p;
+	}
+
+	private stopTimer() {
+		if (this.timer === undefined) return;
+		clearTimeout(this.timer);
+		this.timer = undefined;
+		waiting--;
 	}
 
 	/** Saves the draft; whether it worked, a conflict or error shows. */
@@ -232,6 +290,7 @@ export class EntryEditor {
 				this.draftState = '';
 			} else {
 				this.error = e.message;
+				this.draftState = 'failed';
 			}
 			return false;
 		}
@@ -239,7 +298,7 @@ export class EntryEditor {
 
 	/** No save of what was typed before: discarding, restoring, theirs. */
 	private cancelSave() {
-		clearTimeout(this.timer);
+		this.stopTimer();
 		this.draftState = '';
 	}
 
@@ -264,11 +323,8 @@ export class EntryEditor {
 				});
 				return entry.id;
 			}
-			clearTimeout(this.timer);
-			const snap = this.snapshot();
 			// what isn't saved can't be published: the conflict or error shows
-			if (snap !== this.lastSaved && !(await this.saveDraft(snap)))
-				return null;
+			if (!(await this.flush())) return null;
 			if (!this.draft) return null;
 			await publishDraft(this.id);
 			this.draftState = '';
@@ -325,12 +381,17 @@ export class EntryEditor {
 		this.conflict = '';
 		return this.action.run(async () => {
 			this.draft = await getDraft(this.id!);
-			await this.saveDraft(this.snapshot());
+			this.lastSaved = '';
+			await this.flush();
 		});
 	}
 
 	/** Shows a revision with what it changed against the one before. */
-	async view(rev: Revision) {
+	view(rev: Revision) {
+		return this.action.run(() => this.loadRevision(rev));
+	}
+
+	private async loadRevision(rev: Revision) {
 		const id = this.id!;
 		const before = this.revisions[this.revisions.indexOf(rev) + 1];
 		const [doc, prev] = await Promise.all([
@@ -348,7 +409,10 @@ export class EntryEditor {
 		this.viewing = { rev, doc: now, changed: set };
 	}
 
+	/** Replaces the draft, after asking: what isn't published is lost. */
 	restore(rev: Revision) {
+		const what = this.draft ? 'The draft is replaced. ' : '';
+		if (!confirm(`Restore this revision? ${what}`.trim())) return;
 		this.cancelSave();
 		return this.action.run(async () => {
 			await restoreRevision(this.id!, rev.id);

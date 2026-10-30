@@ -45,7 +45,9 @@
 				{published ? 'Live' : 'Not published'}
 			</span>
 		{/if}
-		{#if hasDraft}
+		{#if ed.draftState === 'failed'}
+			<span class="badge failed" title={ed.error}>Not saved</span>
+		{:else if hasDraft}
 			<span class="badge changes" title="Saved as draft, not live yet">
 				{ed.draftState === 'saving' ? 'Saving…' : 'Draft'}
 			</span>
