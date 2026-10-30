@@ -38,6 +38,52 @@
 	);
 	let input = $state('');
 
+	// the chat's width, kept in this browser
+	const DEFAULT_WIDTH = 420;
+	const MIN_WIDTH = 300;
+	const WIDTH_KEY = 'zipp-ai-width';
+	const maxWidth = () => Math.max(MIN_WIDTH, Math.round(innerWidth * 0.6));
+	let width = $state(
+		clampWidth(Number(localStorage.getItem(WIDTH_KEY)) || DEFAULT_WIDTH),
+	);
+	let resizing = $state(false);
+
+	function clampWidth(w: number) {
+		return Math.round(Math.min(Math.max(w, MIN_WIDTH), maxWidth()));
+	}
+
+	function setWidth(w: number) {
+		width = clampWidth(w);
+		localStorage.setItem(WIDTH_KEY, `${width}`);
+	}
+
+	function startResize(e: PointerEvent) {
+		if (e.button !== 0) return;
+		e.preventDefault();
+		const el = e.currentTarget as HTMLElement;
+		el.setPointerCapture(e.pointerId);
+		const from = e.clientX - width;
+		resizing = true;
+		const move = (ev: PointerEvent) => setWidth(ev.clientX - from);
+		const end = () => {
+			resizing = false;
+			el.removeEventListener('pointermove', move);
+			el.removeEventListener('pointerup', end);
+			el.removeEventListener('pointercancel', end);
+		};
+		el.addEventListener('pointermove', move);
+		el.addEventListener('pointerup', end);
+		el.addEventListener('pointercancel', end);
+	}
+
+	function resizeKey(e: KeyboardEvent) {
+		const step = e.shiftKey ? 80 : 20;
+		if (e.key === 'ArrowLeft') setWidth(width - step);
+		else if (e.key === 'ArrowRight') setWidth(width + step);
+		else return;
+		e.preventDefault();
+	}
+
 	$effect(() => chat.save(preview.view));
 
 	async function send(e: Event) {
@@ -70,8 +116,26 @@
 	onDestroy(() => chat.stop());
 </script>
 
-<div class="split">
+<div class="split" style:--chat="{width}px">
 	<section class="chat">
+		<!-- the border to the website: drag it, or the arrow keys; a
+		     focusable separator is ARIA's window splitter -->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+		<div
+			class="resize"
+			class:resizing
+			role="separator"
+			aria-orientation="vertical"
+			aria-label="Width of the chat"
+			aria-valuenow={width}
+			aria-valuemin={MIN_WIDTH}
+			aria-valuemax={maxWidth()}
+			tabindex="0"
+			title="Drag to change the width, double click for the default"
+			onpointerdown={startResize}
+			ondblclick={() => setWidth(DEFAULT_WIDTH)}
+			onkeydown={resizeKey}
+		></div>
 		<PageTop title="AI" bleed={false}>
 			{#snippet lead()}
 				<button
@@ -173,22 +237,57 @@
 		</form>
 	</section>
 
-	<Preview {preview} />
+	<Preview {preview} {resizing} />
 </div>
 
 <style lang="scss">
 	.split {
 		display: grid;
-		grid-template-columns: minmax(20rem, 26.25rem) 1fr;
+		grid-template-columns: var(--chat) minmax(0, 1fr);
 		height: 100%;
 	}
 
 	.chat {
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
 		background: var(--surface);
 		border-right: 1px solid var(--line);
+	}
+
+	// over the chat's right border, a line in the accent on hover
+	.resize {
+		position: absolute;
+		top: 0;
+		right: -4px;
+		bottom: 0;
+		z-index: var(--z-raised);
+		width: 7px;
+		cursor: col-resize;
+		touch-action: none;
+
+		&::after {
+			content: '';
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: 3px;
+			width: 1px;
+			transition: background 0.15s;
+		}
+
+		&:hover::after,
+		&:focus-visible::after,
+		&.resizing::after {
+			left: 2px;
+			width: 3px;
+			background: var(--accent);
+		}
+
+		&:focus-visible {
+			outline: none;
+		}
 	}
 
 	.log {
