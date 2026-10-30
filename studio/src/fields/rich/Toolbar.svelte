@@ -100,7 +100,7 @@
 			title="List"
 			onclick={() => chain().toggleBulletList().run()}
 		>
-			<Icon name="channel" size={15} />
+			<Icon name="channel" size={16} />
 		</button>
 		<button
 			type="button"
@@ -120,7 +120,7 @@
 					title="Link"
 					onclick={() => openLink(toggle)}
 				>
-					<Icon name="link" size={14} />
+					<Icon name="link" size={16} />
 				</button>
 			{/snippet}
 			<div class="link">
@@ -142,9 +142,9 @@
 		<Popover bind:open={inserting} width="12.25rem" label="Insert">
 			{#snippet trigger({ toggle })}
 				<button type="button" class="insert" onclick={toggle}>
-					<Icon name="add" size={13} />
+					<Icon name="add" size={14} />
 					Insert
-					<Icon name="chevron-down" size={13} />
+					<Icon name="chevron-down" size={14} />
 				</button>
 			{/snippet}
 			{#if opts.buttons}
@@ -176,18 +176,21 @@
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 2px;
-		padding: 3px 0.25rem;
+		padding: 0.25rem;
 		background: var(--surface-2);
 		border-bottom: 1px solid var(--line);
 		border-radius: var(--radius) var(--radius) 0 0;
 
 		> button,
 		> :global(.popover > button) {
-			padding: 3px 0.4375rem;
+			// as big as the tabs of the editor
+			min-width: 2rem;
+			justify-content: center;
+			padding: 0.3125rem 0.5rem;
 			border: none;
 			background: none;
 			color: var(--text-2);
-			font-size: var(--fs-sm);
+			font-size: var(--fs-md);
 
 			&.on {
 				background: var(--accent-soft);
@@ -204,9 +207,9 @@
 
 	.format {
 		width: auto;
-		height: 1.75rem;
-		padding: 0 0.375rem;
-		font-size: var(--fs-sm);
+		height: 2rem;
+		padding: 0 0.5rem;
+		font-size: var(--fs-md);
 		border-color: var(--border);
 		border-radius: var(--radius-sm);
 	}
@@ -216,7 +219,7 @@
 	}
 
 	.num {
-		font-size: var(--fs-xs);
+		font-size: var(--fs-sm);
 		font-weight: 600;
 	}
 

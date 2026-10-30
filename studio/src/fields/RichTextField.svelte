@@ -117,6 +117,15 @@
 		padding: 0.75rem;
 		min-height: 5.25rem;
 
+		// the padding is the space, not the margins of the first and last
+		:global(.tiptap > :first-child) {
+			margin-top: 0;
+		}
+
+		:global(.tiptap > :last-child) {
+			margin-bottom: 0;
+		}
+
 		:global(.tiptap) {
 			outline: none;
 			min-height: 4.375rem;

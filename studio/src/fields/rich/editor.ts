@@ -81,6 +81,12 @@ export function createEditor(o: {
 			Button.configure(nodeOptions),
 			Block.configure(nodeOptions),
 		],
+		// a transaction, so the plugins add what they add: the empty line
+		// at the end shows without a click
+		onCreate: ({ editor }) =>
+			editor.view.dispatch(
+				editor.state.tr.setMeta('addToHistory', false),
+			),
 		onUpdate: ({ editor }) => o.onChange(trimmed(editor.getJSON())),
 		onTransaction: o.onTransaction,
 		enableContentCheck: true,
