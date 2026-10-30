@@ -6,8 +6,7 @@
 	/**
 	 * Moves a row: drag it, or click it for a menu of the moves, or the
 	 * arrow keys while it has the focus (moving shouldn't need dragging).
-	 * It shows when the pointer is on its row (`data-sort`), always on
-	 * touch screens.
+	 * Always there when the list has something to move it past.
 	 */
 	let {
 		sortable,
@@ -49,39 +48,41 @@
 	}
 </script>
 
-<Popover bind:open width="13rem" {label}>
-	{#snippet trigger()}
-		<button
-			type="button"
-			class="icon drag-handle"
-			title="{label}: drag, or click for the moves"
-			aria-label={label}
-			aria-expanded={open}
-			style:touch-action="none"
-			onpointerdown={e => sortable.start(e, at())}
-			onclick={() => !sortable.dragged && (open = !open)}
-			{onkeydown}
-		>
-			<Icon name="grip" size={15} />
-		</button>
-	{/snippet}
-	{#each steps as [step, text, icon] (step)}
-		<button
-			type="button"
-			class="popup-item"
-			role="menuitem"
-			onclick={() => {
-				open = false;
-				sortable.step(at(), step);
-			}}
-		>
-			<Icon name={icon} size={14} />
-			{text}
-		</button>
-	{:else}
-		<span class="popup-item note">It can't move</span>
-	{/each}
-</Popover>
+{#if sortable.movable()}
+	<Popover bind:open width="13rem" {label}>
+		{#snippet trigger()}
+			<button
+				type="button"
+				class="icon drag-handle"
+				title="{label}: drag, or click for the moves"
+				aria-label={label}
+				aria-expanded={open}
+				style:touch-action="none"
+				onpointerdown={e => sortable.start(e, at())}
+				onclick={() => !sortable.dragged && (open = !open)}
+				{onkeydown}
+			>
+				<Icon name="grip" size={15} />
+			</button>
+		{/snippet}
+		{#each steps as [step, text, icon] (step)}
+			<button
+				type="button"
+				class="popup-item"
+				role="menuitem"
+				onclick={() => {
+					open = false;
+					sortable.step(at(), step);
+				}}
+			>
+				<Icon name={icon} size={14} />
+				{text}
+			</button>
+		{:else}
+			<span class="popup-item note">It can't move</span>
+		{/each}
+	</Popover>
+{/if}
 
 <style lang="scss">
 	@use '../vars' as *;
@@ -91,17 +92,9 @@
 		color: var(--subtle);
 	}
 
-	// only on the row under the pointer, or with the focus
 	@include hover {
-		.drag-handle {
-			opacity: 0;
-			transition: opacity 0.15s;
-		}
-
-		:global([data-sort]:hover) .drag-handle,
-		.drag-handle:focus-visible,
-		.drag-handle[aria-expanded='true'] {
-			opacity: 1;
+		.drag-handle:hover {
+			color: var(--text);
 		}
 	}
 </style>

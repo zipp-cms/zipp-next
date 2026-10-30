@@ -67,6 +67,11 @@ export class Sortable {
 		);
 	}
 
+	/** Whether there is anything to move: more than one row. */
+	movable(): boolean {
+		return this.o.depths().length > 1;
+	}
+
 	/** Whether row `i` is dragged, itself or with the row above it. */
 	moving(i: number): boolean {
 		const from = this.dragging;

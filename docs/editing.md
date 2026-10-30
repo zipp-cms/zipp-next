@@ -39,7 +39,7 @@ in the sidebar to the type's fields.
 Everything with an order moves the same way: the pages of a structure,
 the links of a navigation, blocks, relations, files, the rows of a
 table, buttons and blocks in a rich text. The handle (⠿, on the left
-when the pointer is on the row) drags it, left and right for the level
+of each row when there is more than one) drags it, left and right for the level
 in a tree, as deep as allowed; a click on it opens a menu of the moves
 and the arrow keys move it too, so it needs no dragging. Pages move at
 once, the rest goes into the draft.
