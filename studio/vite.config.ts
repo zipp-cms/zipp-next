@@ -29,10 +29,14 @@ export default defineConfig({
 		emptyOutDir: true,
 		assetsDir: '_studio',
 	},
+	// what isn't the studio comes from the cms: the api, uploaded files,
+	// the editors of field types and plugins
 	server: {
-		proxy: {
-			'/api': 'http://127.0.0.1:8090',
-			'/assets': 'http://127.0.0.1:8090',
-		},
+		proxy: Object.fromEntries(
+			['/api', '/assets', '/_fields', '/_plugins'].map(path => [
+				path,
+				'http://127.0.0.1:8090',
+			]),
+		),
 	},
 });
