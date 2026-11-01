@@ -31,6 +31,32 @@ async fn list_route(
 	}))
 }
 
+async fn choices_route(
+	State(state): State<AppState>,
+	auth: Authed,
+	Req(req): Req<ChoicesReq>,
+) -> ApiResult<ChoicesReq> {
+	let schema = &state.schema;
+	let types: Vec<&str> = req.types.split(',').collect();
+	if let Some(t) = types.iter().find(|t| schema.entry_type(t).is_none()) {
+		return Err(Error::Request(format!("unknown entry type {t}")));
+	}
+	let site = req
+		.site
+		.unwrap_or_else(|| schema.primary_site().handle.clone());
+
+	// the sections that have one of the types, of those the role sees
+	let sections: Vec<&str> = schema
+		.sections
+		.iter()
+		.filter(|s| s.types.iter().any(|t| types.contains(&t.as_str())))
+		.filter(|s| auth.can(schema, &s.handle, Access::View))
+		.map(|s| s.handle.as_str())
+		.collect();
+	let entries = choices(&state.db.conn(), schema, &sections, &site)?;
+	Ok(Json(ChoicesResp { entries }))
+}
+
 async fn get_route(
 	State(state): State<AppState>,
 	_access: EntryAccess<View>,
@@ -104,6 +130,7 @@ async fn delete_route(
 pub fn routes() -> Router<AppState> {
 	Router::new()
 		.api::<ListReq, _>(list_route)
+		.api::<ChoicesReq, _>(choices_route)
 		.api::<GetReq, _>(get_route)
 		.api::<CreateReq, _>(create_route)
 		.api::<UpdateReq, _>(update_route)

@@ -159,7 +159,7 @@ commit.
       real schema code
 - [ ] The studio in the user's language?
 - [ ] The Craft import out of the main binary (its own crate or command)?
-- [ ] A better page picker (the tree, search) for relations and links?
+- [x] A better page picker (the tree, search) for relations and links
 - [x] A login dialog when the session expires, so unsaved work stays, 4b457a1
 - [x] The link box of a link field clickable over its whole height, not
       only on its text (operator 2026-11-01)

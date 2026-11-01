@@ -62,7 +62,7 @@
 			<EntrySearch
 				{schema}
 				{types}
-				exclude={ids}
+				chosen={ids}
 				multiple={max !== 1}
 				onpick={add}
 			/>

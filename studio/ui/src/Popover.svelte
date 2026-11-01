@@ -52,7 +52,8 @@
 	 * around it cuts it or gets a scrollbar: at the point of a right
 	 * click, else under the button as `align` says, above it when there is
 	 * no room below; moved in where it would leave the window. Again when
-	 * the page scrolls or the window changes.
+	 * the page scrolls, the window changes or the box grows (a picker
+	 * that loads its list).
 	 */
 	function place(node: HTMLElement, p: { x: number; y: number } | null) {
 		let point = p;
@@ -87,6 +88,8 @@
 		set();
 		addEventListener('scroll', set, true);
 		addEventListener('resize', set);
+		const grows = new ResizeObserver(set);
+		grows.observe(node);
 		return {
 			// another right click while it is open
 			update(next: { x: number; y: number } | null) {
@@ -96,6 +99,7 @@
 			destroy() {
 				removeEventListener('scroll', set, true);
 				removeEventListener('resize', set);
+				grows.disconnect();
 			},
 		};
 	}

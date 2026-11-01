@@ -106,8 +106,15 @@ bar at the top names them (Settings / Header).
 
 ## Entries and images in other fields
 
-Relations and entry links choose with a button that lists the entries of
-their types, with a search. A chosen entry or image opens in a flyout from
+Relations and entry links choose with a button that opens the sections
+of their types: a structure as its tree (the second level and below
+closed, open with the arrow or → and ←), a channel newest first, a
+heading per section when there are several. The search goes over all of
+them, by title and slug without accents, and shows each match with its
+path (Über uns › Team). Chosen entries have a check, entries of other
+types (parents in a tree) show but can't be chosen; ↑ ↓ and Enter pick
+without the mouse. The picker loads its entries once per open
+(`/api/entries/choices?type=page,event`). A chosen entry or image opens in a flyout from
 the right, like Craft's slideout: the entry with its whole editor, an image
 with its details (below); Done or Escape closes it and the
 page behind stays as it was. In rich text, a button is a link like the

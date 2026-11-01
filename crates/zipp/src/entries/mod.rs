@@ -172,6 +172,55 @@ fn from_row(row: &Row) -> rusqlite::Result<Entry> {
 	})
 }
 
+/// An entry in a picker: an [`EntryRef`] with its parent for the tree.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Choice {
+	pub id: i64,
+	pub section: String,
+	#[serde(rename = "type")]
+	pub ty: String,
+	pub title: String,
+	pub slug: String,
+	pub uri: Option<String>,
+	/// in the site
+	pub published: bool,
+	pub parent_id: Option<i64>,
+}
+
+/// The entries of some sections to choose from, each section whole and in
+/// its order: a structure as its tree, so its other types are there too as
+/// the parents; a channel newest first. At most
+/// [`MAX_LIMIT`](query::MAX_LIMIT) per section.
+pub fn choices(
+	conn: &Connection,
+	schema: &Schema,
+	sections: &[&str],
+	site: &str,
+) -> Result<Vec<Choice>> {
+	let mut all = vec![];
+	for section in sections {
+		let params = [
+			("section".into(), section.to_string()),
+			("site".into(), site.into()),
+			("limit".into(), query::MAX_LIMIT.to_string()),
+		];
+		let q = Query::parse(schema, &params).map_err(Error::Request)?;
+		let (entries, _) = list(conn, &q)?;
+		all.extend(entries.into_iter().map(|e| Choice {
+			id: e.id,
+			section: e.section,
+			ty: e.ty,
+			title: e.title,
+			slug: e.slug,
+			uri: e.uri,
+			published: e.published,
+			parent_id: e.parent_id,
+		}));
+	}
+	Ok(all)
+}
+
 pub fn get_entry(conn: &Connection, id: i64, site: &str) -> Result<Entry> {
 	let sql = format!(
 		"SELECT {COLUMNS} FROM entries e

@@ -322,3 +322,56 @@ async fn roles_on_entries() {
 		.unwrap_err();
 	assert_eq!(err, Error::NotFound);
 }
+
+#[tokio::test]
+async fn choices_for_a_picker() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	let create = async |section, ty, title, parent| {
+		let mut i = input(section, ty, title, json!({}));
+		i.parent_id = parent;
+		admin.call(&CreateReq(i)).await
+	};
+	// a single has its entry from the start
+	let home = admin.call(&params(&[("section", "home")])).await.unwrap();
+	let home = &home.entries[0];
+	let about = create("pages", "page", "About", None).await.unwrap();
+	let team = create("pages", "page", "Team", Some(about.id))
+		.await
+		.unwrap();
+	let contact = create("pages", "page", "Contact", None).await.unwrap();
+	create("events", "event", "Jazz", None).await.unwrap();
+
+	// the sections with pages, a structure in its tree order
+	let req = ChoicesReq {
+		types: "page".into(),
+		site: Some("en".into()),
+	};
+	let got = admin.call(&req).await.unwrap().entries;
+	let ids: Vec<i64> = got.iter().map(|e| e.id).collect();
+	assert_eq!(ids, [home.id, about.id, team.id, contact.id]);
+	assert_eq!(got[2].parent_id, Some(about.id));
+	assert_eq!(got[2].ty, "page");
+
+	// an author sees pages, not the home page
+	let author = ts.user(Some("author"));
+	let got = author.call(&req).await.unwrap().entries;
+	assert!(got.iter().all(|e| e.section == "pages"));
+	assert_eq!(got.len(), 3);
+
+	// several types
+	let both = ChoicesReq {
+		types: "page,event".into(),
+		site: None,
+	};
+	assert_eq!(admin.call(&both).await.unwrap().entries.len(), 5);
+
+	let unknown = ChoicesReq {
+		types: "nope".into(),
+		site: None,
+	};
+	let err = admin.call(&unknown).await.unwrap_err();
+	assert!(matches!(err, Error::Request(_)));
+	let err = ts.anonymous().call(&req).await.unwrap_err();
+	assert_eq!(err, Error::MissingSessionToken);
+}

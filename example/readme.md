@@ -41,7 +41,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | A field type of another crate | Events → Genre | `crates/zipp-button-group`: Craft's button group with a color per option, its own editor and GraphQL type |
 | Boolean, number, indexed fields | Events | *sold out*, price (CHF, two decimals) in the tickets; the website sorts by date and filters by city |
 | Date, date and time | Events → Date, Doors open | the date picker; a day or a day and time, the website sorts events by the date |
-| Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them |
+| Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them; the picker shows the pages as their tree, search "team" for a match with its path |
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |
 | Folders, file types, zips | Assets · Events → Tickets → Programm (PDF) · a folder's ⋯ → Download as zip · upload a zip | folders for the library, downloaded as a zip or unpacked from one; the event's program takes only PDFs and puts them into Events/Programs, its image picker opens in Events |
 | Icons | the navigation, Pages, a page's blocks | entry types, blocks and nav groups with Lucide icons from the code |

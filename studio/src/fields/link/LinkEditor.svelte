@@ -116,6 +116,7 @@
 					<EntrySearch
 						{schema}
 						types={linkableTypes(schema)}
+						chosen={[entry.id]}
 						onpick={pickEntry}
 					>
 						{#snippet trigger({ toggle, open })}
