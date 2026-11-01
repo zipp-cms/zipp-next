@@ -37,7 +37,9 @@
 - [x] Field kinds as plugins: a crate with the Rust side and a studio
       package with its Svelte field
 - [ ] Data migrations in code, for changes the ops can't express
-- [ ] crelte adapter, so a crelte project can use zipp instead of Craft
+- [ ] crelte adapter, so a crelte project can use zipp instead of Craft:
+      a new adapter in crelte (no craft/.env, no Craft variable names); no
+      hacks in the textrem port meanwhile (operator 2026-11-01)
 - [ ] Full text search
 - [ ] Storage backends: SQLite (today), in memory (SQLite `:memory:`,
       already used by the tests; for previews and throwaway instances),
@@ -161,5 +163,10 @@ commit.
 - [x] A login dialog when the session expires, so unsaved work stays, 4b457a1
 - [ ] The link box of a link field clickable over its whole height, not
       only on its text (operator 2026-11-01)
+- [ ] zipp-forms for textrem's forms: a confirmation mail to the sender
+      and an optional captcha (Turnstile or reCAPTCHA), then contact and
+      Mappenabo move from the crelte server; orders (prices from the cms, a
+      mail with the order) as a route in the site's cms crate with
+      `state.mail`
 - [ ] Import mapping for Craft: fill a group from flat Craft fields, so a
       port can group fields that were flat in Craft (textrem, 2026-11-01)
