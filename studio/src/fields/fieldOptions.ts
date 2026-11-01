@@ -129,6 +129,17 @@ export function fieldOptions(
 				f.blocks.length ? '' : 'No',
 				components(schema, f.blocks),
 			);
+			add(
+				'Styles',
+				f.styles?.length
+					? f.styles
+							.map(
+								st =>
+									`${st.label} (${st.inline ? 'text' : 'paragraph'}, .${st.class})`,
+							)
+							.join(', ')
+					: 'No',
+			);
 			break;
 		case 'blocks':
 			add('Block types', '', components(schema, f.types));

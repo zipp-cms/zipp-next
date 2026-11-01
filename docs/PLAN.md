@@ -134,11 +134,12 @@ commit.
       (`Schema::asset_fields`)
 - [x] Better support for video assets (player, first frame, type filter,
       `Field::videos`, ranges)
-- [ ] A field type per column of a table (today text, url, email)?
+- [x] A field type per column of a table: number, boolean, date,
+      dropdown and link besides text, url and email (`Column::number`)
 - [x] Number field: `Field::number` with min and max, `.unit("CHF")` and
       `.decimals(2)`
-- [ ] Custom styles in the rich text (CKEditor's styles: classes on text
-      and blocks)?
+- [x] Custom styles in the rich text (CKEditor's styles: classes on text
+      and blocks, `.styles([Style::block("lead", "Lead")])`)
 - [x] Headings in the rich text: `.headings([2, 3])`
 - [x] Switching off a block (`"enabled": false`), e6ac8e3
 - [x] Search: full text in the studio (Cmd/Ctrl+K); for the website see Next

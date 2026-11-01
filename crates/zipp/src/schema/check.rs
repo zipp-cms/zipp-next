@@ -296,6 +296,24 @@ impl Schema {
 		{
 			return Err("headings go from 1 to 6".into());
 		}
+		if let FieldKind::RichText { styles, .. } = &field.kind {
+			for (i, style) in styles.iter().enumerate() {
+				// a class of css the frontend can select
+				let mut chars = style.class.chars();
+				let ok = chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+					&& chars
+						.all(|c| c.is_ascii_alphanumeric() || "-_".contains(c));
+				if !ok {
+					return Err(format!(
+						"style {:?} must be a class like lead or text-large",
+						style.class
+					));
+				}
+				if styles[..i].iter().any(|s| s.class == style.class) {
+					return Err(format!("style {} exists twice", style.class));
+				}
+			}
+		}
 		if matches!(
 			field.kind,
 			FieldKind::Relation { .. } | FieldKind::Blocks { .. }
@@ -364,6 +382,9 @@ impl Schema {
 				if columns[..i].iter().any(|x| x.handle == c.handle) {
 					return Err(format!("column {} exists twice", c.handle));
 				}
+				// a cell is checked like the field of its kind
+				self.check_field(comp, &c.as_field())
+					.map_err(|e| format!("column {}: {e}", c.handle))?;
 			}
 		}
 		if let FieldKind::Navigation { to, depth } = &field.kind

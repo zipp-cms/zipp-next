@@ -18,7 +18,7 @@ use serde_json::{Map, Value};
 
 use crate::content::{default_of, walk_mut};
 use crate::schema::{
-	Component, Field, FieldKind, Holds, Schema, Section, Site,
+	Column, Component, Field, FieldKind, Holds, Schema, Section, Site,
 };
 
 pub mod apply;

@@ -938,6 +938,133 @@ async fn checkboxes_tables_and_navigations() {
 }
 
 #[tokio::test]
+async fn typed_columns_and_styles() {
+	use crate::schema::{Column, Field, LinkKind, Section, Style};
+	let db = Db::memory().unwrap();
+	let s =
+		Arc::new(site().section(Section::channel("menus", ["menu"])).entry(
+			"menu",
+			"Menu",
+			[
+				Field::table(
+					"dishes",
+					[
+						Column::text("name"),
+						Column::number("price").decimals(2).unit("CHF"),
+						Column::boolean("vegan"),
+						Column::date("from"),
+						Column::dropdown(
+							"size",
+							[("s", "Small"), ("l", "Large")],
+						),
+						Column::link("more", [LinkKind::Entry, LinkKind::Url]),
+					],
+				),
+				Field::rich_text("text").styles([
+					Style::block("lead", "Lead"),
+					Style::inline("highlight", "Highlight"),
+				]),
+			],
+		));
+	s.check().unwrap();
+	let urls = SiteUrls::from([("de".to_string(), "https://x.ch".to_string())]);
+	let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
+	{
+		let conn = db.conn();
+		let team = save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "Team", json!({})),
+			None,
+		)
+		.unwrap();
+		let fields = json!({
+			"dishes": [
+				{ "name": " Rösti ", "price": 18.5, "vegan": true, "from": "2026-11-14",
+					"size": "l", "more": { "type": "entry", "value": team.id } },
+				// no is nothing, a row of only noes is no row
+				{ "name": "Wurst", "vegan": false, "more": { "type": "url", "value": null } },
+				{ "vegan": false },
+			],
+			"text": { "type": "doc", "content": [
+				{ "type": "paragraph", "attrs": { "class": "lead" }, "content": [
+					{ "type": "text", "text": "Hot", "marks": [
+						{ "type": "style", "attrs": { "class": "highlight" } }] },
+				] },
+			] },
+		});
+		let menu =
+			save(&conn, &s, None, input("menus", "menu", "M", fields), None)
+				.unwrap();
+		assert_eq!(
+			menu.fields["dishes"],
+			json!([
+				{ "name": "Rösti", "price": 18.5, "vegan": true, "from": "2026-11-14",
+					"size": "l", "more": { "type": "entry", "value": team.id } },
+				{ "name": "Wurst" },
+			])
+		);
+		// the link in the table is a relation, the studio shows its title
+		let refs =
+			crate::entries::refs(&conn, &[menu.id], "de", false).unwrap();
+		assert!(refs.contains_key(&team.id));
+
+		let bad = json!({
+			"dishes": [{ "price": 1.234, "vegan": "yes", "from": "14.11.2026",
+				"size": "m", "more": { "type": "email", "value": "a@b.ch" } }],
+			"text": { "type": "doc", "content": [
+				{ "type": "paragraph", "attrs": { "class": "huge" },
+					"content": [{ "type": "text", "text": "x" }] },
+			] },
+		});
+		let Err(crate::error::Error::Invalid(errs)) =
+			save(&conn, &s, None, input("menus", "menu", "B", bad), None)
+		else {
+			panic!("should fail");
+		};
+		let errs: Vec<_> = errs
+			.iter()
+			.map(|e| format!("{}: {}", e.path, e.message))
+			.collect();
+		assert_eq!(
+			errs,
+			[
+				"dishes.0.price: at most 2 decimal places",
+				"dishes.0.vegan: wrong type",
+				"dishes.0.from: a date like 2026-11-14",
+				"dishes.0.size: not one of the options",
+				"dishes.0.more: can't link to email",
+				"text: style \"huge\" isn't allowed here",
+			]
+		);
+	}
+
+	let data = run(
+		&gql,
+		r#"{ entry(section: "menus") { ... on menu_Entry {
+			dishes { name price vegan from size more { url defaultLabel } }
+			text { html chunks { ... on Html { html } } }
+		} } }"#,
+		true,
+	)
+	.await;
+	let html = r#"<p class="lead"><span class="highlight">Hot</span></p>"#;
+	assert_eq!(
+		data["entry"],
+		json!({
+			"dishes": [
+				{ "name": "Rösti", "price": 18.5, "vegan": true, "from": "2026-11-14",
+					"size": "l", "more": { "url": "https://x.ch/team", "defaultLabel": "Team" } },
+				{ "name": "Wurst", "price": null, "vegan": false, "from": null,
+					"size": null, "more": null },
+			],
+			"text": { "html": html, "chunks": [{ "html": html }] },
+		})
+	);
+}
+
+#[tokio::test]
 async fn craft_arguments_and_fields() {
 	let db = Db::memory().unwrap();
 	let s = Arc::new(site().image_widths([400, 800]));

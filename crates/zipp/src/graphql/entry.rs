@@ -269,7 +269,16 @@ pub(super) fn content_field(
 					Some((t, options)) => t.resolve(&ctx, &options, &value),
 					None => Ok(None),
 				},
-				FieldKind::Checkboxes { .. } | FieldKind::Table { .. } => {
+				FieldKind::Table { .. } => {
+					let rows = value.as_array().cloned().unwrap_or_default();
+					Ok(Some(FieldValue::list(rows.into_iter().map(|cells| {
+						FieldValue::owned_any(TableRow {
+							cells,
+							site: site.clone(),
+						})
+					}))))
+				}
+				FieldKind::Checkboxes { .. } => {
 					let items = value.as_array().cloned().unwrap_or_default();
 					Ok(Some(FieldValue::list(
 						items
@@ -378,23 +387,7 @@ pub(super) fn content_objects(
 			};
 			let mut row = Object::new(table_row(&comp.handle, &field.handle));
 			for c in columns {
-				let column = c.handle.clone();
-				row = row.field(GqlField::new(
-					c.handle.clone(),
-					TypeRef::named(TypeRef::STRING),
-					move |ctx| {
-						let column = column.clone();
-						FieldFuture::new(async move {
-							let v = ctx.parent_value.try_to_value()?;
-							let GqlValue::Object(o) = v else {
-								return Ok(None);
-							};
-							Ok(o.get(column.as_str())
-								.cloned()
-								.map(FieldValue::value))
-						})
-					},
-				));
+				row = row.field(table_cell(c));
 			}
 			objects.push(row);
 		}
@@ -437,6 +430,51 @@ pub(super) fn content_objects(
 		objects.push(obj);
 	}
 	objects
+}
+
+/// A cell of a table row, typed by its column: numbers as floats, a
+/// boolean is false when it's not set, links like a link field.
+fn table_cell(column: &crate::schema::Column) -> GqlField {
+	let ty = match &column.kind {
+		ColumnKind::Number { .. } => TypeRef::named(TypeRef::FLOAT),
+		ColumnKind::Boolean => TypeRef::named_nn(TypeRef::BOOLEAN),
+		ColumnKind::Link { .. } => TypeRef::named("Link"),
+		ColumnKind::Text
+		| ColumnKind::Url
+		| ColumnKind::Email
+		| ColumnKind::Date
+		| ColumnKind::Dropdown { .. } => TypeRef::named(TypeRef::STRING),
+	};
+	let column = column.clone();
+	GqlField::new(column.handle.clone(), ty, move |ctx| {
+		let column = column.clone();
+		FieldFuture::new(async move {
+			let row = ctx.parent_value.try_downcast_ref::<TableRow>()?;
+			let v = &row.cells[&column.handle];
+			// a value of another shape (a draft) is none
+			let v = match &column.kind {
+				ColumnKind::Boolean => GqlValue::from(*v == true),
+				ColumnKind::Number { .. } => match v.as_f64() {
+					Some(n) => GqlValue::from(n),
+					None => return Ok(None),
+				},
+				ColumnKind::Link { .. } if v.is_object() => {
+					let link = resolve_link(&ctx, v, &row.site, true)?;
+					return Ok(link.map(FieldValue::value));
+				}
+				ColumnKind::Link { .. } => return Ok(None),
+				ColumnKind::Text
+				| ColumnKind::Url
+				| ColumnKind::Email
+				| ColumnKind::Date
+				| ColumnKind::Dropdown { .. } => match v.as_str() {
+					Some(s) => GqlValue::from(s),
+					None => return Ok(None),
+				},
+			};
+			Ok(Some(FieldValue::value(v)))
+		})
+	})
 }
 
 /// The type of the rows of a table field.

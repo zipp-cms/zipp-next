@@ -6,7 +6,7 @@ import {
 } from '@tiptap/core';
 import { Plugin } from '@tiptap/pm/state';
 import { mount, unmount, type Component } from 'svelte';
-import type { Schema } from '../../core/schema';
+import type { Schema, Style } from '../../core/schema';
 import type { Refs } from '../../entries/api';
 import type { Sortable } from 'zipp-ui/sortable';
 import BlockNode from './BlockNode.svelte';
@@ -48,6 +48,77 @@ export const ZippLink = Mark.create({
 	},
 	renderHTML({ HTMLAttributes }) {
 		return ['a', { ...HTMLAttributes, class: 'rt-link' }, 0];
+	},
+});
+
+/**
+ * The style of an element if it is one of the field's: copied in the
+ * editor it is `data-style`, from a website a class. The editor doesn't
+ * give the site's classes, they could be ones of the studio.
+ */
+function styleOf(el: HTMLElement, styles: Style[]) {
+	const st = styles.find(
+		st => el.dataset.style === st.class || el.classList.contains(st.class),
+	);
+	return st?.class ?? null;
+}
+
+/**
+ * The block styles of a field: a class on a paragraph or heading,
+ * `attrs.class`. Pasted html keeps only the field's own.
+ */
+export const BlockStyles = Extension.create<{ styles: Style[] }>({
+	name: 'blockStyles',
+	addOptions() {
+		return { styles: [] };
+	},
+	addGlobalAttributes() {
+		const styles = this.options.styles.filter(st => !st.inline);
+		return [
+			{
+				types: ['paragraph', 'heading'],
+				attributes: {
+					class: {
+						default: null,
+						parseHTML: el => styleOf(el, styles),
+						renderHTML: attrs =>
+							attrs.class
+								? {
+										class: 'rt-style',
+										'data-style': attrs.class,
+									}
+								: {},
+					},
+				},
+			},
+		];
+	},
+});
+
+/** An inline style of a field: a mark with a class on a part of the text. */
+export const InlineStyle = Mark.create<{ styles: Style[] }>({
+	name: 'style',
+	addOptions() {
+		return { styles: [] };
+	},
+	addAttributes() {
+		return { class: { default: null } };
+	},
+	parseHTML() {
+		const styles = this.options.styles.filter(st => st.inline);
+		return [
+			{
+				tag: 'span',
+				getAttrs: el => {
+					const c = styleOf(el, styles);
+					return c ? { class: c } : false;
+				},
+			},
+		];
+	},
+	renderHTML({ HTMLAttributes }) {
+		const style = HTMLAttributes.class;
+		return ['span', { class: 'rt-mark', 'data-style': style }, 0];
 	},
 });
 

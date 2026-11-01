@@ -208,25 +208,29 @@ pub(super) fn validate_value(
 				};
 				let mut cells = Map::new();
 				for c in columns {
-					let text = row.get(&c.handle).and_then(Value::as_str);
-					let Some(text) =
-						text.map(str::trim).filter(|t| !t.is_empty())
-					else {
-						continue;
+					let cell = row.get(&c.handle).unwrap_or(&Value::Null);
+					// texts without the spaces around them
+					let cell = match cell {
+						Value::String(t) => Value::from(t.trim()),
+						v => v.clone(),
 					};
-					let ok = match c.kind {
-						ColumnKind::Text => true,
-						ColumnKind::Url => safe_url(text),
-						ColumnKind::Email => valid_email(text),
-					};
-					if !ok {
-						error(
-							errors,
-							&format!("{path}.{i}.{}", c.handle),
-							"not valid",
-						);
+					let p = format!("{path}.{i}.{}", c.handle);
+					let field = c.as_field();
+					let v = validate_value(
+						schema, &field, &cell, &p, hidden, errors,
+					);
+					match v {
+						// no is nothing, a row of only noes is empty
+						None | Some(Value::Bool(false)) => continue,
+						Some(Value::String(u))
+							if c.kind == ColumnKind::Url && !safe_url(&u) =>
+						{
+							error(errors, &p, "a url like https://… or /path")
+						}
+						Some(v) => {
+							cells.insert(c.handle.clone(), v);
+						}
 					}
-					cells.insert(c.handle.clone(), Value::from(text));
 				}
 				// an empty row is no row
 				if !cells.is_empty() {

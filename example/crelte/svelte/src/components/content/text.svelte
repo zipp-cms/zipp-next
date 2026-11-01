@@ -33,6 +33,16 @@
 		margin-top: 1em;
 	}
 
+	/* the styles of the rich text, classes from zipp */
+	.html :global(.lead) {
+		font-size: 1.25rem;
+	}
+
+	.html :global(.highlight) {
+		padding: 0 0.15em;
+		background: #fff3a8;
+	}
+
 	.buttons {
 		display: flex;
 		flex-wrap: wrap;

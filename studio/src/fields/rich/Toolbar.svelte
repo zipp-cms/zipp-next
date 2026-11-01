@@ -8,10 +8,12 @@
 	import LinkEditor from '../link/LinkEditor.svelte';
 	import { BUTTON_LINKS, opensInNewTab } from '../link/link';
 	import {
+		hasStyle,
 		insertBlock,
 		insertButton,
 		setFormat,
 		setLink,
+		toggleStyle,
 		type RichOptions,
 	} from './editor';
 
@@ -55,6 +57,14 @@
 		setLink(editor, to);
 	}
 
+	// the styles of the selection; the button shows the first
+	const styles = $derived(opts.styles ?? []);
+	const styled = $derived.by(() => {
+		void tick;
+		return styles.filter(st => hasStyle(editor, st));
+	});
+	let styling = $state(false);
+
 	let inserting = $state(false);
 	function insert(f: () => void) {
 		inserting = false;
@@ -76,6 +86,44 @@
 				<option value={level}>Heading {level}</option>
 			{/each}
 		</select>
+		<span class="toolbar-sep"></span>
+	{/if}
+	{#if styles.length}
+		<Popover bind:open={styling} width="14rem" label="Styles">
+			{#snippet trigger({ toggle })}
+				<button
+					type="button"
+					class="styles"
+					class:on={styled.length}
+					title="Styles"
+					onclick={toggle}
+				>
+					<span class="truncate">{styled[0]?.label ?? 'Styles'}</span>
+					<Icon name="chevron-down" size={14} />
+				</button>
+			{/snippet}
+			{#each styles as st (st.class)}
+				<button
+					type="button"
+					class="popup-item"
+					onclick={() => {
+						styling = false;
+						toggleStyle(editor, st);
+					}}
+				>
+					<span class="mark">
+						{#if styled.includes(st)}<Icon
+								name="check"
+								size={14}
+							/>{/if}
+					</span>
+					{st.label}
+					<span class="muted">
+						{st.inline ? 'Text' : 'Paragraph'}
+					</span>
+				</button>
+			{/each}
+		</Popover>
 		<span class="toolbar-sep"></span>
 	{/if}
 	<button
@@ -215,6 +263,23 @@
 		font-size: var(--fs-md);
 		border-color: var(--border);
 		border-radius: var(--radius-sm);
+	}
+
+	.styles {
+		max-width: 10rem;
+	}
+
+	// the check of a style the selection has, room for it on the others
+	.mark {
+		display: flex;
+		width: 0.875rem;
+		color: var(--accent);
+	}
+
+	.popup-item .muted {
+		margin-left: auto;
+		font-size: var(--fs-sm);
+		font-weight: normal;
 	}
 
 	.insert {

@@ -20,6 +20,17 @@
 		? ` · CHF ${entry.tickets.price.toFixed(2)}`
 		: ''}{entry.tickets?.soldOut ? ` · ${$t('events.soldOut')}` : ''}
 </p>
+{#if entry.tickets?.categories.length}
+	<table class="prices">
+		{#each entry.tickets.categories as c, i (i)}
+			<tr class:sold={c.soldOut}>
+				<td>{c.name ?? ''}</td>
+				<td>{c.price != null ? `CHF ${c.price.toFixed(2)}` : ''}</td>
+				<td>{c.soldOut ? $t('events.soldOut') : ''}</td>
+			</tr>
+		{/each}
+	</table>
+{/if}
 {#if entry.description}{@html entry.description.html}{/if}
 {#each entry.page as p (p.url)}
 	<a href={p.url}>{p.title}</a>
@@ -28,5 +39,17 @@
 <style>
 	.meta {
 		color: #666;
+	}
+
+	.prices {
+		margin-bottom: 1rem;
+	}
+
+	.prices td {
+		padding: 0.2rem 1rem 0.2rem 0;
+	}
+
+	.sold {
+		color: #999;
 	}
 </style>

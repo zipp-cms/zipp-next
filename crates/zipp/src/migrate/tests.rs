@@ -262,6 +262,53 @@ fn only_blocks_are_blocks() {
 }
 
 #[test]
+fn a_column_of_another_kind_loses_its_cells() {
+	let table =
+		|columns| site().entry("menu", "Menu", [Field::table("rows", columns)]);
+	let old = table(vec![Column::text("name"), Column::text("price")]);
+	let new = table(vec![
+		Column::text("name"),
+		Column::number("price").decimals(2),
+		Column::boolean("vegan"),
+	]);
+	let ops = diff(&old, &new, &[]).unwrap();
+	assert!(matches!(&ops[..], [Op::ChangeField { .. }]));
+
+	let mut ty = "menu".to_string();
+	let mut fields = json!({ "rows": [{ "name": "Rösti", "price": "18.50" }] });
+	ops[0].apply_entry(&old, &mut ty, &mut fields);
+	assert_eq!(fields["rows"], json!([{ "name": "Rösti" }]));
+
+	// a unit is no other kind, the cells stay
+	let unit = table(vec![
+		Column::text("name"),
+		Column::number("price").decimals(2).unit("CHF"),
+		Column::boolean("vegan"),
+	]);
+	let ops = diff(&new, &unit, &[]).unwrap();
+	let mut fields = json!({ "rows": [{ "name": "Rösti", "price": 18.5 }] });
+	ops[0].apply_entry(&new, &mut ty, &mut fields);
+	assert_eq!(fields["rows"], json!([{ "name": "Rösti", "price": 18.5 }]));
+}
+
+#[test]
+fn text_columns_stay_as_they_were_stored() {
+	// the columns of before keep their JSON, no migration
+	let json = serde_json::to_value(Column::url("url")).unwrap();
+	assert_eq!(
+		json,
+		json!({ "handle": "url", "label": "Url", "kind": "url" })
+	);
+	let json = serde_json::to_value(Column::number("p").unit("CHF")).unwrap();
+	assert_eq!(
+		json,
+		json!({ "handle": "p", "label": "P", "kind": "number", "unit": "CHF" })
+	);
+	let back: Column = serde_json::from_value(json).unwrap();
+	assert_eq!(back, Column::number("p").unit("CHF"));
+}
+
+#[test]
 fn instructions_need_no_migration() {
 	let s = site();
 	let mut s2 = s.clone();

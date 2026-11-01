@@ -41,7 +41,7 @@ pub use field::FieldKind;
 pub use field::Holds;
 pub use field::LinkKind;
 use field::*;
-pub use field::{Column, ColumnKind, VIDEOS};
+pub use field::{Column, ColumnKind, Style, VIDEOS};
 
 /// The single of the texts of the frontend, see [`Schema::translations`].
 pub const TRANSLATIONS: &str = "translations";

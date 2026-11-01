@@ -6,9 +6,17 @@ import {
 	type FieldOf,
 	type Link,
 	type Schema,
+	type Style,
 } from '../../core/schema';
 import type { Refs } from '../../entries/api';
-import { Block, Button, EndLine, ZippLink } from './extensions.svelte';
+import {
+	Block,
+	BlockStyles,
+	Button,
+	EndLine,
+	InlineStyle,
+	ZippLink,
+} from './extensions.svelte';
 import type { Sortable } from 'zipp-ui/sortable';
 
 /** What a rich text field allows: its field. */
@@ -76,6 +84,12 @@ export function createEditor(o: {
 				link: false,
 			}),
 			...(opts.links ? [ZippLink] : []),
+			...(opts.styles?.length
+				? [
+						BlockStyles.configure({ styles: opts.styles }),
+						InlineStyle.configure({ styles: opts.styles }),
+					]
+				: []),
 			// css shows it only at the end, see .tiptap
 			Placeholder.configure({
 				placeholder: ({ editor }) =>
@@ -152,4 +166,29 @@ export function setFormat(editor: Editor, level: number) {
 			.setHeading({ level: level as any })
 			.run();
 	else chain(editor).setParagraph().run();
+}
+
+/** Whether the selection has the style. */
+export function hasStyle(editor: Editor, style: Style) {
+	const attrs = { class: style.class };
+	if (style.inline) return editor.isActive('style', attrs);
+	return (
+		editor.isActive('paragraph', attrs) || editor.isActive('heading', attrs)
+	);
+}
+
+/**
+ * Gives the selection the style or takes it away: an inline style the
+ * selected text, a block style its paragraphs and headings.
+ */
+export function toggleStyle(editor: Editor, style: Style) {
+	if (style.inline) {
+		chain(editor).toggleMark('style', { class: style.class }).run();
+		return;
+	}
+	const attrs = { class: hasStyle(editor, style) ? null : style.class };
+	let c = chain(editor).updateAttributes('paragraph', attrs);
+	// a field without headings has no such node
+	if (editor.schema.nodes.heading) c = c.updateAttributes('heading', attrs);
+	c.run();
 }

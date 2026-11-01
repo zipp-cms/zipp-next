@@ -9,7 +9,7 @@ use zipp::error::Result;
 use zipp::query::Query;
 use zipp::{
 	Access, AppState, Cms, Column, Condition, Field, Format, LinkKind, Role,
-	Schema, Section, Transform,
+	Schema, Section, Style, Transform,
 };
 use zipp_button_group::{ButtonGroup, button_group};
 use zipp_forms::{Form, FormField, Forms};
@@ -283,6 +283,20 @@ fn schema() -> Schema {
 							.unit("CHF")
 							.width(50),
 						Field::boolean("soldOut").width(50),
+						// prices by category, typed columns
+						Field::table(
+							"categories",
+							[
+								Column::text("name").label("Kategorie"),
+								Column::number("price")
+									.decimals(2)
+									.unit("CHF")
+									.label("Preis"),
+								Column::boolean("soldOut").label("Ausverkauft"),
+							],
+						)
+						.label("Kategorien")
+						.instructions("Leer: es gilt der Preis oben."),
 						// where to get on the waiting list, only while sold out
 						Field::link(
 							"waitlist",
@@ -336,7 +350,12 @@ fn schema() -> Schema {
 				.lists()
 				.links()
 				.buttons()
-				.embed(["images"])],
+				.embed(["images"])
+				// classes for the frontend's CSS, see components/content/text.svelte
+				.styles([
+					Style::block("lead", "Lead"),
+					Style::inline("highlight", "Highlight"),
+				])],
 		)
 		// what it shows and how wide, in tabs inside the block
 		.block_tabs(

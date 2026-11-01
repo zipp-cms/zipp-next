@@ -13,7 +13,7 @@ use crate::auth::Authed;
 use crate::content::{inner, markdown_text, richtext};
 use crate::db::marks;
 use crate::error::Result;
-use crate::schema::{Access, Component, FieldKind, Schema};
+use crate::schema::{Access, ColumnKind, Component, FieldKind, Schema};
 
 pub mod api;
 #[cfg(test)]
@@ -114,9 +114,14 @@ fn collect(
 			FieldKind::RichText { .. } => {
 				out.push(richtext::plain_text(value));
 			}
-			FieldKind::Table { .. } => {
+			// the cells of text, not numbers, links or options
+			FieldKind::Table { columns } => {
 				for row in value.as_array().into_iter().flatten() {
-					out.extend(strings(row));
+					for c in
+						columns.iter().filter(|c| c.kind == ColumnKind::Text)
+					{
+						out.extend(row[&c.handle].as_str().map(String::from));
+					}
 				}
 			}
 			FieldKind::Texts { .. } => out.extend(strings(value)),

@@ -172,6 +172,31 @@ impl Op {
 						}
 					});
 				}
+				// a column of a table likewise, its cells go
+				let changed = match (old.map(|o| &o.kind), &field.kind) {
+					(
+						Some(FieldKind::Table { columns: before }),
+						FieldKind::Table { columns },
+					) => changed_columns(before, columns),
+					_ => vec![],
+				};
+				if !changed.is_empty() {
+					walk_mut(schema, comp, fields, &mut |c, obj| {
+						if &c.handle != component {
+							return;
+						}
+						let rows = obj
+							.get_mut(&field.handle)
+							.and_then(Value::as_array_mut);
+						for row in rows.into_iter().flatten() {
+							if let Some(row) = row.as_object_mut() {
+								for h in &changed {
+									row.remove(h);
+								}
+							}
+						}
+					});
+				}
 			}
 		}
 
@@ -224,6 +249,21 @@ impl Op {
 			),
 		}
 	}
+}
+
+/// The columns of a table that are still there with another kind.
+fn changed_columns(before: &[Column], after: &[Column]) -> Vec<String> {
+	after
+		.iter()
+		.filter(|c| {
+			before.iter().any(|b| {
+				b.handle == c.handle
+					&& std::mem::discriminant(&b.kind)
+						!= std::mem::discriminant(&c.kind)
+			})
+		})
+		.map(|c| c.handle.clone())
+		.collect()
 }
 
 /// Calls `f` with each list of blocks in the fields of `comp`: a blocks

@@ -1,6 +1,8 @@
 //! Rich text: what TipTap edits, stored as its JSON (a ProseMirror
 //! document). The schema says per field what it may contain: headings,
-//! lists, links, rows of buttons and blocks of given types.
+//! lists, links, rows of buttons, blocks of given types and styles: a
+//! class on a paragraph or heading (`attrs.class`) or a mark `style`
+//! with a class on a part of the text.
 //!
 //! On save the document is checked and cleaned: empty paragraphs (also
 //! ones with only `&nbsp;`) and line breaks at the end of a paragraph go
@@ -11,7 +13,7 @@ use serde_json::{Map, Value, json};
 
 use crate::content::validate::validate_block;
 use crate::content::{FieldError, check_link, link_is_empty};
-use crate::schema::{FieldKind, LinkKind, Schema};
+use crate::schema::{FieldKind, LinkKind, Schema, Style};
 
 /// The links a rich text knows, everything but assets.
 const LINKS: [LinkKind; 4] = [
@@ -28,9 +30,17 @@ pub struct Allowed<'a> {
 	pub links: bool,
 	pub buttons: bool,
 	pub blocks: &'a [String],
+	pub styles: &'a [Style],
 }
 
 impl<'a> Allowed<'a> {
+	/// Whether the field has this style, inline or of a block.
+	fn has_style(&self, class: &str, inline: bool) -> bool {
+		self.styles
+			.iter()
+			.any(|s| s.class == class && s.inline == inline)
+	}
+
 	pub fn of(kind: &'a FieldKind) -> Option<Self> {
 		match kind {
 			FieldKind::RichText {
@@ -39,12 +49,14 @@ impl<'a> Allowed<'a> {
 				links,
 				buttons,
 				blocks,
+				styles,
 			} => Some(Self {
 				headings,
 				lists: *lists,
 				links: *links,
 				buttons: *buttons,
 				blocks,
+				styles,
 			}),
 			_ => None,
 		}
@@ -229,8 +241,20 @@ fn clean_inline(
 
 	let mut out = Map::new();
 	out.insert("type".into(), node["type"].clone());
+	let mut attrs = Map::new();
 	if node["type"] == "heading" {
-		out.insert("attrs".into(), json!({ "level": node["attrs"]["level"] }));
+		attrs.insert("level".into(), node["attrs"]["level"].clone());
+	}
+	// a block style; TipTap writes null for none
+	match node["attrs"]["class"].as_str() {
+		Some(class) if allowed.has_style(class, false) => {
+			attrs.insert("class".into(), class.into());
+		}
+		Some(class) => err(format!("style {class:?} isn't allowed here")),
+		None => {}
+	}
+	if !attrs.is_empty() {
+		out.insert("attrs".into(), attrs.into());
 	}
 	out.insert("content".into(), content.into());
 	Some(Value::Object(out))
@@ -239,6 +263,12 @@ fn clean_inline(
 fn check_mark(mark: &Value, allowed: &Allowed, err: &mut impl FnMut(String)) {
 	match mark["type"].as_str() {
 		Some("bold") | Some("italic") => {}
+		Some("style") => {
+			let class = mark["attrs"]["class"].as_str().unwrap_or_default();
+			if !allowed.has_style(class, true) {
+				err(format!("style {class:?} isn't allowed here"));
+			}
+		}
 		Some("link") if allowed.links => {
 			let link = &mark["attrs"]["link"];
 			let ok = link
@@ -388,14 +418,14 @@ fn render(node: &Value, resolve: &mut Resolve, out: &mut String) {
 	};
 	match node["type"].as_str() {
 		Some("paragraph") => {
-			*out += "<p>";
+			*out += &format!("<p{}>", class(node));
 			children(resolve, out);
 			*out += "</p>";
 		}
 		Some("heading") => {
 			let level =
 				node["attrs"]["level"].as_u64().unwrap_or(2).clamp(1, 6);
-			*out += &format!("<h{level}>");
+			*out += &format!("<h{level}{}>", class(node));
 			children(resolve, out);
 			*out += &format!("</h{level}>");
 		}
@@ -429,6 +459,9 @@ fn render(node: &Value, resolve: &mut Resolve, out: &mut String) {
 				text = match m["type"].as_str() {
 					Some("bold") => format!("<strong>{text}</strong>"),
 					Some("italic") => format!("<em>{text}</em>"),
+					Some("style") => {
+						format!("<span{}>{text}</span>", class(m))
+					}
 					Some("link") => match resolve(&m["attrs"]["link"]) {
 						Some((url, target)) => {
 							anchor(&url, target.as_deref(), &text)
@@ -441,6 +474,14 @@ fn render(node: &Value, resolve: &mut Resolve, out: &mut String) {
 			*out += &text;
 		}
 		_ => {}
+	}
+}
+
+/// The class attribute of a style, ` class="lead"`, or nothing.
+fn class(node: &Value) -> String {
+	match node["attrs"]["class"].as_str() {
+		Some(c) if !c.is_empty() => format!(" class=\"{}\"", escape(c)),
+		_ => String::new(),
 	}
 }
 
@@ -517,8 +558,16 @@ mod tests {
 			links: true,
 			buttons: true,
 			blocks,
+			styles: STYLES.get_or_init(|| {
+				vec![
+					Style::block("lead", "Lead"),
+					Style::inline("highlight", "Highlight"),
+				]
+			}),
 		}
 	}
+
+	static STYLES: std::sync::OnceLock<Vec<Style>> = std::sync::OnceLock::new();
 
 	fn p(text: &str) -> Value {
 		json!({ "type": "paragraph", "content": [{ "type": "text", "text": text }] })
@@ -649,6 +698,60 @@ mod tests {
 		assert_eq!(
 			html(&doc, &mut resolver),
 			"<ul><li>one</li><li><p>two</p><p>three</p></li></ul>"
+		);
+	}
+
+	#[test]
+	fn styles_are_classes() {
+		let s = site();
+		let highlight =
+			json!([{ "type": "style", "attrs": { "class": "highlight" } }]);
+		let doc = json!({ "type": "doc", "content": [
+			{ "type": "paragraph", "attrs": { "class": "lead" }, "content": [
+				{ "type": "text", "text": "Big " },
+				{ "type": "text", "text": "news", "marks": highlight },
+			] },
+			// TipTap writes null for no style
+			{ "type": "heading", "attrs": { "level": 2, "class": null },
+				"content": [{ "type": "text", "text": "H" }] },
+		] });
+		let mut errors = vec![];
+		let doc = validate(&s, &allowed(&[]), &doc, "t", &mut errors);
+		assert!(errors.is_empty(), "{errors:?}");
+		assert_eq!(doc["content"][1]["attrs"], json!({ "level": 2 }));
+
+		let out = "<p class=\"lead\">Big <span class=\"highlight\">news</span></p>\
+			<h2>H</h2>";
+		assert_eq!(html(&doc, &mut resolver), out);
+		assert_eq!(chunks(&doc, &mut resolver), [Chunk::Html(out.into())]);
+		assert_eq!(plain_text(&doc), "Big news\nH");
+	}
+
+	#[test]
+	fn refuses_unknown_styles() {
+		let s = site();
+		let mark = |class: &str| json!([{ "type": "style", "attrs": { "class": class } }]);
+		let doc = json!({ "type": "doc", "content": [
+			{ "type": "paragraph", "attrs": { "class": "huge" },
+				"content": [{ "type": "text", "text": "a" }] },
+			// a block style is no inline style
+			{ "type": "paragraph", "content": [
+				{ "type": "text", "text": "b", "marks": mark("lead") },
+			] },
+			{ "type": "heading", "attrs": { "level": 2, "class": "highlight" },
+				"content": [{ "type": "text", "text": "c" }] },
+		] });
+		let mut errors = vec![];
+		validate(&s, &allowed(&[]), &doc, "t", &mut errors);
+		let messages: Vec<_> =
+			errors.iter().map(|e| e.message.as_str()).collect();
+		assert_eq!(
+			messages,
+			[
+				"style \"huge\" isn't allowed here",
+				"style \"lead\" isn't allowed here",
+				"style \"highlight\" isn't allowed here",
+			]
 		);
 	}
 }

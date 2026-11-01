@@ -627,3 +627,39 @@ fn an_inline_group_named_like_a_block() {
 		"component newsTickets exists twice, an inline group of news makes it"
 	);
 }
+
+#[test]
+fn columns_and_styles() {
+	use crate::schema::{Column, Style};
+	let with = |f: Field| site().block("x", "X", [f]).check();
+	let table = |c: Column| with(Field::table("t", [c]));
+	table(Column::number("n").decimals(2).unit("CHF")).unwrap();
+	assert_eq!(
+		table(Column::number("n").decimals(11)).unwrap_err(),
+		"x.t: column n: decimals go from 0 to 10"
+	);
+	assert_eq!(
+		table(Column::dropdown("d", [])).unwrap_err(),
+		"x.t: column d: it needs options"
+	);
+	assert_eq!(
+		table(Column::link("l", [])).unwrap_err(),
+		"x.t: column l: a link needs something to point to"
+	);
+
+	let rich = |styles: Vec<Style>| with(Field::rich_text("r").styles(styles));
+	rich(vec![
+		Style::block("lead", "Lead"),
+		Style::inline("text-big", "Big"),
+	])
+	.unwrap();
+	assert_eq!(
+		rich(vec![Style::block("1x", "X")]).unwrap_err(),
+		"x.r: style \"1x\" must be a class like lead or text-large"
+	);
+	assert_eq!(
+		rich(vec![Style::block("a", "A"), Style::inline("a", "B")])
+			.unwrap_err(),
+		"x.r: style a exists twice"
+	);
+}

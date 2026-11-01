@@ -53,7 +53,7 @@ use crate::error::{Error, Result};
 use crate::field_type::{GraphqlType, Scalar as FieldScalar};
 use crate::query::Query;
 use crate::richtext::{self, Chunk};
-use crate::schema::{ASSET, FieldKind, Format, Schema, Transform};
+use crate::schema::{ASSET, ColumnKind, FieldKind, Format, Schema, Transform};
 
 pub mod api;
 #[cfg(test)]
@@ -146,6 +146,12 @@ struct Viewer {
 /// A rich text field as parent of html and chunks.
 struct RichText {
 	doc: Value,
+	site: String,
+}
+
+/// A row of a table field, it knows its site for links.
+struct TableRow {
+	cells: Value,
 	site: String,
 }
 

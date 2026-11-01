@@ -28,13 +28,14 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Revisions | Options → Revisions | what each one changed; click to look, **Restore** to go back |
 | Two editors at once | log in twice | the second one is told instead of overwriting the first |
 | Blocks | Pages → Über uns → Content | text, images, video, button, upcoming events |
-| Rich text | the Intro tab · the Text block | the intro only with links; the block also with headings, lists, **buttons** (next to each other one row) and **images** inside the text |
+| Rich text | the Intro tab · the Text block | the intro only with links; the block also with headings, lists, **buttons** (next to each other one row), **images** inside the text and **Styles** (*Lead* for a paragraph, *Highlight* for words; the website styles their classes) |
 | Links | a Button block | entry, URL, email, phone or file; external ones open in a new tab |
 | Group, inline group | a page → SEO, Events → Tickets | fields of another component under one name in a box; the event's tickets are an inline group, its fields written right in the field (`Field::group_of`) |
 | Tabs in a block | Pages → Über uns → Content → an Images block | **Content** (the images, the caption) and **Layout** (the width) as tabs inside the block (`block_tabs`); the block keeps its tab |
 | Tab in a card | News → an article → Intro · Events | the fields of a tab or a whole type in one card with the labels on the left, like a group (`.tab_card`, `.entry_card`) |
 | Markdown | Events → Description | written as markdown, the website gets it as html |
 | Navigation, table, checkboxes | Settings → Header, Footer · Events → Für wen | a menu with a second level, footer links as rows, some of the options |
+| Typed table columns | Events → Tickets → Kategorien | a text, a price in CHF and a *Ausverkauft* switch per row; the event page lists them |
 | Dropdown | Images block → Width (3 options: buttons), Events → Sprache (5: a select) | the website sizes the image, filters events by language |
 | Field widths, notes | Events | date, doors and city in one row, two fields a row below and in the tickets; a note on how the event's image should be (on a phone all full width) |
 | Conditions | Events → Genre, Tickets → Sold out | *Doors open* only for a concert, *Warteliste* only while the event is sold out; the fields come and go as you click |

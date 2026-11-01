@@ -1,16 +1,30 @@
 <script lang="ts">
-	import type { FieldOf, Values } from '../core/schema';
+	import type { FieldOf, Schema, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
+	import type { Refs } from '../entries/api';
 	import AddButton from 'zipp-ui/AddButton.svelte';
 	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
 	import { Sortable, moved } from 'zipp-ui/sortable';
 	import { inserted, removed, replaced } from '../core/list';
+	import TableCell from './TableCell.svelte';
 
-	/** Rows of the columns of the code, like Craft's table field. */
-	let { field, values }: { field: FieldOf<'table'>; values: Values } =
-		$props();
+	/**
+	 * Rows of the columns of the code, like Craft's table field. A
+	 * plugin's module mounts it without schema and refs, links need them.
+	 */
+	let {
+		schema,
+		field,
+		values,
+		refs = {},
+	}: {
+		schema?: Schema;
+		field: FieldOf<'table'>;
+		values: Values;
+		refs?: Refs;
+	} = $props();
 
 	const columns = $derived(field.columns);
 	const rows = $derived(valueOf(values, field) ?? []);
@@ -26,8 +40,16 @@
 		onmove: (from, drop) => set(moved(rows, from, drop)),
 	});
 
-	function cell(i: number, column: string, text: string) {
-		set(replaced(rows, i, { ...rows[i], [column]: text }));
+	// nothing leaves the row, so an empty row is one
+	function cell(i: number, column: string, value: unknown) {
+		const { [column]: _, ...row } = rows[i];
+		set(
+			replaced(
+				rows,
+				i,
+				value === null ? row : { ...row, [column]: value },
+			),
+		);
 	}
 </script>
 
@@ -51,15 +73,13 @@
 						/>
 					</td>
 					{#each columns as c (c.handle)}
-						<td>
-							<input
-								type={c.kind === 'email' ? 'email' : 'text'}
-								placeholder={c.kind === 'url'
-									? 'https://…'
-									: ''}
-								value={row[c.handle] ?? ''}
-								oninput={e =>
-									cell(i, c.handle, e.currentTarget.value)}
+						<td class={c.kind}>
+							<TableCell
+								{schema}
+								{refs}
+								column={c}
+								value={row[c.handle] ?? null}
+								onchange={v => cell(i, c.handle, v)}
 							/>
 						</td>
 					{/each}
@@ -107,6 +127,11 @@
 
 	td {
 		padding: 2px 0.25rem;
+	}
+
+	// a switch only as wide as it is
+	.boolean {
+		width: 1%;
 	}
 
 	.actions {

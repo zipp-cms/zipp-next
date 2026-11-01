@@ -1346,6 +1346,34 @@
             "kind": "boolean"
           },
           {
+            "handle": "categories",
+            "label": "Kategorien",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Leer: es gilt der Preis oben.",
+            "kind": "table",
+            "columns": [
+              {
+                "handle": "name",
+                "label": "Kategorie",
+                "kind": "text"
+              },
+              {
+                "handle": "price",
+                "label": "Preis",
+                "kind": "number",
+                "decimals": 2,
+                "unit": "CHF"
+              },
+              {
+                "handle": "soldOut",
+                "label": "Ausverkauft",
+                "kind": "boolean"
+              }
+            ]
+          },
+          {
             "handle": "waitlist",
             "label": "Warteliste",
             "required": false,
@@ -1478,6 +1506,18 @@
             "buttons": true,
             "blocks": [
               "images"
+            ],
+            "styles": [
+              {
+                "class": "lead",
+                "label": "Lead",
+                "inline": false
+              },
+              {
+                "class": "highlight",
+                "label": "Highlight",
+                "inline": true
+              }
             ]
           }
         ],
@@ -3233,6 +3273,34 @@
             "kind": "boolean"
           },
           {
+            "handle": "categories",
+            "label": "Kategorien",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Leer: es gilt der Preis oben.",
+            "kind": "table",
+            "columns": [
+              {
+                "handle": "name",
+                "label": "Kategorie",
+                "kind": "text"
+              },
+              {
+                "handle": "price",
+                "label": "Preis",
+                "kind": "number",
+                "decimals": 2,
+                "unit": "CHF"
+              },
+              {
+                "handle": "soldOut",
+                "label": "Ausverkauft",
+                "kind": "boolean"
+              }
+            ]
+          },
+          {
             "handle": "waitlist",
             "label": "Warteliste",
             "required": false,
@@ -3356,6 +3424,18 @@
             "buttons": true,
             "blocks": [
               "images"
+            ],
+            "styles": [
+              {
+                "class": "lead",
+                "label": "Lead",
+                "inline": false
+              },
+              {
+                "class": "highlight",
+                "label": "Highlight",
+                "inline": true
+              }
             ]
           }
         ],

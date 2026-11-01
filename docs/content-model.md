@@ -151,6 +151,15 @@ breaks, so frontends need no margin hacks. GraphQL has `html` and
 `chunks` (`Html`, `Buttons` with a row of links, the blocks): each
 button is a node of its own in the text, the ones next to each other
 arrive as one row. Links in the text point to entries by id.
+`.styles([Style::block("lead", "Lead"), Style::inline("highlight",
+"Highlight")])` gives editors a Styles menu like CKEditor's: a block
+style is a class on a paragraph or heading (`attrs.class`), an inline
+style a mark `style` with the class on a part of the text. `html` and
+the chunks render them as `<p class="lead">` and `<span
+class="highlight">`, the frontend's CSS gives their look; the studio
+shows every style alike (a line on the left, a tint). Unknown classes
+are refused; a removed style stays in the content until it is saved
+again, which refuses it, like a removed heading level.
 
 ## Groups and markdown
 
@@ -179,7 +188,15 @@ Dropdowns can be indexed.
 `Field::checkboxes` stores some
 of its options (GraphQL: a list of values). `Field::table("links",
 [Column::text("label"), Column::url("url")])` stores rows, GraphQL has a
-row type per table. `Field::navigation("main", [LinkKind::Entry,
+row type per table (`<component>_<field>_Row`). A column is like the
+field of its kind, small enough for a row: `Column::text`, `url`,
+`email`, `number("price").decimals(2).unit("CHF")` (a `Float`),
+`boolean("vegan")` (a switch, `Boolean!`, no is stored as nothing),
+`date("from")` (a day), `dropdown("size", [("s", "Small")])` (the value)
+and `link("more", [LinkKind::Entry, LinkKind::Url])` (a link without a
+label, GraphQL's `Link`, a relation). Empty rows are left out, the
+search finds the text columns. A column that gets another kind loses
+its cells in the migration, like a field. `Field::navigation("main", [LinkKind::Entry,
 LinkKind::Url]).depth(2)` is a menu: links with their own label and the
 links under them, GraphQL gives `{ url label defaultLabel target
 download children }`; links to entries count as relations.

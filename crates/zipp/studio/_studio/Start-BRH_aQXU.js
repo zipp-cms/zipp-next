@@ -1,0 +1,1 @@
+import{p as r,d as e,v as n}from"./index-BPY-lXAO.js";import"./legacy-DhR68M1r.js";import{n as f}from"./paths-CF3jM17v.js";import{i as m}from"./lifecycle-DMl8aASa.js";function l(s,t){var o;const a=(o=n(s.schema)[0])==null?void 0:o.sections[0],i=a?f(s.schema,a):"/admin/assets";t.setRedirect(i)}function u(s,t){r(t,!1),m(),e()}export{u as default,l as loadProps};

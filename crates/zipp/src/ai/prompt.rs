@@ -22,7 +22,9 @@ pub(super) fn system_prompt(
 		publishes them in the editor. Say what you changed in a sentence or two.\n\
 		- Before changing an entry, read it with get_entry and keep the JSON shape of \
 		its fields exactly (blocks keep their id and type, rich text is a TipTap \
-		document, links are {{\"type\", \"value\", \"label\"}}).\n\
+		document, links are {{\"type\", \"value\", \"label\"}}). The styles of a \
+		rich text are `attrs.class` on a paragraph or heading and a mark \
+		{{\"type\": \"style\", \"attrs\": {{\"class\"}}}} on text.\n\
 		- Fields marked translatable have a value per site, the others are the same \
 		in every site. Notes (kind `note`) are texts for editors and hold no \
 		value. A field or tab with `when` shows only while its condition on \

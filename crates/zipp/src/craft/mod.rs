@@ -623,8 +623,24 @@ impl Importer<'_> {
 				_ => None,
 			},
 			FieldKind::Boolean => v.as_bool().map(Value::from),
-			FieldKind::Checkboxes { .. } | FieldKind::Table { .. } => {
-				Some(v.clone())
+			FieldKind::Checkboxes { .. } => Some(v.clone()),
+			// each cell like the field of its column
+			FieldKind::Table { columns } => {
+				let mut rows = vec![];
+				for row in v.as_array().into_iter().flatten() {
+					let mut cells = serde_json::Map::new();
+					for c in columns {
+						let cell = &row[&c.handle];
+						match self.value(&c.as_field(), cell) {
+							None | Some(Value::Bool(false)) => {}
+							Some(v) => {
+								cells.insert(c.handle.clone(), v);
+							}
+						}
+					}
+					rows.push(Value::Object(cells));
+				}
+				Some(Value::from(rows))
 			}
 			FieldKind::Texts { .. } => v.is_object().then(|| v.clone()),
 			FieldKind::Relation { .. } => Some(self.ids(v, false)),
@@ -764,6 +780,7 @@ impl Importer<'_> {
 			links,
 			buttons,
 			blocks,
+			..
 		} = &field.kind
 		else {
 			unreachable!()

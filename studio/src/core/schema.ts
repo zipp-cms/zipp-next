@@ -17,11 +17,22 @@ export type Link = {
 /** An item of a navigation: a link and the items under it. */
 export type NavItem = Link & { children?: NavItem[] };
 
+/** A column of a table, a cell holds what the field of its kind does. */
 export type Column = {
 	handle: string;
 	label: string;
-	kind: 'text' | 'url' | 'email';
-};
+} & (
+	| { kind: 'text' | 'url' | 'email' | 'boolean' | 'date' }
+	| { kind: 'number'; decimals?: number; unit?: string }
+	| { kind: 'dropdown'; options: { value: string; label: string }[] }
+	| { kind: 'link'; to: LinkKind[] }
+);
+
+/**
+ * A style of a rich text: a class on a paragraph or heading, `inline` on
+ * a part of the text.
+ */
+export type Style = { class: string; label: string; inline: boolean };
 
 export type FieldKind =
 	| { kind: 'text'; max: number | null; multiline: boolean }
@@ -62,6 +73,7 @@ export type FieldKind =
 			links: boolean;
 			buttons: boolean;
 			blocks: string[];
+			styles?: Style[];
 	  }
 	| {
 			kind: 'blocks';

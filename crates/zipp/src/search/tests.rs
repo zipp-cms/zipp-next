@@ -53,6 +53,30 @@ fn collects_the_texts_of_blocks_groups_and_rich_text() {
 }
 
 #[test]
+fn collects_the_text_columns_of_tables() {
+	use crate::schema::{Column, Field};
+	let s = site_with_roles().entry(
+		"menu",
+		"Menu",
+		[Field::table(
+			"dishes",
+			[
+				Column::text("name"),
+				Column::number("price"),
+				Column::dropdown("size", [("l", "Large")]),
+				Column::url("url"),
+			],
+		)],
+	);
+	let fields = json!({ "dishes": [
+		{ "name": "Rösti", "price": 18.5, "size": "l", "url": "/r" },
+		{ "name": "Wurst" },
+	] });
+	let comp = s.entry_type("menu").unwrap();
+	assert_eq!(texts(&s, comp, &fields), "Rösti\nWurst");
+}
+
+#[test]
 fn finds_saved_entries_and_follows_updates() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();

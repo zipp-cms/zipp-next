@@ -175,6 +175,18 @@
 			text-decoration: underline;
 		}
 
+		// styles of the site look alike here: a paragraph with a line on
+		// the left, text on a tint; the frontend's CSS gives their look
+		:global(.rt-style) {
+			padding-left: 0.625rem;
+			border-left: 3px solid var(--accent-soft);
+		}
+
+		:global(.rt-mark) {
+			border-radius: var(--radius-sm);
+			background: var(--accent-soft);
+		}
+
 		:global(.ProseMirror-selectednode) {
 			@include focus-ring(0);
 			border-radius: var(--radius);

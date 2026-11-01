@@ -158,6 +158,11 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 			tickets {
 				price
 				soldOut
+				categories {
+					name
+					price
+					soldOut
+				}
 			}
 			genre {
 				value

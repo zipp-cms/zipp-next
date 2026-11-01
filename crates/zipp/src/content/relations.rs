@@ -103,6 +103,22 @@ pub(super) fn collect_relations(
 			FieldKind::Navigation { .. } => {
 				nav_relations(schema, value, &path, out)
 			}
+			// and so is one in a cell of a table
+			FieldKind::Table { columns } => {
+				let rows = value.as_array().into_iter().flatten();
+				for (i, row) in rows.enumerate() {
+					for c in columns {
+						if matches!(c.kind, ColumnKind::Link { .. }) {
+							let p = format!("{path}.{i}.{}", c.handle);
+							out.extend(link_relation(
+								schema,
+								&row[&c.handle],
+								&p,
+							));
+						}
+					}
+				}
+			}
 			// a field type of another crate says what it relates to
 			FieldKind::Custom { ty, options } => {
 				let ty = schema.field_types.get(ty);
@@ -126,7 +142,6 @@ pub(super) fn collect_relations(
 			| FieldKind::Markdown
 			| FieldKind::Date { .. }
 			| FieldKind::Checkboxes { .. }
-			| FieldKind::Table { .. }
 			| FieldKind::Texts { .. }
 			| FieldKind::Dropdown { .. }
 			| FieldKind::Blocks { .. }
