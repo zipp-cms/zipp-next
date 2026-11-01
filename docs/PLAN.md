@@ -106,7 +106,6 @@
   editable in `seoSettings` over the code's defaults
 - [x] SEO as the plugin `zipp-seo`, the test of the plugin system (operator
   2026-10-28); field handles for admins; tabs of entry types, shown in Setup
-- Tabs for blocks too, like Craft's nested entry types? (question)
 - Two AI features (operator 2026-10-30, later): the AI chat in the core
   (`crates/zipp/src/ai`, a model on OpenRouter that writes drafts, for
   roles with `.ai()`) and the coding agent of the plugin `zipp-agent`
@@ -128,7 +127,7 @@ commit.
       (`Field::note`)
 - [x] Field width in the editor: 25 %, 50 %, 75 %, 100 % (`.width(50)`)
 - [x] Settings (globals) without the big title above the fields, 4b457a1
-- [ ] Tabs inside blocks?
+- [x] Tabs inside blocks (`Schema::block_tabs`)
 - [x] Max level of a structure, 6317a46
 - [x] Custom fields on assets (besides title, alt, focal point)
       (`Schema::asset_fields`)

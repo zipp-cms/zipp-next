@@ -277,6 +277,52 @@ fn tabs_keep_the_fields_in_order() {
 }
 
 #[test]
+fn blocks_have_tabs_too() {
+	let s = site()
+		.block_tabs(
+			"teaser",
+			"Teaser",
+			[
+				(
+					"Content",
+					vec![
+						Field::text("heading"),
+						Field::group_of("link", [Field::text("url")]),
+					],
+				),
+				("Layout", vec![Field::boolean("wide")]),
+			],
+		)
+		.tab_when("teaser", "Layout", Condition::filled("heading"));
+	s.check().unwrap();
+
+	let teaser = s.get("teaser").unwrap();
+	assert!(!teaser.entry);
+	let handles: Vec<_> =
+		teaser.fields.iter().map(|f| f.handle.as_str()).collect();
+	assert_eq!(handles, ["heading", "link", "wide"]);
+	assert_eq!(teaser.tabs[0].fields, ["heading", "link"]);
+	assert_eq!(teaser.tabs[1].fields, ["wide"]);
+	assert!(teaser.tabs[1].when.is_some());
+	// the inline group is hoisted after the block, the tabs stay on it
+	let link = s.get("teaserLink").unwrap();
+	assert_eq!(link.part_of.as_deref(), Some("teaser"));
+	assert!(link.tabs.is_empty());
+
+	// a hidden tab hides its fields like in an entry
+	let values = serde_json::json!({ "wide": true });
+	assert!(!teaser.is_shown("wide", values.as_object().unwrap()));
+}
+
+#[test]
+#[should_panic(expected = "no entry type teaser")]
+fn blocks_have_no_tab_cards() {
+	let _ = site()
+		.block_tabs("teaser", "Teaser", [("Content", vec![Field::text("a")])])
+		.tab_card("teaser", "Content");
+}
+
+#[test]
 fn icons_of_types_and_nav_groups() {
 	let s = site()
 		.icon("event", "calendar")

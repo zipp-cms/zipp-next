@@ -1509,7 +1509,6 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "width": 50,
             "kind": "text",
             "max": 200,
             "multiline": false
@@ -1521,7 +1520,6 @@
             "indexed": false,
             "translatable": false,
             "default": "wide",
-            "width": 50,
             "kind": "dropdown",
             "options": [
               {
@@ -1536,6 +1534,21 @@
                 "value": "full",
                 "label": "Full width"
               }
+            ]
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Content",
+            "fields": [
+              "images",
+              "caption"
+            ]
+          },
+          {
+            "name": "Layout",
+            "fields": [
+              "width"
             ]
           }
         ],
@@ -3371,7 +3384,6 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "width": 50,
             "kind": "text",
             "max": 200,
             "multiline": false
@@ -3383,7 +3395,6 @@
             "indexed": false,
             "translatable": false,
             "default": "wide",
-            "width": 50,
             "kind": "dropdown",
             "options": [
               {
@@ -3398,6 +3409,21 @@
                 "value": "full",
                 "label": "Full width"
               }
+            ]
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Content",
+            "fields": [
+              "images",
+              "caption"
+            ]
+          },
+          {
+            "name": "Layout",
+            "fields": [
+              "width"
             ]
           }
         ],

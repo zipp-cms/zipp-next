@@ -367,12 +367,16 @@ impl Schema {
 	/// Shows the fields of a tab in one card with the labels on the left,
 	/// like a group, after the type: `.tab_card("article", "Intro")`. For
 	/// tabs of several short fields, a long column of them reads badly.
+	/// Not for blocks, their fields are in a card already.
 	pub fn tab_card(mut self, component: &str, tab: &str) -> Self {
 		let t = self
 			.get_mut(component)
+			.filter(|c| c.entry)
 			.and_then(|c| c.tabs.iter_mut().find(|t| t.name == tab));
 		let Some(t) = t else {
-			panic!("tab_card: {component} has no tab {tab}");
+			panic!(
+				"tab_card: there is no entry type {component} with a tab {tab}"
+			);
 		};
 		t.card = true;
 		self
@@ -495,9 +499,40 @@ impl Schema {
 	/// An entry type with its fields in tabs, like Craft's field layout:
 	/// `[("Content", vec![...]), ("SEO", vec![...])]`.
 	pub fn entry_tabs<'a>(
+		self,
+		handle: &str,
+		name: &str,
+		tabs: impl IntoIterator<Item = (&'a str, Vec<Field>)>,
+	) -> Self {
+		self.component_tabs(handle, name, true, tabs)
+	}
+
+	pub fn block(
+		self,
+		handle: &str,
+		name: &str,
+		fields: impl IntoIterator<Item = Field>,
+	) -> Self {
+		self.component(handle, name, false, fields)
+	}
+
+	/// A block with its fields in tabs like [`Schema::entry_tabs`], for a
+	/// big block: `[("Content", vec![...]), ("Layout", vec![...])]`. The
+	/// studio shows them as tabs inside its card.
+	pub fn block_tabs<'a>(
+		self,
+		handle: &str,
+		name: &str,
+		tabs: impl IntoIterator<Item = (&'a str, Vec<Field>)>,
+	) -> Self {
+		self.component_tabs(handle, name, false, tabs)
+	}
+
+	fn component_tabs<'a>(
 		mut self,
 		handle: &str,
 		name: &str,
+		entry: bool,
 		tabs: impl IntoIterator<Item = (&'a str, Vec<Field>)>,
 	) -> Self {
 		let mut fields = vec![];
@@ -511,18 +546,9 @@ impl Schema {
 			});
 			fields.extend(tab_fields);
 		}
-		self = self.component(handle, name, true, fields);
+		self = self.component(handle, name, entry, fields);
 		self.get_mut(handle).unwrap().tabs = layout;
 		self
-	}
-
-	pub fn block(
-		self,
-		handle: &str,
-		name: &str,
-		fields: impl IntoIterator<Item = Field>,
-	) -> Self {
-		self.component(handle, name, false, fields)
 	}
 
 	fn component(

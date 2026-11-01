@@ -2,7 +2,7 @@
 	import { untrack } from 'svelte';
 	import type { Schema, Values } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
-	import Fields from '../Fields.svelte';
+	import BlockFields from '../BlockFields.svelte';
 	import EmbedCard from './EmbedCard.svelte';
 	import { rememberOpen, wasOpen } from '../opened';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
@@ -76,13 +76,14 @@
 	{/snippet}
 	{#if comp}
 		<fieldset disabled={!editable}>
-			<Fields
+			<BlockFields
 				{schema}
 				component={comp}
 				values={fields.value}
 				errors={{}}
 				{refs}
 				prefix="{uid}."
+				id={attrs.id}
 			/>
 		</fieldset>
 	{/if}

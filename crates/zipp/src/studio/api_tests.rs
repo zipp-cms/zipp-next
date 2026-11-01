@@ -4,7 +4,7 @@ use axum::http::{Request, StatusCode, header};
 use super::api::*;
 use crate::error::Error;
 use crate::schema::tests::site_with_roles;
-use crate::schema::{Field, Section};
+use crate::schema::{Condition, Field, Section};
 use crate::testing::TestServer;
 
 #[tokio::test]
@@ -111,4 +111,27 @@ async fn the_schema_says_which_tabs_are_cards() {
 	assert!(comp("post")["tabs"][1]["card"].is_null());
 	assert!(comp("post")["card"].is_null());
 	assert_eq!(comp("event")["card"], true);
+}
+
+#[tokio::test]
+async fn the_schema_has_the_tabs_of_blocks() {
+	let schema = site_with_roles()
+		.block_tabs(
+			"teaser",
+			"Teaser",
+			[
+				("Content", vec![Field::text("heading")]),
+				("Settings", vec![Field::boolean("wide")]),
+			],
+		)
+		.tab_when("teaser", "Settings", Condition::filled("heading"));
+	let ts = TestServer::new(schema);
+	let resp = ts.user(Some("author")).call_json(&SchemaReq {}).await;
+	let comps = resp.unwrap()["components"].as_array().unwrap().clone();
+	let teaser = comps.iter().find(|c| c["handle"] == "teaser").unwrap();
+	assert_eq!(teaser["entry"], false);
+	assert_eq!(teaser["tabs"][0]["name"], "Content");
+	assert_eq!(teaser["tabs"][0]["fields"], serde_json::json!(["heading"]));
+	assert_eq!(teaser["tabs"][1]["fields"], serde_json::json!(["wide"]));
+	assert_eq!(teaser["tabs"][1]["when"]["field"], "heading");
 }

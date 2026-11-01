@@ -329,3 +329,20 @@ fn cards_need_no_migration() {
 	let s2 = s.clone().entry_card("event");
 	assert_eq!(diff(&s, &s2, &[]).unwrap(), []);
 }
+
+#[test]
+fn tabs_of_blocks_need_no_migration() {
+	let block = |s: Schema, tabbed: bool| {
+		let (a, b) = (Field::text("heading"), Field::boolean("wide"));
+		match tabbed {
+			true => s.block_tabs(
+				"teaser",
+				"Teaser",
+				[("Content", vec![a]), ("Layout", vec![b])],
+			),
+			false => s.block("teaser", "Teaser", [a, b]),
+		}
+	};
+	let s = block(site(), false);
+	assert_eq!(diff(&s, &block(site(), true), &[]).unwrap(), []);
+}

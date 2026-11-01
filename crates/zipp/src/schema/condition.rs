@@ -118,7 +118,7 @@ impl Component {
 }
 
 impl Schema {
-	/// Shows a tab of an entry type only when the condition holds, after
+	/// Shows a tab of an entry type or block only when the condition holds, after
 	/// the type: `.tab_when("page", "Page", Condition::on("hasPage"))`.
 	pub fn tab_when(
 		mut self,

@@ -331,23 +331,33 @@ fn schema() -> Schema {
 				.buttons()
 				.embed(["images"])],
 		)
-		.block(
+		// what it shows and how wide, in tabs inside the block
+		.block_tabs(
 			"images",
 			"Images",
 			[
-				Field::images("images").required(),
-				Field::text("caption").max(200).width(50),
-				// three options: buttons in the studio
-				Field::dropdown(
-					"width",
-					[
-						("small", "Small"),
-						("wide", "Wide"),
-						("full", "Full width"),
+				(
+					"Content",
+					vec![
+						Field::images("images").required(),
+						Field::text("caption").max(200),
 					],
-				)
-				.default("wide")
-				.width(50),
+				),
+				(
+					"Layout",
+					// three options: buttons in the studio
+					vec![
+						Field::dropdown(
+							"width",
+							[
+								("small", "Small"),
+								("wide", "Wide"),
+								("full", "Full width"),
+							],
+						)
+						.default("wide"),
+					],
+				),
 			],
 		)
 		.block(

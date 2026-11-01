@@ -4,7 +4,7 @@
 	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
 	import BlockMenu from './BlockMenu.svelte';
-	import Fields from './Fields.svelte';
+	import BlockFields from './BlockFields.svelte';
 	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import ItemCard from 'zipp-ui/ItemCard.svelte';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
@@ -177,7 +177,7 @@
 					<p class="error">{errors[`${path}.${i}`]}</p>
 				{/if}
 				{#if comp}
-					<Fields
+					<BlockFields
 						{schema}
 						component={comp}
 						values={block.fields}
@@ -185,6 +185,7 @@
 						{refs}
 						prefix="{path}.{i}."
 						{changed}
+						id={block.id}
 					/>
 				{/if}
 			</ItemCard>
