@@ -4,6 +4,7 @@
 	import type { Refs } from './api';
 	import { openEntry } from '../core/flyout.svelte';
 	import { componentName } from '../core/schema';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * A chosen entry, like Craft's element chips: its title opens it in
@@ -28,7 +29,7 @@
 	<button
 		type="button"
 		class="open plain"
-		title="Open in the flyout"
+		title={t('entries.openInFlyout')}
 		onclick={() => openEntry(id)}
 	>
 		<span class="truncate">{entry?.title ?? `#${id}`}</span>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { FieldOf, Values } from '../core/schema';
 	import Switch from 'zipp-ui/Switch.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/** A field that is one input: text, email, boolean. */
 	let {
@@ -21,7 +22,9 @@
 		checked={!!values[field.handle]}
 		onchange={on => (values[field.handle] = on)}
 	>
-		<span class="muted">{values[field.handle] ? 'Yes' : 'No'}</span>
+		<span class="muted">
+			{values[field.handle] ? t('common.yes') : t('common.no')}
+		</span>
 	</Switch>
 {:else if field.kind === 'text' && field.multiline}
 	<textarea

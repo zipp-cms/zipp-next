@@ -19,6 +19,18 @@ For the values of a field, beside the inputs of the page: `Segmented`
 `Switch` (yes or no, its text on the right; `onchange` only when
 clicked), `DatePicker`, `SearchInput`.
 
+## Texts
+
+What the components write themselves (Today, Clear, Close, Nothing
+found, the moves of `DragHandle`) and the locale of their dates are in
+`zipp-ui/texts`: `ui.texts` (English unless set) and `ui.locale`. The
+studio sets both in its user's language, `<html lang>` too. The object
+lives on `globalThis`, so the zipp-ui a plugin bundles reads the same;
+it reads it when it renders, a changed language shows in a plugin's view
+when it opens again. A component's text props (`placeholder`, `label`,
+`empty`) win over them. A plugin translates its own texts itself, by
+`document.documentElement.lang`.
+
 ## What the page gives them
 
 A module renders in the studio's page, the components lean on what the

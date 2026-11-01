@@ -19,9 +19,11 @@
 	import RoleAccess from './RoleAccess.svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import Segmented from 'zipp-ui/Segmented.svelte';
 	import { go } from '../core/router.svelte';
 	import { isAdmin, roleNameOf } from '../core/access';
 	import { time } from '../core/format';
+	import { browserLang, LANGUAGES, t, type Lang } from '../i18n/index.svelte';
 
 	/**
 	 * A user's account: name and email, the role and what it may do, a new
@@ -41,13 +43,30 @@
 	const admin = $derived(isAdmin(schema));
 	const isNew = $derived(form.account === null);
 	const title = $derived(
-		form.account ? displayName(form.account) : 'New user',
+		form.account ? displayName(form.account) : t('users.new'),
 	);
 	const crumbs = $derived(
 		admin
-			? [{ label: 'Users', href: '/admin/users' }, { label: title }]
-			: [{ label: 'Your account' }],
+			? [
+					{ label: t('users.title'), href: '/admin/users' },
+					{ label: title },
+				]
+			: [{ label: t('users.yourAccount') }],
 	);
+
+	// empty follows the browser, it says which that is
+	const languages = $derived([
+		{
+			value: '',
+			label: t('users.browserLanguage', {
+				language: LANGUAGES[browserLang()],
+			}),
+		},
+		...(Object.keys(LANGUAGES) as Lang[]).map(l => ({
+			value: l,
+			label: LANGUAGES[l],
+		})),
+	]);
 
 	async function save(e?: SubmitEvent) {
 		e?.preventDefault();
@@ -56,14 +75,14 @@
 	}
 
 	async function remove() {
-		if (!confirm(`Delete ${title}? They can't log in any more.`)) return;
+		if (!confirm(t('users.confirmDelete', { name: title }))) return;
 		if (await form.remove()) go('/admin/users');
 	}
 
 	function endSessions() {
 		const what = form.own
-			? 'Log out in all other browsers?'
-			: `Log ${title} out everywhere?`;
+			? t('users.confirmEndOwn')
+			: t('users.confirmEnd', { name: title });
 		if (confirm(what)) form.endSessions();
 	}
 
@@ -91,12 +110,12 @@
 	{#snippet state()}
 		{#if form.account}
 			<span class="badge">{roleNameOf(schema, form.account.role)}</span>
-			{#if form.own}<span class="muted">That's you</span>{/if}
+			{#if form.own}<span class="muted">{t('users.thatsYou')}</span>{/if}
 		{/if}
 	{/snippet}
 	{#snippet actions()}
 		{#if admin && form.account && !form.own}
-			<button class="icon" onclick={remove} title="Delete the user">
+			<button class="icon" onclick={remove} title={t('users.delete')}>
 				<Icon name="delete" />
 			</button>
 		{/if}
@@ -105,7 +124,7 @@
 			form="account"
 			disabled={form.busy || (!isNew && !form.changed)}
 		>
-			{isNew ? 'Create' : 'Save'}
+			{isNew ? t('common.create') : t('common.save')}
 		</button>
 	{/snippet}
 </PageTop>
@@ -117,13 +136,16 @@
 <div class="with-aside">
 	<form id="account" class="cards" onsubmit={save}>
 		<div class="card">
-			<h2>Account</h2>
+			<h2>{t('users.account')}</h2>
 			<label class="stacked">
-				Name
-				<input bind:value={form.name} placeholder="Anna Muster" />
+				{t('common.name')}
+				<input
+					bind:value={form.name}
+					placeholder={t('users.namePlaceholder')}
+				/>
 			</label>
 			<label class="stacked">
-				Email
+				{t('common.email')}
 				<input
 					type="email"
 					autocomplete="off"
@@ -134,13 +156,23 @@
 					<span class="error">{form.fields.email}</span>
 				{/if}
 			</label>
+			<!-- not a select: the role's is the only one in the form -->
+			<div class="language">
+				<span>{t('users.language')}</span>
+				<Segmented
+					options={languages}
+					value={form.language}
+					onchange={l => (form.language = l)}
+					label={t('users.language')}
+				/>
+			</div>
 		</div>
 
 		<div class="card">
-			<h2>Role</h2>
+			<h2>{t('users.role')}</h2>
 			{#if admin && !form.own}
 				<select bind:value={form.role}>
-					<option value={null}>Admin</option>
+					<option value={null}>{t('common.admin')}</option>
 					{#each schema.roles as r (r.handle)}
 						<option value={r.handle}>{r.name}</option>
 					{/each}
@@ -152,25 +184,22 @@
 		</div>
 
 		<div class="card">
-			<h2>Password</h2>
+			<h2>{t('common.password')}</h2>
 			{#if isNew}
-				<p class="muted">
-					Without one the user gets an invite link to choose it.
-				</p>
+				<p class="muted">{t('users.passwordNew')}</p>
 			{:else}
 				<p class="muted">
-					Leave it empty to keep the current one. A new password logs {form.own
-						? 'you'
-						: 'them'} out in all
-					{form.own ? 'other ' : ''}browsers.
+					{form.own
+						? t('users.passwordKeepOwn')
+						: t('users.passwordKeep')}
 				</p>
 			{/if}
 			<label class="stacked">
-				{isNew ? 'Password' : 'New password'}
+				{isNew ? t('common.password') : t('users.newPassword')}
 				<input
 					type="password"
 					autocomplete="new-password"
-					placeholder="At least 8 characters"
+					placeholder={t('users.passwordPlaceholder')}
 					bind:value={form.password}
 				/>
 				{#if form.fields.password}
@@ -180,12 +209,12 @@
 			{#if isNew && !form.password}
 				<label class="check">
 					<input type="checkbox" bind:checked={form.sendInvite} />
-					Send the invite by mail
+					{t('users.sendInvite')}
 				</label>
 			{/if}
 			{#if form.own && form.password}
 				<label class="stacked">
-					Your current password
+					{t('users.currentPassword')}
 					<input
 						type="password"
 						autocomplete="current-password"
@@ -205,7 +234,7 @@
 			<span class="avatar">{initials}</span>
 			<div class="truncate">
 				<strong class="truncate">
-					{form.name || form.email || 'New user'}
+					{form.name || form.email || t('users.new')}
 				</strong>
 				{#if form.name}<span class="note truncate">
 						{form.email}
@@ -214,36 +243,32 @@
 		</div>
 		{#if form.account}
 			<dl>
-				<dt>Created</dt>
+				<dt>{t('users.created')}</dt>
 				<dd>{time(form.account.createdAt)}</dd>
-				<dt>Last login</dt>
+				<dt>{t('users.lastLogin')}</dt>
 				<dd>
 					{form.account.lastLoginAt
 						? time(form.account.lastLoginAt)
-						: 'Never'}
+						: t('common.never')}
 				</dd>
-				<dt>Logged in</dt>
+				<dt>{t('users.loggedIn')}</dt>
 				<dd>
 					{form.account.sessions === 0
-						? 'Not logged in'
-						: form.account.sessions === 1
-							? 'in 1 browser'
-							: `in ${form.account.sessions} browsers`}
+						? t('users.notLoggedIn')
+						: t('users.browsers', { n: form.account.sessions })}
 				</dd>
 			</dl>
 			{#if form.account.sessions > (form.own ? 1 : 0)}
 				<button onclick={endSessions} disabled={form.busy}>
 					<Icon name="logout" />
-					{form.own
-						? 'Log out everywhere else'
-						: 'Log out everywhere'}
+					{form.own ? t('users.endOwn') : t('users.end')}
 				</button>
 			{/if}
 			{#if admin && !form.own}
 				<div class="access">
-					<h3>Access</h3>
+					<h3>{t('users.access')}</h3>
 					{#if form.account.invited}
-						<p class="note">Invited, no password yet.</p>
+						<p class="note">{t('users.invitedNote')}</p>
 					{/if}
 					<div class="buttons">
 						<button
@@ -252,8 +277,8 @@
 						>
 							<Icon name="mail" />
 							{form.account.invited
-								? 'Send the invite again'
-								: 'Send a password reset'}
+								? t('users.sendInviteAgain')
+								: t('users.sendReset')}
 						</button>
 						<button
 							class="light"
@@ -262,8 +287,8 @@
 						>
 							<Icon name="copy-url" />
 							{form.account.invited
-								? 'Copy the invite link'
-								: 'Copy a reset link'}
+								? t('users.copyInvite')
+								: t('users.copyReset')}
 						</button>
 						{#if form.account.role !== null}
 							<button
@@ -271,16 +296,16 @@
 								disabled={form.busy}
 							>
 								<Icon name="users" />
-								Log in as {title}
+								{t('users.loginAs', { name: title })}
 							</button>
 							<button
 								class="light"
 								onclick={() => form.loginAs(true)}
 								disabled={form.busy}
-								title="To open in a private window, your login stays"
+								title={t('users.copyLoginTitle')}
 							>
 								<Icon name="copy-url" />
-								Copy a login link
+								{t('users.copyLogin')}
 							</button>
 						{/if}
 					</div>
@@ -305,6 +330,19 @@
 
 		p {
 			margin: 0;
+		}
+	}
+
+	.language {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.3125rem;
+
+		// small and bold like the labels above
+		> span {
+			font-size: var(--fs-sm);
+			font-weight: 600;
 		}
 	}
 

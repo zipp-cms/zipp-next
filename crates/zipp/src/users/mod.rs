@@ -23,7 +23,12 @@ pub struct User {
 	/// empty when it isn't set
 	pub name: String,
 	pub role: Option<String>,
+	/// of the studio, one of [`LANGUAGES`]; empty is the browser's
+	pub language: String,
 }
+
+/// The languages the studio is translated to.
+pub const LANGUAGES: &[&str] = &["en", "de"];
 
 /// A user with what the studio shows about the account.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -40,7 +45,8 @@ pub struct Account {
 	pub invited: bool,
 }
 
-const ACCOUNT: &str = "SELECT id, email, name, role, created_at, last_login_at,
+const ACCOUNT: &str = "SELECT id, email, name, role, language, created_at,
+	last_login_at,
 	(SELECT COUNT(*) FROM sessions s
 		WHERE s.user_id = users.id AND s.expires_at > ?1),
 	password_hash = ''
@@ -53,11 +59,12 @@ fn account(r: &rusqlite::Row) -> rusqlite::Result<Account> {
 			email: r.get(1)?,
 			name: r.get(2)?,
 			role: r.get(3)?,
+			language: r.get(4)?,
 		},
-		created_at: r.get(4)?,
-		last_login_at: r.get(5)?,
-		sessions: r.get(6)?,
-		invited: r.get(7)?,
+		created_at: r.get(5)?,
+		last_login_at: r.get(6)?,
+		sessions: r.get(7)?,
+		invited: r.get(8)?,
 	})
 }
 
@@ -82,12 +89,13 @@ pub fn user(conn: &Connection, id: i64) -> Result<User> {
 	Ok(get(conn, id)?.user)
 }
 
-/// What is wrong with a name, email and new password, by field. The email
-/// is another user's, `id` is the user's own (`None` for a new one).
+/// What is wrong with an email, language and new password, by field. The
+/// email is another user's, `id` is the user's own (`None` for a new one).
 pub fn check(
 	conn: &Connection,
 	id: Option<i64>,
 	email: &str,
+	language: &str,
 	password: Option<&str>,
 ) -> Result<Vec<FieldError>> {
 	let mut errors = vec![];
@@ -106,6 +114,9 @@ pub fn check(
 		error("email", "An email address");
 	} else if taken {
 		error("email", "Another user has this email");
+	}
+	if !language.is_empty() && !LANGUAGES.contains(&language) {
+		error("language", "A language of the studio");
 	}
 	if let Some(e) = password.and_then(password_error) {
 		error("password", e);
@@ -126,11 +137,13 @@ pub fn create(
 	name: &str,
 	hash: &str,
 	role: Option<&str>,
+	language: &str,
 ) -> Result<i64> {
 	conn.execute(
-		"INSERT INTO users (email, name, password_hash, role, created_at)
-		VALUES (?1, ?2, ?3, ?4, ?5)",
-		params![email, name.trim(), hash, role, now()],
+		"INSERT INTO users (email, name, password_hash, role, language,
+			created_at)
+		VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+		params![email, name.trim(), hash, role, language, now()],
 	)?;
 	Ok(conn.last_insert_rowid())
 }
@@ -140,10 +153,11 @@ pub fn update(
 	id: i64,
 	email: &str,
 	name: &str,
+	language: &str,
 ) -> Result<()> {
 	let n = conn.execute(
-		"UPDATE users SET email = ?1, name = ?2 WHERE id = ?3",
-		params![email, name.trim(), id],
+		"UPDATE users SET email = ?1, name = ?2, language = ?3 WHERE id = ?4",
+		params![email, name.trim(), language, id],
 	)?;
 	match n {
 		0 => Err(Error::NotFound),

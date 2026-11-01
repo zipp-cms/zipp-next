@@ -6,6 +6,7 @@
 	import { time } from '../../core/format';
 	import { changeText } from './revisions';
 	import EntryHead from './EntryHead.svelte';
+	import { t } from '../../i18n/index.svelte';
 
 	/** An old revision, read only, with the dots of what it changed. */
 	let {
@@ -34,17 +35,25 @@
 
 <div class="viewing">
 	<span>
-		Revision of {time(rev.createdAt)}{rev.user ? ` by ${rev.user}` : ''},
-		read only
+		{rev.user
+			? t('entries.revisionOfBy', {
+					time: time(rev.createdAt),
+					user: rev.user,
+				})
+			: t('entries.revisionOf', { time: time(rev.createdAt) })}
 		<br />
 		<small>
-			Changed: {changeText(rev, comp, schema.sites.length > 1)}
+			{t('entries.changedList', {
+				changes: changeText(rev, comp, schema.sites.length > 1),
+			})}
 		</small>
 	</span>
 	{#if onrestore}
-		<button class="primary" onclick={onrestore}>Restore</button>
+		<button class="primary" onclick={onrestore}>
+			{t('common.restore')}
+		</button>
 	{/if}
-	<button class="light" onclick={onback}>Back to editing</button>
+	<button class="light" onclick={onback}>{t('entries.backToEditing')}</button>
 </div>
 {#if doc}
 	<!-- a disabled fieldset disables every input in it -->
@@ -54,7 +63,7 @@
 			<p class="slug">
 				{#if changed.has('slug')}<span
 						class="changed-dot"
-					></span>{/if}Slug:
+					></span>{/if}{t('entries.slug')}:
 				<code>{doc.slug}</code>
 			</p>
 		{/if}
@@ -69,7 +78,7 @@
 		/>
 	</fieldset>
 {:else}
-	<p class="muted">This revision has no content for this site.</p>
+	<p class="muted">{t('entries.noContentHere')}</p>
 {/if}
 
 <style lang="scss">

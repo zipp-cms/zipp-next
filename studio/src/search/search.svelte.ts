@@ -2,6 +2,7 @@ import { SEARCH_DELAY_MS } from 'zipp-ui/SearchInput.svelte';
 import type { Asset } from '../assets/api';
 import { sectionName, type Schema } from '../core/schema';
 import { search, type EntryHit, type Found } from './api';
+import { t } from '../i18n/index.svelte';
 
 /** Whether the search over the page is open, from anywhere. */
 export const searchBox = $state({ open: false });
@@ -91,7 +92,7 @@ function group(schema: Schema, found: Found): HitGroup[] {
 	}
 	if (found.assets.length) {
 		const hits = found.assets.map(asset => ({ kind: 'asset', asset }));
-		out.push({ name: 'Assets', hits: hits as Hit[] });
+		out.push({ name: t('search.assets'), hits: hits as Hit[] });
 	}
 	return out;
 }

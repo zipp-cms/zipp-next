@@ -2,6 +2,7 @@
 	import type { Edits } from '../api';
 	import BackgroundPicker from './BackgroundPicker.svelte';
 	import { withCanvas, withResize, type Size } from './edits';
+	import { t } from '../../i18n/index.svelte';
 
 	/** The size of the image, and a canvas around it. */
 	let { edits = $bindable(), resized }: { edits: Edits; resized: Size } =
@@ -10,7 +11,7 @@
 
 <div class="options">
 	<label class="stacked">
-		Width
+		{t('assets.width')}
 		<input
 			type="number"
 			min="1"
@@ -25,7 +26,7 @@
 		/>
 	</label>
 	<label class="stacked">
-		Height
+		{t('assets.height')}
 		<input
 			type="number"
 			min="1"
@@ -46,7 +47,7 @@
 			class="link"
 			onclick={() => (edits = withResize(edits, null, null))}
 		>
-			Original size
+			{t('assets.originalSize')}
 		</button>
 	{/if}
 	<label class="check">
@@ -56,11 +57,11 @@
 			onchange={e =>
 				(edits = withCanvas(edits, e.currentTarget.checked, resized))}
 		/>
-		Canvas around it
+		{t('assets.canvas')}
 	</label>
 	{#if edits.canvas}
 		<label class="stacked">
-			Canvas width
+			{t('assets.canvasWidth')}
 			<input
 				type="number"
 				min="1"
@@ -69,7 +70,7 @@
 			/>
 		</label>
 		<label class="stacked">
-			Canvas height
+			{t('assets.canvasHeight')}
 			<input
 				type="number"
 				min="1"

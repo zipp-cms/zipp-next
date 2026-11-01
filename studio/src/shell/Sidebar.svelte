@@ -18,6 +18,7 @@
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import { searchBox } from '../search/search.svelte';
 	import { sideNav } from './sideNav.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The sidebar: the site, the groups of the schema's navigation with
@@ -60,7 +61,7 @@
 
 	<button type="button" class="open-search" onclick={search}>
 		<Icon name="search" size={14} />
-		Search
+		{t('common.search')}
 		<kbd>{mod}K</kbd>
 	</button>
 
@@ -95,30 +96,30 @@
 				class:active={page === 'assets'}
 			>
 				<Icon name="dashboard" />
-				Assets
+				{t('shell.assets')}
 			</a>
 		{/if}
 		{#if (schema.aiModels.length || hasAgent(schema)) && canAi(schema)}
 			<a class="item" href="/admin/ai" class:active={page === 'ai'}>
 				<Icon name="sparkles" />
-				AI
+				{t('shell.ai')}
 			</a>
 		{/if}
 		<hr />
 		<!-- read only for everyone, a role sees its part -->
 		<a class="item" href="/admin/setup" class:active={page === 'setup'}>
 			<Icon name="settings" />
-			Setup
+			{t('shell.setup')}
 		</a>
 		{#if page === 'setup'}
 			{@const tab = current.path.split('/')[3] ?? 'overview'}
 			<div class="sub">
-				{#each setupTabs(schema) as [handle, name] (handle)}
+				{#each setupTabs(schema) as [handle, key] (handle)}
 					<a
 						href="/admin/setup/{handle}"
 						class:active={tab === handle}
 					>
-						{name}
+						{t(key)}
 					</a>
 				{/each}
 			</div>
@@ -126,7 +127,7 @@
 		{#if isAdmin(schema)}
 			<a class="item" href="/admin/users" class:active={page === 'users'}>
 				<Icon name="users" />
-				Users
+				{t('shell.users')}
 			</a>
 			<a
 				class="item"
@@ -140,7 +141,7 @@
 		{#if canTrash(schema)}
 			<a class="item" href="/admin/trash" class:active={page === 'trash'}>
 				<Icon name="delete" />
-				Trash
+				{t('shell.trash')}
 			</a>
 		{/if}
 	</nav>

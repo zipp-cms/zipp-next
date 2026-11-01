@@ -3,6 +3,7 @@
 	import type { Asset } from './api';
 	import { openAsset } from '../core/flyout.svelte';
 	import Thumb from './Thumb.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/** A chosen file in a row, like an entry: it opens in the flyout. */
 	let { asset, actions }: { asset: Asset; actions: Snippet } = $props();
@@ -12,7 +13,7 @@
 	<button
 		type="button"
 		class="open plain"
-		title="Details: title, alt text, focal point"
+		title={t('assets.details')}
 		onclick={() => openAsset(asset.id)}
 	>
 		<span class="thumb"><Thumb {asset} small /></span>

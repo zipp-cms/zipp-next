@@ -14,6 +14,8 @@ export type User = {
 	/** empty when it isn't set */
 	name: string;
 	role: string | null;
+	/** of the studio, `en` or `de`; empty is the browser's */
+	language: string;
 };
 
 export type Authenticated = {

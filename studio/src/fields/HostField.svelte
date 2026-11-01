@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Field, Values } from '../core/schema';
+	import { t } from '../i18n/index.svelte';
 	import { synced } from '../core/synced.svelte';
 	import { hostedComponent } from './registry';
 
@@ -29,5 +30,5 @@
 {#if Input}
 	<Input {field} values={values.value} path={field.handle} />
 {:else}
-	<span class="error">{field.kind} fields can't be mounted by plugins</span>
+	<span class="error">{t('fields.notHosted', { kind: field.kind })}</span>
 {/if}

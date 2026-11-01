@@ -10,6 +10,7 @@ fn new_user(email: &str, role: Option<&str>) -> CreateReq {
 		name: "Neu".into(),
 		password: "password1".into(),
 		role: role.map(Into::into),
+		language: String::new(),
 	}
 }
 
@@ -20,6 +21,7 @@ fn unchanged(a: &super::Account) -> UpdateReq {
 		email: a.user.email.clone(),
 		name: a.user.name.clone(),
 		role: a.user.role.clone(),
+		language: a.user.language.clone(),
 		password: None,
 		current_password: None,
 	}
@@ -140,6 +142,38 @@ async fn users_change_their_own_account() {
 	assert_eq!(editor.call(&theirs).await.unwrap_err(), Error::Forbidden);
 	let end = EndSessionsReq { id: them };
 	assert_eq!(editor.call(&end).await.unwrap_err(), Error::Forbidden);
+}
+
+#[tokio::test]
+async fn users_pick_the_studio_language() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+
+	// empty is the browser's; an admin invites Irene in German
+	let mut irene = new_user("irene@x.ch", Some("editor"));
+	irene.password = String::new();
+	irene.language = "de".into();
+	let created = admin.call(&irene).await.unwrap();
+	assert_eq!(created.user.language, "de");
+	let me = admin.call(&SessionReq {}).await.unwrap().user;
+	assert_eq!(me.language, "");
+
+	// the own, also in the session the studio loads at the start
+	let editor = ts.user(Some("editor"));
+	let id = editor.call(&SessionReq {}).await.unwrap().user.id;
+	let mut change = unchanged(&editor.call(&GetReq { id }).await.unwrap());
+	change.language = "de".into();
+	editor.call(&change).await.unwrap();
+	let session = editor.call(&SessionReq {}).await.unwrap();
+	assert_eq!(session.user.language, "de");
+	change.language = String::new();
+	let back = editor.call(&change).await.unwrap();
+	assert_eq!(back.user.language, "");
+
+	// only languages the studio has
+	change.language = "fr".into();
+	let err = editor.call(&change).await.unwrap_err();
+	assert_eq!(paths(err), ["language"]);
 }
 
 #[tokio::test]

@@ -5,6 +5,7 @@
 	import { fieldOptions } from '../fields/fieldOptions';
 	import { gqlType, usedIn } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * An entry type or block: its fields by tab, a click on one shows all
@@ -18,26 +19,26 @@
 		if (!c.tabs?.length)
 			return [
 				{
-					name: 'Fields',
+					name: t('setup.fields'),
 					fields: c.fields,
 					when: undefined,
 					card: c.card,
 				},
 			];
-		const byTab = c.tabs.map(t => ({
-			name: t.name,
-			fields: c.fields.filter(f => t.fields.includes(f.handle)),
-			when: t.when,
-			card: c.card || t.card,
+		const byTab = c.tabs.map(tab => ({
+			name: tab.name,
+			fields: c.fields.filter(f => tab.fields.includes(f.handle)),
+			when: tab.when,
+			card: c.card || tab.card,
 		}));
 		const rest = c.fields.filter(
-			f => !c.tabs!.some(t => t.fields.includes(f.handle)),
+			f => !c.tabs!.some(tab => tab.fields.includes(f.handle)),
 		);
 		return rest.length
 			? [
 					...byTab,
 					{
-						name: 'Other',
+						name: t('setup.other'),
 						fields: rest,
 						when: undefined,
 						card: false,
@@ -63,9 +64,13 @@
 				<h2>
 					{g.name}
 					{#if g.when}<span class="muted when">
-							shown when {describeCondition(c, g.when)}
+							{t('setup.shownWhen', {
+								condition: describeCondition(c, g.when),
+							})}
 						</span>{/if}
-					{#if g.card}<span class="muted when">in a card</span>{/if}
+					{#if g.card}<span class="muted when">
+							{t('setup.inACard')}
+						</span>{/if}
 					{#if i === 0}<code class="gql">{gqlType(c)}</code>{/if}
 				</h2>
 				{#if g.fields.length}
@@ -73,7 +78,13 @@
 						rows={g.fields}
 						key={f => f.handle}
 						id={f => `field-${f.handle}`}
-						columns={['Label', 'Handle', 'Kind', 'Sites', '']}
+						columns={[
+							t('setup.label'),
+							t('setup.handle'),
+							t('setup.kind'),
+							t('setup.sites'),
+							'',
+						]}
 						widths={['20%', '18%', '36%', '12%', '14%']}
 						isOpen={f => open.includes(f.handle)}
 						ontoggle={toggle}
@@ -85,16 +96,18 @@
 							<td>
 								{c.entry && f.kind !== 'note'
 									? f.translatable
-										? 'per site'
-										: 'all sites'
+										? t('setup.perSite')
+										: t('setup.allSites')
 									: ''}
 							</td>
 							<td class="muted">
 								{f.width ? `${f.width} %` : ''}
-								{f.required ? 'required' : ''}
-								{f.when ? 'conditional' : ''}
-								{f.indexed ? 'indexed' : ''}
-								{f.handle === c.title_field ? 'title' : ''}
+								{f.required ? t('setup.required') : ''}
+								{f.when ? t('setup.conditional') : ''}
+								{f.indexed ? t('setup.indexed') : ''}
+								{f.handle === c.title_field
+									? t('setup.title')
+									: ''}
 							</td>
 						{/snippet}
 						{#snippet detail(f)}
@@ -118,22 +131,22 @@
 						{/snippet}
 					</Table>
 				{:else}
-					<p class="muted">No fields here.</p>
+					<p class="muted">{t('setup.noFieldsHere')}</p>
 				{/if}
 			</div>
 		{:else}
 			<div class="card">
-				<p class="muted">No fields, only a title.</p>
+				<p class="muted">{t('setup.onlyTitle')}</p>
 			</div>
 		{/each}
 	</div>
 	<aside class="card">
-		<h2>Used in</h2>
+		<h2>{t('setup.usedIn')}</h2>
 		<ul class="plain">
 			{#each usedIn(schema, c) as u (u.text)}
 				<li><a href={u.href}>{u.text}</a></li>
 			{:else}
-				<li class="muted">nothing</li>
+				<li class="muted">{t('setup.nothing')}</li>
 			{/each}
 		</ul>
 	</aside>

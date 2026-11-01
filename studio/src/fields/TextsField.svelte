@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { FieldOf, Schema, Values } from '../core/schema';
+	import { t } from '../i18n/index.svelte';
 	import { valueOf } from '../core/schema';
 	import { editedSite } from '../core/editing';
 
@@ -42,7 +43,7 @@
 							: own}
 						placeholder={primary
 							? fallback
-							: `Not translated: ${fallback}`}
+							: t('fields.notTranslated', { text: fallback })}
 						oninput={e => {
 							const v = e.currentTarget.value;
 							cleared = v === '' ? key : null;

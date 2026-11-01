@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PageTop from 'zipp-ui/PageTop.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/** A page that couldn't load: its error, and a way back. */
 	let { loadError }: { loadError: unknown } = $props();
@@ -9,9 +10,9 @@
 </script>
 
 <div class="page">
-	<PageTop title="This page couldn't load" />
+	<PageTop title={t('shell.pageFailed')} />
 	<p class="error">{message}</p>
-	<p class="empty"><a href="/admin">To the start</a></p>
+	<p class="empty"><a href="/admin">{t('shell.toStart')}</a></p>
 </div>
 
 <style lang="scss">

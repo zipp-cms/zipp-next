@@ -7,6 +7,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { request } from '../core/client';
 	import AuthLayout from './AuthLayout.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * A forgotten password: the email gets a link to choose a new one,
@@ -35,21 +36,19 @@
 <AuthLayout>
 	<form {onsubmit}>
 		<div class="intro">
-			<h1>Forgot your password?</h1>
+			<h1>{t('auth.forgot')}</h1>
 			<p class="muted">
-				{sent
-					? `If ${email} has an account, a mail with a link is on its way. The link works for an hour.`
-					: 'Your email gets a link to choose a new one.'}
+				{sent ? t('auth.forgotSent', { email }) : t('auth.forgotIntro')}
 			</p>
 		</div>
 
 		{#if !sent}
 			<label class="stacked">
-				Email
+				{t('common.email')}
 				<input
 					type="email"
 					autocomplete="username"
-					placeholder="name@example.com"
+					placeholder={t('auth.emailPlaceholder')}
 					bind:value={email}
 					required
 				/>
@@ -58,11 +57,11 @@
 			{#if error}<p class="error">{error}</p>{/if}
 
 			<button class="primary submit" disabled={busy}>
-				Send the link
+				{t('auth.sendLink')}
 				<Icon name="arrow-right" />
 			</button>
 		{/if}
 
-		<p class="note"><a href="/admin/login">Back to the login</a></p>
+		<p class="note"><a href="/admin/login">{t('auth.backToLogin')}</a></p>
 	</form>
 </AuthLayout>

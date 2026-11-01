@@ -23,10 +23,11 @@
 
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { t } from '../i18n/index.svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import {
-		KINDS,
-		ROOT,
+		kinds,
+		root,
 		assetUsage,
 		deleteAsset,
 		moveAssets,
@@ -162,20 +163,24 @@
 
 	function menu(a: Asset, startRename: () => void): MenuItem[] {
 		const items: MenuItem[] = [
-			{ label: 'Open', icon: 'view', onclick: () => open(a) },
+			{ label: t('common.open'), icon: 'view', onclick: () => open(a) },
 		];
 		if (canEdit)
-			items.push({ label: 'Rename', icon: 'edit', onclick: startRename });
+			items.push({
+				label: t('common.rename'),
+				icon: 'edit',
+				onclick: startRename,
+			});
 		items.push(...linkItems(a));
 		if (canEdit && a.folderId !== null)
 			items.push({
-				label: `Move to ${ROOT}`,
+				label: t('assets.moveTo', { folder: root() }),
 				icon: 'file',
 				onclick: () => move([a.id], null),
 			});
 		if (canDelete)
 			items.push({
-				label: 'Delete',
+				label: t('common.delete'),
 				icon: 'delete',
 				danger: true,
 				onclick: () => remove(a),
@@ -187,13 +192,16 @@
 <div
 	class="page"
 	role="region"
-	aria-label="Assets"
+	aria-label={t('assets.title')}
 	ondragenter={drag.dragenter}
 	ondragleave={drag.dragleave}
 	ondragover={drag.dragover}
 	ondrop={drag.drop}
 >
-	<PageTop title="Assets" note={zipping ? `Zipping ${zipping}…` : undefined}>
+	<PageTop
+		title={t('assets.title')}
+		note={zipping ? t('assets.zipping', { name: zipping }) : undefined}
+	>
 		{#snippet actions()}
 			{#if canEdit}
 				<UploadButton
@@ -201,14 +209,16 @@
 					directory
 					icon="folder-plus"
 				>
-					Upload folder
+					{t('assets.uploadFolder')}
 				</UploadButton>
 				<UploadButton
 					onfiles={f => upload(fromInput(f))}
 					multiple
 					primary
 				>
-					{uploads.active ? 'Uploading…' : 'Upload'}
+					{uploads.active
+						? t('assets.uploading')
+						: t('common.upload')}
 				</UploadButton>
 			{/if}
 		{/snippet}
@@ -237,19 +247,19 @@
 
 		<div class="card files">
 			{#if drag.over}
-				<DropOverlay label="Drop to upload into {lib.path}" />
+				<DropOverlay label={t('assets.dropInto', { path: lib.path })} />
 			{/if}
 			<div class="top">
-				<h2>{lib.search ? 'In all folders' : lib.path}</h2>
+				<h2>{lib.search ? t('assets.inAllFolders') : lib.path}</h2>
 				<Segmented
-					options={KINDS}
+					options={kinds()}
 					value={lib.kind}
 					onchange={k => lib.filter(k)}
-					label="Type"
+					label={t('assets.type')}
 				/>
 				<SearchInput
 					bind:value={() => lib.search, v => lib.type(v)}
-					placeholder="Search files"
+					placeholder={t('assets.searchFiles')}
 				/>
 			</div>
 			<AssetGrid

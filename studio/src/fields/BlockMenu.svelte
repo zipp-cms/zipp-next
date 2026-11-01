@@ -5,6 +5,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Popover from 'zipp-ui/Popover.svelte';
 	import SearchList from 'zipp-ui/SearchList.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * Adds a block: as a bar with the types (the first ones as buttons,
@@ -29,7 +30,7 @@
 	let search = $state('');
 
 	const found = $derived(
-		rest.filter(t => t.name.toLowerCase().includes(search.toLowerCase())),
+		rest.filter(c => c.name.toLowerCase().includes(search.toLowerCase())),
 	);
 
 	function toggle(popover: () => void) {
@@ -50,23 +51,23 @@
 		<SearchList
 			items={found}
 			bind:search
-			placeholder="Search blocks"
-			key={t => t.handle}
-			onpick={t => pick(t.handle)}
+			placeholder={t('fields.searchBlocks')}
+			key={c => c.handle}
+			onpick={c => pick(c.handle)}
 		>
-			{#snippet item(t)}
-				<SchemaIcon icon={t.icon} size={14} />{t.name}
+			{#snippet item(c)}
+				<SchemaIcon icon={c.icon} size={14} />{c.name}
 			{/snippet}
 		</SearchList>
 	{:else}
-		{#each found as t (t.handle)}
+		{#each found as c (c.handle)}
 			<button
 				type="button"
 				class="popup-item"
-				onclick={() => pick(t.handle)}
+				onclick={() => pick(c.handle)}
 			>
-				<SchemaIcon icon={t.icon} size={14} />
-				{t.name}
+				<SchemaIcon icon={c.icon} size={14} />
+				{c.name}
 			</button>
 		{/each}
 	{/if}
@@ -74,13 +75,18 @@
 
 {#if inline}
 	<div class="inline" class:open>
-		<Popover bind:open align="center" width="14rem" label="Add a block">
-			{#snippet trigger({ toggle: t })}
+		<Popover
+			bind:open
+			align="center"
+			width="14rem"
+			label={t('fields.addBlock')}
+		>
+			{#snippet trigger({ toggle: show })}
 				<button
 					type="button"
 					class="insert"
-					title="Add a block here"
-					onclick={() => toggle(t)}
+					title={t('fields.addBlockHere')}
+					onclick={() => toggle(show)}
 				>
 					<Icon name="add" size={14} />
 				</button>
@@ -91,15 +97,19 @@
 {:else}
 	<div class="bar">
 		<AddGroup
-			options={buttons.map(t => ({ value: t.handle, label: t.name }))}
+			options={buttons.map(c => ({ value: c.handle, label: c.name }))}
 			onadd={pick}
 		>
 			{#snippet more()}
 				{#if rest.length}
-					<Popover bind:open width="14rem" label="More blocks">
-						{#snippet trigger({ toggle: t })}
-							<button type="button" onclick={() => toggle(t)}>
-								More
+					<Popover
+						bind:open
+						width="14rem"
+						label={t('fields.moreBlocks')}
+					>
+						{#snippet trigger({ toggle: show })}
+							<button type="button" onclick={() => toggle(show)}>
+								{t('fields.more')}
 								<Icon name="chevron-down" size={14} />
 							</button>
 						{/snippet}

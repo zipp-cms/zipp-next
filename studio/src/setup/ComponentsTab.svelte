@@ -3,6 +3,7 @@
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import { gqlType, usedIn, visibleEntryTypes } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The entry types or the blocks, with where they are used. Inline
@@ -21,7 +22,13 @@
 	<Table
 		rows={components}
 		key={c => c.handle}
-		columns={['Name', 'Handle', 'Fields', 'Used in', 'GraphQL']}
+		columns={[
+			t('common.name'),
+			t('setup.handle'),
+			t('setup.fields'),
+			t('setup.usedIn'),
+			'GraphQL',
+		]}
 		href={c => `/admin/setup/${tab}/${c.handle}`}
 	>
 		{#snippet row(c)}

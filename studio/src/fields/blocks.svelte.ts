@@ -1,6 +1,6 @@
 import type { Component, Link, Values } from '../core/schema';
+import { t } from '../i18n/index.svelte';
 import type { Refs } from '../entries/api';
-import { plural } from '../core/format';
 import { hasTarget, isEmpty, linkTarget } from './link/link';
 
 /**
@@ -74,22 +74,18 @@ export function blockSummary(
 			return link.label ? `${link.label} → ${target}` : target;
 		}
 		if (f.kind === 'richText' || f.kind === 'markdown') {
-			const t = typeof v === 'string' ? v : docText(v);
-			if (t.trim()) return t.trim().slice(0, 80);
+			const text = typeof v === 'string' ? v : docText(v);
+			if (text.trim()) return text.trim().slice(0, 80);
 		}
 		if (!Array.isArray(v) || !v.length) continue;
 		if (f.kind === 'assets')
 			counts.push(
-				plural(
-					v.length,
-					f.images ? 'image' : 'file',
-					f.images ? 'images' : 'files',
-				),
+				t(f.images ? 'fields.images' : 'common.files', { n: v.length }),
 			);
 		else if (f.kind === 'relation')
-			counts.push(plural(v.length, 'entry', 'entries'));
+			counts.push(t('common.entries', { n: v.length }));
 		else if (f.kind === 'blocks')
-			counts.push(plural(v.length, 'block', 'blocks'));
+			counts.push(t('fields.blocks', { n: v.length }));
 	}
 	return counts.join(' · ');
 }
@@ -102,7 +98,9 @@ export function blockMissing(
 	for (const f of comp?.fields ?? []) {
 		if (!f.required) continue;
 		if (!isEmpty(f.kind, fields[f.handle])) continue;
-		return f.kind === 'link' ? 'No link yet' : `${f.label} is missing`;
+		return f.kind === 'link'
+			? t('fields.noLinkYet')
+			: t('fields.isMissing', { label: f.label });
 	}
 	return '';
 }

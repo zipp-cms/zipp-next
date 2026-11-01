@@ -1,4 +1,5 @@
 import { upload } from '../core/client';
+import { t } from '../i18n/index.svelte';
 import { createFolder, listFolders, type Asset, type Unzipped } from './api';
 
 /** What an asset tile carries when it is dragged: the asset ids. */
@@ -312,7 +313,11 @@ export class FileDrag {
 		e.preventDefault();
 		fromDrop(e.dataTransfer!)
 			.then(this.ondrop)
-			.catch(err => uploads.report(`The drop: ${err.message ?? err}`));
+			.catch(err =>
+				uploads.report(
+					t('assets.dropFailed', { error: err.message ?? err }),
+				),
+			);
 	};
 
 	private stop() {

@@ -8,6 +8,7 @@
 	import Thumb from '../assets/Thumb.svelte';
 	import { altOf } from '../assets/api';
 	import { Search, highlight, searchBox, type Hit } from './search.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The search of the studio over the page, like Craft's: entries of
@@ -66,15 +67,15 @@
 	class="box"
 	role="dialog"
 	aria-modal="true"
-	aria-label="Search"
+	aria-label={t('common.search')}
 	use:layer={close}
 >
 	<label class="input">
 		<Icon name="search" size={16} />
 		<input
 			type="search"
-			placeholder="Search entries and files"
-			aria-label="Search entries and files"
+			placeholder={t('search.placeholder')}
+			aria-label={t('search.placeholder')}
 			autocomplete="off"
 			spellcheck="false"
 			bind:this={input}
@@ -90,7 +91,9 @@
 				<p class="error">{s.error}</p>
 			{:else if !s.hits.length}
 				<p class="empty">
-					{s.loading ? 'Searching…' : 'Nothing found'}
+					{s.loading
+						? t('search.searching')
+						: t('common.nothingFound')}
 				</p>
 			{/if}
 			{#each s.groups as g (g.name)}
@@ -112,7 +115,7 @@
 									</span>
 									{#if !hit.entry.published}
 										<span class="badge draft">
-											Not published
+											{t('search.notPublished')}
 										</span>
 									{/if}
 								</span>

@@ -3,6 +3,7 @@ import App from './shell/App.svelte';
 import { startRouter } from './core/router.svelte';
 import { session } from './core/session.svelte';
 import { registerRoutes } from './shell/routes';
+import { t } from './i18n/index.svelte';
 // bundled, the studio loads nothing from other servers
 import '@fontsource/inter/latin-400.css';
 import '@fontsource/inter/latin-500.css';
@@ -29,6 +30,6 @@ session
 		const p = document.createElement('p');
 		p.className = 'error';
 		p.style.padding = '1.5rem';
-		p.textContent = `zipp can't be reached (${e.message}), reload the page to try again.`;
+		p.textContent = t('common.unreachable', { error: e.message });
 		document.getElementById('app')!.append(p);
 	});

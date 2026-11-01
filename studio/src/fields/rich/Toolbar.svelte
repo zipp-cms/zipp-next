@@ -16,6 +16,7 @@
 		toggleStyle,
 		type RichOptions,
 	} from './editor';
+	import { t } from '../../i18n/index.svelte';
 
 	/** The bar over a rich text: only what its field allows. */
 	let {
@@ -76,29 +77,31 @@
 	{#if opts.headings.length}
 		<select
 			class="format"
-			title="Format"
+			title={t('fields.format')}
 			value={opts.headings.find(level => active('heading', { level })) ??
 				0}
 			onchange={e => setFormat(editor, Number(e.currentTarget.value))}
 		>
-			<option value={0}>Paragraph</option>
+			<option value={0}>{t('fields.paragraph')}</option>
 			{#each opts.headings as level (level)}
-				<option value={level}>Heading {level}</option>
+				<option value={level}>{t('fields.heading', { level })}</option>
 			{/each}
 		</select>
 		<span class="toolbar-sep"></span>
 	{/if}
 	{#if styles.length}
-		<Popover bind:open={styling} width="14rem" label="Styles">
+		<Popover bind:open={styling} width="14rem" label={t('fields.styles')}>
 			{#snippet trigger({ toggle })}
 				<button
 					type="button"
 					class="styles"
 					class:on={styled.length}
-					title="Styles"
+					title={t('fields.styles')}
 					onclick={toggle}
 				>
-					<span class="truncate">{styled[0]?.label ?? 'Styles'}</span>
+					<span class="truncate">
+						{styled[0]?.label ?? t('fields.styles')}
+					</span>
 					<Icon name="chevron-down" size={14} />
 				</button>
 			{/snippet}
@@ -119,7 +122,7 @@
 					</span>
 					{st.label}
 					<span class="muted">
-						{st.inline ? 'Text' : 'Paragraph'}
+						{st.inline ? t('fields.text') : t('fields.paragraph')}
 					</span>
 				</button>
 			{/each}
@@ -129,7 +132,7 @@
 	<button
 		type="button"
 		class:on={active('bold')}
-		title="Bold"
+		title={t('fields.bold')}
 		onclick={() => chain().toggleBold().run()}
 	>
 		<Icon name="bold" size={16} />
@@ -137,7 +140,7 @@
 	<button
 		type="button"
 		class:on={active('italic')}
-		title="Italic"
+		title={t('fields.italic')}
 		onclick={() => chain().toggleItalic().run()}
 	>
 		<Icon name="italic" size={16} />
@@ -146,7 +149,7 @@
 		<button
 			type="button"
 			class:on={active('bulletList')}
-			title="List"
+			title={t('fields.list')}
 			onclick={() => chain().toggleBulletList().run()}
 		>
 			<Icon name="channel" size={16} />
@@ -154,19 +157,19 @@
 		<button
 			type="button"
 			class:on={active('orderedList')}
-			title="Numbered list"
+			title={t('fields.numberedList')}
 			onclick={() => chain().toggleOrderedList().run()}
 		>
 			<Icon name="numbered" size={16} />
 		</button>
 	{/if}
 	{#if opts.links}
-		<Popover bind:open={linking} width="34rem" label="Link">
+		<Popover bind:open={linking} width="34rem" label={t('fields.link')}>
 			{#snippet trigger({ toggle })}
 				<button
 					type="button"
 					class:on={active('link')}
-					title="Link"
+					title={t('fields.link')}
 					onclick={() => openLink(toggle)}
 				>
 					<Icon name="link" size={16} />
@@ -188,11 +191,15 @@
 	{/if}
 	{#if opts.buttons || blockTypes.length}
 		<span class="toolbar-sep"></span>
-		<Popover bind:open={inserting} width="12.25rem" label="Insert">
+		<Popover
+			bind:open={inserting}
+			width="12.25rem"
+			label={t('fields.insert')}
+		>
 			{#snippet trigger({ toggle })}
 				<button type="button" class="insert" onclick={toggle}>
 					<Icon name="add" size={14} />
-					Insert
+					{t('fields.insert')}
 					<Icon name="chevron-down" size={14} />
 				</button>
 			{/snippet}
@@ -202,7 +209,7 @@
 					class="popup-item"
 					onclick={() => insert(() => insertButton(editor))}
 				>
-					Button
+					{t('fields.button')}
 				</button>
 			{/if}
 			{#each blockTypes as b (b.handle)}

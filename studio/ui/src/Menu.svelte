@@ -12,6 +12,7 @@
 </script>
 
 <script lang="ts">
+	import { ui } from './texts.svelte';
 	import Icon from './Icon.svelte';
 	import Popover from './Popover.svelte';
 
@@ -20,8 +21,9 @@
 	 * click on the row or card around it (`data-menu-area`) opens the same
 	 * menu at the pointer; the innermost area's menu wins.
 	 */
-	let { items, label = 'Actions' }: { items: MenuItem[]; label?: string } =
+	let { items, label: given }: { items: MenuItem[]; label?: string } =
 		$props();
+	const label = $derived(given ?? ui.texts.actions);
 
 	let open = $state(false);
 	let at = $state<{ x: number; y: number } | null>(null);

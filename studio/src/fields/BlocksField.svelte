@@ -15,6 +15,7 @@
 	import { inserted, isFull, removed } from '../core/list';
 	import { componentOf, defaults } from '../core/schema';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * Blocks as cards that open: the type, a summary when closed, the
@@ -121,12 +122,12 @@
 <div class="blocks" bind:this={list}>
 	{#if blocks.length > 1}
 		<div class="tools">
-			<span>{blocks.length} blocks</span>
+			<span>{t('fields.blocks', { n: blocks.length })}</span>
 			<button type="button" class="link" onclick={() => setAll(false)}>
-				Collapse all
+				{t('fields.collapseAll')}
 			</button>
 			<button type="button" class="link" onclick={() => setAll(true)}>
-				Expand all
+				{t('fields.expandAll')}
 			</button>
 		</div>
 	{/if}
@@ -134,7 +135,7 @@
 	{#each blocks as block, i (key(block))}
 		{@const comp = componentOf(schema, block.type)}
 		{#if i > 0 && !full}
-			<BlockMenu {types} inline onpick={t => add(t, i)} />
+			<BlockMenu {types} inline onpick={type => add(type, i)} />
 		{/if}
 		<div class="block" data-sort class:sort-dragging={sort.dragging === i}>
 			{#snippet kindIcon()}<SchemaIcon
@@ -162,7 +163,7 @@
 					<DragHandle
 						sortable={sort}
 						index={i}
-						label="Move the block"
+						label={t('fields.moveBlock')}
 					/>
 				{/snippet}
 				{#snippet actions()}
@@ -194,7 +195,7 @@
 	<SortLine sortable={sort} />
 
 	{#if !full}
-		<BlockMenu {types} onpick={t => add(t)} />
+		<BlockMenu {types} onpick={type => add(type)} />
 	{/if}
 </div>
 

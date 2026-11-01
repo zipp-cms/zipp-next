@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { t } from '../../i18n/index.svelte';
+
 	/**
 	 * Someone else changed the draft: load theirs or keep mine.
 	 */
@@ -17,12 +19,12 @@
 	<div class="conflict">
 		<span>
 			<b>{conflict}</b>
-			while you were editing. Your last changes are not saved yet.
+			{t('entries.conflict')}
 		</span>
 		<button class="primary" onclick={onloadtheirs}>
-			Load their changes
+			{t('entries.loadTheirs')}
 		</button>
-		<button onclick={onkeepmine}>Keep mine</button>
+		<button onclick={onkeepmine}>{t('entries.keepMine')}</button>
 	</div>
 {/if}
 

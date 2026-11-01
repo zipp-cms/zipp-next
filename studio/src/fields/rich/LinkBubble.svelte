@@ -9,6 +9,7 @@
 	import LinkRow from '../link/LinkRow.svelte';
 	import { BUTTON_LINKS, linkSummary, opensInNewTab } from '../link/link';
 	import { setLink } from './editor';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * The link the cursor is on, under it: where it goes, and edit, remove
@@ -133,7 +134,7 @@
 		style:left="{place?.left ?? 0}px"
 		style:width="{place?.width ?? 0}px"
 		role="dialog"
-		aria-label="Link"
+		aria-label={t('fields.link')}
 		tabindex="-1"
 		bind:this={bubble}
 		{onkeydown}
@@ -157,14 +158,14 @@
 				newTab={opensInNewTab(schema, shown, true)}
 				onedit={edit}
 				menu={[
-					{ label: 'Edit', icon: 'edit', onclick: edit },
+					{ label: t('common.edit'), icon: 'edit', onclick: edit },
 					{
-						label: 'Open the target',
+						label: t('fields.openTarget'),
 						icon: 'external',
 						onclick: () => open(shown),
 					},
 					{
-						label: 'Remove link',
+						label: t('fields.removeLink'),
 						icon: 'unlink',
 						onclick: () => apply({ type: 'url', value: null }),
 						danger: true,

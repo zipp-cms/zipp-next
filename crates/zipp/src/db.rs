@@ -176,7 +176,9 @@ const MIGRATIONS: &[&str] = &[r#"
 		role TEXT,
 		created_at INTEGER NOT NULL,
 		name TEXT NOT NULL DEFAULT '',
-		last_login_at INTEGER
+		last_login_at INTEGER,
+		-- of the studio, see users::LANGUAGES; empty: the browser's
+		language TEXT NOT NULL DEFAULT ''
 	);
 
 	CREATE TABLE sessions (

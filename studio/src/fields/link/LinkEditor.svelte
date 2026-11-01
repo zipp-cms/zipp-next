@@ -12,11 +12,12 @@
 	import { sectionOf } from '../../core/schema';
 	import {
 		LINK_ICONS,
-		LINK_NAMES,
+		linkName,
 		hasAnchor,
 		linkInput,
 		linkableTypes,
 	} from './link';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * The settings of a link, a row each: the kind of target, the target,
@@ -93,12 +94,12 @@
 
 <div class="link-editor">
 	{#if to.length > 1}
-		<span class="label">Target</span>
+		<span class="label">{t('fields.target')}</span>
 		<Segmented
-			options={to.map(k => ({ value: k, label: LINK_NAMES[k] }))}
+			options={to.map(k => ({ value: k, label: linkName(k) }))}
 			value={link.type}
 			onchange={setType}
-			label="Target"
+			label={t('fields.target')}
 		>
 			{#snippet item({ value, label })}
 				<Icon name={LINK_ICONS[value]} size={14} />
@@ -107,7 +108,7 @@
 		</Segmented>
 	{/if}
 
-	<span class="label">{LINK_NAMES[link.type]}</span>
+	<span class="label">{linkName(link.type)}</span>
 	<div>
 		{#if link.type === 'entry'}
 			{#if entry}
@@ -123,7 +124,7 @@
 							<button
 								type="button"
 								class="chosen plain"
-								title="Choose another entry"
+								title={t('fields.chooseAnotherEntry')}
 								aria-expanded={open}
 								onclick={toggle}
 							>
@@ -131,8 +132,8 @@
 									class="changed-dot"
 									class:live={entry.published}
 									title={entry.published
-										? 'Published'
-										: 'Not published'}
+										? t('common.published')
+										: t('fields.notPublished')}
 								></span>
 								<span class="truncate">{entry.title}</span>
 								<span class="note">
@@ -145,7 +146,7 @@
 					<button
 						type="button"
 						class="icon"
-						title="Remove the entry"
+						title={t('fields.removeEntry')}
 						onclick={() => set({ value: null })}
 					>
 						<Icon name="close" size={14} />
@@ -167,7 +168,7 @@
 						<button
 							type="button"
 							class="icon"
-							title="Another file"
+							title={t('fields.anotherFile')}
 							onclick={() => set({ value: null })}
 						>
 							<Icon name="close" size={14} />
@@ -176,7 +177,7 @@
 				</AssetChip>
 			{:else}
 				<AddButton onclick={() => (picking = true)}>
-					Choose file
+					{t('fields.chooseFile')}
 				</AddButton>
 			{/if}
 		{:else}
@@ -191,22 +192,22 @@
 	</div>
 
 	{#if labels}
-		<span class="label">Label</span>
+		<span class="label">{t('fields.label')}</span>
 		<input
-			placeholder="From the target"
+			placeholder={t('fields.fromTarget')}
 			value={link.label ?? ''}
 			oninput={e => set({ label: e.currentTarget.value })}
 		/>
 	{/if}
 
 	{#if hasAnchor(link.type)}
-		<span class="label">Anchor</span>
+		<span class="label">{t('fields.anchor')}</span>
 		<div class="anchor">
 			<span class="hash">
 				<span>#</span>
 				<input
 					class="mono"
-					placeholder="optional, e.g. contact"
+					placeholder={t('fields.anchorPlaceholder')}
 					value={link.anchor ?? ''}
 					oninput={e =>
 						set({
@@ -214,7 +215,7 @@
 						})}
 				/>
 			</span>
-			<span class="note">Jumps to a section of the target page.</span>
+			<span class="note">{t('fields.anchorNote')}</span>
 		</div>
 	{/if}
 
@@ -226,7 +227,7 @@
 				checked={newTab}
 				onchange={e => set({ newTab: e.currentTarget.checked })}
 			/>
-			Open in a new tab
+			{t('fields.openInNewTab')}
 		</label>
 		{#if link.type === 'asset'}
 			<label class="check">
@@ -236,12 +237,12 @@
 					onchange={e =>
 						set({ download: e.currentTarget.checked || undefined })}
 				/>
-				Download instead of opening
+				{t('fields.downloadInstead')}
 			</label>
 		{/if}
 		{#if onremove}
 			<button type="button" class="push" onclick={onremove}>
-				Remove link
+				{t('fields.removeLink')}
 			</button>
 		{/if}
 		{#if ondone}
@@ -251,7 +252,7 @@
 				class:push={!onremove}
 				onclick={ondone}
 			>
-				Done
+				{t('common.done')}
 			</button>
 		{/if}
 	</div>

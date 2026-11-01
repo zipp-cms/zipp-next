@@ -17,6 +17,7 @@
 	import { session } from '../core/session.svelte';
 	import { go } from '../core/router.svelte';
 	import { time } from '../core/format';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The users of the studio, for admins: who has which role and logged
@@ -26,11 +27,11 @@
 	let { schema, users }: { schema: Schema; users: Account[] } = $props();
 </script>
 
-<PageTop title="Users">
+<PageTop title={t('users.title')}>
 	{#snippet actions()}
 		<button class="primary" onclick={() => go('/admin/users/new')}>
 			<Icon name="add" />
-			New user
+			{t('users.new')}
 		</button>
 	{/snippet}
 </PageTop>
@@ -39,7 +40,7 @@
 	<Table
 		rows={users}
 		key={u => u.id}
-		columns={['User', 'Role', 'Last login']}
+		columns={[t('users.user'), t('users.role'), t('users.lastLogin')]}
 		href={u => `/admin/users/${u.id}`}
 	>
 		{#snippet row(u)}
@@ -47,13 +48,15 @@
 				<a href="/admin/users/{u.id}">{displayName(u)}</a>
 				{#if u.name}<span class="note">{u.email}</span>{/if}
 				{#if u.id === session.user?.id}
-					<span class="muted">(you)</span>
+					<span class="muted">{t('users.you')}</span>
 				{/if}
-				{#if u.invited}<span class="badge">Invited</span>{/if}
+				{#if u.invited}<span class="badge">
+						{t('users.invited')}
+					</span>{/if}
 			</td>
 			<td>{roleNameOf(schema, u.role)}</td>
 			<td class="muted">
-				{u.lastLoginAt ? time(u.lastLoginAt) : 'Never'}
+				{u.lastLoginAt ? time(u.lastLoginAt) : t('common.never')}
 			</td>
 		{/snippet}
 	</Table>

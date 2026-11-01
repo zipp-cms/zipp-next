@@ -4,6 +4,7 @@
 	import { isAdmin } from '../core/access';
 	import { listRequests } from './api';
 	import { entryCounts } from './setup';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * A section of its own: its first entries come with the page; the
@@ -33,7 +34,10 @@
 		const section = props.schema.sections.find(
 			s => s.handle === props.handle,
 		);
-		if (!section) throw new Error(`There is no section ${props.handle}`);
+		if (!section)
+			throw new Error(
+				t('setup.noSectionThere', { handle: props.handle }),
+			);
 		const params: Record<string, string> = {
 			section: section.handle,
 			site: props.schema.sites[0].handle,
@@ -93,9 +97,10 @@
 
 	// Setup, the tab, the section or type of a page of its own
 	const crumbs = $derived.by(() => {
-		const name = Object.fromEntries(SETUP_TABS)[tab] ?? tab;
+		const key = SETUP_TABS.find(([h]) => h === tab)?.[1];
+		const name = key ? t(key) : tab;
 		const out: { label: string; href?: string }[] = [
-			{ label: 'Setup', href: '/admin/setup' },
+			{ label: t('setup.setup'), href: '/admin/setup' },
 			{ label: name, href: `/admin/setup/${tab}` },
 		];
 		if (handle) {
@@ -109,7 +114,7 @@
 	});
 </script>
 
-<PageTop {crumbs} note="Read only, the content model is code">
+<PageTop {crumbs} note={t('setup.readOnly')}>
 	{#snippet actions()}
 		{#if tab !== 'requests'}
 			<RequestChange
@@ -138,8 +143,9 @@
 		<ComponentPage {schema} {component} />
 	{:else}
 		<p class="error">
-			No {tab === 'types' ? 'entry type' : 'block'}
-			{handle}
+			{t(tab === 'types' ? 'setup.noEntryType' : 'setup.noBlock', {
+				handle,
+			})}
 		</p>
 	{/if}
 {:else if tab === 'types' || tab === 'blocks'}

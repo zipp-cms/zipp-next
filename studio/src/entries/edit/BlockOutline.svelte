@@ -8,6 +8,7 @@
 	import { componentName, componentOf } from '../../core/schema';
 	import SchemaIcon from '../../core/SchemaIcon.svelte';
 	import type { Refs } from '../api';
+	import { t } from '../../i18n/index.svelte';
 
 	/** The blocks of a field as a list; a click opens one and goes there. */
 	let {
@@ -18,8 +19,11 @@
 	}: { schema: Schema; field: Field; blocks: Block[]; refs: Refs } = $props();
 </script>
 
-<nav class="card outline" aria-label="Outline of {field.label}">
-	<h3>Outline · {field.label}</h3>
+<nav
+	class="card outline"
+	aria-label={t('entries.outlineOf', { field: field.label })}
+>
+	<h3>{t('entries.outline', { field: field.label })}</h3>
 	<ol class="plain">
 		{#each blocks as b, i (i)}
 			{@const comp = componentOf(schema, b.type)}
@@ -29,7 +33,9 @@
 					type="button"
 					class="block plain"
 					class:off={b.enabled === false}
-					title={b.enabled === false ? 'Disabled' : undefined}
+					title={b.enabled === false
+						? t('entries.disabled')
+						: undefined}
 					onclick={() => showBlock(field.handle, i)}
 				>
 					<span class="n">{String(i + 1).padStart(2, '0')}</span>
@@ -39,7 +45,7 @@
 					</span>
 					<span class="note truncate" class:missing>
 						{missing
-							? 'Missing'
+							? t('entries.missing')
 							: blockSummary(comp, b.fields, refs)}
 					</span>
 				</button>

@@ -1,10 +1,11 @@
 <script module lang="ts">
 	import type { Schema as SchemaT } from '../core/schema';
+	import { t } from '../i18n/index.svelte';
 
 	/** A doc of the code by its handle. */
 	export function loadProps(props: { schema: SchemaT; handle: string }) {
 		const doc = props.schema.docs.find(d => d.handle === props.handle);
-		if (!doc) throw new Error(`There is no doc ${props.handle}`);
+		if (!doc) throw new Error(t('shell.noDoc', { handle: props.handle }));
 		return { doc };
 	}
 </script>
@@ -30,7 +31,7 @@
 	}
 </script>
 
-<PageTop title={doc.name} note="Read only, from the code" />
+<PageTop title={doc.name} note={t('shell.readOnly')} />
 
 <div class="card markdown-body" use:external>
 	{@html doc.html}

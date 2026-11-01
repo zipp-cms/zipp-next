@@ -1,6 +1,7 @@
 import { SEARCH_DELAY_MS } from 'zipp-ui/SearchInput.svelte';
+import { t } from '../i18n/index.svelte';
 import {
-	ROOT,
+	root,
 	folderRows,
 	listAssets,
 	listFolders,
@@ -37,7 +38,7 @@ export class Library {
 	/** `Library / Photos / Events` */
 	path = $derived(
 		[
-			ROOT,
+			root(),
 			folderRows(this.folders).find(r => r.folder.id === this.folder)
 				?.path,
 		]
@@ -48,10 +49,10 @@ export class Library {
 	/** What an empty list says. */
 	empty = $derived(
 		this.search || this.kind
-			? 'Nothing found'
+			? t('common.nothingFound')
 			: this.folder === null
-				? 'No assets yet'
-				: 'No files in this folder',
+				? t('assets.noAssets')
+				: t('assets.noFilesInFolder'),
 	);
 
 	/** The assets of the open folder, of all with a search. */

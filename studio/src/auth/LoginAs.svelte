@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import { session } from '../core/session.svelte';
 	import AuthLayout from './AuthLayout.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * A link that logs in as a user, which an admin made on the user's
@@ -30,11 +31,11 @@
 <AuthLayout>
 	<div>
 		<div class="intro">
-			<h1>{error ? "This link doesn't work" : 'Logging in…'}</h1>
+			<h1>{error ? t('auth.linkBroken') : t('auth.loggingIn')}</h1>
 			{#if error}<p class="muted">{error}</p>{/if}
 		</div>
 		{#if error}
-			<p class="note"><a href="/admin">To the studio</a></p>
+			<p class="note"><a href="/admin">{t('auth.toStudio')}</a></p>
 		{/if}
 	</div>
 </AuthLayout>

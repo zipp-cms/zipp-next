@@ -345,7 +345,7 @@ pub fn add_user(
 			crate::users::set_role(conn, id, role)?;
 			id
 		}
-		None => crate::users::create(conn, email, "", &hash, role)?,
+		None => crate::users::create(conn, email, "", &hash, role, "")?,
 	};
 	// a new password logs out everywhere
 	set_password_hash(conn, id, &hash, None)

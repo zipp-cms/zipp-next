@@ -8,6 +8,7 @@
 	import { router } from '../core/router.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import AuthLayout from './AuthLayout.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/** The login, a link to a new password if it is forgotten. */
 	let email = $state('');
@@ -39,23 +40,23 @@
 <AuthLayout>
 	<form {onsubmit}>
 		<div class="intro">
-			<h1>Log in</h1>
-			<p class="muted">Welcome back. Log in with your account.</p>
+			<h1>{t('auth.logIn')}</h1>
+			<p class="muted">{t('auth.welcomeBack')}</p>
 		</div>
 
 		<label class="stacked">
-			Email
+			{t('common.email')}
 			<input
 				type="email"
 				autocomplete="username"
-				placeholder="name@example.com"
+				placeholder={t('auth.emailPlaceholder')}
 				bind:value={email}
 				required
 			/>
 		</label>
 
 		<label class="stacked">
-			Password
+			{t('common.password')}
 			<span class="password">
 				<input
 					type={showPassword ? 'text' : 'password'}
@@ -67,8 +68,8 @@
 					type="button"
 					class="icon"
 					title={showPassword
-						? 'Hide the password'
-						: 'Show the password'}
+						? t('auth.hidePassword')
+						: t('auth.showPassword')}
 					onclick={() => (showPassword = !showPassword)}
 				>
 					<Icon name={showPassword ? 'hide' : 'view'} />
@@ -78,18 +79,18 @@
 
 		<label class="check">
 			<input type="checkbox" bind:checked={remember} />
-			Stay logged in
+			{t('auth.stayLoggedIn')}
 		</label>
 
 		{#if error}<p class="error">{error}</p>{/if}
 
 		<button class="primary submit" disabled={busy}>
-			Log in
+			{t('auth.logIn')}
 			<Icon name="arrow-right" />
 		</button>
 
 		<p class="note">
-			<a href="/admin/forgot">Forgot your password?</a>
+			<a href="/admin/forgot">{t('auth.forgot')}</a>
 		</p>
 	</form>
 </AuthLayout>

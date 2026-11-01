@@ -4,6 +4,7 @@
 	import { Busy } from '../core/busy.svelte';
 	import { time } from '../core/format';
 	import { setRequestDone, type ChangeRequest } from './api';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * What editors asked to change in the content model, for admins: the
@@ -24,20 +25,25 @@
 
 <div class="card">
 	<p class="muted">
-		Editors ask for changes with “Request a change” on the pages of Setup.
-		Admins get a mail of each when mails are set up.
+		{t('setup.requestsIntro')}
 	</p>
 	<Table
 		rows={requests}
 		key={r => r.id}
-		columns={['Done', 'Request', 'Where', 'Who', 'When']}
-		empty="No requests yet"
+		columns={[
+			t('common.done'),
+			t('setup.request'),
+			t('setup.where'),
+			t('setup.who'),
+			t('setup.when'),
+		]}
+		empty={t('setup.noRequests')}
 	>
 		{#snippet row(r)}
 			<td>
 				<input
 					type="checkbox"
-					aria-label="Done"
+					aria-label={t('common.done')}
 					checked={r.done}
 					disabled={action.busy}
 					onchange={e => toggle(r, e.currentTarget.checked)}

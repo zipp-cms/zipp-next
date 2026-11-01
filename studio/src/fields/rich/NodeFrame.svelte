@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * Something in a rich text that isn't text (a block, a button), with a
@@ -24,10 +25,11 @@
 		<button
 			type="button"
 			class="line before reveal"
-			title="Add a line above"
+			title={t('fields.addLineAbove')}
 			onclick={() => oninsert('before')}
 		>
-			<Icon name="add" size={12} /> Line
+			<Icon name="add" size={12} />
+			{t('fields.line')}
 		</button>
 	{/if}
 	{@render children()}
@@ -35,10 +37,11 @@
 		<button
 			type="button"
 			class="line after reveal"
-			title="Add a line below"
+			title={t('fields.addLineBelow')}
 			onclick={() => oninsert('after')}
 		>
-			<Icon name="add" size={12} /> Line
+			<Icon name="add" size={12} />
+			{t('fields.line')}
 		</button>
 	{/if}
 </div>

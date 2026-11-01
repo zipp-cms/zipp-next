@@ -15,10 +15,11 @@
 	} from './uploads.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
-	import { ROOT } from './api';
+	import { root } from './api';
+	import { t } from '../i18n/index.svelte';
 
 	/**
-	 * The folders of the asset library as a tree below its top (ROOT),
+	 * The folders of the asset library as a tree below its top (`root()`),
 	 * which holds the assets in no folder. Opens one with `onselect`; with `editable` it adds,
 	 * renames and deletes (only empty ones) folders, and assets dragged
 	 * from the grid or files from the computer drop onto a folder.
@@ -151,7 +152,7 @@
 	}
 
 	async function remove(f: Folder) {
-		if (!confirm(`Delete the folder ${f.name}?`)) return;
+		if (!confirm(t('assets.confirmDeleteFolder', { name: f.name }))) return;
 		try {
 			await deleteFolder(f.id);
 			if (current === f.id) onselect(f.parentId);
@@ -166,12 +167,12 @@
 		if (editable) {
 			list.push(
 				{
-					label: 'Rename',
+					label: t('common.rename'),
 					icon: 'edit',
 					onclick: () => startRename(f),
 				},
 				{
-					label: 'New folder',
+					label: t('assets.newFolder'),
 					icon: 'folder-plus',
 					onclick: () => startNew(f.id),
 				},
@@ -179,13 +180,13 @@
 		}
 		if (ondownload)
 			list.push({
-				label: 'Download as zip',
+				label: t('assets.downloadZip'),
 				icon: 'download',
 				onclick: () => ondownload(f),
 			});
 		if (deletable) {
 			list.push({
-				label: 'Delete',
+				label: t('common.delete'),
 				icon: 'delete',
 				danger: true,
 				onclick: () => remove(f),
@@ -221,7 +222,9 @@
 			fromDrop(data)
 				.then(items => onupload?.(items, id))
 				.catch(err =>
-					uploads.report(`The drop: ${err.message ?? err}`),
+					uploads.report(
+						t('assets.dropFailed', { error: err.message ?? err }),
+					),
 				);
 	}
 
@@ -238,8 +241,8 @@
 		<input
 			class="name-input"
 			bind:value={name}
-			placeholder="Folder name"
-			aria-label="Folder name"
+			placeholder={t('assets.folderName')}
+			aria-label={t('assets.folderName')}
 			use:focus
 			{onkeydown}
 			onblur={save}
@@ -248,15 +251,15 @@
 	{#if error}<p class="error" style:--depth={depth}>{error}</p>{/if}
 {/snippet}
 
-<nav class="tree" aria-label="Folders">
+<nav class="tree" aria-label={t('assets.folders')}>
 	<div class="head">
-		<span>Folders</span>
+		<span>{t('assets.folders')}</span>
 		{#if editable}
 			<button
 				type="button"
 				class="icon"
-				title="New folder"
-				aria-label="New folder"
+				title={t('assets.newFolder')}
+				aria-label={t('assets.newFolder')}
 				onclick={() => startNew(current)}
 			>
 				<Icon name="folder-plus" size={16} />
@@ -276,7 +279,7 @@
 		<span class="chevron"></span>
 		<button type="button" class="name" onclick={() => onselect(null)}>
 			<Icon name="dashboard" size={15} />
-			<span class="label">{ROOT}</span>
+			<span class="label">{root()}</span>
 			{#if top}<span class="count">{top}</span>{/if}
 		</button>
 		{#if editable || deletable}<span class="menu-space"></span>{/if}
@@ -307,7 +310,9 @@
 					<button
 						type="button"
 						class="chevron"
-						aria-label={open.has(f.id) ? 'Collapse' : 'Expand'}
+						aria-label={open.has(f.id)
+							? t('assets.collapse')
+							: t('assets.expand')}
 						aria-expanded={open.has(f.id)}
 						onclick={() => toggle(f.id)}
 					>

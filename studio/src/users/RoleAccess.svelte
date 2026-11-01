@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
 	import { accessText } from '../setup/setup';
+	import { t } from '../i18n/index.svelte';
 
 	/** What a role may do, from the code: per section, assets, AI. */
 	let { schema, role }: { schema: Schema; role: string | null } = $props();
@@ -12,25 +13,23 @@
 </script>
 
 {#if !def}
-	<p class="muted">
-		An admin may do everything: all sections, assets, AI, users and Setup.
-	</p>
+	<p class="muted">{t('users.adminMay')}</p>
 {:else}
 	<dl>
 		{#each sections as s (s.handle)}
 			<dt>{s.name}</dt>
 			<dd>{accessText(def.sections[s.handle])}</dd>
 		{/each}
-		<dt>Assets</dt>
+		<dt>{t('users.assets')}</dt>
 		<dd>{accessText(def.assets)}</dd>
-		<dt>AI</dt>
-		<dd>{def.ai ? 'Yes' : '–'}</dd>
+		<dt>{t('users.ai')}</dt>
+		<dd>{def.ai ? t('common.yes') : '–'}</dd>
 	</dl>
+	{@const [before, after] = t('users.levels').split('{setup}')}
 	<p class="note">
-		View sees entries, Edit changes them as drafts, Publish makes them live,
-		Delete deletes them. The roles are code,
-		<a href="/admin/setup/sites#roles">Setup</a>
-		shows all of them.
+		{before}
+		<a href="/admin/setup/sites#roles">{t('users.setup')}</a>
+		{after}
 	</p>
 {/if}
 

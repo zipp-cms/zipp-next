@@ -3,6 +3,7 @@
 	import { accessOf } from '../core/access';
 	import { accessText, visibleSections } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/** The sections the role sees, with how many entries each has. */
 	let {
@@ -22,13 +23,13 @@
 		rows={sections}
 		key={s => s.handle}
 		columns={[
-			'Name',
-			'Handle',
-			'Kind',
-			'Entry types',
+			t('common.name'),
+			t('setup.handle'),
+			t('setup.kind'),
+			t('setup.entryTypes'),
 			'URI',
-			'Entries',
-			'You may',
+			t('setup.entries'),
+			t('setup.youMay'),
 		]}
 		href={s => `/admin/setup/sections/${s.handle}`}
 	>
@@ -39,17 +40,17 @@
 			<td><code>{s.handle}</code></td>
 			<td>{s.kind}</td>
 			<td>
-				{#each s.types as t, i (t)}
+				{#each s.types as type, i (type)}
 					{i ? ', ' : ''}
-					<a href="/admin/setup/types/{t}">{t}</a>
+					<a href="/admin/setup/types/{type}">{type}</a>
 				{/each}
 			</td>
 			<td>
 				<code>{s.uri ?? '–'}</code>
-				{#each Object.entries(s.type_uris ?? {}) as [t, u] (t)}
+				{#each Object.entries(s.type_uris ?? {}) as [type, u] (type)}
 					<br />
 					<small>
-						{t}:
+						{type}:
 						<code>{u || '/'}</code>
 					</small>
 				{/each}

@@ -38,6 +38,7 @@
 	import { SitePreview } from '../preview.svelte';
 	import { previewToken } from '../drafts';
 	import { sideNav } from '../../shell/sideNav.svelte';
+	import { t } from '../../i18n/index.svelte';
 
 	let {
 		schema,
@@ -157,12 +158,12 @@
 	}
 
 	function discard() {
-		if (confirm('Throw away the unpublished changes?')) ed.discard();
+		if (confirm(t('entries.confirmDiscard'))) ed.discard();
 	}
 
 	function copyFrom(other: string) {
 		const name = schema.sites.find(s => s.handle === other)?.name;
-		if (confirm(`Replace the content with the one of ${name}?`))
+		if (confirm(t('entries.confirmCopy', { site: name ?? other })))
 			ed.copyFrom(other);
 	}
 
@@ -172,7 +173,7 @@
 	onDestroy(session.onRenewed(() => ed.retry()));
 
 	async function remove() {
-		if (!confirm(`Move ${ed.title} to the trash?`)) return;
+		if (!confirm(t('entries.confirmTrash', { title: ed.title }))) return;
 		if (!(await ed.remove())) return;
 		if (onclose) onclose();
 		else go(sectionPath(ed.sec));
@@ -258,7 +259,10 @@
 								/>
 							</fieldset>
 							{#if narrow}
-								<aside class="strip" aria-label="Status">
+								<aside
+									class="strip"
+									aria-label={t('entries.status')}
+								>
 									<EntryStatus
 										{schema}
 										{ed}
@@ -285,7 +289,9 @@
 										class="layout-link"
 										href={setupPath('types', comp.handle)}
 									>
-										Field layout «{comp.name}»
+										{t('entries.fieldLayout', {
+											name: comp.name,
+										})}
 									</a>
 								{/if}
 							</div>
@@ -329,7 +335,7 @@
 					initial={560}
 					min={320}
 					side="end"
-					label="Width of the website"
+					label={t('entries.websiteWidth')}
 				/>
 				<Preview preview={live} {resizing} />
 			</div>

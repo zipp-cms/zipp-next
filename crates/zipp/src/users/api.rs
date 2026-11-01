@@ -28,6 +28,9 @@ pub struct CreateReq {
 	pub password: String,
 	/// `None` is an admin
 	pub role: Option<String>,
+	/// of the studio, empty is the browser's
+	#[serde(default)]
+	pub language: String,
 }
 
 request!(CreateReq, POST "/users" => Account);
@@ -42,6 +45,9 @@ pub struct UpdateReq {
 	pub name: String,
 	/// `None` is an admin; the own stays
 	pub role: Option<String>,
+	/// of the studio, empty is the browser's
+	#[serde(default)]
+	pub language: String,
 	/// a new one, the user is logged out everywhere else
 	pub password: Option<String>,
 	/// with a new password of oneself

@@ -1,16 +1,22 @@
 import type { Link, LinkKind, Schema } from '../../core/schema';
 import { sectionOf } from '../../core/schema';
 import type { Refs } from '../../entries/api';
+import { t, type Key } from '../../i18n/index.svelte';
 
 /** Links: of the link field, a navigation and the buttons of a rich text. */
 
-export const LINK_NAMES: Record<LinkKind, string> = {
-	entry: 'Entry',
-	url: 'URL',
-	email: 'Email',
-	phone: 'Phone',
-	asset: 'File',
+const LINK_NAMES: Record<LinkKind, Key> = {
+	entry: 'fields.linkEntry',
+	url: 'fields.linkUrl',
+	email: 'common.email',
+	phone: 'fields.linkPhone',
+	asset: 'fields.linkFile',
 };
+
+/** The name of a kind of link, in the user's language. */
+export function linkName(kind: LinkKind): string {
+	return t(LINK_NAMES[kind]);
+}
 
 /** The icon of each kind of link. */
 export const LINK_ICONS: Record<LinkKind, string> = {
@@ -54,7 +60,11 @@ export function linkSummary(
 	const anchor = link.anchor ? `#${link.anchor}` : '';
 	const label = link.label?.trim();
 	if (!hasTarget(link))
-		return { title: label || 'No target yet', sub: '', mono: false };
+		return {
+			title: label || t('fields.noTargetYet'),
+			sub: '',
+			mono: false,
+		};
 	if (link.type === 'entry') {
 		const ref = typeof link.value === 'number' ? refs[link.value] : null;
 		const target = ref?.title ?? `#${link.value}`;
@@ -67,7 +77,7 @@ export function linkSummary(
 		};
 	}
 	if (link.type === 'asset') {
-		const name = file ?? 'A file';
+		const name = file ?? t('fields.aFile');
 		return { title: label || name, sub: label ? name : '', mono: false };
 	}
 	const value =

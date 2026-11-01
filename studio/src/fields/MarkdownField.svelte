@@ -4,6 +4,7 @@
 	import type { FieldOf, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
 	import Segmented from 'zipp-ui/Segmented.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * Markdown: shown rendered when there is text, so it reads like docs,
@@ -24,8 +25,8 @@
 		<Segmented
 			tabs
 			options={[
-				{ value: 'write', label: 'Write' },
-				{ value: 'preview', label: 'Preview' },
+				{ value: 'write', label: t('fields.write') },
+				{ value: 'preview', label: t('common.preview') },
 			]}
 			value={writing ? 'write' : 'preview'}
 			onchange={v => (writing = v === 'write')}

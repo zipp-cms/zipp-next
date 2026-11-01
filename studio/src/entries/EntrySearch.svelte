@@ -18,6 +18,7 @@
 		type Choice,
 		type Row,
 	} from './picker';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * Chooses entries for relations and links: a button that opens the
@@ -53,9 +54,13 @@
 	let closed = $state(new Set<number>());
 	let results = $state<HTMLElement>();
 
-	const typeName = (t: string) => componentName(schema, t);
+	const typeName = (ty: string) => componentName(schema, ty);
 	// "Choose Seite" with one type, "Choose entry" with several
-	const what = $derived(types.length === 1 ? typeName(types[0]) : 'entry');
+	const choose = $derived(
+		types.length === 1
+			? t('entries.chooseType', { type: typeName(types[0]) })
+			: t('entries.chooseEntry'),
+	);
 
 	const groups = $derived(groupChoices(schema, entries, types));
 	const searching = $derived(search.trim() !== '');
@@ -177,9 +182,7 @@
 				class:shut
 				tabindex="-1"
 				aria-expanded={!shut}
-				title={shut
-					? 'Show the entries below'
-					: 'Hide the entries below'}
+				title={shut ? t('entries.showBelow') : t('entries.hideBelow')}
 				onclick={() => toggle(r.e.id)}
 			>
 				<Icon name="chevron-down" size={14} />
@@ -194,9 +197,9 @@
 			aria-disabled={!canPick(r)}
 			data-id={r.e.id}
 			title={!r.pickable
-				? `A ${typeName(r.e.type)} can't be chosen here`
+				? t('entries.cantChoose', { type: typeName(r.e.type) })
 				: isChosen
-					? 'Already chosen'
+					? t('entries.alreadyChosen')
 					: undefined}
 			onclick={() => pick(r)}
 		>
@@ -216,18 +219,20 @@
 	</div>
 {/snippet}
 
-<Popover bind:open width="24rem" label="Choose {what}">
+<Popover bind:open width="24rem" label={choose}>
 	{#snippet trigger({ toggle, open })}
 		{@const start = () => ((search = ''), toggle())}
 		{#if own}
 			{@render own({ toggle: start, open })}
 		{:else}
-			<AddButton onclick={start} expanded={open}>Choose {what}</AddButton>
+			<AddButton onclick={start} expanded={open}>{choose}</AddButton>
 		{/if}
 	{/snippet}
 	<SearchInput
 		bind:value={search}
-		placeholder="Search {types.map(typeName).join(', ')}"
+		placeholder={t('entries.searchTypes', {
+			types: types.map(typeName).join(', '),
+		})}
 		onkeydown={onInputKey}
 	/>
 	<!-- the keys of its buttons, see onListKey -->
@@ -239,14 +244,14 @@
 		onkeydown={onListKey}
 	>
 		{#if loading && !entries.length}
-			<p class="empty">Loading…</p>
+			<p class="empty">{t('common.loading')}</p>
 		{:else if failed}
-			<p class="error">The entries didn't load.</p>
+			<p class="error">{t('entries.didntLoad')}</p>
 		{:else if searching}
 			{#each found as r (r.e.id)}
 				{@render line(r, false)}
 			{:else}
-				<p class="empty">Nothing found</p>
+				<p class="empty">{t('common.nothingFound')}</p>
 			{/each}
 		{:else}
 			{#each groups as g (g.section.handle)}
@@ -258,13 +263,15 @@
 					{@render line(r, tree)}
 				{/each}
 			{:else}
-				<p class="empty">No entries yet</p>
+				<p class="empty">{t('entries.noneYet')}</p>
 			{/each}
 		{/if}
 	</div>
 	{#if multiple}
 		<div class="foot">
-			<button type="button" onclick={() => (open = false)}>Done</button>
+			<button type="button" onclick={() => (open = false)}>
+				{t('common.done')}
+			</button>
 		</div>
 	{/if}
 </Popover>

@@ -1,5 +1,6 @@
 import { Busy } from '../core/busy.svelte';
 import { session } from '../core/session.svelte';
+import { locale, t } from '../i18n/index.svelte';
 import {
 	createUser,
 	deleteUser,
@@ -21,6 +22,8 @@ export class UserForm extends Busy {
 	name = $state('');
 	email = $state('');
 	role = $state<string | null>(null);
+	/** of the studio, empty is the browser's */
+	language = $state('');
 	password = $state('');
 	currentPassword = $state('');
 	/** a new user without a password gets the invite by mail */
@@ -47,7 +50,12 @@ export class UserForm extends Busy {
 	}
 
 	private snapshot() {
-		return JSON.stringify([this.name, this.email, this.role]);
+		return JSON.stringify([
+			this.name,
+			this.email,
+			this.role,
+			this.language,
+		]);
 	}
 
 	private reset(account: Account | null) {
@@ -55,6 +63,7 @@ export class UserForm extends Busy {
 		this.name = account?.name ?? '';
 		this.email = account?.email ?? '';
 		this.role = account?.role ?? null;
+		this.language = account?.language ?? '';
 		this.password = '';
 		this.currentPassword = '';
 		this.initial = this.snapshot();
@@ -62,7 +71,7 @@ export class UserForm extends Busy {
 
 	/** Saves; a new user's id, else null. */
 	async save(): Promise<number | null> {
-		const { name, email, role } = this;
+		const { name, email, role, language } = this;
 		const password = this.password || null;
 		const saved = await this.run(async () => {
 			if (!this.account) {
@@ -70,12 +79,13 @@ export class UserForm extends Busy {
 					name,
 					email,
 					role,
+					language,
 					password: password ?? '',
 				});
 				// the user is there even if the mail fails, its page sends again
 				if (!password && this.sendInvite)
 					await passwordLink(created.id, true).catch(e =>
-						alert(`The invite mail failed: ${e.message}`),
+						alert(t('users.inviteFailed', { error: e.message })),
 					);
 				return created;
 			}
@@ -84,6 +94,7 @@ export class UserForm extends Busy {
 				name,
 				email,
 				role,
+				language,
 				password,
 				currentPassword: current,
 			});
@@ -91,9 +102,9 @@ export class UserForm extends Busy {
 		if (!saved) return null;
 		const created = this.account ? null : saved.id;
 		this.reset(saved);
-		// the user menu shows the new name
+		// the user menu shows the new name, the studio the language
 		if (this.own && session.user)
-			session.user = { ...session.user, name, email };
+			session.user = { ...session.user, name, email, language };
 		return created;
 	}
 
@@ -120,13 +131,15 @@ export class UserForm extends Busy {
 		const id = this.account!.id;
 		const link = await this.run(() => passwordLink(id, send));
 		if (!link) return;
-		const what = link.kind === 'invite' ? 'The invite' : 'The reset link';
-		const until = new Date(link.expiresAt).toLocaleString();
+		const invite = link.kind === 'invite';
+		const until = new Date(link.expiresAt).toLocaleString(locale());
 		if (send) {
-			this.linkNote = `${what} is sent to ${this.account!.email}, it works until ${until}.`;
+			const key = invite ? 'users.inviteSent' : 'users.resetSent';
+			this.linkNote = t(key, { email: this.account!.email, until });
 		} else {
 			await navigator.clipboard.writeText(link.url);
-			this.linkNote = `${what} is copied, it works once until ${until}.`;
+			const key = invite ? 'users.inviteCopied' : 'users.resetCopied';
+			this.linkNote = t(key, { until });
 		}
 	}
 
@@ -140,8 +153,7 @@ export class UserForm extends Busy {
 		if (!link) return;
 		if (copy) {
 			await navigator.clipboard.writeText(link.url);
-			this.linkNote =
-				'The login link is copied: open it once, in the next 10 minutes.';
+			this.linkNote = t('users.loginCopied');
 			return;
 		}
 		const token = link.url.split('/').pop()!;

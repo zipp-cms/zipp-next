@@ -14,7 +14,8 @@
 	import { sectionName, type Schema } from '../core/schema';
 	import { Busy } from '../core/busy.svelte';
 	import { entryPath } from '../core/router.svelte';
-	import { fileSize, plural, time } from '../core/format';
+	import { fileSize, time } from '../core/format';
+	import { t } from '../i18n/index.svelte';
 	import {
 		emptyTrash,
 		purge,
@@ -54,40 +55,34 @@
 	}
 
 	function purgeEntry(e: TrashedEntry) {
-		const also = e.children
-			? ` And ${plural(e.children, 'entry', 'entries')} below it.`
-			: '';
-		if (
-			!confirm(`Delete ${e.title} for good?${also} It can't be restored.`)
-		)
-			return;
+		const question = e.children
+			? t('trash.confirmEntryChildren', { name: e.title, n: e.children })
+			: t('trash.confirmEntry', { name: e.title });
+		if (!confirm(question)) return;
 		run(() => purge('entries', e.id));
 	}
 
 	function purgeAsset(a: TrashedAsset) {
-		if (!confirm(`Delete ${a.filename} for good? It can't be restored.`))
-			return;
+		if (!confirm(t('trash.confirmAsset', { name: a.filename }))) return;
 		run(() => purge('assets', a.id));
 	}
 
 	function emptyAll() {
 		const n = trash.entries.length + trash.assets.length;
-		const what = plural(n, 'item', 'items');
-		if (!confirm(`Delete ${what} for good? They can't be restored.`))
-			return;
+		if (!confirm(t('trash.confirmAll', { n }))) return;
 		run(emptyTrash);
 	}
 </script>
 
 <PageTop
-	title="Trash"
-	note="Deleted entries and assets, for {trash.keepDays} days"
+	title={t('trash.title')}
+	note={t('trash.note', { days: trash.keepDays })}
 >
 	{#snippet actions()}
 		{#if !empty}
 			<button class="danger" disabled={action.busy} onclick={emptyAll}>
 				<Icon name="delete" />
-				Empty trash
+				{t('trash.empty')}
 			</button>
 		{/if}
 	{/snippet}
@@ -97,23 +92,28 @@
 
 {#if restored.length}
 	<p class="note restored">
-		Restored:
+		{t('trash.restored')}
 		{#each restored as e, i (e.id)}{i ? ', ' : ''}
 			<a href={entryPath(e.section, e.id)}>{e.title}</a>{/each}
 	</p>
 {/if}
 
 {#if empty}
-	<p class="card empty">The trash is empty.</p>
+	<p class="card empty">{t('trash.isEmpty')}</p>
 {/if}
 
 {#if trash.entries.length}
 	<div class="card">
-		<h2>Entries</h2>
+		<h2>{t('trash.entries')}</h2>
 		<Table
 			rows={trash.entries}
 			key={e => e.id}
-			columns={['Entry', 'Section', 'Deleted', '']}
+			columns={[
+				t('trash.entry'),
+				t('trash.section'),
+				t('trash.deleted'),
+				'',
+			]}
 			widths={['auto', '12rem', '16rem', '15rem']}
 		>
 			{#snippet row(e)}
@@ -121,7 +121,7 @@
 					<span class="title">{e.title}</span>
 					{#if e.children}
 						<span class="note">
-							and {plural(e.children, 'entry', 'entries')} below
+							{t('trash.below', { n: e.children })}
 						</span>
 					{/if}
 				</td>
@@ -129,7 +129,7 @@
 				<td class="muted">
 					{time(e.deletedAt)}
 					{#if e.deletedBy}<span class="by">
-							by {e.deletedBy}
+							{t('trash.by', { email: e.deletedBy })}
 						</span>{/if}
 				</td>
 				<td class="actions">
@@ -139,12 +139,14 @@
 						onclick={() => restoreEntry(e)}
 					>
 						<Icon name="reset" />
-						Restore
+						{t('common.restore')}
 					</button>
 					<button
 						class="icon danger"
-						aria-label="Delete {e.title} for good"
-						title="Delete for good"
+						aria-label={t('trash.deleteNameForGood', {
+							name: e.title,
+						})}
+						title={t('trash.deleteForGood')}
 						disabled={action.busy}
 						onclick={() => purgeEntry(e)}
 					>
@@ -158,11 +160,16 @@
 
 {#if trash.assets.length}
 	<div class="card">
-		<h2>Assets</h2>
+		<h2>{t('trash.assets')}</h2>
 		<Table
 			rows={trash.assets}
 			key={a => a.id}
-			columns={['Asset', 'Size', 'Deleted', '']}
+			columns={[
+				t('trash.asset'),
+				t('trash.size'),
+				t('trash.deleted'),
+				'',
+			]}
 			widths={['auto', '12rem', '16rem', '15rem']}
 		>
 			{#snippet row(a)}
@@ -174,7 +181,7 @@
 				<td class="muted">
 					{time(a.deletedAt)}
 					{#if a.deletedBy}<span class="by">
-							by {a.deletedBy}
+							{t('trash.by', { email: a.deletedBy })}
 						</span>{/if}
 				</td>
 				<td class="actions">
@@ -184,12 +191,14 @@
 						onclick={() => run(() => restore('assets', a.id))}
 					>
 						<Icon name="reset" />
-						Restore
+						{t('common.restore')}
 					</button>
 					<button
 						class="icon danger"
-						aria-label="Delete {a.filename} for good"
-						title="Delete for good"
+						aria-label={t('trash.deleteNameForGood', {
+							name: a.filename,
+						})}
+						title={t('trash.deleteForGood')}
 						disabled={action.busy}
 						onclick={() => purgeAsset(a)}
 					>

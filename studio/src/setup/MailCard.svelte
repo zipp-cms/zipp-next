@@ -3,6 +3,7 @@
 	import { request } from '../core/client';
 	import { Busy } from '../core/busy.svelte';
 	import { session } from '../core/session.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * How the cms sends mails, for admins: the SMTP server of `serve
@@ -35,27 +36,32 @@
 </script>
 
 <div class="card" id="mail">
-	<h2>Mail</h2>
+	<h2>{t('setup.mail')}</h2>
 	{#if status?.configured}
+		{@const [a, b, c] = t('setup.mailsGoTo').split(/\s*\{\w+\}\s*/)}
 		<p>
-			Mails go to <code>{status.server}</code>
-			from
+			{a}
+			<code>{status.server}</code>
+			{b}
 			<code>{status.from}</code>
-			.
+			{c}
 		</p>
 		<button class="light" disabled={action.busy} onclick={test}>
-			Send a test mail to me
+			{t('setup.sendTest')}
 		</button>
 		{#if sent}
-			<span class="note">Sent to {session.user?.email}.</span>
+			<span class="note">
+				{t('setup.sentTo', { email: session.user?.email ?? '' })}
+			</span>
 		{/if}
 	{:else if status}
+		{@const [a, b, c] = t('setup.noSmtp').split(/\s*\{\w+\}\s*/)}
 		<p class="muted">
-			No SMTP server: mails are only logged. Start the cms with
+			{a}
 			<code>serve --smtp-url</code>
-			and
+			{b}
 			<code>--mail-from</code>
-			.
+			{c}
 		</p>
 	{/if}
 	{#if action.error}<p class="error">{action.error}</p>{/if}

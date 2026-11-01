@@ -3,6 +3,7 @@
 	import { isAdmin } from '../core/access';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { markdownInline } from '../core/markdown';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The label of a field: a dot when the draft changed it, required,
@@ -34,13 +35,13 @@
 	<span class="name">
 		{#if changed}<span
 				class="changed-dot"
-				title="Changed"
+				title={t('fields.changed')}
 			></span>{/if}{field.label}{#if field.required}<span class="req">
 				*
 			</span>{/if}
 	</span>
 	{#if translated}
-		<span class="translated" title="Translated: each site has its own">
+		<span class="translated" title={t('fields.translated')}>
 			<Icon name="translate" size={13} />
 		</span>
 	{/if}
@@ -51,7 +52,7 @@
 			href="/admin/setup/{component.entry
 				? 'types'
 				: 'blocks'}/{component.handle}#field-{field.handle}"
-			title="The field in Setup"
+			title={t('fields.inSetup')}
 		>
 			{field.handle}
 		</a>

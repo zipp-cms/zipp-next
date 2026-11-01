@@ -11,6 +11,7 @@
 	import { entryPath, site } from '../core/router.svelte';
 	import { sitePreviewToken } from '../entries/drafts';
 	import Preview from '../entries/Preview.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The AI chat on the left, the website on the right with every draft.
@@ -94,16 +95,17 @@
 			key="zipp-ai-width"
 			initial={420}
 			min={300}
-			label="Width of the chat"
+			label={t('ai.width')}
 		/>
-		<PageTop title="AI" bleed={false}>
+		<PageTop title={t('ai.title')} bleed={false}>
 			{#snippet actions()}
 				<button
 					onclick={() => chat.clear()}
 					disabled={chat.busy || !chat.lines.length}
-					title="Start over, this chat is only kept in this tab"
+					title={t('ai.startOver')}
 				>
-					<Icon name="add" size={14} /> New chat
+					<Icon name="add" size={14} />
+					{t('ai.newChat')}
 				</button>
 			{/snippet}
 		</PageTop>
@@ -112,16 +114,9 @@
 			{#if !chat.lines.length}
 				<p class="hint">
 					{#if agent}
-						Development: ask for anything, content, design or new
-						fields, e.g. “Add a field for the opening hours” or
-						“Make the buttons round”. Code changes show on the right
-						right away, content changes are drafts you publish.
+						{t('ai.hintAgent')}
 					{:else}
-						Ask for anything on the website, e.g. “Write a better
-						intro for Über uns”, “Add an event in Basel” or
-						“Translate the footer into English”. Changes are drafts:
-						you see them on the right and publish them in the
-						editor.
+						{t('ai.hint')}
 					{/if}
 				</p>
 			{/if}
@@ -136,7 +131,7 @@
 									line.action.entryId,
 								)}
 							>
-								Open
+								{t('common.open')}
 							</a>
 						{/if}
 					</div>
@@ -163,19 +158,19 @@
 					bind:value={input}
 					{onkeydown}
 					rows="1"
-					placeholder="What should change?"
-					aria-label="Message"
+					placeholder={t('ai.placeholder')}
+					aria-label={t('ai.message')}
 					spellcheck="false"
 					use:grow={input}
 				></textarea>
 				<div class="bottom">
 					<span class="keys">
-						Enter sends, Shift+Enter a new line
+						{t('ai.keys')}
 					</span>
 					<button
 						class="send"
-						title="Send"
-						aria-label="Send"
+						title={t('ai.send')}
+						aria-label={t('ai.send')}
 						disabled={chat.busy || !input.trim()}
 					>
 						<Icon name="arrow-up" size={16} />

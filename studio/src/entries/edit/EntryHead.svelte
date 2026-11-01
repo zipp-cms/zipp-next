@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { t } from '../../i18n/index.svelte';
+
 	/** The title, large on top, with the dot of a change and its error. */
 	let {
 		title = $bindable(),
@@ -13,10 +15,12 @@
 
 <label class="head">
 	<span class="label">
-		{#if changed.has('title')}<span class="changed-dot"></span>{/if}Title
+		{#if changed.has('title')}<span class="changed-dot"></span>{/if}{t(
+			'common.title',
+		)}
 		<span class="req">*</span>
 	</span>
-	<input placeholder="Title" bind:value={title} />
+	<input placeholder={t('common.title')} bind:value={title} />
 	{#if errors.title}<span class="error">{errors.title}</span>{/if}
 </label>
 

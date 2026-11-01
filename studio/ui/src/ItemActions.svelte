@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ui } from './texts.svelte';
 	import Icon from './Icon.svelte';
 
 	/**
@@ -11,7 +12,7 @@
 		off = false,
 		onduplicate,
 		onremove,
-		removeLabel = 'Remove',
+		removeLabel,
 	}: {
 		/** switches it off (the website leaves it out) and on again */
 		onswitch?: () => void;
@@ -27,7 +28,7 @@
 		<button
 			type="button"
 			class="icon"
-			title={off ? 'Show it on the website' : 'Hide it on the website'}
+			title={off ? ui.texts.show : ui.texts.hide}
 			aria-pressed={off}
 			onclick={onswitch}
 		>
@@ -38,7 +39,7 @@
 		<button
 			type="button"
 			class="icon"
-			title="Duplicate"
+			title={ui.texts.duplicate}
 			onclick={onduplicate}
 		>
 			<Icon name="copy" size={15} />
@@ -47,7 +48,7 @@
 	<button
 		type="button"
 		class="icon remove"
-		title={removeLabel}
+		title={removeLabel ?? ui.texts.remove}
 		onclick={onremove}
 	>
 		<Icon name="delete" size={15} />

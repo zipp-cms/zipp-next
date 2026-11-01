@@ -7,6 +7,7 @@
 	import type { Schema } from '../core/schema';
 	import { go } from '../core/router.svelte';
 	import { TokenForm } from './tokenForm.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * A new token for a frontend: a name, the sections and sites it reads,
@@ -27,17 +28,17 @@
 <PageTop
 	crumbs={[
 		{ label: 'GraphQL', href: '/admin/graphql' },
-		{ label: 'New token' },
+		{ label: t('graphql.newToken') },
 	]}
 >
 	{#snippet actions()}
 		{#if form.created}
 			<button class="primary" onclick={() => go('/admin/graphql')}>
-				Done
+				{t('common.done')}
 			</button>
 		{:else}
 			<button class="primary" form="token" disabled={form.busy}>
-				Create
+				{t('common.create')}
 			</button>
 		{/if}
 	{/snippet}
@@ -48,20 +49,25 @@
 {/if}
 
 {#if form.created}
+	{@const [a, b, c] = t('graphql.copyNow').split(/\s*\{\w+\}\s*/)}
 	<div class="card">
 		<h2>{form.name}</h2>
 		<p>
-			Copy the token now, it doesn't show again. A frontend sends it as
+			{a}
 			<code>Authorization: Bearer …</code>
-			; crelte reads it as
+			{b}
 			<code>ENDPOINT_TOKEN</code>
-			.
+			{c}
 		</p>
 		<div class="token">
-			<input readonly value={form.created} aria-label="The token" />
+			<input
+				readonly
+				value={form.created}
+				aria-label={t('graphql.theToken')}
+			/>
 			<button onclick={() => form.copy()}>
 				<Icon name={form.copied ? 'check' : 'copy'} />
-				{form.copied ? 'Copied' : 'Copy'}
+				{form.copied ? t('common.copied') : t('common.copy')}
 			</button>
 		</div>
 	</div>
@@ -69,29 +75,35 @@
 	<form id="token" class="cards" onsubmit={save}>
 		<div class="card">
 			<label class="stacked">
-				Name
-				<input bind:value={form.name} placeholder="Website" required />
+				{t('common.name')}
+				<input
+					bind:value={form.name}
+					placeholder={t('graphql.namePlaceholder')}
+					required
+				/>
 				{#if form.fields.name}
 					<span class="error">{form.fields.name}</span>
 				{/if}
 			</label>
 			<label class="stacked">
-				Expires
+				{t('graphql.expires')}
 				<DatePicker
 					value={form.expires}
 					onchange={v => (form.expires = v)}
-					placeholder="Never"
+					placeholder={t('common.never')}
 					min={today}
 				/>
 			</label>
 		</div>
 
 		<div class="card">
-			<h2>Sections</h2>
-			<Switch bind:checked={form.allSections}>All sections</Switch>
+			<h2>{t('graphql.sections')}</h2>
+			<Switch bind:checked={form.allSections}>
+				{t('graphql.allSections')}
+			</Switch>
 			{#if !form.allSections}
 				<CheckGroup
-					label="Sections"
+					label={t('graphql.sections')}
 					options={schema.sections.map(s => ({
 						value: s.handle,
 						label: s.name,
@@ -106,11 +118,13 @@
 		</div>
 
 		<div class="card">
-			<h2>Sites</h2>
-			<Switch bind:checked={form.allSites}>All sites</Switch>
+			<h2>{t('graphql.sites')}</h2>
+			<Switch bind:checked={form.allSites}>
+				{t('graphql.allSites')}
+			</Switch>
 			{#if !form.allSites}
 				<CheckGroup
-					label="Sites"
+					label={t('graphql.sites')}
 					options={schema.sites.map(s => ({
 						value: s.handle,
 						label: s.name,
@@ -125,13 +139,12 @@
 		</div>
 
 		<div class="card">
-			<h2>Drafts</h2>
+			<h2>{t('graphql.drafts')}</h2>
 			<Switch bind:checked={form.previews}>
-				Preview links show drafts
+				{t('graphql.previewsShowDrafts')}
 			</Switch>
 			<p class="note">
-				For the website that shows the studio's previews; other
-				frontends only read what is live.
+				{t('graphql.previewsNote')}
 			</p>
 		</div>
 	</form>

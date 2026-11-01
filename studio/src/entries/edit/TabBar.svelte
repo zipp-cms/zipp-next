@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Tab } from '../../core/schema';
 	import Segmented from 'zipp-ui/Segmented.svelte';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * The tabs of an entry type, like Craft's: a dot on a tab with changes,
@@ -25,20 +26,22 @@
 
 <Segmented
 	tabs
-	options={tabs.map(t => ({ value: t.name, label: t.name }))}
+	options={tabs.map(tb => ({ value: tb.name, label: tb.name }))}
 	value={current}
 	onchange={v => (current = v)}
 >
 	{#snippet item({ value })}
-		{@const tab = tabs.find(t => t.name === value)!}
+		{@const tab = tabs.find(tb => tb.name === value)!}
 		{@const errs = count(tab, Object.keys(errors))}
 		{#if count(tab, changed)}<span
 				class="changed-dot"
-				title="Changed"
+				title={t('entries.changed')}
 			></span>{/if}
 		{value}
 		{#if errs}
-			<span class="errors" title="{errs} errors">{errs}</span>
+			<span class="errors" title={t('entries.errors', { n: errs })}>
+				{errs}
+			</span>
 		{/if}
 	{/snippet}
 </Segmented>

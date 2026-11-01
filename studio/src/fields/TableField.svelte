@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { FieldOf, Schema, Values } from '../core/schema';
+	import { t } from '../i18n/index.svelte';
 	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
 	import AddButton from 'zipp-ui/AddButton.svelte';
@@ -69,7 +70,7 @@
 						<DragHandle
 							sortable={sort}
 							index={i}
-							label="Move the row"
+							label={t('fields.moveRow')}
 						/>
 					</td>
 					{#each columns as c (c.handle)}
@@ -86,7 +87,7 @@
 					<td class="actions">
 						<ItemActions
 							onremove={() => set(removed(rows, i))}
-							removeLabel="Remove the row"
+							removeLabel={t('fields.removeRow')}
 						/>
 					</td>
 				</tr>
@@ -95,7 +96,9 @@
 	</table>
 	<SortLine sortable={sort} />
 </div>
-<AddButton onclick={() => set(inserted(rows, {}))}>Add a row</AddButton>
+<AddButton onclick={() => set(inserted(rows, {}))}>
+	{t('fields.addRow')}
+</AddButton>
 
 <style lang="scss">
 	.wrap {

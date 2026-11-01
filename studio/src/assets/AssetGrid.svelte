@@ -3,6 +3,7 @@
 	import AssetCard from './AssetCard.svelte';
 	import type { MenuItem } from 'zipp-ui/Menu.svelte';
 	import { ASSETS_DRAG } from './uploads.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The files as cards. With `draggable` a card drags onto a folder of
@@ -14,7 +15,7 @@
 		selected = [],
 		loading = false,
 		draggable = false,
-		empty = 'No assets yet',
+		empty,
 		menu,
 		onrename,
 		onpick,
@@ -89,14 +90,16 @@
 			<input
 				class="rename"
 				bind:value={name}
-				aria-label="Filename"
+				aria-label={t('assets.filename')}
 				use:focus
 				onkeydown={e => onkeydown(e, a)}
 				onblur={() => save(a)}
 			/>
 		{/snippet}
 	{:else}
-		<p class="empty">{loading ? 'Loading…' : empty}</p>
+		<p class="empty">
+			{loading ? t('common.loading') : (empty ?? t('assets.noAssets'))}
+		</p>
 	{/each}
 </div>
 

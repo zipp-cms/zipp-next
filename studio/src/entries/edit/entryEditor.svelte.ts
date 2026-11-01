@@ -34,6 +34,7 @@ import { site } from '../../core/router.svelte';
 import { changedPaths, clean } from './diff';
 import { slugify } from '../../core/format';
 import { depth } from '../tree';
+import { t } from '../../i18n/index.svelte';
 
 /** What the role may do with the entry; the server checks it too. */
 export type May = { edit: boolean; publish: boolean; delete: boolean };
@@ -297,9 +298,10 @@ export class EntryEditor {
 		const lost = Object.keys(values)
 			.filter(h => !kept(h))
 			.map(h => from?.fields.find(f => f.handle === h)?.label ?? h);
-		const question =
-			`Change the type to ${into.name}? It has no field like ` +
-			`${lost.join(', ')}: their content is removed in every site.`;
+		const question = t('entries.confirmType', {
+			type: into.name,
+			fields: lost.join(', '),
+		});
 		if (lost.length && !confirm(question)) return false;
 		this.fields = Object.fromEntries(
 			Object.entries(this.fields).filter(([h]) => kept(h)),
@@ -515,8 +517,10 @@ export class EntryEditor {
 
 	/** Replaces the draft, after asking: what isn't published is lost. */
 	restore(rev: Revision) {
-		const what = this.draft ? 'The draft is replaced. ' : '';
-		if (!confirm(`Restore this revision? ${what}`.trim())) return;
+		const question = this.draft
+			? t('entries.confirmRestoreDraft')
+			: t('entries.confirmRestore');
+		if (!confirm(question)) return;
 		this.cancelSave();
 		return this.action.run(async () => {
 			await restoreRevision(this.id!, rev.id);

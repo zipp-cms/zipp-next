@@ -4,12 +4,13 @@
 </script>
 
 <script lang="ts">
+	import { ui } from './texts.svelte';
 	import Icon from './Icon.svelte';
 
 	/** A search box with its icon, for lists and pickers. */
 	let {
 		value = $bindable(''),
-		placeholder = 'Search',
+		placeholder,
 		onkeydown,
 	}: {
 		value?: string;
@@ -22,8 +23,8 @@
 	<Icon name="search" size={14} />
 	<input
 		type="search"
-		{placeholder}
-		aria-label={placeholder}
+		placeholder={placeholder ?? ui.texts.search}
+		aria-label={placeholder ?? ui.texts.search}
 		bind:value
 		{onkeydown}
 	/>

@@ -1,3 +1,5 @@
+import { t } from '../i18n/index.svelte';
+
 export type FieldError = { path: string; message: string };
 
 /** The errors of the server, `Error` of zipp's error.rs. */
@@ -129,7 +131,7 @@ export async function request<T = unknown>(
 	try {
 		data = text ? JSON.parse(text) : null;
 	} catch {
-		if (resp.ok) throw new Error(`${path}: the answer is no JSON`);
+		if (resp.ok) throw new Error(t('shell.noJson', { path }));
 	}
 	if (!resp.ok) throw failed(resp, data);
 	return data as T;
@@ -157,17 +159,18 @@ export function upload<T = unknown>(
 	return new Promise((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
 		xhr.open('POST', '/api' + path);
-		const t = token();
-		if (t) xhr.setRequestHeader('session-token', t);
+		const tok = token();
+		if (tok) xhr.setRequestHeader('session-token', tok);
 		xhr.upload.onprogress = e => onprogress(e.loaded, e.total);
-		xhr.onerror = () => reject(new Error(`${path}: the upload failed`));
+		xhr.onerror = () =>
+			reject(new Error(t('shell.uploadFailed', { path })));
 		xhr.onload = () => {
 			let data = null;
 			try {
 				data = xhr.responseText ? JSON.parse(xhr.responseText) : null;
 			} catch {
 				if (xhr.status < 300)
-					return reject(new Error(`${path}: the answer is no JSON`));
+					return reject(new Error(t('shell.noJson', { path })));
 			}
 			if (xhr.status >= 200 && xhr.status < 300) resolve(data as T);
 			else reject(failed(xhr, data));

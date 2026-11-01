@@ -4,6 +4,7 @@
 	import Thumb from './Thumb.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * A file as a square card: the picture, below it a bar with the title
@@ -67,7 +68,9 @@
 			</button>
 		{/if}
 		{#if menu?.length}
-			<span class="menu"><Menu items={menu} label="File actions" /></span>
+			<span class="menu">
+				<Menu items={menu} label={t('assets.fileActions')} />
+			</span>
 		{/if}
 	</div>
 	{#if handle}<span class="handle">{@render handle()}</span>{/if}

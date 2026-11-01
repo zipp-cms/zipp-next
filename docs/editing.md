@@ -61,6 +61,17 @@ Craft's impersonation: here, or with a copied link in a private window
 (ten minutes, once). The session lasts two hours, a bar shows it with
 "Back to your account"; what is saved meanwhile is the user's.
 
+The studio speaks English and German. Each user picks the language on
+their account page (an admin can set it for a new user, like a client
+who wants German); without a choice it follows the browser: German if
+the browser asks for German first, else English. The login page always
+follows the browser. Dates and numbers are written in that language
+(with the browser's region when it matches, so a Swiss browser writes
+Swiss numbers). What the site's code names (sections, types, field
+labels, instructions) stays as the code writes it, it is the site's
+language already; messages of the server (a failed save's reason) are
+still English.
+
 ## Trash
 
 Like Craft's, deleting an entry (in a structure with the entries below

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ui } from './texts.svelte';
 	import { untrack } from 'svelte';
 	import Icon from './Icon.svelte';
 	import {
@@ -37,13 +38,13 @@
 	let shown = $state(untrack(() => monthOf(parseDay(value) ?? new Date())));
 	let view = $state<'days' | 'months' | 'years'>('days');
 
-	const months = monthNames();
-	const days = weekdays();
-	const title = new Intl.DateTimeFormat(undefined, {
+	const months = monthNames(ui.locale);
+	const days = weekdays(ui.locale);
+	const title = new Intl.DateTimeFormat(ui.locale, {
 		month: 'long',
 		year: 'numeric',
 	});
-	const spoken = new Intl.DateTimeFormat(undefined, { dateStyle: 'full' });
+	const spoken = new Intl.DateTimeFormat(ui.locale, { dateStyle: 'full' });
 	const today = formatDay(new Date());
 
 	const decade = $derived(Math.floor(shown.getFullYear() / 12) * 12);
@@ -74,7 +75,7 @@
 		<button
 			type="button"
 			class="icon"
-			aria-label={view === 'days' ? 'Month before' : 'Back'}
+			aria-label={view === 'days' ? ui.texts.monthBefore : ui.texts.back}
 			onclick={() => move(-1)}
 		>
 			<Icon name="chevron-left" size={16} />
@@ -83,7 +84,9 @@
 			type="button"
 			class="period plain"
 			disabled={view === 'years'}
-			aria-label={view === 'days' ? 'Pick a month' : 'Pick a year'}
+			aria-label={view === 'days'
+				? ui.texts.pickMonth
+				: ui.texts.pickYear}
 			onclick={() => (view = view === 'days' ? 'months' : 'years')}
 		>
 			<span aria-live="polite">{period}</span>
@@ -91,7 +94,9 @@
 		<button
 			type="button"
 			class="icon"
-			aria-label={view === 'days' ? 'Month after' : 'Forward'}
+			aria-label={view === 'days'
+				? ui.texts.monthAfter
+				: ui.texts.forward}
 			onclick={() => move(1)}
 		>
 			<Icon name="chevron-right" size={16} />

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { session } from '../core/session.svelte';
 	import { displayName } from '../users/api';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * While an admin is logged in as someone else: who, and the way back
@@ -14,13 +15,16 @@
 </script>
 
 {#if session.impersonatedBy && session.user}
+	{@const [before, after] = t('shell.loggedInAs', {
+		by: session.impersonatedBy,
+	}).split('{name}')}
 	<div class="login-as" role="status">
 		<span>
-			Logged in as <strong>{displayName(session.user)}</strong>
-			by
-			{session.impersonatedBy}
+			{before}
+			<strong>{displayName(session.user)}</strong>
+			{after}
 		</span>
-		<button class="light" onclick={back}>Back to your account</button>
+		<button class="light" onclick={back}>{t('shell.backToAccount')}</button>
 	</div>
 {/if}
 

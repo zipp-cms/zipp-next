@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ui } from './texts.svelte';
 	import { untrack } from 'svelte';
 
 	/**
@@ -84,7 +85,7 @@
 	aria-valuemin={min}
 	aria-valuemax={max()}
 	tabindex="0"
-	title="Drag to change the width, double click for the default"
+	title={ui.texts.resize}
 	{onpointerdown}
 	ondblclick={() => set(initial)}
 	{onkeydown}

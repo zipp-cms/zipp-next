@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { ui } from './texts.svelte';
 	/** Where a page is: links up to it, the page itself last. */
 	let { items }: { items: { label: string; href?: string }[] } = $props();
 </script>
 
-<nav class="crumbs" aria-label="Breadcrumbs">
+<nav class="crumbs" aria-label={ui.texts.breadcrumbs}>
 	{#each items as item, i (i)}
 		{#if i}<span class="sep">/</span>{/if}
 		{#if item.href && i < items.length - 1}

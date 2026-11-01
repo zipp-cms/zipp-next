@@ -1,5 +1,6 @@
 import { request } from './client';
 import { knowIcons } from './lucide';
+import { t } from '../i18n/index.svelte';
 
 export type LinkKind = 'entry' | 'url' | 'email' | 'phone' | 'asset';
 
@@ -286,7 +287,12 @@ export async function getSchema(): Promise<Schema> {
 /** The groups of the top bar, all sections in one without a nav. */
 export function navGroups(schema: Schema): NavGroup[] {
 	if (schema.nav.length) return schema.nav;
-	return [{ name: 'Entries', sections: schema.sections.map(s => s.handle) }];
+	return [
+		{
+			name: t('shell.entries'),
+			sections: schema.sections.map(s => s.handle),
+		},
+	];
 }
 
 /** The url of an entry on the website, if the site has one. */

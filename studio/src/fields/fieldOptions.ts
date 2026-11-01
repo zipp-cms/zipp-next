@@ -1,6 +1,7 @@
 import type { Component, Field, Schema } from '../core/schema';
 import { describeCondition } from './conditions';
-import { LINK_NAMES } from './link/link';
+import { linkName } from './link/link';
+import { t } from '../i18n/index.svelte';
 
 /**
  * All options of a field, set or not, for Setup: what the code says and
@@ -12,7 +13,7 @@ export type FieldOption = {
 	links?: { text: string; href: string }[];
 };
 
-const yes = (b: boolean) => (b ? 'Yes' : 'No');
+const yes = (b: boolean) => (b ? t('common.yes') : t('common.no'));
 const or = (v: number | null, none = '–') => (v === null ? none : String(v));
 
 /** Links to the entry types or blocks of a list of handles. */
@@ -30,38 +31,50 @@ export function fieldOptions(
 	c: Component,
 ): FieldOption[] {
 	const layout = [
-		{ name: 'Width', value: `${f.width ?? 100} % of a row` },
+		{
+			name: t('fields.optWidth'),
+			value: t('fields.widthOfRow', { n: f.width ?? 100 }),
+		},
 		...(f.when
-			? [{ name: 'Shown when', value: describeCondition(c, f.when) }]
+			? [
+					{
+						name: t('fields.optShownWhen'),
+						value: describeCondition(c, f.when),
+					},
+				]
 			: []),
 	];
 	// a note only has its text
-	if (f.kind === 'note') return [{ name: 'Text', value: f.text }, ...layout];
+	if (f.kind === 'note')
+		return [{ name: t('fields.optText'), value: f.text }, ...layout];
 
 	const out: FieldOption[] = [
 		...(f.instructions
-			? [{ name: 'Instructions', value: f.instructions }]
+			? [{ name: t('fields.optInstructions'), value: f.instructions }]
 			: []),
-		{ name: 'Required', value: yes(f.required) },
+		{ name: t('fields.optRequired'), value: yes(f.required) },
 		...layout,
 		...(c.entry
 			? [
 					{
-						name: 'Sites',
+						name: t('fields.optSites'),
 						value: f.translatable
-							? 'Per site, translated'
-							: 'The same in all sites',
+							? t('fields.perSite')
+							: t('fields.sameInAllSites'),
 					},
 				]
 			: []),
 		{
-			name: 'Indexed',
-			value: f.indexed
-				? 'Yes, lists and GraphQL filter and sort by it'
-				: 'No',
+			name: t('fields.optIndexed'),
+			value: f.indexed ? t('fields.indexedYes') : t('common.no'),
 		},
 		...(f.default !== undefined
-			? [{ name: 'Default', value: JSON.stringify(f.default) }]
+			? [
+					{
+						name: t('fields.optDefault'),
+						value: JSON.stringify(f.default),
+					},
+				]
 			: []),
 	];
 	const add = (name: string, value: string, links?: FieldOption['links']) =>
@@ -69,105 +82,112 @@ export function fieldOptions(
 
 	switch (f.kind) {
 		case 'text':
-			add('Lines', f.multiline ? 'Several' : 'One');
-			add('Max length', or(f.max));
+			add(
+				t('fields.optLines'),
+				f.multiline ? t('fields.several') : t('fields.one'),
+			);
+			add(t('fields.optMaxLength'), or(f.max));
 			break;
 		case 'number':
-			add('Min', or(f.min));
-			add('Max', or(f.max));
-			add('Decimals', or(f.decimals ?? null, 'Any'));
-			add('Unit', f.unit ?? '–');
+			add(t('fields.optMin'), or(f.min));
+			add(t('fields.optMax'), or(f.max));
+			add(
+				t('fields.optDecimals'),
+				or(f.decimals ?? null, t('fields.any')),
+			);
+			add(t('fields.optUnit'), f.unit ?? '–');
 			break;
 		case 'date':
 			add(
-				'Value',
-				f.time
-					? 'A day and time, 2026-11-14T20:00'
-					: 'A day, 2026-11-14',
+				t('fields.optValue'),
+				f.time ? t('fields.dayAndTime') : t('fields.day'),
 			);
 			break;
 		case 'relation':
-			add('Entry types', '', components(schema, f.types));
-			add('Max entries', or(f.max, 'Any'));
+			add(t('fields.optEntryTypes'), '', components(schema, f.types));
+			add(t('fields.optMaxEntries'), or(f.max, t('fields.any')));
 			break;
 		case 'assets':
 			add(
-				'Files',
+				t('fields.optFiles'),
 				f.extensions?.length
 					? f.extensions.map(e => e.toUpperCase()).join(', ')
 					: f.images
-						? 'Images only'
-						: 'Any file',
+						? t('fields.imagesOnly')
+						: t('fields.anyFile'),
 			);
-			add('Max files', or(f.max, 'Any'));
-			add('Upload to', f.folder ?? 'Library');
+			add(t('fields.optMaxFiles'), or(f.max, t('fields.any')));
+			add(t('fields.optUploadTo'), f.folder ?? t('fields.library'));
 			break;
 		case 'link':
-			add('Links to', f.to.map(k => LINK_NAMES[k]).join(', '));
-			add('Label', yes(f.labels));
+			add(t('fields.optLinksTo'), f.to.map(linkName).join(', '));
+			add(t('fields.label'), yes(f.labels));
 			add(
-				'External links',
-				f.newTab ? 'In a new tab' : 'In the same tab',
+				t('fields.optExternalLinks'),
+				f.newTab ? t('fields.inNewTab') : t('fields.inSameTab'),
 			);
 			break;
 		case 'navigation':
-			add('Links to', f.to.map(k => LINK_NAMES[k]).join(', '));
-			add('Levels', String(f.depth));
+			add(t('fields.optLinksTo'), f.to.map(linkName).join(', '));
+			add(t('fields.optLevels'), String(f.depth));
 			break;
 		case 'richText':
 			add(
-				'Headings',
+				t('fields.optHeadings'),
 				f.headings.length
 					? f.headings.map(h => `h${h}`).join(', ')
-					: 'No',
+					: t('common.no'),
 			);
-			add('Lists', yes(f.lists));
-			add('Links', yes(f.links));
-			add('Buttons', yes(f.buttons));
+			add(t('fields.optLists'), yes(f.lists));
+			add(t('fields.optLinks'), yes(f.links));
+			add(t('fields.optButtons'), yes(f.buttons));
 			add(
-				'Blocks in the text',
-				f.blocks.length ? '' : 'No',
+				t('fields.optBlocksInText'),
+				f.blocks.length ? '' : t('common.no'),
 				components(schema, f.blocks),
 			);
 			add(
-				'Styles',
+				t('fields.styles'),
 				f.styles?.length
 					? f.styles
 							.map(
 								st =>
-									`${st.label} (${st.inline ? 'text' : 'paragraph'}, .${st.class})`,
+									`${st.label} (${st.inline ? t('fields.styleText') : t('fields.styleParagraph')}, .${st.class})`,
 							)
 							.join(', ')
-					: 'No',
+					: t('common.no'),
 			);
 			break;
 		case 'blocks':
-			add('Block types', '', components(schema, f.types));
-			add('Min blocks', or(f.min));
-			add('Max blocks', or(f.max, 'Any'));
+			add(t('fields.optBlockTypes'), '', components(schema, f.types));
+			add(t('fields.optMinBlocks'), or(f.min));
+			add(t('fields.optMaxBlocks'), or(f.max, t('fields.any')));
 			break;
 		case 'group':
-			add('Fields of', '', components(schema, [f.component]));
+			add(t('fields.optFieldsOf'), '', components(schema, [f.component]));
 			break;
 		case 'dropdown':
 		case 'checkboxes':
 			add(
-				'Options',
+				t('fields.optOptions'),
 				f.options.map(o => `${o.label} (${o.value})`).join(', '),
 			);
 			break;
 		case 'table':
 			add(
-				'Columns',
+				t('fields.optColumns'),
 				f.columns.map(c => `${c.label} (${c.kind})`).join(', '),
 			);
 			break;
 		case 'texts':
-			add('Keys', f.keys.map(([k]) => k).join(', '));
+			add(t('fields.optKeys'), f.keys.map(([k]) => k).join(', '));
 			break;
 		case 'custom':
-			add('Field type', `${f.type}, of a plugin`);
-			add('Options', JSON.stringify(f.options) ?? '–');
+			add(
+				t('fields.optFieldType'),
+				t('fields.ofPlugin', { type: f.type }),
+			);
+			add(t('fields.optOptions'), JSON.stringify(f.options) ?? '–');
 			break;
 	}
 	add('GraphQL', f.handle);

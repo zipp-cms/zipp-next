@@ -102,6 +102,7 @@ async fn an_invited_user_sets_a_password() {
 		name: String::new(),
 		password: String::new(),
 		role: Some("editor".into()),
+		language: String::new(),
 	};
 	let account = admin.call(&new).await.unwrap();
 	assert!(account.invited);

@@ -18,6 +18,7 @@ import {
 	ZippLink,
 } from './extensions.svelte';
 import type { Sortable } from 'zipp-ui/sortable';
+import { t } from '../../i18n/index.svelte';
 
 /** What a rich text field allows: its field. */
 export type RichOptions = Omit<FieldOf<'richText'>, 'kind'>;
@@ -93,7 +94,9 @@ export function createEditor(o: {
 			// css shows it only at the end, see .tiptap
 			Placeholder.configure({
 				placeholder: ({ editor }) =>
-					editor.isEmpty ? 'Write …' : 'Continue writing …',
+					editor.isEmpty
+						? t('fields.writePlaceholder')
+						: t('fields.continueWriting'),
 				showOnlyCurrent: false,
 			}),
 			EndLine,

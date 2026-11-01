@@ -1,10 +1,17 @@
-import type { Component, Field, Role, Schema, Section } from '../core/schema';
+import type {
+	Access,
+	Component,
+	Field,
+	Role,
+	Schema,
+	Section,
+} from '../core/schema';
 import { componentOf } from '../core/schema';
 import { can, isAdmin, visibleNav } from '../core/access';
 import { listEntries } from '../entries/api';
 import { describeField } from '../fields/fieldKind';
 import { session } from '../core/session.svelte';
-import { capitalized } from '../core/format';
+import { t } from '../i18n/index.svelte';
 import { ASSET_FIELDS } from '../assets/api';
 
 /** What Setup shows of the schema: only what the role may see. */
@@ -35,9 +42,12 @@ export function gqlType(c: Pick<Component, 'handle' | 'entry'>): string {
 	return `${c.handle}_${c.entry ? 'Entry' : 'Block'}`;
 }
 
-/** An access level as a word, `–` for none. */
-export function accessText(level: string | null | undefined): string {
-	return level ? capitalized(level) : '–';
+/** A level of access in words, `none` without one. */
+export function accessText(
+	level: Access | null | undefined,
+	none = '–',
+): string {
+	return level ? t(`common.${level}`) : none;
 }
 
 /** Where a component is used: sections and fields, as links of Setup. */
@@ -46,11 +56,11 @@ export function usedIn(
 	c: Component,
 ): { text: string; href: string }[] {
 	if (!c.entry && c.handle === ASSET_FIELDS)
-		return [{ text: 'every asset', href: '/admin/assets' }];
+		return [{ text: t('setup.everyAsset'), href: '/admin/assets' }];
 	const out = visibleSections(schema)
 		.filter(s => s.types.includes(c.handle))
 		.map(s => ({
-			text: `section ${s.name}`,
+			text: t('setup.sectionName', { name: s.name }),
 			href: `/admin/setup/sections/${s.handle}`,
 		}));
 	for (const other of schema.components) {
@@ -138,8 +148,7 @@ export function sectionsByGroup(
 	const rest = sections.filter(
 		s => !groups.some(g => g.sections.includes(s)),
 	);
-	if (rest.length)
-		groups.push({ name: 'Not in the navigation', sections: rest });
+	if (rest.length) groups.push({ name: t('setup.notInNav'), sections: rest });
 	return groups;
 }
 

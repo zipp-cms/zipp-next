@@ -2,6 +2,7 @@
 	import type { Schema as SchemaT } from '../core/schema';
 	import { listEntries as list, type EntryList } from './api';
 	import { entryPath, go, site, type LoadProps } from '../core/router.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/** The entries of the section; a single opens its entry. */
 	export async function loadProps(
@@ -9,7 +10,8 @@
 		lp: LoadProps,
 	) {
 		const sec = props.schema.sections.find(s => s.handle === props.section);
-		if (!sec) throw new Error(`There is no section ${props.section}`);
+		if (!sec)
+			throw new Error(t('entries.noSection', { section: props.section }));
 		const first = await list(
 			listParams(sec.kind, props.section, site.current, ''),
 		);
@@ -48,7 +50,7 @@
 	} from './api';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
-	import { date, plural, time } from '../core/format';
+	import { date, time } from '../core/format';
 	import { depth, isBelow } from './tree';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
@@ -134,7 +136,7 @@
 	function actions(e: Entry): MenuItem[] {
 		const items: MenuItem[] = [
 			{
-				label: 'Edit',
+				label: t('common.edit'),
 				icon: 'edit',
 				href: entryPath(section, e.id),
 			},
@@ -142,13 +144,13 @@
 		const url = entryUrl(schema, site.current, e.uri);
 		if (url && published[e.id]?.[site.current])
 			items.push({
-				label: 'View on the website',
+				label: t('entries.viewOnWebsite'),
 				icon: 'external',
 				href: url,
 			});
 		if (sec.kind !== 'single' && can(schema, section, 'delete'))
 			items.push({
-				label: 'Delete',
+				label: t('common.delete'),
 				icon: 'delete',
 				danger: true,
 				onclick: () => remove(e),
@@ -159,10 +161,10 @@
 	async function remove(e: Entry) {
 		// the entries below it go with it
 		const below = entries.filter(c => isBelow(entries, c, e)).length;
-		const also = below
-			? ` The ${below === 1 ? 'entry' : `${below} entries`} below it too.`
-			: '';
-		if (!confirm(`Move ${e.title} to the trash?${also}`)) return;
+		const question = below
+			? t('entries.confirmTrashBelow', { title: e.title, n: below })
+			: t('entries.confirmTrash', { title: e.title });
+		if (!confirm(question)) return;
 		try {
 			await deleteEntry(e.id);
 			load();
@@ -180,7 +182,7 @@
 				onclick={() => go(`/admin/entries/${section}/new`)}
 			>
 				<Icon name="add" />
-				New entry
+				{t('entries.new')}
 			</button>
 		{/if}
 	{/snippet}
@@ -191,16 +193,19 @@
 <div class="card list" bind:this={rows}>
 	<div class="search">
 		<span class="field">
-			<SearchInput bind:value={search} placeholder="Search entries" />
+			<SearchInput
+				bind:value={search}
+				placeholder={t('entries.search')}
+			/>
 		</span>
-		<span class="note total">{plural(total, 'entry', 'entries')}</span>
+		<span class="note total">{t('common.entries', { n: total })}</span>
 	</div>
 	{#if entries.length}
 		<div class="row columns" class:types>
-			<span>Title</span>
-			<span>Status</span>
-			{#if types}<span class="hide-small">Type</span>{/if}
-			<span class="hide-small">Updated</span>
+			<span>{t('common.title')}</span>
+			<span>{t('entries.status')}</span>
+			{#if types}<span class="hide-small">{t('entries.type')}</span>{/if}
+			<span class="hide-small">{t('entries.updated')}</span>
 			<span></span>
 		</div>
 	{/if}
@@ -222,7 +227,7 @@
 					<DragHandle
 						sortable={sort}
 						index={i}
-						label="Move {e.title}"
+						label={t('entries.move', { title: e.title })}
 					/>
 				{/if}
 				<a class="title" href={entryPath(section, e.id)}>
@@ -232,23 +237,30 @@
 			<span class="status">
 				<SiteBadges {schema} published={published[e.id]} />
 				{#if drafts.includes(e.id)}
-					<span class="badge changes" title="Unpublished changes">
-						Draft
+					<span
+						class="badge changes"
+						title={t('entries.unpublishedChanges')}
+					>
+						{t('common.draft')}
 					</span>
 				{/if}
 				{#if dateState(e) === 'pending'}
 					<span
 						class="badge draft"
-						title="Live from {time(e.postDate!)}"
+						title={t('entries.liveFrom', {
+							time: time(e.postDate!),
+						})}
 					>
-						Pending
+						{t('entries.pending')}
 					</span>
 				{:else if dateState(e) === 'expired'}
 					<span
 						class="badge draft"
-						title="Expired {time(e.expiryDate!)}"
+						title={t('entries.expiredAt', {
+							time: time(e.expiryDate!),
+						})}
 					>
-						Expired
+						{t('entries.expired')}
 					</span>
 				{/if}
 			</span>
@@ -262,15 +274,20 @@
 				</span>
 			{/if}
 			<span class="date hide-small">{date(e.updatedAt)}</span>
-			<Menu items={actions(e)} label="Actions for {e.title}" />
+			<Menu
+				items={actions(e)}
+				label={t('entries.actionsFor', { title: e.title })}
+			/>
 		</div>
 	{:else}
 		<p class="empty">
-			{search ? 'Nothing found' : 'No entries yet'}
+			{search ? t('common.nothingFound') : t('entries.noneYet')}
 		</p>
 	{/each}
 	{#if total > entries.length}
-		<p class="empty">{entries.length} of {total}</p>
+		<p class="empty">
+			{t('entries.shownOf', { shown: entries.length, total })}
+		</p>
 	{/if}
 	<SortLine sortable={sort} />
 </div>

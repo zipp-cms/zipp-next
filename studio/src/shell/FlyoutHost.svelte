@@ -7,6 +7,7 @@
 	import Edit from '../entries/edit/Edit.svelte';
 	import { EntryEditor } from '../entries/edit/entryEditor.svelte';
 	import Flyout from 'zipp-ui/Flyout.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The entry or asset a field opened, over the page: loaded when it
@@ -36,7 +37,7 @@
 							? { kind: 'asset', asset }
 							: {
 									kind: 'error',
-									message: 'This file was deleted.',
+									message: t('shell.fileDeleted'),
 								},
 					);
 		load.catch((e): Loaded => ({ kind: 'error', message: e.message }))
@@ -59,7 +60,9 @@
 	{/key}
 {:else if flyout.open}
 	<Flyout
-		title={flyout.open.kind === 'entry' ? 'Entry' : 'File'}
+		title={flyout.open.kind === 'entry'
+			? t('shell.entry')
+			: t('shell.file')}
 		onclose={closeFlyout}
 	>
 		{#if loaded?.kind === 'entry'}
@@ -69,7 +72,7 @@
 		{:else if loaded?.kind === 'error'}
 			<p class="error">{loaded.message}</p>
 		{:else}
-			<p class="empty">Loading…</p>
+			<p class="empty">{t('common.loading')}</p>
 		{/if}
 	</Flyout>
 {/if}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
 	import { site } from '../core/router.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * Whether an entry is live in each site: a badge per site, grey where
@@ -22,14 +23,17 @@
 <span class="sites">
 	{#each schema.sites as s (s.handle)}
 		{@const on = published?.[s.handle] ?? false}
-		{@const title = `${s.name}: ${on ? 'published' : 'not published'}`}
+		{@const title = t(
+			on ? 'entries.sitePublished' : 'entries.siteNotPublished',
+			{ site: s.name },
+		)}
 		{#if onselect}
 			<button
 				type="button"
 				class="badge"
 				class:draft={!on}
 				class:current={s.handle === site.current}
-				title="{title}, open"
+				title={t('entries.siteOpen', { title })}
 				onclick={() => onselect(s.handle)}
 			>
 				{s.handle.toUpperCase()}

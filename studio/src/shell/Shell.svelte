@@ -23,6 +23,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import SearchBox from '../search/SearchBox.svelte';
 	import { searchBox } from '../search/search.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The frame of the studio's pages: the sidebar, the page, the flyout
@@ -74,8 +75,8 @@
 		type="button"
 		class="icon menu"
 		class:shown={hidden}
-		title="Menu"
-		aria-label="Menu"
+		title={t('shell.menu')}
+		aria-label={t('shell.menu')}
 		aria-expanded={sideNav.open}
 		onclick={() => (sideNav.open = true)}
 	>

@@ -10,6 +10,7 @@
 	import { blockSummary } from '../blocks.svelte';
 	import { synced } from '../../core/synced.svelte';
 	import { componentOf } from '../../core/schema';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * A block inside a rich text: a card with its summary, its fields like
@@ -68,11 +69,11 @@
 >
 	{#snippet handle()}
 		{#if editable && sortable}
-			<DragHandle {sortable} {index} label="Move the block" />
+			<DragHandle {sortable} {index} label={t('fields.moveBlock')} />
 		{/if}
 	{/snippet}
 	{#snippet preview()}
-		{blockSummary(comp, fields.value, refs) || 'Empty'}
+		{blockSummary(comp, fields.value, refs) || t('fields.empty')}
 	{/snippet}
 	{#if comp}
 		<fieldset disabled={!editable}>

@@ -4,6 +4,7 @@
 	import { accessText, visibleRoles, visibleSections } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
 	import MailCard from './MailCard.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The sites, the image transforms and the roles of the code, for
@@ -17,18 +18,23 @@
 
 <div class="cards">
 	<div class="card">
-		<h2>Sites</h2>
+		<h2>{t('setup.sites')}</h2>
 		<Table
 			rows={schema.sites}
 			key={s => s.handle}
-			columns={['Name', 'Handle', 'Language', 'URL']}
+			columns={[
+				t('common.name'),
+				t('setup.handle'),
+				t('setup.language'),
+				t('setup.url'),
+			]}
 		>
 			{#snippet row(s, i)}
 				<td>
 					{s.name}{i === 0
-						? ' (primary)'
+						? t('setup.primary')
 						: ''}{schema.offline.includes(s.handle)
-						? ' (offline, not on the website)'
+						? t('setup.offlineSite')
 						: ''}
 				</td>
 				<td><code>{s.handle}</code></td>
@@ -39,30 +45,33 @@
 	</div>
 
 	<div class="card">
-		<h2>Image transforms</h2>
-		<Table rows={schema.transforms} key={t => t.handle}>
-			{#snippet row(t)}
-				<td><code>{t.handle}</code></td>
+		<h2>{t('setup.transforms')}</h2>
+		<Table rows={schema.transforms} key={tf => tf.handle}>
+			{#snippet row(tf)}
+				<td><code>{tf.handle}</code></td>
 				<td>
-					{`${t.width ?? 'auto'} × ${t.height ?? 'auto'}${t.crop ? ', cropped around the focal point' : ''}${t.format ? `, ${t.format}` : ''}`}
+					{`${tf.width ?? t('setup.auto')} × ${tf.height ?? t('setup.auto')}${tf.crop ? t('setup.cropped') : ''}${tf.format ? `, ${tf.format}` : ''}`}
 				</td>
 			{/snippet}
 		</Table>
 	</div>
 
 	<div class="card" id="roles">
-		<h2>Roles</h2>
+		<h2>{t('setup.roles')}</h2>
 		<p class="muted">
-			You are {isAdmin(schema)
-				? 'an admin and can do everything'
-				: roleName(schema)}. View sees entries, Edit changes them as
-			drafts and creates new ones, Publish makes drafts live and moves
-			entries, Delete deletes them. Users without a role are admins.
+			{t('setup.youAre', {
+				who: isAdmin(schema) ? t('setup.anAdmin') : roleName(schema),
+			})}
 		</p>
 		<Table
 			rows={roles}
 			key={r => r.handle}
-			columns={['Role', ...sections.map(s => s.name), 'Assets', 'AI']}
+			columns={[
+				t('setup.role'),
+				...sections.map(s => s.name),
+				t('setup.assets'),
+				t('setup.ai'),
+			]}
 		>
 			{#snippet row(r)}
 				<td>
@@ -73,7 +82,7 @@
 					<td>{accessText(r.sections[s.handle])}</td>
 				{/each}
 				<td>{accessText(r.assets)}</td>
-				<td>{r.ai ? 'Yes' : '–'}</td>
+				<td>{r.ai ? t('common.yes') : '–'}</td>
 			{/snippet}
 		</Table>
 	</div>

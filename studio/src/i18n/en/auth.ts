@@ -1,0 +1,36 @@
+export default {
+	'auth.logIn': 'Log in',
+	'auth.welcomeBack': 'Welcome back. Log in with your account.',
+	'auth.emailPlaceholder': 'name@example.com',
+	'auth.showPassword': 'Show the password',
+	'auth.hidePassword': 'Hide the password',
+	'auth.stayLoggedIn': 'Stay logged in',
+	'auth.forgot': 'Forgot your password?',
+	'auth.forgotIntro': 'Your email gets a link to choose a new one.',
+	'auth.forgotSent':
+		'If {email} has an account, a mail with a link is on its way. The link works for an hour.',
+	'auth.sendLink': 'Send the link',
+	'auth.backToLogin': 'Back to the login',
+	'auth.linkBroken': "This link doesn't work",
+	'auth.loggingIn': 'Logging in…',
+	'auth.toStudio': 'To the studio',
+	'auth.sessionEnded': 'The session ended',
+	'auth.wereLoggedInAs':
+		'You were logged in as {name}. Go back to your account or log in.',
+	'auth.backToAccount': 'Back to your account',
+	'auth.logInAgain': 'Log in again to go on, what you changed stays.',
+	'auth.logOut': 'Log out',
+	'auth.welcome': 'Welcome',
+	'auth.newPasswordTitle': 'A new password',
+	'auth.inviteIntro': 'Your account is {email}. Choose a password to log in.',
+	'auth.resetIntro':
+		'Choose a new password for {email}. You are logged out everywhere else.',
+	'auth.yourName': 'Your name',
+	'auth.namePlaceholder': 'Anna Muster',
+	'auth.passwordPlaceholder': 'At least 8 characters',
+	'auth.setAndLogIn': 'Set the password and log in',
+	'auth.saveAndLogIn': 'Save and log in',
+	'auth.linkProblem':
+		'{problem}. Ask for a new one, or an admin for an invite.',
+	'auth.newPassword': 'New password',
+};

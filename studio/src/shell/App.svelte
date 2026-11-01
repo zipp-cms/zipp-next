@@ -3,9 +3,13 @@
 	import { session } from '../core/session.svelte';
 	import PageLoader from './PageLoader.svelte';
 	import SessionDialog from '../auth/SessionDialog.svelte';
+	import { applyLanguage } from '../i18n/index.svelte';
 
 	/** The page of the router in its frame, see core/router.svelte.ts. */
 	const page = $derived(view.page!);
+
+	// again when the user picks another language
+	$effect.pre(applyLanguage);
 </script>
 
 <PageLoader loading={view.loading} />

@@ -2,7 +2,6 @@
 	import type { Component, Schema } from '../core/schema';
 	import { componentOf } from '../core/schema';
 	import { isAdmin } from '../core/access';
-	import { plural } from '../core/format';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import {
 		componentHref,
@@ -13,6 +12,7 @@
 		visibleEntryTypes,
 		visibleSections,
 	} from './setup';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * What is where: the nav groups with their sections, each with its
@@ -40,20 +40,28 @@
 	const unused = $derived(blocks.filter(b => !usedIn(schema, b).length));
 	const sections = $derived(visibleSections(schema));
 	const stats = $derived([
-		{ n: sections.length, label: 'Sections', href: 'sections' },
 		{
-			n: visibleEntryTypes(schema).length,
-			label: 'Entry types',
-			href: 'types',
-		},
-		{ n: blocks.length, label: 'Blocks', href: 'blocks' },
-		{ n: fieldUsage(schema).length, label: 'Fields', href: 'fields' },
-		{
-			n: Object.values(counts).reduce((a, b) => a + b, 0),
-			label: 'Entries',
+			n: sections.length,
+			label: t('shell.setupSections'),
 			href: 'sections',
 		},
-		{ n: schema.sites.length, label: 'Sites', href: 'sites' },
+		{
+			n: visibleEntryTypes(schema).length,
+			label: t('setup.entryTypes'),
+			href: 'types',
+		},
+		{ n: blocks.length, label: t('shell.setupBlocks'), href: 'blocks' },
+		{
+			n: fieldUsage(schema).length,
+			label: t('setup.fields'),
+			href: 'fields',
+		},
+		{
+			n: Object.values(counts).reduce((a, b) => a + b, 0),
+			label: t('setup.entries'),
+			href: 'sections',
+		},
+		{ n: schema.sites.length, label: t('setup.sites'), href: 'sites' },
 	]);
 
 	// a plugin's handles as links of Setup
@@ -63,7 +71,7 @@
 			.filter(c => c !== undefined);
 		return [
 			{
-				name: 'Sections',
+				name: t('shell.setupSections'),
 				links: sections
 					.filter(s => p.sections.includes(s.handle))
 					.map(s => ({
@@ -72,14 +80,14 @@
 					})),
 			},
 			{
-				name: 'Types and blocks',
+				name: t('setup.typesAndBlocks'),
 				links: comps.map(c => ({
 					text: c.name,
 					href: componentHref(c),
 				})),
 			},
 			{
-				name: 'Fields',
+				name: t('setup.fields'),
 				links: p.fields.map(f => {
 					const [c, field] = f.split('.');
 					const comp = componentOf(schema, c);
@@ -90,13 +98,13 @@
 				}),
 			},
 			{
-				name: 'Field types',
-				links: p.fieldTypes.map(t => ({ text: t, href: undefined })),
+				name: t('setup.fieldTypes'),
+				links: p.fieldTypes.map(f => ({ text: f, href: undefined })),
 			},
 			{
-				name: 'Transforms',
-				links: p.transforms.map(t => ({
-					text: t,
+				name: t('setup.transformsShort'),
+				links: p.transforms.map(tr => ({
+					text: tr,
 					href: '/admin/setup/sites',
 				})),
 			},
@@ -156,13 +164,13 @@
 							</a>
 							<span class="muted">
 								{s.kind}{s.handle in counts
-									? `, ${plural(counts[s.handle], 'entry', 'entries')}`
+									? `, ${t('common.entries', { n: counts[s.handle] })}`
 									: ''}
 							</span>
 						</div>
 						<ul class="plain types">
-							{#each s.types as t (t)}
-								{@const c = componentOf(schema, t)}
+							{#each s.types as type (type)}
+								{@const c = componentOf(schema, type)}
 								<li>
 									{#if c}
 										<a class="type" href={componentHref(c)}>
@@ -173,15 +181,13 @@
 											{c.name}
 										</a>
 										<span class="muted">
-											{plural(
-												c.fields.length,
-												'field',
-												'fields',
-											)}
+											{t('setup.nFields', {
+												n: c.fields.length,
+											})}
 										</span>
 										{@render parts(c, [c.handle])}
 									{:else}
-										{t}
+										{type}
 									{/if}
 								</li>
 							{/each}
@@ -191,12 +197,12 @@
 			</div>
 		{:else}
 			<div class="card">
-				<p class="empty">No sections you may see.</p>
+				<p class="empty">{t('setup.noSectionsVisible')}</p>
 			</div>
 		{/each}
 		{#if unused.length && isAdmin(schema)}
 			<div class="card">
-				<h2>Blocks used nowhere</h2>
+				<h2>{t('setup.unusedBlocks')}</h2>
 				<p>
 					{#each unused as b, i (b.handle)}
 						{i ? ', ' : ''}
@@ -210,7 +216,7 @@
 	<aside class="cards">
 		{#if schema.pluginsAdded.length}
 			<div class="card">
-				<h2>Plugins</h2>
+				<h2>{t('setup.plugins')}</h2>
 				{#each schema.pluginsAdded as p (p.plugin)}
 					{@const added = pluginParts(p)}
 					<div class="plugin">
@@ -232,7 +238,7 @@
 								{/each}
 							</dl>
 						{:else}
-							<p class="muted">Nothing in the content model.</p>
+							<p class="muted">{t('setup.nothingInModel')}</p>
 						{/if}
 					</div>
 				{/each}
@@ -240,32 +246,36 @@
 		{/if}
 
 		<div class="card">
-			<h2>More</h2>
+			<h2>{t('setup.more')}</h2>
 			<ul class="plain links">
 				{#if isAdmin(schema)}
 					<li>
 						<a href="/admin/graphql">GraphQL</a>
-						<span class="muted">tokens of frontends, GraphiQL</span>
+						<span class="muted">{t('setup.graphqlNote')}</span>
 					</li>
 				{/if}
 				<li>
-					<a href="/admin/setup/sites#roles">Roles</a>
-					<span class="muted">who may do what</span>
+					<a href="/admin/setup/sites#roles">{t('setup.roles')}</a>
+					<span class="muted">{t('setup.rolesNote')}</span>
 				</li>
 				<li>
-					<a href="/admin/setup/sites">Sites and transforms</a>
+					<a href="/admin/setup/sites">
+						{t('setup.sitesAndTransforms')}
+					</a>
 				</li>
 				{#if isAdmin(schema)}
 					<li>
-						<a href="/admin/setup/sites#mail">Mail</a>
-						<span class="muted">how mails are sent</span>
+						<a href="/admin/setup/sites#mail">{t('setup.mail')}</a>
+						<span class="muted">{t('setup.mailNote')}</span>
 					</li>
 					<li>
-						<a href="/admin/setup/requests">Requests</a>
+						<a href="/admin/setup/requests">
+							{t('shell.setupRequests')}
+						</a>
 						<span class="muted">
 							{openRequests
-								? `${openRequests} open`
-								: 'changes editors asked for'}
+								? t('setup.nOpen', { n: openRequests })
+								: t('setup.requestsNote')}
 						</span>
 					</li>
 				{/if}

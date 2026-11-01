@@ -5,6 +5,7 @@
 
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { t } from '../i18n/index.svelte';
 	import { folderByPath, type Asset } from './api';
 	import FolderTree from './FolderTree.svelte';
 	import AssetGrid from './AssetGrid.svelte';
@@ -76,32 +77,34 @@
 
 	const drag = new FileDrag(upload, () => true);
 
-	const what = $derived(
+	const title = $derived(
 		images
 			? multiple
-				? 'images'
-				: 'an image'
+				? t('assets.chooseImages')
+				: t('assets.chooseImage')
 			: multiple
-				? 'files'
-				: 'a file',
+				? t('assets.chooseFiles')
+				: t('assets.chooseFile'),
 	);
 </script>
 
-<Flyout title="Choose {what}" {onclose}>
+<Flyout {title} {onclose}>
 	{#snippet actions()}
 		<UploadButton
 			onfiles={f => upload(fromInput(f))}
 			{multiple}
 			accept={acceptOf({ images, extensions })}
 		>
-			{uploads.active ? 'Uploading…' : 'Upload'}
+			{uploads.active ? t('assets.uploading') : t('common.upload')}
 		</UploadButton>
-		<button type="button" class="primary" onclick={onclose}>Done</button>
+		<button type="button" class="primary" onclick={onclose}>
+			{t('common.done')}
+		</button>
 	{/snippet}
 	<div class="search">
 		<SearchInput
 			bind:value={() => lib.search, v => lib.type(v)}
-			placeholder="Search files"
+			placeholder={t('assets.searchFiles')}
 		/>
 	</div>
 	{#if lib.error}<p class="error">{lib.error}</p>{/if}
@@ -109,7 +112,7 @@
 		class="library"
 		class:flat={!lib.folders.length}
 		role="region"
-		aria-label="Files"
+		aria-label={t('assets.files')}
 		ondragenter={drag.dragenter}
 		ondragleave={drag.dragleave}
 		ondragover={drag.dragover}
@@ -126,7 +129,7 @@
 		{/if}
 		<div class="card files">
 			{#if drag.over}
-				<DropOverlay label="Drop to upload" />
+				<DropOverlay label={t('assets.dropToUpload')} />
 			{/if}
 			<AssetGrid
 				assets={lib.assets}

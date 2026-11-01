@@ -114,7 +114,7 @@ impl TestServer {
 		let email = format!("{}{n}@test.ch", role.unwrap_or("admin"));
 		let conn = self.state.db.conn();
 		let user_id =
-			crate::users::create(&conn, &email, "", password_hash(), role)
+			crate::users::create(&conn, &email, "", password_hash(), role, "")
 				.unwrap();
 		let token = crate::auth::new_session(&conn, user_id).unwrap().token;
 		Client {

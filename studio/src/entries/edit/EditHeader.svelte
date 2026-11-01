@@ -3,6 +3,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { time } from '../../core/format';
 	import type { EntryEditor, May } from './entryEditor.svelte';
+	import { t } from '../../i18n/index.svelte';
 
 	/** Where the entry is, its state and what can be done with it. */
 	let {
@@ -38,30 +39,41 @@
 	// who changed the draft last, and when
 	const draftBy = $derived(
 		ed.draft?.user
-			? `by ${ed.draft.user}, ${time(ed.draft.updatedAt)}`
+			? t('entries.draftBy', {
+					user: ed.draft.user,
+					time: time(ed.draft.updatedAt),
+				})
 			: null,
 	);
 </script>
 
-<PageTop crumbs={[...crumbs, { label: title || 'New entry' }]}>
+<PageTop crumbs={[...crumbs, { label: title || t('entries.new') }]}>
 	{#snippet state()}
 		{#if !isNew}
 			<span class="badge" class:live={published} class:draft={!published}>
-				{published ? 'Live' : 'Not published'}
+				{published ? t('entries.live') : t('entries.notPublished')}
 			</span>
 		{/if}
 		{#if ed.draftState === 'failed'}
-			<span class="badge failed" title={ed.error}>Not saved</span>
+			<span class="badge failed" title={ed.error}>
+				{t('entries.notSaved')}
+			</span>
 		{:else if hasDraft}
-			<span class="badge changes" title="Saved as draft, not live yet">
-				{ed.draftState === 'saving' ? 'Saving…' : 'Draft'}
+			<span class="badge changes" title={t('entries.savedAsDraft')}>
+				{ed.draftState === 'saving'
+					? t('common.saving')
+					: t('common.draft')}
 			</span>
 			{#if draftBy}<span class="by">{draftBy}</span>{/if}
 		{/if}
 	{/snippet}
 	{#snippet actions()}
 		{#if may.delete}
-			<button class="icon" onclick={onremove} title="Move to the trash">
+			<button
+				class="icon"
+				onclick={onremove}
+				title={t('entries.moveToTrash')}
+			>
 				<Icon name="delete" />
 			</button>
 		{/if}
@@ -69,10 +81,10 @@
 			<button
 				onclick={ondiscard}
 				disabled={ed.busy || !may.edit}
-				title="Throw away the unpublished changes"
+				title={t('entries.discardTitle')}
 			>
 				<Icon name="reset" />
-				<span class="text">Discard</span>
+				<span class="text">{t('common.discard')}</span>
 			</button>
 		{/if}
 		{#if live !== null}
@@ -81,31 +93,28 @@
 				class:on={live}
 				aria-pressed={live}
 				onclick={onlive}
-				title="The website next to the editor, with the draft"
+				title={t('entries.liveTitle')}
 			>
 				<Icon name="live-preview" />
-				<span class="text">Live preview</span>
+				<span class="text">{t('entries.livePreview')}</span>
 			</button>
 		{/if}
 		<!-- the live preview has its own link to a new tab -->
 		{#if url && !live}
 			{#if hasDraft}
-				<button
-					onclick={onpreview}
-					title="Open the draft on the website"
-				>
+				<button onclick={onpreview} title={t('entries.previewTitle')}>
 					<Icon name="view" />
-					<span class="text">Preview</span>
+					<span class="text">{t('common.preview')}</span>
 				</button>
 			{:else}
 				<a
 					class="light"
 					href={url}
 					target="_blank"
-					title="Open the page on the website"
+					title={t('entries.viewTitle')}
 				>
 					<Icon name="external" />
-					<span class="text">View</span>
+					<span class="text">{t('common.view')}</span>
 				</a>
 			{/if}
 		{/if}
@@ -116,10 +125,10 @@
 			disabled={ed.busy ||
 				(isNew ? !may.edit : !hasDraft || !may.publish)}
 			title={!isNew && !may.publish
-				? 'Your role can edit drafts, someone else publishes them'
+				? t('entries.mayNotPublish')
 				: undefined}
 		>
-			{isNew ? 'Create' : 'Publish'}
+			{isNew ? t('common.create') : t('common.publish')}
 		</button>
 	{/snippet}
 </PageTop>

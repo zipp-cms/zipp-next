@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { FieldOf, Schema, Values } from '../core/schema';
+	import { t } from '../i18n/index.svelte';
 	import { valueOf } from '../core/schema';
 	import type { EntryRef, Refs } from '../entries/api';
 	import EntryChip from '../entries/EntryChip.svelte';
@@ -44,12 +45,16 @@
 <div class="relation" bind:this={list}>
 	{#each ids as id, i (id)}
 		<div data-sort class="item" class:sort-dragging={sort.dragging === i}>
-			<DragHandle sortable={sort} index={i} label="Move the entry" />
+			<DragHandle
+				sortable={sort}
+				index={i}
+				label={t('fields.moveEntry')}
+			/>
 			<EntryChip {schema} {refs} {id}>
 				{#snippet actions()}
 					<ItemActions
 						onremove={() => set(removed(ids, i))}
-						removeLabel="Remove from the field"
+						removeLabel={t('fields.removeFromField')}
 					/>
 				{/snippet}
 			</EntryChip>

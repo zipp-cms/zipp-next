@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ui } from './texts.svelte';
 	import type { Snippet } from 'svelte';
 	import Icon from './Icon.svelte';
 	import { layer } from './layers';
@@ -73,8 +74,8 @@
 			<button
 				type="button"
 				class="icon"
-				title="Close"
-				aria-label="Close"
+				title={ui.texts.close}
+				aria-label={ui.texts.close}
 				onclick={onclose}
 			>
 				<Icon name="close" size={16} />
@@ -86,7 +87,7 @@
 			{:else}
 				<button type="button" class="primary" onclick={onclose}>
 					<Icon name="close" size={14} />
-					Done
+					{ui.texts.done}
 				</button>
 			{/if}
 		{/if}

@@ -6,6 +6,7 @@
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import type { Sortable } from 'zipp-ui/sortable';
 	import { BUTTON_LINKS } from '../link/link';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * A button in a rich text: a link with a label, like a link field;
@@ -44,11 +45,15 @@
 			labels
 			onchange={link => update({ link })}
 			onremove={remove}
-			removeLabel="Delete button"
+			removeLabel={t('fields.deleteButton')}
 		>
 			{#snippet handle()}
 				{#if editable && sortable}
-					<DragHandle {sortable} {index} label="Move the button" />
+					<DragHandle
+						{sortable}
+						{index}
+						label={t('fields.moveButton')}
+					/>
 				{/if}
 			{/snippet}
 		</LinkInput>

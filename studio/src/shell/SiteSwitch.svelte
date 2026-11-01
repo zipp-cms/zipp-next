@@ -2,6 +2,7 @@
 	import type { Schema } from '../core/schema';
 	import { setSite, site } from '../core/router.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/** The site the studio edits, and where it runs; the box opens a choice. */
 	let { schema }: { schema: Schema } = $props();
@@ -10,13 +11,15 @@
 	const offline = (handle: string) => schema.offline.includes(handle);
 </script>
 
-<label class="site-switch" title="Site">
+<label class="site-switch" title={t('shell.site')}>
 	<span class="mark">{(current?.name ?? '?')[0]}</span>
 	<span class="name">
 		<strong class="truncate">{current?.name}</strong>
 		<small>
-			{schema.dev ? 'Development' : 'Production'}{offline(site.current)
-				? ' · offline'
+			{schema.dev
+				? t('shell.development')
+				: t('shell.production')}{offline(site.current)
+				? ' · ' + t('shell.offline')
 				: ''}
 		</small>
 	</span>
@@ -28,7 +31,9 @@
 		>
 			{#each schema.sites as s (s.handle)}
 				<option value={s.handle}>
-					{s.name}{offline(s.handle) ? ' (offline)' : ''}
+					{s.name}{offline(s.handle)
+						? ` (${t('shell.offline')})`
+						: ''}
 				</option>
 			{/each}
 		</select>

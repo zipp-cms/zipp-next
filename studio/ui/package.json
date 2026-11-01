@@ -15,6 +15,7 @@
 		"./layers": "./src/layers.ts",
 		"./pageLead": "./src/pageLead.ts",
 		"./sortable": "./src/sortable.svelte.ts",
+		"./texts": "./src/texts.svelte.ts",
 		"./vars.scss": "./vars.scss",
 		"./AddButton.svelte": "./src/AddButton.svelte",
 		"./AddGroup.svelte": "./src/AddGroup.svelte",

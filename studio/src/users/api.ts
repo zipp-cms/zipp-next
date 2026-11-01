@@ -37,6 +37,7 @@ export function createUser(user: {
 	name: string;
 	password: string;
 	role: string | null;
+	language: string;
 }): Promise<Account> {
 	return request('POST', '/users', user);
 }
@@ -51,6 +52,7 @@ export function updateUser(
 		email: string;
 		name: string;
 		role: string | null;
+		language: string;
 		password: string | null;
 		currentPassword: string | null;
 	},

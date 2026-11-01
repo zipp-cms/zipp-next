@@ -5,6 +5,7 @@
 	import type { Revision } from '../drafts';
 	import RevisionList from './RevisionList.svelte';
 	import type { EntryEditor, May } from './entryEditor.svelte';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * Next to the content like Craft's sidebar: the status in each site,
@@ -73,7 +74,7 @@
 	{#if !isNew && multiSite && may.edit}
 		<div class="card">
 			<label>
-				<span>Copy content</span>
+				<span>{t('entries.copyContent')}</span>
 				<select
 					value=""
 					onchange={e => {
@@ -82,7 +83,9 @@
 						oncopy(other);
 					}}
 				>
-					<option value="" disabled>From another site…</option>
+					<option value="" disabled>
+						{t('entries.fromOtherSite')}
+					</option>
 					{#each schema.sites.filter(s => s.handle !== ed.site) as s (s.handle)}
 						<option value={s.handle}>{s.name}</option>
 					{/each}
@@ -103,12 +106,14 @@
 	{#if ed.revisions.length && narrow}
 		<!-- at the end of a long page, closed -->
 		<details class="card">
-			<summary>Revisions · {ed.revisions.length}</summary>
+			<summary>
+				{t('entries.revisionsCount', { n: ed.revisions.length })}
+			</summary>
 			{@render revisions()}
 		</details>
 	{:else if ed.revisions.length}
 		<div class="card">
-			<h3>Revisions</h3>
+			<h3>{t('entries.revisions')}</h3>
 			{@render revisions()}
 		</div>
 	{/if}

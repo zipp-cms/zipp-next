@@ -1,4 +1,5 @@
 import { stream } from '../core/client';
+import { t } from '../i18n/index.svelte';
 
 /** A message of the AI chat, the studio keeps the conversation. */
 export type AiMessage =
@@ -46,5 +47,5 @@ export async function aiChat(
 		else if (ev.type === 'error') throw new Error(ev.message);
 		else if (ev.type === 'done') return ev.messages;
 	}
-	throw new Error('The answer ended early');
+	throw new Error(t('ai.endedEarly'));
 }

@@ -38,7 +38,8 @@ async fn create_route(
 	check_role(&state.schema, req.role.as_deref())?;
 	// without a password the user is invited
 	let password = Some(req.password.as_str()).filter(|p| !p.is_empty());
-	let errors = check(&state.db.conn(), None, &req.email, password)?;
+	let errors =
+		check(&state.db.conn(), None, &req.email, &req.language, password)?;
 	if !errors.is_empty() {
 		return Err(Error::Invalid(errors));
 	}
@@ -47,7 +48,8 @@ async fn create_route(
 		None => String::new(),
 	};
 	let conn = state.db.conn();
-	let id = create(&conn, &req.email, &req.name, &hash, req.role.as_deref())?;
+	let role = req.role.as_deref();
+	let id = create(&conn, &req.email, &req.name, &hash, role, &req.language)?;
 	Ok(Json(get(&conn, id)?))
 }
 
@@ -65,8 +67,13 @@ async fn update_route(
 	check_role(&state.schema, req.role.as_deref())?;
 
 	let password = req.password.as_deref().filter(|p| !p.is_empty());
-	let mut errors =
-		check(&state.db.conn(), Some(req.id), &req.email, password)?;
+	let mut errors = check(
+		&state.db.conn(),
+		Some(req.id),
+		&req.email,
+		&req.language,
+		password,
+	)?;
 	// a new password of oneself needs the current one, a session alone
 	// could be someone else at an open laptop
 	if own && password.is_some() {
@@ -89,7 +96,7 @@ async fn update_route(
 	let conn = state.db.conn();
 	// all of it or nothing
 	let tx = conn.unchecked_transaction()?;
-	update(&tx, req.id, &req.email, &req.name)?;
+	update(&tx, req.id, &req.email, &req.name, &req.language)?;
 	if !own {
 		set_role(&tx, req.id, req.role.as_deref())?;
 	}

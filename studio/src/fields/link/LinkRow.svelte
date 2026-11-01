@@ -4,6 +4,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import { LINK_ICONS } from './link';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * A link as a row: the icon of its kind, title, where it goes, whether
@@ -55,7 +56,7 @@
 		<button
 			type="button"
 			class="main plain"
-			title={editing ? 'Close its settings' : 'Edit the link'}
+			title={editing ? t('fields.closeSettings') : t('fields.editLink')}
 			aria-expanded={editing}
 			onclick={onedit}
 		>
@@ -67,13 +68,13 @@
 	{#if newTab}
 		<span class="tab">
 			<Icon name="external" size={12} />
-			New tab
+			{t('fields.newTab')}
 		</span>
 	{/if}
 	{#if handle}
 		<span class="handle">{@render handle()}</span>
 	{/if}
-	<Menu items={menu} label="Actions for the link" />
+	<Menu items={menu} label={t('fields.linkActions')} />
 </div>
 
 <style lang="scss">

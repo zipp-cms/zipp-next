@@ -12,6 +12,7 @@
 	import CropStage from './CropStage.svelte';
 	import SizeOptions from './SizeOptions.svelte';
 	import { drawEdited } from './draw';
+	import { t } from '../../i18n/index.svelte';
 	import {
 		flipped,
 		focalAt,
@@ -42,11 +43,11 @@
 
 	type Mode = 'focal' | 'crop' | 'size';
 	let mode = $state<Mode>('focal');
-	const MODES: { value: Mode; label: string; icon: string }[] = [
-		{ value: 'focal', label: 'Focal point', icon: 'focal' },
-		{ value: 'crop', label: 'Crop', icon: 'crop' },
-		{ value: 'size', label: 'Size', icon: 'size' },
-	];
+	const modes: { value: Mode; label: string; icon: string }[] = $derived([
+		{ value: 'focal', label: t('assets.focalPoint'), icon: 'focal' },
+		{ value: 'crop', label: t('assets.crop'), icon: 'crop' },
+		{ value: 'size', label: t('assets.size'), icon: 'size' },
+	]);
 
 	let img = $state<HTMLImageElement | null>(null);
 	$effect(() => {
@@ -71,14 +72,14 @@
 		if (img && view) drawEdited(view, img, edits, outside);
 	});
 
-	const RATIOS: [string, number | null][] = [
-		['Free', null],
-		['Original', 0],
-		['Square', 1],
+	const ratios: [string, number | null][] = $derived([
+		[t('assets.free'), null],
+		[t('assets.original'), 0],
+		[t('assets.square'), 1],
 		['16:9', 16 / 9],
 		['4:3', 4 / 3],
 		['3:2', 3 / 2],
-	];
+	]);
 	let ratio = $state<number | null>(null);
 	let portrait = $state(false);
 	const want = $derived(wantedRatio(ratio, portrait, size.turned));
@@ -101,16 +102,16 @@
 
 <div class="editor">
 	{#if editable}
-		<div class="tools" role="toolbar" aria-label="Edit the image">
+		<div class="tools" role="toolbar" aria-label={t('assets.editImage')}>
 			<Segmented
-				options={MODES}
+				options={modes}
 				value={mode}
 				onchange={m => (mode = m)}
-				label="Tool"
+				label={t('assets.tool')}
 			>
 				{#snippet item(o)}
 					<Icon
-						name={MODES.find(m => m.value === o.value)!.icon}
+						name={modes.find(m => m.value === o.value)!.icon}
 						size={15}
 					/>
 					{o.label}
@@ -120,7 +121,7 @@
 			<button
 				type="button"
 				class="icon"
-				title="Rotate left"
+				title={t('assets.rotateLeft')}
 				onclick={() => rotate(-90)}
 			>
 				<Icon name="rotate-left" />
@@ -128,7 +129,7 @@
 			<button
 				type="button"
 				class="icon"
-				title="Rotate right"
+				title={t('assets.rotateRight')}
 				onclick={() => rotate(90)}
 			>
 				<Icon name="rotate-right" />
@@ -137,7 +138,7 @@
 				type="button"
 				class="icon"
 				class:active={edits.flipH}
-				title="Flip horizontally"
+				title={t('assets.flipH')}
 				onclick={() => (edits = flipped(edits, 'flipH'))}
 			>
 				<Icon name="flip-h" />
@@ -146,7 +147,7 @@
 				type="button"
 				class="icon"
 				class:active={edits.flipV}
-				title="Flip vertically"
+				title={t('assets.flipV')}
 				onclick={() => (edits = flipped(edits, 'flipV'))}
 			>
 				<Icon name="flip-v" />
@@ -157,9 +158,10 @@
 				class="link"
 				disabled={noEdits(edits)}
 				onclick={() => (edits = { ...NO_EDITS })}
-				title="Back to the uploaded image"
+				title={t('assets.resetTitle')}
 			>
-				<Icon name="reset" size={14} /> Reset
+				<Icon name="reset" size={14} />
+				{t('assets.reset')}
 			</button>
 		</div>
 	{/if}
@@ -167,7 +169,7 @@
 	{#if mode === 'crop'}
 		<div class="options">
 			<Segmented
-				options={RATIOS.map(([label, value]) => ({
+				options={ratios.map(([label, value]) => ({
 					value: String(value),
 					label,
 				}))}
@@ -176,7 +178,7 @@
 					ratio = v === 'null' ? null : +v;
 					applyRatio();
 				}}
-				label="Ratio"
+				label={t('assets.ratio')}
 			/>
 			{#if ratio !== null && ratio !== 0 && ratio !== 1}
 				<label class="check">
@@ -185,7 +187,7 @@
 						bind:checked={portrait}
 						onchange={applyRatio}
 					/>
-					Portrait
+					{t('assets.portrait')}
 				</label>
 			{/if}
 			{#if outside}
@@ -193,14 +195,12 @@
 				<BackgroundPicker bind:edits />
 			{/if}
 		</div>
-		<p class="note">Drag the crop past the image for room around it.</p>
+		<p class="note">{t('assets.cropNote')}</p>
 	{:else if mode === 'size'}
 		<SizeOptions bind:edits resized={size.resized} />
 	{/if}
 	{#if mode !== 'focal' && transparentEdges(edits)}
-		<p class="note">
-			Transparent needs a PNG: a JPEG is delivered as PNG then.
-		</p>
+		<p class="note">{t('assets.transparentNote')}</p>
 	{/if}
 
 	<div class="stage checkerboard" class:cropping={mode === 'crop'}>
@@ -231,13 +231,10 @@
 				{/if}
 			</div>
 		{/if}
-		{#if !img}<p class="empty">Loading…</p>{/if}
+		{#if !img}<p class="empty">{t('common.loading')}</p>{/if}
 	</div>
 	{#if mode === 'focal' && editable}
-		<p class="note">
-			Click on the image to set the focal point, crops of the sizes keep
-			it in view.
-		</p>
+		<p class="note">{t('assets.focalNote')}</p>
 	{/if}
 </div>
 

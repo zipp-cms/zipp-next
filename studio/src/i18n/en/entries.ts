@@ -1,0 +1,108 @@
+export default {
+	// the list
+	'entries.noSection': 'There is no section {section}',
+	'entries.viewOnWebsite': 'View on the website',
+	'entries.confirmTrash': 'Move {title} to the trash?',
+	'entries.confirmTrashBelow': {
+		one: 'Move {title} to the trash? The entry below it too.',
+		other: 'Move {title} to the trash? The {n} entries below it too.',
+	},
+	'entries.new': 'New entry',
+	'entries.search': 'Search entries',
+	'entries.status': 'Status',
+	'entries.type': 'Type',
+	'entries.updated': 'Updated',
+	'entries.move': 'Move {title}',
+	'entries.unpublishedChanges': 'Unpublished changes',
+	'entries.liveFrom': 'Live from {time}',
+	'entries.pending': 'Pending',
+	'entries.expiredAt': 'Expired {time}',
+	'entries.expired': 'Expired',
+	'entries.actionsFor': 'Actions for {title}',
+	'entries.noneYet': 'No entries yet',
+	'entries.shownOf': '{shown} of {total}',
+
+	// the picker
+	'entries.chooseType': 'Choose {type}',
+	'entries.chooseEntry': 'Choose entry',
+	'entries.showBelow': 'Show the entries below',
+	'entries.hideBelow': 'Hide the entries below',
+	'entries.cantChoose': "A {type} can't be chosen here",
+	'entries.alreadyChosen': 'Already chosen',
+	'entries.searchTypes': 'Search {types}',
+	'entries.didntLoad': "The entries didn't load.",
+	'entries.openInFlyout': 'Open in the flyout',
+
+	// the sites
+	'entries.sitePublished': '{site}: published',
+	'entries.siteNotPublished': '{site}: not published',
+	'entries.siteOpen': '{title}, open',
+
+	// the preview
+	'entries.desktop': 'Desktop',
+	'entries.tablet': 'Tablet',
+	'entries.mobile': 'Mobile',
+	'entries.reload': 'Reload',
+	'entries.websiteWidth': 'Width of the website',
+	'entries.openInNewTab': 'Open in a new tab',
+	'entries.website': 'Website',
+
+	// the editor
+	'entries.confirmDiscard': 'Throw away the unpublished changes?',
+	'entries.confirmCopy': 'Replace the content with the one of {site}?',
+	'entries.fieldLayout': 'Field layout «{name}»',
+	'entries.draftBy': 'by {user}, {time}',
+	'entries.live': 'Live',
+	'entries.notPublished': 'Not published',
+	'entries.notSaved': 'Not saved',
+	'entries.savedAsDraft': 'Saved as draft, not live yet',
+	'entries.moveToTrash': 'Move to the trash',
+	'entries.discardTitle': 'Throw away the unpublished changes',
+	'entries.liveTitle': 'The website next to the editor, with the draft',
+	'entries.livePreview': 'Live preview',
+	'entries.previewTitle': 'Open the draft on the website',
+	'entries.viewTitle': 'Open the page on the website',
+	'entries.mayNotPublish':
+		'Your role can edit drafts, someone else publishes them',
+	'entries.conflict':
+		'while you were editing. Your last changes are not saved yet.',
+	'entries.loadTheirs': 'Load their changes',
+	'entries.keepMine': 'Keep mine',
+	'entries.confirmType':
+		'Change the type to {type}? It has no field like {fields}: their content is removed in every site.',
+
+	// status and sidebar
+	'entries.publishedIn': 'Published in {site}',
+	'entries.notLiveYet': 'Not live yet, from {time}',
+	'entries.notLiveAnymore': 'Not live anymore, expired {time}',
+	'entries.postDate': 'Post date',
+	'entries.whenPublished': 'When published',
+	'entries.expiryDate': 'Expiry date',
+	'entries.fieldsInSetup': 'Its fields in Setup',
+	'entries.parent': 'Parent',
+	'entries.noParent': 'None, on the top',
+	'entries.slug': 'Slug',
+	'entries.fromTitle': 'from the title',
+	'entries.outlineOf': 'Outline of {field}',
+	'entries.outline': 'Outline · {field}',
+	'entries.disabled': 'Disabled',
+	'entries.missing': 'Missing',
+	'entries.changed': 'Changed',
+	'entries.errors': { one: '{n} error', other: '{n} errors' },
+	'entries.copyContent': 'Copy content',
+	'entries.fromOtherSite': 'From another site…',
+
+	// revisions
+	'entries.revisions': 'Revisions',
+	'entries.revisionsCount': 'Revisions · {n}',
+	'entries.revisionOf': 'Revision of {time}, read only',
+	'entries.revisionOfBy': 'Revision of {time} by {user}, read only',
+	'entries.changedList': 'Changed: {changes}',
+	'entries.backToEditing': 'Back to editing',
+	'entries.noContentHere': 'This revision has no content for this site.',
+	'entries.revisionLive': 'live',
+	'entries.created': 'Created',
+	'entries.confirmRestore': 'Restore this revision?',
+	'entries.confirmRestoreDraft':
+		'Restore this revision? The draft is replaced.',
+};

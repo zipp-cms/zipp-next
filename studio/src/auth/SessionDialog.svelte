@@ -3,6 +3,7 @@
 	import { endSession } from '../core/router.svelte';
 	import { displayName } from '../users/api';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The session ended while the studio was open: the login again over
@@ -51,32 +52,31 @@
 	{#if session.impersonatedBy && session.user}
 		<div class="form">
 			<div class="intro">
-				<h2 id="session-ended">The session ended</h2>
+				<h2 id="session-ended">{t('auth.sessionEnded')}</h2>
 				<p class="muted">
-					You were logged in as {displayName(session.user)}. Go back
-					to your account or log in.
+					{t('auth.wereLoggedInAs', {
+						name: displayName(session.user),
+					})}
 				</p>
 			</div>
 			<div class="actions">
 				<button type="button" onclick={() => endSession()}>
-					Log in
+					{t('auth.logIn')}
 				</button>
 				<button class="primary" onclick={back} disabled={busy}>
-					Back to your account
+					{t('auth.backToAccount')}
 				</button>
 			</div>
 		</div>
 	{:else}
 		<form class="form" {onsubmit}>
 			<div class="intro">
-				<h2 id="session-ended">The session ended</h2>
-				<p class="muted">
-					Log in again to go on, what you changed stays.
-				</p>
+				<h2 id="session-ended">{t('auth.sessionEnded')}</h2>
+				<p class="muted">{t('auth.logInAgain')}</p>
 			</div>
 
 			<label class="stacked">
-				Email
+				{t('common.email')}
 				<input
 					type="email"
 					autocomplete="username"
@@ -86,7 +86,7 @@
 			</label>
 
 			<label class="stacked">
-				Password
+				{t('common.password')}
 				<span class="password">
 					<!-- svelte-ignore a11y_autofocus -->
 					<input
@@ -100,8 +100,8 @@
 						type="button"
 						class="icon"
 						title={showPassword
-							? 'Hide the password'
-							: 'Show the password'}
+							? t('auth.hidePassword')
+							: t('auth.showPassword')}
 						onclick={() => (showPassword = !showPassword)}
 					>
 						<Icon name={showPassword ? 'hide' : 'view'} />
@@ -113,9 +113,11 @@
 
 			<div class="actions">
 				<button type="button" onclick={() => endSession()}>
-					Log out
+					{t('auth.logOut')}
 				</button>
-				<button class="primary" disabled={busy}>Log in</button>
+				<button class="primary" disabled={busy}>
+					{t('auth.logIn')}
+				</button>
 			</div>
 		</form>
 	{/if}

@@ -8,6 +8,7 @@
 	import { hasTarget, linkSummary, opensInNewTab } from './link';
 	import type { Link, LinkKind, NavItem, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * The links of a navigation as rows in one card, the ones under a link
@@ -113,11 +114,10 @@
 	}
 
 	function remove(i: number) {
-		const what = rows[i].item.children?.length
-			? ' with the links under it'
-			: '';
-		if (hasTarget(rows[i].item) && !confirm(`Remove the link${what}?`))
-			return;
+		const question = rows[i].item.children?.length
+			? t('fields.confirmRemoveLinkChildren')
+			: t('fields.confirmRemoveLink');
+		if (hasTarget(rows[i].item) && !confirm(question)) return;
 		const [next, copied] = copy();
 		take(next, copied[i]);
 		editing = null;
@@ -151,12 +151,12 @@
 					onedit={() => (editing = editing === i ? null : i)}
 					menu={[
 						{
-							label: 'Edit',
+							label: t('common.edit'),
 							icon: 'edit',
 							onclick: () => (editing = i),
 						},
 						{
-							label: 'Delete',
+							label: t('common.delete'),
 							icon: 'delete',
 							onclick: () => remove(i),
 							danger: true,
@@ -167,7 +167,7 @@
 						<DragHandle
 							sortable={sort}
 							index={i}
-							label="Move the link"
+							label={t('fields.moveLink')}
 						/>
 					{/snippet}
 				</LinkRow>
@@ -194,7 +194,9 @@
 <div class="add">
 	<LinkAdd {to} onadd={add} />
 	<span class="note">
-		{depth > 1 ? `Up to ${depth} levels` : 'One level'}
+		{depth > 1
+			? t('fields.upToLevels', { n: depth })
+			: t('fields.oneLevel')}
 	</span>
 </div>
 

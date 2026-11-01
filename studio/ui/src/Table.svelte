@@ -1,4 +1,5 @@
 <script lang="ts" generics="T">
+	import { ui } from './texts.svelte';
 	import type { Snippet } from 'svelte';
 
 	/**
@@ -15,7 +16,7 @@
 		row,
 		href,
 		id,
-		empty = 'Nothing yet',
+		empty,
 		detail,
 		isOpen,
 		ontoggle,
@@ -94,7 +95,9 @@
 				{/if}
 			{:else}
 				<tr>
-					<td class="empty" colspan={columns.length || 1}>{empty}</td>
+					<td class="empty" colspan={columns.length || 1}>
+						{empty ?? ui.texts.nothingYet}
+					</td>
 				</tr>
 			{/each}
 		</tbody>

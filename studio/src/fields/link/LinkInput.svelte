@@ -8,6 +8,7 @@
 	import LinkEditor from './LinkEditor.svelte';
 	import LinkRow from './LinkRow.svelte';
 	import { hasTarget, linkSummary, opensInNewTab } from './link';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * A link to an entry, a url, an email, a phone or a file: a row with
@@ -24,7 +25,7 @@
 		required = false,
 		onchange,
 		onremove,
-		removeLabel = 'Remove',
+		removeLabel,
 		handle,
 	}: {
 		schema: Schema;
@@ -69,7 +70,7 @@
 		onremove
 			? [
 					{
-						label: removeLabel,
+						label: removeLabel ?? t('common.remove'),
 						icon: 'delete',
 						onclick: onremove,
 						danger: true,
@@ -89,11 +90,11 @@
 	<div class="link-input empty" class:required data-menu-area>
 		{@render handle?.()}
 		<span class="message">
-			{required ? 'Required – no link yet.' : 'No link yet.'}
+			{required ? t('fields.requiredNoLink') : t('fields.noLink')}
 		</span>
 		<span class="end">
 			<LinkAdd {to} onadd={add} />
-			<Menu items={removeItem} label="Actions" />
+			<Menu items={removeItem} label={t('fields.actions')} />
 		</span>
 	</div>
 {:else}
@@ -109,12 +110,12 @@
 				onedit={() => (editing = !editing)}
 				menu={[
 					{
-						label: 'Edit',
+						label: t('common.edit'),
 						icon: 'edit',
 						onclick: () => (editing = true),
 					},
 					{
-						label: 'Remove link',
+						label: t('fields.removeLink'),
 						icon: 'unlink',
 						onclick: () => {
 							editing = false;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ui } from './texts.svelte';
 	import type { Snippet } from 'svelte';
 	import Icon from './Icon.svelte';
 
@@ -53,14 +54,17 @@
 			disabled={!collapsible}
 			onclick={toggle}
 		>
-			{#if changed}<span class="changed-dot" title="Changed"></span>{/if}
+			{#if changed}<span
+					class="changed-dot"
+					title={ui.texts.changed}
+				></span>{/if}
 			<span class="kind">{@render kindIcon?.()}{kind}</span>
-			{#if off}<span class="badge draft">Disabled</span>{/if}
+			{#if off}<span class="badge draft">{ui.texts.disabled}</span>{/if}
 			{#if summary}
 				<span class="summary truncate">{@render summary()}</span>
 			{/if}
 			{#if invalid}
-				<span class="flag" title="Has errors">
+				<span class="flag" title={ui.texts.hasErrors}>
 					<Icon name="alert" size={14} />
 				</span>
 			{/if}
@@ -70,7 +74,7 @@
 			<button
 				type="button"
 				class="icon"
-				title={shown ? 'Collapse' : 'Expand'}
+				title={shown ? ui.texts.collapse : ui.texts.expand}
 				onclick={toggle}
 			>
 				<Icon name={shown ? 'chevron-down' : 'chevron-right'} />

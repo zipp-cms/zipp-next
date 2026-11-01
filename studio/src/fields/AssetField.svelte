@@ -25,6 +25,7 @@
 		uploads,
 		type Upload,
 	} from '../assets/uploads.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * Images and videos as cards, other files as chips, in an order; a
@@ -78,15 +79,18 @@
 	}
 
 	const drag = new FileDrag(upload, () => !full);
-	const kind = $derived(
+	const dragHint = $derived(
 		videos
-			? 'videos'
+			? t('fields.dragVideos')
 			: field.extensions?.length
-				? field.extensions.map(e => e.toUpperCase()).join(', ') +
-					' files'
+				? t('fields.dragTypes', {
+						types: field.extensions
+							.map(e => e.toUpperCase())
+							.join(', '),
+					})
 				: images
-					? 'images'
-					: 'files',
+					? t('fields.dragImages')
+					: t('fields.dragFiles'),
 	);
 </script>
 
@@ -95,7 +99,7 @@
 {/snippet}
 
 {#snippet handle(i: number)}
-	<DragHandle sortable={sort} index={i} label="Move the file" />
+	<DragHandle sortable={sort} index={i} label={t('fields.moveFile')} />
 {/snippet}
 
 <div
@@ -116,28 +120,28 @@
 			{#if !cards}{@render handle(i)}{/if}
 			{#if a === null}
 				<div class="chip box gone">
-					<span class="note">A file that was deleted</span>
+					<span class="note">{t('fields.deletedFile')}</span>
 					{@render itemActions(i)}
 				</div>
 			{:else if !a}
 				<div class="loading">
-					<span class="note">Loading…</span>
+					<span class="note">{t('common.loading')}</span>
 				</div>
 			{:else if cards}
 				<div class="card-size">
 					<AssetCard
 						asset={a}
-						openTitle="Details: title, alt text, focal point"
+						openTitle={t('fields.detailsTitle')}
 						onopen={() => openAsset(a.id)}
 						menu={[
 							{
-								label: 'Details',
+								label: t('fields.details'),
 								icon: 'edit',
 								onclick: () => openAsset(a.id),
 							},
 							...linkItems(a),
 							{
-								label: 'Remove',
+								label: t('common.remove'),
 								icon: 'close',
 								danger: true,
 								onclick: () => set(removed(ids, i)),
@@ -167,17 +171,19 @@
 		>
 			<Icon name="upload" size={18} />
 			<span class="hint">
-				{drag.over ? 'Drop to add' : `Drag ${kind} here`}
+				{drag.over ? t('fields.dropToAdd') : dragHint}
 			</span>
 			<span class="buttons">
-				<AddButton onclick={() => (picking = true)}>Choose</AddButton>
+				<AddButton onclick={() => (picking = true)}>
+					{t('common.choose')}
+				</AddButton>
 				<UploadButton
 					onfiles={f => upload(fromInput(f))}
 					multiple={max !== 1}
 					accept={acceptOf(field)}
 					icon="upload"
 				>
-					Upload
+					{t('common.upload')}
 				</UploadButton>
 			</span>
 		</div>

@@ -1,4 +1,5 @@
 <script lang="ts" generics="T">
+	import { ui } from './texts.svelte';
 	import type { Snippet } from 'svelte';
 	import SearchInput from './SearchInput.svelte';
 
@@ -39,7 +40,9 @@
 			{@render item(t)}
 		</button>
 	{:else}
-		<p class="empty">{loading ? 'Loading…' : 'Nothing found'}</p>
+		<p class="empty">
+			{loading ? ui.texts.loading : ui.texts.nothingFound}
+		</p>
 	{/each}
 </div>
 

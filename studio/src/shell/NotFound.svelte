@@ -1,11 +1,13 @@
 <script lang="ts">
 	import PageTop from 'zipp-ui/PageTop.svelte';
+	import { t } from '../i18n/index.svelte';
 </script>
 
 <main class="page">
-	<PageTop title="Not found" bleed={false} />
+	<PageTop title={t('shell.notFound')} bleed={false} />
 	<p class="empty">
-		This page doesn't exist. <a href="/admin">To the start</a>
+		{t('shell.noPage')}
+		<a href="/admin">{t('shell.toStart')}</a>
 	</p>
 </main>
 

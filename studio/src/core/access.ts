@@ -1,4 +1,5 @@
 import { session } from './session.svelte';
+import { t } from '../i18n/index.svelte';
 import { navGroups, type Access, type NavGroup, type Schema } from './schema';
 
 /**
@@ -22,7 +23,7 @@ export function roleName(schema: Schema): string {
 
 /** The name of a role, `null` is an admin. */
 export function roleNameOf(schema: Schema, handle: string | null): string {
-	if (handle === null) return 'Admin';
+	if (handle === null) return t('common.admin');
 	return schema.roles.find(r => r.handle === handle)?.name ?? handle;
 }
 

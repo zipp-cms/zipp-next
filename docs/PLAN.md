@@ -163,7 +163,7 @@ commit.
       rough click-together of sections, types and fields that doesn't have
       to be exact and outputs pseudo code, which an AI then turns into the
       real schema code
-- [ ] The studio in the user's language?
+- [x] The studio in the user's language: English and German, per user
 - [x] The Craft import out of the main binary: zipp's feature `craft`
 - [x] A better page picker (the tree, search) for relations and links
 - [x] A login dialog when the session expires, so unsaved work stays, 4b457a1

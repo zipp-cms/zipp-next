@@ -4,6 +4,7 @@
 	import { session } from '../core/session.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { displayName } from '../users/api';
+	import { t } from '../i18n/index.svelte';
 
 	/** Who is logged in, with the role, and the logout. */
 	let { schema, onlogout }: { schema: Schema; onlogout: () => void } =
@@ -13,14 +14,14 @@
 </script>
 
 <div class="me">
-	<a href="/admin/users/{session.user?.id}" title="Your account">
+	<a href="/admin/users/{session.user?.id}" title={t('shell.yourAccount')}>
 		<span class="avatar">{name[0].toUpperCase()}</span>
 		<span class="who">
 			<strong class="truncate">{name}</strong>
 			<small>{roleName(schema)}</small>
 		</span>
 	</a>
-	<button class="icon" onclick={onlogout} title="Log out">
+	<button class="icon" onclick={onlogout} title={t('shell.logOut')}>
 		<Icon name="logout" />
 	</button>
 </div>

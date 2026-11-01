@@ -1,5 +1,5 @@
 import type { MenuItem } from 'zipp-ui/Menu.svelte';
-import { plural } from '../core/format';
+import { t } from '../i18n/index.svelte';
 import { assetUrl, zipAssets, type Asset } from './api';
 
 /**
@@ -7,10 +7,12 @@ import { assetUrl, zipAssets, type Asset } from './api';
  * entries): there it is gone until it is restored.
  */
 export function confirmDelete(a: Asset, n: number): boolean {
-	const used = n
-		? ` It is used in ${plural(n, 'entry', 'entries')}, they lose it until it is restored.`
-		: '';
-	return confirm(`Move ${a.filename} to the trash?${used}`);
+	const { filename } = a;
+	return confirm(
+		n
+			? t('assets.confirmTrashUsed', { filename, n })
+			: t('assets.confirmTrash', { filename }),
+	);
 }
 
 /** The full url of an asset, to paste somewhere. */
@@ -22,12 +24,16 @@ export function copyUrl(a: Asset): Promise<void> {
 export function linkItems(a: Asset): MenuItem[] {
 	return [
 		{
-			label: 'Download',
+			label: t('common.download'),
 			icon: 'download',
 			href: assetUrl(a, false, true),
 			download: a.filename,
 		},
-		{ label: 'Copy URL', icon: 'copy-url', onclick: () => copyUrl(a) },
+		{
+			label: t('assets.copyUrl'),
+			icon: 'copy-url',
+			onclick: () => copyUrl(a),
+		},
 	];
 }
 
@@ -55,9 +61,9 @@ export function isZip(file: File): boolean {
 
 /** Asks whether the zips are unpacked into folders or kept as files. */
 export function confirmUnzip(zips: File[]): boolean {
-	const what =
-		zips.length === 1 ? zips[0].name : `the ${zips.length} zip files`;
 	return confirm(
-		`Unpack ${what} into folders?\n\nOK unpacks, Cancel uploads it as one zip file.`,
+		zips.length === 1
+			? t('assets.confirmUnzip', { name: zips[0].name })
+			: t('assets.confirmUnzipMany', { n: zips.length }),
 	);
 }

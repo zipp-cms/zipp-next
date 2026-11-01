@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ui } from './texts.svelte';
 	import Calendar from './Calendar.svelte';
 	import Icon from './Icon.svelte';
 	import Popover from './Popover.svelte';
@@ -14,8 +15,8 @@
 		value,
 		onchange,
 		time = false,
-		label = 'Date',
-		placeholder = 'No date',
+		label: givenLabel,
+		placeholder: givenPlaceholder,
 		min = null,
 		max = null,
 		disabled = false,
@@ -32,6 +33,8 @@
 		disabled?: boolean;
 	} = $props();
 
+	const label = $derived(givenLabel ?? ui.texts.date);
+	const placeholder = $derived(givenPlaceholder ?? ui.texts.noDate);
 	let open = $state(false);
 
 	const day = $derived(value.slice(0, 10));
@@ -39,7 +42,7 @@
 	const shown = $derived.by(() => {
 		const d = parseDay(day);
 		return d
-			? d.toLocaleDateString(undefined, { dateStyle: 'medium' })
+			? d.toLocaleDateString(ui.locale, { dateStyle: 'medium' })
 			: '';
 	});
 
@@ -52,7 +55,7 @@
 
 <!-- one box like an input: the day, its time, the x that empties it -->
 <span class="date-picker" class:with-time={time} class:disabled>
-	<Popover bind:open width="18rem" label="Pick a day">
+	<Popover bind:open width="18rem" label={ui.texts.pickDay}>
 		{#snippet trigger({ toggle, open })}
 			<button
 				type="button"
@@ -87,7 +90,7 @@
 					open = false;
 				}}
 			>
-				Today
+				{ui.texts.today}
 			</button>
 			{#if value}
 				<button
@@ -98,7 +101,7 @@
 						open = false;
 					}}
 				>
-					Clear
+					{ui.texts.clear}
 				</button>
 			{/if}
 		</div>
@@ -107,7 +110,7 @@
 	{#if time && day}
 		<input
 			type="time"
-			aria-label="{label}: time"
+			aria-label="{label}: {ui.texts.time}"
 			value={clock}
 			{disabled}
 			onchange={e => set(day, e.currentTarget.value)}
@@ -117,8 +120,8 @@
 		<button
 			type="button"
 			class="icon clear"
-			aria-label="{label}: clear"
-			title="Clear"
+			aria-label="{label}: {ui.texts.clear}"
+			title={ui.texts.clear}
 			onclick={() => set('', '')}
 		>
 			<Icon name="close" size={14} />

@@ -4,7 +4,7 @@
 		ASSET_FIELDS,
 		assetUrl,
 		isVideo,
-		ROOT,
+		root,
 		folderRows,
 		transparentEdges,
 		type Asset,
@@ -24,6 +24,7 @@
 	import { sectionName } from '../core/schema';
 	import Thumb from './Thumb.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * A file like Craft's asset panel: the image editor or a player,
@@ -58,19 +59,19 @@
 	let copied = $state(false);
 	// the alt text of the site the studio edits
 	const altLabel = $derived.by(() => {
-		if (schema.sites.length < 2) return 'Alt text';
+		if (schema.sites.length < 2) return t('assets.altText');
 		const name = schema.sites.find(s => s.handle === site.current)?.name;
-		return `Alt text (${name})`;
+		return t('assets.altTextOf', { site: name ?? '' });
 	});
 	// a site without its own alt text has the primary site's
 	const altPlaceholder = $derived.by(() => {
 		const primary = schema.sites[0].handle;
 		const fallback = site.current !== primary && form.alt[primary];
-		return fallback || 'What the image shows';
+		return fallback || t('assets.altPlaceholder');
 	});
 
 	/** Whether the changes may go: none, or the editor says so. */
-	const mayLeave = () => !form.dirty || confirm('Discard the changes?');
+	const mayLeave = () => !form.dirty || confirm(t('assets.confirmDiscard'));
 
 	function cancel() {
 		if (mayLeave()) onclose();
@@ -94,9 +95,10 @@
 </script>
 
 {#snippet actions()}
-	<button type="button" onclick={cancel}>Cancel</button>
+	<button type="button" onclick={cancel}>{t('common.cancel')}</button>
 	<button type="button" class="primary" disabled={form.busy} onclick={save}>
-		<Icon name="save" size={14} /> Save
+		<Icon name="save" size={14} />
+		{t('common.save')}
 	</button>
 {/snippet}
 
@@ -142,10 +144,10 @@
 		<aside>
 			<div class="card fields">
 				<label class="stacked">
-					Title
+					{t('common.title')}
 					<input
 						bind:value={form.title}
-						placeholder="From the filename"
+						placeholder={t('assets.titlePlaceholder')}
 						disabled={!canEdit}
 					/>
 				</label>
@@ -170,14 +172,16 @@
 					</fieldset>
 				{/if}
 				<label class="stacked">
-					Filename
+					{t('assets.filename')}
 					<input bind:value={form.filename} disabled={!canEdit} />
 				</label>
 				{#if folders.length}
 					<label class="stacked">
-						Folder
+						{t('assets.folder')}
 						<select bind:value={form.folder} disabled={!canEdit}>
-							<option value={null}>{ROOT} (no folder)</option>
+							<option value={null}>
+								{t('assets.noFolder', { root: root() })}
+							</option>
 							{#each folderRows(folders) as r (r.folder.id)}
 								<option value={r.folder.id}>{r.path}</option>
 							{/each}
@@ -189,31 +193,40 @@
 
 			<div class="card">
 				<dl>
-					<dt>Size</dt>
+					<dt>{t('assets.size')}</dt>
 					<dd>{fileSize(current.size)}</dd>
 					{#if current.width}
-						<dt>Dimensions</dt>
+						<dt>{t('assets.dimensions')}</dt>
 						<dd>
 							{current.width} × {current.height}
 							{#if current.edits}
 								<span class="note">
-									uploaded {current.originalWidth} × {current.originalHeight}
+									{t('assets.uploadedSize', {
+										width: current.originalWidth ?? '',
+										height: current.originalHeight ?? '',
+									})}
 								</span>
 							{/if}
 						</dd>
 					{/if}
-					<dt>Type</dt>
+					<dt>{t('assets.type')}</dt>
 					<dd>
 						{current.mime}
 						{#if current.edits && transparentEdges(current.edits) && current.mime !== 'image/png'}
-							<span class="note">delivered as PNG</span>
+							<span class="note">
+								{t('assets.deliveredAsPng')}
+							</span>
 						{/if}
 					</dd>
-					<dt>Uploaded</dt>
+					<dt>{t('assets.uploaded')}</dt>
 					<dd>
 						{time(current.createdAt)}
 						{#if current.uploadedBy}
-							<span class="note">by {current.uploadedBy}</span>
+							<span class="note">
+								{t('assets.uploadedBy', {
+									email: current.uploadedBy,
+								})}
+							</span>
 						{/if}
 					</dd>
 				</dl>
@@ -223,27 +236,28 @@
 						href={assetUrl(current, false, true)}
 						download={current.filename}
 					>
-						<Icon name="download" size={14} /> Download
+						<Icon name="download" size={14} />
+						{t('common.download')}
 					</a>
 					<button type="button" onclick={copyUrl}>
 						<Icon name="copy-url" size={14} />
-						{copied ? 'Copied' : 'Copy URL'}
+						{copied ? t('common.copied') : t('assets.copyUrl')}
 					</button>
 					{#if canEdit}
 						<UploadButton
 							onfiles={f => form.replace(f[0])}
 							icon="replace"
 						>
-							Replace file
+							{t('assets.replaceFile')}
 						</UploadButton>
 					{/if}
 				</div>
 			</div>
 
 			<div class="card">
-				<h3>Used in</h3>
+				<h3>{t('assets.usedIn')}</h3>
 				{#if form.usage === null}
-					<p class="empty">Loading…</p>
+					<p class="empty">{t('common.loading')}</p>
 				{:else}
 					<ul class="plain usage">
 						{#each form.usage as u (u.id)}
@@ -264,7 +278,7 @@
 								</span>
 							</li>
 						{:else}
-							<li class="note">Not used in any entry</li>
+							<li class="note">{t('assets.notUsed')}</li>
 						{/each}
 					</ul>
 				{/if}
@@ -272,7 +286,7 @@
 
 			{#if canDelete}
 				<button type="button" class="danger delete" onclick={remove}>
-					Delete the file
+					{t('assets.deleteFile')}
 				</button>
 			{/if}
 		</aside>

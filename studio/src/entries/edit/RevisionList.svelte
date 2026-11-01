@@ -3,6 +3,7 @@
 	import type { Revision } from '../drafts';
 	import { time } from '../../core/format';
 	import { changeText } from './revisions';
+	import { t } from '../../i18n/index.svelte';
 
 	/** The revisions, newest first: the first is live, older ones restore. */
 	let {
@@ -28,13 +29,15 @@
 				<span>
 					{time(rev.createdAt)}
 					{#if rev.user}<span class="muted by">{rev.user}</span>{/if}
-					{#if i === 0}<span class="muted by">live</span>{/if}
+					{#if i === 0}<span class="muted by">
+							{t('entries.revisionLive')}
+						</span>{/if}
 				</span>
 				<span class="what">{changeText(rev, comp, multiSite)}</span>
 			</button>
 			{#if i > 0 && onrestore}
 				<button class="link" onclick={() => onrestore(rev)}>
-					Restore
+					{t('common.restore')}
 				</button>
 			{/if}
 		</li>

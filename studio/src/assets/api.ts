@@ -1,5 +1,6 @@
 import { download, request } from '../core/client';
 import type { Values } from '../core/schema';
+import { t } from '../i18n/index.svelte';
 
 export type Asset = {
 	id: number;
@@ -49,12 +50,14 @@ export function isVideo(a: Asset): boolean {
 /** What the library can show: all, or only one type. */
 export type AssetKind = 'image' | 'video' | 'document';
 
-export const KINDS: { value: AssetKind | ''; label: string }[] = [
-	{ value: '', label: 'All' },
-	{ value: 'image', label: 'Images' },
-	{ value: 'video', label: 'Videos' },
-	{ value: 'document', label: 'Documents' },
-];
+export function kinds(): { value: AssetKind | ''; label: string }[] {
+	return [
+		{ value: '', label: t('assets.all') },
+		{ value: 'image', label: t('assets.images') },
+		{ value: 'video', label: t('assets.videos') },
+		{ value: 'document', label: t('assets.documents') },
+	];
+}
 
 /**
  * What the image editor changes, the uploaded file stays: rotate, flip,
@@ -190,7 +193,9 @@ export type Folder = {
 };
 
 /** The name of the top, where all folders are and the assets in none. */
-export const ROOT = 'Library';
+export function root(): string {
+	return t('assets.library');
+}
 
 /** The folders, and how many assets are in none. */
 export function listFolders(): Promise<{ folders: Folder[]; top: number }> {

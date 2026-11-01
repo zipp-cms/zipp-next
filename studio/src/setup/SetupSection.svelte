@@ -8,6 +8,7 @@
 	import PluginCards from './PluginCards.svelte';
 	import Table from 'zipp-ui/Table.svelte';
 	import { componentOf, sectionOf } from '../core/schema';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * A section in the setup, read only: its settings in the main column
@@ -23,10 +24,10 @@
 	const section = $derived(sectionOf(schema, handle));
 	const types = $derived(
 		(section?.types ?? []).map(
-			t =>
-				componentOf(schema, t) ?? {
-					handle: t,
-					name: t,
+			type =>
+				componentOf(schema, type) ?? {
+					handle: type,
+					name: type,
 					entry: true,
 					fields: [],
 				},
@@ -40,12 +41,18 @@
 	// who may what here, admins first
 	const access = $derived([
 		...(isAdmin(schema)
-			? [{ name: 'Admins (no role)', handle: null, may: 'Everything' }]
+			? [
+					{
+						name: t('setup.admins'),
+						handle: null,
+						may: t('setup.everything'),
+					},
+				]
 			: []),
 		...roles.map(r => ({
 			name: r.name,
 			handle: r.handle,
-			may: accessText(r.sections[handle] ?? 'nothing, hidden'),
+			may: accessText(r.sections[handle], t('setup.nothingHidden')),
 		})),
 	]);
 
@@ -53,41 +60,44 @@
 	const { entries, published, drafts, total } = $derived(list);
 
 	const KINDS = {
-		single: 'Single: exactly one entry',
-		channel: 'Channel: a list, newest first',
-		structure: 'Structure: a tree in a set order',
-	};
+		single: 'setup.single',
+		channel: 'setup.channel',
+		structure: 'setup.structure',
+	} as const;
 </script>
 
 {#if section}
 	<div class="with-aside">
 		<div class="cards">
 			<div class="card">
-				<h2>General</h2>
+				<h2>{t('setup.general')}</h2>
 				<dl>
-					<dt>Name</dt>
+					<dt>{t('common.name')}</dt>
 					<dd>{section.name}</dd>
-					<dt>Handle</dt>
+					<dt>{t('setup.handle')}</dt>
 					<dd><code>{section.handle}</code></dd>
-					<dt>Kind</dt>
-					<dd>{KINDS[section.kind]}</dd>
+					<dt>{t('setup.kind')}</dt>
+					<dd>{t(KINDS[section.kind])}</dd>
 					{#if section.kind === 'structure'}
-						<dt>Max level</dt>
+						<dt>{t('setup.maxLevel')}</dt>
 						<dd>
 							{section.max_level === 1
-								? '1, only entries on the top'
+								? t('setup.maxLevelOne')
 								: (section.max_level ??
-									'none, as deep as needed')}
+									t('setup.maxLevelNone'))}
 						</dd>
 					{/if}
 					{#if section.uri_if}
-						<dt>Pages</dt>
+						{@const [before, after] =
+							t('setup.pagesIf').split('{field}')}
+						<dt>{t('setup.pages')}</dt>
 						<dd>
-							only entries with <code>{section.uri_if}</code>
-							on
+							{before}
+							<code>{section.uri_if}</code>
+							{after}
 						</dd>
 					{/if}
-					<dt>Navigation</dt>
+					<dt>{t('setup.navigation')}</dt>
 					<dd>{group ?? '–'}</dd>
 					<dt>GraphQL</dt>
 					<dd>
@@ -97,64 +107,82 @@
 								: `entries(section: "${handle}")`}
 						</code>
 					</dd>
-					<dt>You may</dt>
-					<dd>{accessText(accessOf(schema, handle) ?? 'nothing')}</dd>
+					<dt>{t('setup.youMay')}</dt>
+					<dd>
+						{accessText(
+							accessOf(schema, handle),
+							t('setup.nothing'),
+						)}
+					</dd>
 				</dl>
 			</div>
 
 			<div class="card">
-				<h2>Entry types</h2>
+				<h2>{t('setup.entryTypes')}</h2>
 				<Table
 					rows={types}
-					key={t => t.handle}
-					columns={['Name', 'Handle', 'Fields', 'URI', 'GraphQL']}
-					href={t => `/admin/setup/types/${t.handle}`}
+					key={ty => ty.handle}
+					columns={[
+						t('common.name'),
+						t('setup.handle'),
+						t('setup.fields'),
+						'URI',
+						'GraphQL',
+					]}
+					href={ty => `/admin/setup/types/${ty.handle}`}
 				>
-					{#snippet row(t)}
-						{@const uri = uriOf(section, t.handle)}
+					{#snippet row(ty)}
+						{@const uri = uriOf(section, ty.handle)}
 						<td>
-							<a href="/admin/setup/types/{t.handle}">
-								{t.name}
+							<a href="/admin/setup/types/{ty.handle}">
+								{ty.name}
 							</a>
 						</td>
-						<td><code>{t.handle}</code></td>
-						<td>{t.fields.length}</td>
+						<td><code>{ty.handle}</code></td>
+						<td>{ty.fields.length}</td>
 						<td>
 							<code>
-								{uri === null ? 'no pages' : uri || '/ (home)'}
+								{uri === null
+									? t('setup.noPages')
+									: uri || t('setup.home')}
 							</code>
 						</td>
-						<td><code>{t.handle}_Entry</code></td>
+						<td><code>{ty.handle}_Entry</code></td>
 					{/snippet}
 				</Table>
 			</div>
 
 			<div class="card">
-				<h2>Sites</h2>
+				<h2>{t('setup.sites')}</h2>
 				<Table
 					rows={schema.sites}
 					key={s => s.handle}
-					columns={['Site', 'Language', 'URLs', 'Status']}
+					columns={[
+						t('setup.site'),
+						t('setup.language'),
+						t('setup.urls'),
+						t('setup.status'),
+					]}
 				>
 					{#snippet row(s)}
 						<td>{s.name}</td>
 						<td>{s.language}</td>
 						<td>
-							{#each types as t (t.handle)}
+							{#each types as ty (ty.handle)}
 								{@const uri = uriOf(
 									section,
-									t.handle,
+									ty.handle,
 									s.handle,
 								)}
 								<div>
 									{#if types.length > 1}
 										<span class="muted">
-											{t.name}:
+											{ty.name}:
 										</span>
 									{/if}
 									<code>
 										{uri === null
-											? 'no pages'
+											? t('setup.noPages')
 											: (entryUrl(
 													schema,
 													s.handle,
@@ -166,19 +194,19 @@
 						</td>
 						<td>
 							{schema.offline.includes(s.handle)
-								? 'Offline'
-								: 'Online'}
+								? t('setup.offline')
+								: t('setup.online')}
 						</td>
 					{/snippet}
 				</Table>
 			</div>
 
 			<div class="card">
-				<h2>Access</h2>
+				<h2>{t('setup.access')}</h2>
 				<Table
 					rows={access}
 					key={a => a.name}
-					columns={['Role', 'May']}
+					columns={[t('setup.role'), t('setup.may')]}
 				>
 					{#snippet row(a)}
 						<td>
@@ -189,7 +217,7 @@
 					{/snippet}
 				</Table>
 				<p class="muted">
-					<a href="/admin/setup/sites#roles">All roles</a>
+					<a href="/admin/setup/sites#roles">{t('setup.allRoles')}</a>
 				</p>
 			</div>
 
@@ -198,7 +226,8 @@
 
 		<aside class="card">
 			<h2>
-				Entries <span class="muted">{total}</span>
+				{t('setup.entries')}
+				<span class="muted">{total}</span>
 			</h2>
 			<ul class="plain">
 				{#each entries as e (e.id)}
@@ -207,9 +236,9 @@
 						{#if drafts.includes(e.id)}
 							<span
 								class="badge changes"
-								title="Unpublished changes"
+								title={t('setup.unpublishedChanges')}
 							>
-								Draft
+								{t('common.draft')}
 							</span>
 						{/if}
 						<SiteBadges {schema} published={published[e.id]} />
@@ -217,15 +246,17 @@
 				{/each}
 			</ul>
 			{#if total > entries.length}
-				<p class="muted">The first {entries.length}.</p>
+				<p class="muted">
+					{t('setup.theFirst', { n: entries.length })}
+				</p>
 			{/if}
 			<p class="muted">
-				<a href="/admin/entries/{handle}">Open in Content</a>
+				<a href="/admin/entries/{handle}">{t('setup.openInContent')}</a>
 			</p>
 		</aside>
 	</div>
 {:else}
-	<p class="error">No section {handle}</p>
+	<p class="error">{t('setup.noSection', { handle })}</p>
 {/if}
 
 <style lang="scss">

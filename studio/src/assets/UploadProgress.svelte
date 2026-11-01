@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from 'zipp-ui/Icon.svelte';
-	import { fileSize, plural } from '../core/format';
+	import { fileSize } from '../core/format';
+	import { t } from '../i18n/index.svelte';
 	import { uploads } from './uploads.svelte';
 
 	/** The running uploads at the bottom right: a bar, the failed ones. */
@@ -14,25 +15,30 @@
 		<div class="head">
 			<strong>
 				{#if uploads.active}
-					Uploading {uploads.done + 1 > uploads.files
-						? uploads.files
-						: uploads.done + 1} of {uploads.files}
+					{t('assets.uploadingOf', {
+						n:
+							uploads.done + 1 > uploads.files
+								? uploads.files
+								: uploads.done + 1,
+						total: uploads.files,
+					})}
 				{:else}
-					Uploaded {plural(
-						uploads.files - uploads.errors.length,
-						'file',
-						'files',
-					)}
+					{t('assets.uploadedFiles', {
+						n: uploads.files - uploads.errors.length,
+					})}
 				{/if}
 			</strong>
 			<span class="note">
-				{fileSize(uploads.sent)} of {fileSize(uploads.total)}
+				{t('assets.sentOf', {
+					sent: fileSize(uploads.sent),
+					total: fileSize(uploads.total),
+				})}
 			</span>
 			{#if !uploads.active}
 				<button
 					type="button"
 					class="icon"
-					aria-label="Close"
+					aria-label={t('common.close')}
 					onclick={() => uploads.close()}
 				>
 					<Icon name="close" size={14} />

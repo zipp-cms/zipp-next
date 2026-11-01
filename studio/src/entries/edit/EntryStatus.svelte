@@ -9,6 +9,7 @@
 	import type { Component, Schema, Section } from '../../core/schema';
 	import { setSite } from '../../core/router.svelte';
 	import type { EntryEditor, May } from './entryEditor.svelte';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * The status of the entry in each site and the dates that keep it off
@@ -49,8 +50,11 @@
 					{#if ed.changed.has('published')}<span
 							class="changed-dot"
 						></span>{/if}
-					Published in {schema.sites.find(s => s.handle === ed.site)
-						?.name}
+					{t('entries.publishedIn', {
+						site:
+							schema.sites.find(s => s.handle === ed.site)
+								?.name ?? '',
+					})}
 				</span>
 			</Switch>
 		</fieldset>
@@ -61,8 +65,12 @@
 		{#if ed.published && waiting}
 			<span class="note waiting">
 				{waiting === 'pending'
-					? `Not live yet, from ${shortTime(ed.dates.postDate!)}`
-					: `Not live anymore, expired ${shortTime(ed.dates.expiryDate!)}`}
+					? t('entries.notLiveYet', {
+							time: shortTime(ed.dates.postDate!),
+						})
+					: t('entries.notLiveAnymore', {
+							time: shortTime(ed.dates.expiryDate!),
+						})}
 			</span>
 		{/if}
 	</div>
@@ -74,11 +82,11 @@
 				<span>
 					{#if ed.changed.has('postDate')}<span
 							class="changed-dot"
-						></span>{/if}Post date
+						></span>{/if}{t('entries.postDate')}
 				</span>
 				<DateTime
-					label="Post date"
-					placeholder="When published"
+					label={t('entries.postDate')}
+					placeholder={t('entries.whenPublished')}
 					value={ed.dates.postDate}
 					onchange={v => (ed.dates.postDate = v)}
 				/>
@@ -87,11 +95,11 @@
 				<span>
 					{#if ed.changed.has('expiryDate')}<span
 							class="changed-dot"
-						></span>{/if}Expiry date
+						></span>{/if}{t('entries.expiryDate')}
 				</span>
 				<DateTime
-					label="Expiry date"
-					placeholder="Never"
+					label={t('entries.expiryDate')}
+					placeholder={t('common.never')}
 					value={ed.dates.expiryDate}
 					onchange={v => (ed.dates.expiryDate = v)}
 				/>
@@ -107,7 +115,7 @@
 			<span>
 				{#if ed.changed.has('type')}<span
 						class="changed-dot"
-					></span>{/if}Type
+					></span>{/if}{t('entries.type')}
 			</span>
 			{#if secDef.types.length > 1}
 				<select
@@ -118,9 +126,9 @@
 							e.currentTarget.value = ed.ty;
 					}}
 				>
-					{#each secDef.types as t (t)}
-						<option value={t}>
-							{componentName(schema, t)}
+					{#each secDef.types as ty (ty)}
+						<option value={ty}>
+							{componentName(schema, ty)}
 						</option>
 					{/each}
 				</select>
@@ -128,7 +136,7 @@
 				<a
 					class="value"
 					href={setupPath('types', comp.handle)}
-					title="Its fields in Setup"
+					title={t('entries.fieldsInSetup')}
 				>
 					{comp.name}
 				</a>
@@ -137,9 +145,9 @@
 
 		{#if isNew && ed.parents.length}
 			<label>
-				<span>Parent</span>
+				<span>{t('entries.parent')}</span>
 				<select bind:value={ed.parentId}>
-					<option value={null}>None, on the top</option>
+					<option value={null}>{t('entries.noParent')}</option>
 					{#each ed.parents as p (p.id)}
 						<option value={p.id}>{p.title}</option>
 					{/each}
@@ -152,9 +160,12 @@
 				<span>
 					{#if ed.changed.has('slug')}<span
 							class="changed-dot"
-						></span>{/if}Slug
+						></span>{/if}{t('entries.slug')}
 				</span>
-				<input placeholder="from the title" bind:value={ed.slug} />
+				<input
+					placeholder={t('entries.fromTitle')}
+					bind:value={ed.slug}
+				/>
 				{#if ed.errors.slug}<span class="error">
 						{ed.errors.slug}
 					</span>{/if}

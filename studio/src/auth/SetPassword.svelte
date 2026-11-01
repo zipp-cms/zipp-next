@@ -30,6 +30,7 @@
 	import { session, type Authenticated } from '../core/session.svelte';
 	import { ApiError } from '../core/client';
 	import AuthLayout from './AuthLayout.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The link of an invite or a password reset: choose a password (an
@@ -74,32 +75,34 @@
 	{#if link}
 		<form {onsubmit}>
 			<div class="intro">
-				<h1>{invite ? 'Welcome' : 'A new password'}</h1>
+				<h1>
+					{invite ? t('auth.welcome') : t('auth.newPasswordTitle')}
+				</h1>
 				<p class="muted">
 					{invite
-						? `Your account is ${link.email}. Choose a password to log in.`
-						: `Choose a new password for ${link.email}. You are logged out everywhere else.`}
+						? t('auth.inviteIntro', { email: link.email })
+						: t('auth.resetIntro', { email: link.email })}
 				</p>
 			</div>
 
 			{#if invite}
 				<label class="stacked">
-					Your name
+					{t('auth.yourName')}
 					<input
 						autocomplete="name"
-						placeholder="Anna Muster"
+						placeholder={t('auth.namePlaceholder')}
 						bind:value={name}
 					/>
 				</label>
 			{/if}
 
 			<label class="stacked">
-				Password
+				{t('common.password')}
 				<span class="password">
 					<input
 						type={showPassword ? 'text' : 'password'}
 						autocomplete="new-password"
-						placeholder="At least 8 characters"
+						placeholder={t('auth.passwordPlaceholder')}
 						bind:value={password}
 						required
 					/>
@@ -107,8 +110,8 @@
 						type="button"
 						class="icon"
 						title={showPassword
-							? 'Hide the password'
-							: 'Show the password'}
+							? t('auth.hidePassword')
+							: t('auth.showPassword')}
 						onclick={() => (showPassword = !showPassword)}
 					>
 						<Icon name={showPassword ? 'hide' : 'view'} />
@@ -119,22 +122,22 @@
 			{#if error}<p class="error">{error}</p>{/if}
 
 			<button class="primary submit" disabled={busy}>
-				{invite ? 'Set the password and log in' : 'Save and log in'}
+				{invite ? t('auth.setAndLogIn') : t('auth.saveAndLogIn')}
 				<Icon name="arrow-right" />
 			</button>
 		</form>
 	{:else}
 		<div>
 			<div class="intro">
-				<h1>This link doesn't work</h1>
+				<h1>{t('auth.linkBroken')}</h1>
 				<p class="muted">
-					{problem}. Ask for a new one, or an admin for an invite.
+					{t('auth.linkProblem', { problem })}
 				</p>
 			</div>
 			<p class="note">
-				<a href="/admin/forgot">New password</a>
+				<a href="/admin/forgot">{t('auth.newPassword')}</a>
 				·
-				<a href="/admin/login">Log in</a>
+				<a href="/admin/login">{t('auth.logIn')}</a>
 			</p>
 		</div>
 	{/if}

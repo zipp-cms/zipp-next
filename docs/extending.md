@@ -60,6 +60,12 @@ zipp. The components are scss: the module's `vite.config.js` needs
 `svelte({ preprocess: vitePreprocess() })` and `sass`, like
 `crates/zipp-seo/studio`.
 
+The components write their few own texts (Today, Close, Nothing found)
+and dates in the user's language: the studio sets them in
+`zipp-ui/texts`, which a plugin's copy of zipp-ui shares. A plugin's
+own texts are its own; `<html lang>` says the studio's language (`en`
+or `de`) to pick them by.
+
 `host` is what the studio lends a module: `host.request(method, path,
 body)` calls the api as the logged in user, `host.mountField(target, {
 field, value, onchange })` mounts one of the studio's own fields (images

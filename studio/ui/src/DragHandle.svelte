@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ui } from './texts.svelte';
 	import Icon from './Icon.svelte';
 	import Popover from './Popover.svelte';
 	import type { Sortable, Step } from './sortable.svelte';
@@ -11,7 +12,7 @@
 	let {
 		sortable,
 		index,
-		label = 'Move',
+		label: given,
 	}: {
 		sortable: Sortable;
 		/** its row, or how to find it when it changes, like in a rich text */
@@ -19,15 +20,20 @@
 		label?: string;
 	} = $props();
 
+	const label = $derived(given ?? ui.texts.move);
 	const at = () => (typeof index === 'function' ? index() : index);
 
 	let open = $state(false);
 
-	const STEPS: [Step, string, string][] = [
-		['up', 'Move up', 'arrow-up'],
-		['down', 'Move down', 'arrow-down'],
-		['out', 'Move out a level', 'outdent'],
-		['in', 'Move under the one above', 'indent'],
+	const STEPS: [
+		Step,
+		'moveUp' | 'moveDown' | 'moveOut' | 'moveIn',
+		string,
+	][] = [
+		['up', 'moveUp', 'arrow-up'],
+		['down', 'moveDown', 'arrow-down'],
+		['out', 'moveOut', 'outdent'],
+		['in', 'moveIn', 'indent'],
 	];
 	const KEYS: Record<string, Step> = {
 		ArrowUp: 'up',
@@ -54,7 +60,7 @@
 			<button
 				type="button"
 				class="icon drag-handle"
-				title="{label}: drag, or click for the moves"
+				title="{label}: {ui.texts.dragOrClick}"
 				aria-label={label}
 				aria-expanded={open}
 				style:touch-action="none"
@@ -76,10 +82,10 @@
 				}}
 			>
 				<Icon name={icon} size={14} />
-				{text}
+				{ui.texts[text]}
 			</button>
 		{:else}
-			<span class="popup-item note">It can't move</span>
+			<span class="popup-item note">{ui.texts.cantMove}</span>
 		{/each}
 	</Popover>
 {/if}

@@ -3,6 +3,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { Busy } from '../core/busy.svelte';
 	import { createRequest } from './api';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * Setup is read only: here an editor writes what they need changed on
@@ -33,23 +34,23 @@
 	});
 </script>
 
-<Popover bind:open align="end" width="22rem" label="Request a change">
+<Popover bind:open align="end" width="22rem" label={t('setup.requestChange')}>
 	{#snippet trigger({ toggle })}
-		<button onclick={toggle} title="Ask the developers for a change here">
+		<button onclick={toggle} title={t('setup.requestChangeTitle')}>
 			<Icon name="edit" />
-			Request a change
+			{t('setup.requestChange')}
 		</button>
 	{/snippet}
 	<form class="request" onsubmit={send}>
 		{#if sent}
-			<p class="note">Sent, the developers see it under Requests.</p>
+			<p class="note">{t('setup.requestSent')}</p>
 		{/if}
 		<label class="stacked">
-			What do you need on {context}?
+			{t('setup.whatDoYouNeed', { context })}
 			<textarea
 				rows="4"
 				bind:value={text}
-				placeholder="I need a subtitle field"
+				placeholder={t('setup.requestPlaceholder')}
 			></textarea>
 			{#if action.fields.text}
 				<span class="error">{action.fields.text}</span>
@@ -60,10 +61,10 @@
 		{/if}
 		<div class="buttons">
 			<button type="button" class="light" onclick={() => (open = false)}>
-				Close
+				{t('common.close')}
 			</button>
 			<button class="primary" disabled={action.busy || !text.trim()}>
-				Send
+				{t('setup.send')}
 			</button>
 		</div>
 	</form>

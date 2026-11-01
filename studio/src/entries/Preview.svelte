@@ -15,6 +15,7 @@
 	import type { SitePreview } from './preview.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
+	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The website with drafts, next to the chat or the editor: reload,
@@ -47,11 +48,11 @@
 		localStorage.setItem(DEVICE_KEY, d);
 	}
 
-	const devices: { value: Device; label: string }[] = [
-		{ value: 'desktop', label: 'Desktop' },
-		{ value: 'tablet', label: 'Tablet' },
-		{ value: 'mobile', label: 'Mobile' },
-	];
+	const devices: { value: Device; label: string }[] = $derived([
+		{ value: 'desktop', label: t('entries.desktop') },
+		{ value: 'tablet', label: t('entries.tablet') },
+		{ value: 'mobile', label: t('entries.mobile') },
+	]);
 </script>
 
 <section class="site">
@@ -59,8 +60,8 @@
 		<button
 			type="button"
 			class="icon"
-			title="Reload"
-			aria-label="Reload"
+			title={t('entries.reload')}
+			aria-label={t('entries.reload')}
 			onclick={() => preview.refresh()}
 		>
 			<Icon name="reload" size={15} />
@@ -72,7 +73,7 @@
 			options={devices}
 			value={device}
 			onchange={setDevice}
-			label="Width of the website"
+			label={t('entries.websiteWidth')}
 		>
 			{#snippet item(o)}
 				<span class="device" title={o.label}>
@@ -87,8 +88,8 @@
 				href={preview.withToken(preview.view)}
 				target="_blank"
 				rel="noreferrer"
-				title="Open in a new tab"
-				aria-label="Open in a new tab"
+				title={t('entries.openInNewTab')}
+				aria-label={t('entries.openInNewTab')}
 			>
 				<Icon name="external" size={15} />
 			</a>
@@ -99,7 +100,7 @@
 		<!-- its src is set by the preview, see `load` -->
 		<iframe
 			bind:this={frame}
-			title="Website"
+			title={t('entries.website')}
 			style:width={WIDTHS[device] ? `${WIDTHS[device]}px` : null}
 			style:pointer-events={resizing ? 'none' : null}
 		></iframe>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Edits } from '../api';
+	import { t } from '../../i18n/index.svelte';
 
 	/** What is around the image, past the crop and on a canvas. */
 	let { edits = $bindable() }: { edits: Edits } = $props();
@@ -14,15 +15,15 @@
 	);
 </script>
 
-<div class="background" role="group" aria-label="Background">
-	<span class="note">Background</span>
+<div class="background" role="group" aria-label={t('assets.background')}>
+	<span class="note">{t('assets.background')}</span>
 	<button
 		type="button"
 		class:on={background === 'transparent'}
 		onclick={() => (edits = { ...edits, background: null })}
 	>
 		<span class="swatch checkerboard"></span>
-		Transparent
+		{t('assets.transparent')}
 	</button>
 	<!-- the button opens the color picker -->
 	<label class="light color" class:on={background !== 'transparent'}>
