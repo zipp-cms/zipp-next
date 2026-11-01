@@ -360,6 +360,20 @@ impl Schema {
 			}
 		}
 
+		if ![25, 50, 75, 100].contains(&field.width) {
+			return Err("the width is 25, 50, 75 or 100".into());
+		}
+		if let FieldKind::Note { text } = &field.kind {
+			if text.trim().is_empty() {
+				return Err("a note needs a text".into());
+			}
+			if field.required || field.indexed || field.translatable {
+				return Err("a note holds no value, it can't be required, \
+					indexed or translatable"
+					.into());
+			}
+		}
+
 		crate::content::check_default(self, field)
 			.map_err(|e| format!("default: {e}"))?;
 
@@ -438,6 +452,7 @@ impl Schema {
 			| FieldKind::Table { .. }
 			| FieldKind::Navigation { .. }
 			| FieldKind::Texts { .. }
+			| FieldKind::Note { .. }
 			| FieldKind::Blocks { .. } => None,
 		}
 	}

@@ -130,6 +130,7 @@ pub(super) fn collect_relations(
 			| FieldKind::Texts { .. }
 			| FieldKind::Dropdown { .. }
 			| FieldKind::Blocks { .. }
+			| FieldKind::Note { .. }
 			| FieldKind::Group { .. } => {}
 		}
 

@@ -192,15 +192,21 @@ fn schema() -> Schema {
 			"Event",
 			[
 				// a day, sorted and filtered as 2026-11-14
-				Field::date("date").required().indexed().instructions(
-					"Past events leave the list of upcoming ones.",
-				),
+				// in a row with doors and city
+				Field::date("date")
+					.required()
+					.indexed()
+					.instructions(
+						"Past events leave the list of upcoming ones.",
+					)
+					.width(25),
 				// a day and time, 2026-11-14T19:30
 				Field::date("doors")
 					.time()
 					.label("Doors open")
-					.instructions("Empty: the website shows none."),
-				Field::text("city").required().indexed(),
+					.instructions("Empty: the website shows none.")
+					.width(50),
+				Field::text("city").required().indexed().width(25),
 				button_group(
 					"genre",
 					[
@@ -220,7 +226,8 @@ fn schema() -> Schema {
 						("families", "Familien"),
 					],
 				)
-				.label("Für wen"),
+				.label("Für wen")
+				.width(50),
 				Field::dropdown(
 					"spokenIn",
 					[
@@ -234,20 +241,29 @@ fn schema() -> Schema {
 				// most events are in German, new ones start so
 				.default("de")
 				.indexed()
-				.label("Sprache"),
+				.label("Sprache")
+				.width(50),
 				Field::number("price")
 					.range(0.0, 1000.0)
 					.decimals(2)
 					.unit("CHF")
-					.indexed(),
-				Field::boolean("soldOut").indexed(),
+					.indexed()
+					.width(50),
+				Field::boolean("soldOut").indexed().width(50),
+				// how the image should be, for the editors
+				Field::note(
+					"imageHint",
+					"**Bild** im Querformat (3:2), mindestens 1600 px breit: \
+					es steht in der Liste und oben auf der Seite.",
+				),
 				// new images of events go into their folder
-				Field::images("image").max(1).folder("Events"),
+				Field::images("image").max(1).folder("Events").width(50),
 				Field::assets("program")
 					.extensions(["pdf"])
 					.max(1)
 					.folder("Events/Programs")
-					.label("Programm (PDF)"),
+					.label("Programm (PDF)")
+					.width(50),
 				Field::markdown("description").translatable(),
 				Field::relation("page", ["page"]).max(1).label("More info"),
 			],
@@ -294,7 +310,7 @@ fn schema() -> Schema {
 			"Images",
 			[
 				Field::images("images").required(),
-				Field::text("caption").max(200),
+				Field::text("caption").max(200).width(50),
 				// three options: buttons in the studio
 				Field::dropdown(
 					"width",
@@ -304,7 +320,8 @@ fn schema() -> Schema {
 						("full", "Full width"),
 					],
 				)
-				.default("wide"),
+				.default("wide")
+				.width(50),
 			],
 		)
 		.block(

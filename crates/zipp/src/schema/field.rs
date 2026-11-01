@@ -96,6 +96,10 @@ pub struct Field {
 	/// What a new entry or block starts with, see [`Field::default`].
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub default: Option<Value>,
+	/// How much of a row the field takes in the studio, in percent: 25,
+	/// 50, 75 or 100; only layout, no migration
+	#[serde(default = "full_width", skip_serializing_if = "is_full_width")]
+	pub width: u8,
 	#[serde(flatten)]
 	pub kind: FieldKind,
 }
@@ -202,6 +206,12 @@ pub enum FieldKind {
 		min: Option<u32>,
 		max: Option<u32>,
 	},
+	/// Text for editors in the field layout, markdown from the code: a
+	/// how-to or a warning. It holds no value, no migration when it
+	/// changes.
+	Note {
+		text: String,
+	},
 	/// A field type of another crate, registered in the schema; the
 	/// options are its own.
 	Custom {
@@ -247,9 +257,24 @@ impl FieldKind {
 			| Self::Navigation { .. }
 			| Self::Texts { .. }
 			| Self::Dropdown { .. }
+			| Self::Note { .. }
 			| Self::Custom { .. } => Holds::Nothing,
 		}
 	}
+
+	/// Whether the field has a value in the content; a note only shows
+	/// its text.
+	pub fn has_value(&self) -> bool {
+		!matches!(self, Self::Note { .. })
+	}
+}
+
+fn full_width() -> u8 {
+	100
+}
+
+fn is_full_width(width: &u8) -> bool {
+	*width == 100
 }
 
 impl Field {
@@ -262,6 +287,7 @@ impl Field {
 			translatable: false,
 			instructions: None,
 			default: None,
+			width: 100,
 			kind,
 		}
 	}
@@ -499,6 +525,13 @@ impl Field {
 		self
 	}
 
+	/// Text for editors between the fields, markdown: `Field::note("howto",
+	/// "**Bilder** im Querformat")`. It stores nothing, the handle places
+	/// it in tabs.
+	pub fn note(handle: &str, text: &str) -> Self {
+		Self::new(handle, FieldKind::Note { text: text.into() })
+	}
+
 	/// A field of a type of another crate, it has to be registered with
 	/// [`Schema::field_type`]. Such crates usually have a builder of their
 	/// own that calls this.
@@ -569,6 +602,14 @@ impl Field {
 	/// Existing entries get it when a migration adds the field.
 	pub fn default(mut self, value: impl Into<Value>) -> Self {
 		self.default = Some(value.into());
+		self
+	}
+
+	/// How much of a row the field takes in the editor, 25, 50, 75 or 100
+	/// percent: `.width(50)` puts two fields next to each other. Narrow
+	/// screens show every field full width.
+	pub fn width(mut self, percent: u8) -> Self {
+		self.width = percent;
 		self
 	}
 

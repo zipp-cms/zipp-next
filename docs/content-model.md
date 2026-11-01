@@ -65,6 +65,17 @@ on for old content too. Changing a default later needs no migration.
 `.label("…")` names a field, `.instructions("…")` tells editors what
 to put there, under the label in the studio (markdown: bold, links);
 the AI chat reads them too. Both are only looks, no migration.
+`.width(50)` gives a field half of a row in the editor (25, 50, 75 or
+100 percent, 100 without it), like Craft's field widths: date, doors and
+city of an event sit in one row. A narrow editor (a phone, the flyout,
+a small block) shows every field full width; inside a block a field
+that shares its row has its label above. Also only looks.
+`Field::note("imageHint", "**Bild** im Querformat …")` is a note for
+editors in the field layout, like Craft's tip: its markdown text from
+the code shows in a grey box, with a width too. It holds nothing: the
+server refuses a value for it, GraphQL and the TypeScript types don't
+have it, and adding, changing or removing a note needs no migration.
+Its handle places it in tabs like a field's.
 
 `entry_tabs("page", "Page", [("Content", vec![...]), ("SEO",
 vec![seo_field("seo")])])` puts the fields of an entry type in tabs of

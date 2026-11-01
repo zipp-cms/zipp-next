@@ -676,6 +676,10 @@ async fn checks_queries_of_frontends() {
 	let bad = "{ entries { ... on event_Entry { town } } }";
 	let errors = check_query(&gql, bad).await;
 	assert!(errors[0].contains("Unknown field \"town\""), "{errors:?}");
+	// a note has no value to ask for
+	let note = "{ entries { ... on event_Entry { howto } } }";
+	let errors = check_query(&gql, note).await;
+	assert!(errors[0].contains("Unknown field \"howto\""), "{errors:?}");
 }
 
 #[tokio::test]

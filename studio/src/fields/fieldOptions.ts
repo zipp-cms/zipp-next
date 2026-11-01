@@ -28,11 +28,16 @@ export function fieldOptions(
 	f: Field,
 	entry: boolean,
 ): FieldOption[] {
+	const width = { name: 'Width', value: `${f.width ?? 100} % of a row` };
+	// a note only has its text
+	if (f.kind === 'note') return [{ name: 'Text', value: f.text }, width];
+
 	const out: FieldOption[] = [
 		...(f.instructions
 			? [{ name: 'Instructions', value: f.instructions }]
 			: []),
 		{ name: 'Required', value: yes(f.required) },
+		width,
 		...(entry
 			? [
 					{

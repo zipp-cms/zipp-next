@@ -60,13 +60,14 @@
 							<td><code>{f.handle}</code></td>
 							<td>{describeField(f)}</td>
 							<td>
-								{c.entry
+								{c.entry && f.kind !== 'note'
 									? f.translatable
 										? 'per site'
 										: 'all sites'
 									: ''}
 							</td>
 							<td class="muted">
+								{f.width ? `${f.width} %` : ''}
 								{f.required ? 'required' : ''}
 								{f.indexed ? 'indexed' : ''}
 							</td>

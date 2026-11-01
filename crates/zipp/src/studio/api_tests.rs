@@ -22,6 +22,17 @@ async fn the_schema_for_the_user() {
 	assert!(schema["aiModels"].as_array().unwrap().is_empty());
 	// no icons in this schema
 	assert_eq!(schema["icons"], serde_json::json!({}));
+	// the studio lays out a note with its text and width
+	let event = schema["components"]
+		.as_array()
+		.unwrap()
+		.iter()
+		.find(|c| c["handle"] == "event")
+		.unwrap();
+	let note = &event["fields"].as_array().unwrap().last().unwrap();
+	assert_eq!(note["kind"], "note");
+	assert_eq!(note["text"], "Images in **landscape**.");
+	assert_eq!(note["width"], 50);
 
 	let err = ts.anonymous().call_json(&SchemaReq {}).await.unwrap_err();
 	assert_eq!(err, Error::MissingSessionToken);

@@ -282,6 +282,9 @@ pub(super) fn validate_value(
 				.collect();
 			return Some(Value::Array(blocks));
 		}
+		(FieldKind::Note { .. }, _) => {
+			error(errors, path, "a note holds no value")
+		}
 		(FieldKind::Custom { ty, options }, value) => {
 			let t = schema.field_types.get(ty).unwrap();
 			match t.validate(options, value) {

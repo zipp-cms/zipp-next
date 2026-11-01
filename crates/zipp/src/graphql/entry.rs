@@ -117,12 +117,13 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 	})
 }
 
-/// A field of the content model, read from the JSON of its entry or block.
+/// A field of the content model, read from the JSON of its entry or block;
+/// none for a note, it has no value.
 pub(super) fn content_field(
 	schema: &Schema,
 	comp: &str,
 	field: &crate::schema::Field,
-) -> GqlField {
+) -> Option<GqlField> {
 	// a custom type turns the stored value into its output
 	let custom = match &field.kind {
 		FieldKind::Custom { ty, options } => schema
@@ -167,11 +168,12 @@ pub(super) fn content_field(
 			TypeRef::named(format!("{component}_Fields"))
 		}
 		FieldKind::Blocks { .. } => TypeRef::named_nn_list_nn("Block"),
+		FieldKind::Note { .. } => return None,
 	};
 	let handle = field.handle.clone();
 	let kind = field.kind.clone();
 
-	GqlField::new(field.handle.clone(), ty, move |ctx| {
+	Some(GqlField::new(field.handle.clone(), ty, move |ctx| {
 		let handle = handle.clone();
 		let kind = kind.clone();
 		let custom = custom.clone();
@@ -289,7 +291,8 @@ pub(super) fn content_field(
 				FieldKind::Group { .. }
 				| FieldKind::Markdown
 				| FieldKind::RichText { .. }
-				| FieldKind::Link { .. } => Ok(None),
+				| FieldKind::Link { .. }
+				| FieldKind::Note { .. } => Ok(None),
 				FieldKind::Text { .. }
 				| FieldKind::Email
 				| FieldKind::Number { .. }
@@ -301,7 +304,7 @@ pub(super) fn content_field(
 				},
 			}
 		})
-	})
+	}))
 }
 
 pub(super) fn block_value(
@@ -355,7 +358,9 @@ pub(super) fn content_objects(
 		let comp = schema.get(handle).unwrap();
 		let mut obj = Object::new(format!("{handle}_Fields"));
 		for field in &comp.fields {
-			obj = obj.field(content_field(schema, &comp.handle, field));
+			if let Some(f) = content_field(schema, &comp.handle, field) {
+				obj = obj.field(f);
+			}
 		}
 		objects.push(obj);
 	}
@@ -419,7 +424,9 @@ pub(super) fn content_objects(
 				))
 		};
 		for field in &comp.fields {
-			obj = obj.field(content_field(schema, &comp.handle, field));
+			if let Some(f) = content_field(schema, &comp.handle, field) {
+				obj = obj.field(f);
+			}
 		}
 		objects.push(obj);
 	}

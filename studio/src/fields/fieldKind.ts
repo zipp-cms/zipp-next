@@ -69,5 +69,7 @@ export function describeField(f: Field): string {
 		}
 		case 'custom':
 			return `${f.type} (plugin)`;
+		case 'note':
+			return 'Note for editors';
 	}
 }

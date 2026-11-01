@@ -77,12 +77,15 @@ pub fn generate(schema: &Schema) -> String {
 }
 
 fn fields(schema: &Schema, comp: &Component) -> String {
-	if comp.fields.is_empty() {
+	// notes have no value
+	let fields: Vec<_> =
+		comp.fields.iter().filter(|f| f.kind.has_value()).collect();
+	if fields.is_empty() {
 		return "Record<string, never>".into();
 	}
 
 	let mut out = "{\n".to_string();
-	for f in &comp.fields {
+	for f in fields {
 		let ty = match &f.kind {
 			FieldKind::Text { .. } | FieldKind::Email => "string".into(),
 			// `2026-11-14`, with a time `2026-11-14T20:00`
@@ -140,6 +143,7 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 				.get(ty)
 				.map(|t| t.typescript())
 				.unwrap_or_else(|| "unknown".into()),
+			FieldKind::Note { .. } => unreachable!(),
 		};
 		let opt = if f.required { "" } else { "?" };
 		out += &format!("\t{}{opt}: {ty};\n", f.handle);
@@ -167,5 +171,7 @@ mod tests {
 		assert!(ts.contains("\tbody?: (TextBlock | ButtonBlock)[];"));
 		assert!(ts.contains("\tlabel: string;"));
 		assert!(ts.contains("export type AnyEntry = Page | Event;"));
+		// a note has no value
+		assert!(!ts.contains("howto"));
 	}
 }

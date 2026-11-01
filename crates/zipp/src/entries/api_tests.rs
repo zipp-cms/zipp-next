@@ -205,6 +205,26 @@ async fn emails_and_defaults_of_new_entries() {
 }
 
 #[tokio::test]
+async fn notes_take_no_value() {
+	let ts = TestServer::new(site_with_roles());
+	let err = ts
+		.user(Some("author"))
+		.call(&CreateReq(input(
+			"events",
+			"event",
+			"Jazz",
+			json!({ "howto": "mine" }),
+		)))
+		.await
+		.unwrap_err();
+	let Error::Invalid(fields) = err else {
+		panic!("{err:?}")
+	};
+	assert_eq!(fields[0].path, "howto");
+	assert_eq!(fields[0].message, "a note holds no value");
+}
+
+#[tokio::test]
 async fn roles_on_entries() {
 	let ts = TestServer::new(site_with_roles());
 	let admin = ts.admin();

@@ -24,7 +24,8 @@ pub(super) fn system_prompt(
 		its fields exactly (blocks keep their id and type, rich text is a TipTap \
 		document, links are {{\"type\", \"value\", \"label\"}}).\n\
 		- Fields marked translatable have a value per site, the others are the same \
-		in every site.\n\
+		in every site. Notes (kind `note`) are texts for editors and hold no \
+		value.\n\
 		- After a change, look at the page the editor sees (its fields are below). If \
 		the change shows there, stay: the preview reloads and keeps its scroll \
 		position. It shows there if it is the page itself, a global like the header \

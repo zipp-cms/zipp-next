@@ -60,58 +60,112 @@
 	{#each shown as field (field.handle)}
 		{@const path = prefix + field.handle}
 		{@const Input = fieldComponent(field)}
-		<FieldLabel
-			{schema}
-			{component}
-			{field}
-			{path}
-			changed={changed.has(path)}
-		/>
-		<div class="value">
-			<Input {schema} {field} {values} {errors} {refs} {path} {changed} />
-			{#if errors[path]}<p class="error">{errors[path]}</p>{/if}
-			{#each inside(field, path) as e (e)}<p class="error">{e}</p>{/each}
+		<!-- the part of the row it takes, every field full width in narrow
+		places -->
+		<div
+			class="field"
+			class:part={(field.width ?? 100) < 100}
+			style:--span={(field.width ?? 100) / 25}
+		>
+			{#if field.kind !== 'note'}
+				<FieldLabel
+					{schema}
+					{component}
+					{field}
+					{path}
+					changed={changed.has(path)}
+				/>
+			{/if}
+			<div class="value">
+				<Input
+					{schema}
+					{field}
+					{values}
+					{errors}
+					{refs}
+					{path}
+					{changed}
+				/>
+				{#if errors[path]}<p class="error">{errors[path]}</p>{/if}
+				{#each inside(field, path) as e (e)}<p class="error">
+						{e}
+					</p>{/each}
+			</div>
 		</div>
 	{/each}
 </div>
 
 <style lang="scss">
+	// a row has four quarters, a field takes as many as its width says
+	// when there is room for them
 	.fields {
+		container-type: inline-size;
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0.875rem 1.25rem;
+	}
+
+	.field {
+		grid-column: 1 / -1;
 		display: flex;
 		flex-direction: column;
 		gap: 0.375rem;
+		min-width: 0;
+	}
 
-		.value {
-			margin-bottom: 0.875rem;
+	@container (min-width: 36rem) {
+		.field {
+			grid-column: span var(--span);
 		}
 	}
 
 	// inside a block: the label on the left, compact
 	.nested {
-		display: grid;
-		grid-template-columns: 8.125rem minmax(0, 1fr);
 		gap: 0.625rem 1.25rem;
-		align-items: center;
 
-		.value {
-			margin-bottom: 0;
+		.field {
+			display: grid;
+			grid-template-columns: 8.125rem minmax(0, 1fr);
+			gap: 1.25rem;
+			align-items: center;
+
+			// at the top of tall fields like blocks or rich text, the first
+			// line of a field is 2.125rem high
+			> :global(label) {
+				align-self: start;
+				flex-direction: column;
+				align-items: flex-start;
+				gap: 1px;
+				padding-top: 0.4375rem;
+			}
+
+			// a note has no label, it sits where the values are
+			> .value:only-child {
+				grid-column: 2;
+			}
 		}
+	}
 
-		// at the top of tall fields like blocks or rich text, the first
-		// line of a field is 2.125rem high
-		> :global(label) {
-			align-self: start;
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 1px;
-			padding-top: 0.4375rem;
+	// fields that share a row keep their label above
+	@container (min-width: 36rem) {
+		.nested .part {
+			display: flex;
+			gap: 0.375rem;
+
+			> .value:only-child {
+				grid-column: auto;
+			}
 		}
 	}
 
 	@include max-tablet {
-		.nested {
-			grid-template-columns: 1fr;
+		.nested .field {
+			display: flex;
 			gap: 0.375rem;
+
+			> .value:only-child {
+				grid-column: auto;
+			}
 		}
 	}
 </style>

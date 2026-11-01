@@ -69,6 +69,8 @@ export type FieldKind =
 			min: number | null;
 			max: number | null;
 	  }
+	/** text for editors from the code, markdown; it has no value */
+	| { kind: 'note'; text: string }
 	/** a field type of another crate, its editor is a module */
 	| { kind: 'custom'; type: string; options: unknown };
 
@@ -82,6 +84,8 @@ export type Field = FieldKind & {
 	instructions?: string;
 	/** what a new entry or block starts with */
 	default?: unknown;
+	/** the part of a row in the editor in percent, none is 100 */
+	width?: 25 | 50 | 75;
 };
 
 /** What a field is besides its kind and options, see [`sameKind`]. */
@@ -93,6 +97,7 @@ const FIELD_KEYS = [
 	'translatable',
 	'instructions',
 	'default',
+	'width',
 ];
 
 /**
@@ -215,6 +220,8 @@ export type ValueOf = {
 	blocks: Block[];
 	/** what the plugin keeps */
 	custom: unknown;
+	/** nothing, a note only shows its text */
+	note: never;
 };
 
 /** The value of a field in `values`, undefined while it has none. */

@@ -275,3 +275,34 @@ fn instructions_need_no_migration() {
 	let json = serde_json::to_value(&s.components[0].fields[0]).unwrap();
 	assert!(json.get("instructions").is_none());
 }
+
+#[test]
+fn widths_and_notes_need_no_migration() {
+	let s = site();
+	let mut s2 = s.clone();
+	let event = s2.get_mut("event").unwrap();
+	event.fields[0].width = 50;
+	// a note changes its text, another comes, the one of before goes
+	let note = event.fields.iter_mut().find(|f| f.handle == "howto");
+	*note.unwrap() = Field::note("howto", "Other text");
+	event.fields.push(Field::note("hint", "New"));
+	assert_eq!(diff(&s, &s2, &[]).unwrap(), []);
+	let mut s3 = s.clone();
+	s3.get_mut("event")
+		.unwrap()
+		.fields
+		.retain(|f| f.handle != "howto");
+	assert_eq!(diff(&s, &s3, &[]).unwrap(), []);
+
+	// a field that becomes a note loses its content
+	let mut s4 = s.clone();
+	let event = s4.get_mut("event").unwrap();
+	event.fields[0] = Field::note("city", "No city");
+	assert_eq!(
+		diff(&s, &s4, &[]).unwrap(),
+		[Op::RemoveField {
+			component: "event".into(),
+			field: "city".into(),
+		}]
+	);
+}

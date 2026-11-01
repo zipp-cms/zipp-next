@@ -531,6 +531,7 @@ impl Importer<'_> {
 			}
 			FieldKind::RichText { .. } => Some(self.rich_text(field, v)),
 			FieldKind::Custom { .. } => Some(v.clone()),
+			FieldKind::Note { .. } => None,
 		}
 	}
 

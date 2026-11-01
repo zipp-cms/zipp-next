@@ -1106,6 +1106,7 @@
             "indexed": true,
             "translatable": false,
             "instructions": "Past events leave the list of upcoming ones.",
+            "width": 25,
             "kind": "date",
             "time": false
           },
@@ -1116,6 +1117,7 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Empty: the website shows none.",
+            "width": 25,
             "kind": "date",
             "time": true
           },
@@ -1125,6 +1127,7 @@
             "required": true,
             "indexed": true,
             "translatable": false,
+            "width": 50,
             "kind": "text",
             "max": null,
             "multiline": false
@@ -1161,6 +1164,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "width": 50,
             "kind": "checkboxes",
             "options": [
               {
@@ -1184,6 +1188,7 @@
             "indexed": true,
             "translatable": false,
             "default": "de",
+            "width": 50,
             "kind": "dropdown",
             "options": [
               {
@@ -1214,6 +1219,7 @@
             "required": false,
             "indexed": true,
             "translatable": false,
+            "width": 50,
             "kind": "number",
             "min": 0.0,
             "max": 1000.0,
@@ -1226,6 +1232,7 @@
             "required": false,
             "indexed": true,
             "translatable": false,
+            "width": 50,
             "kind": "boolean"
           },
           {
@@ -1234,6 +1241,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "width": 50,
             "kind": "assets",
             "images": true,
             "max": 1,
@@ -1245,6 +1253,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "width": 50,
             "kind": "assets",
             "images": false,
             "max": 1,
@@ -1404,6 +1413,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "width": 50,
             "kind": "text",
             "max": 200,
             "multiline": false
@@ -1415,6 +1425,7 @@
             "indexed": false,
             "translatable": false,
             "default": "wide",
+            "width": 50,
             "kind": "dropdown",
             "options": [
               {
@@ -2819,6 +2830,7 @@
             "indexed": true,
             "translatable": false,
             "instructions": "Past events leave the list of upcoming ones.",
+            "width": 25,
             "kind": "date",
             "time": false
           },
@@ -2829,6 +2841,7 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Empty: the website shows none.",
+            "width": 25,
             "kind": "date",
             "time": true
           },
@@ -2838,6 +2851,7 @@
             "required": true,
             "indexed": true,
             "translatable": false,
+            "width": 50,
             "kind": "text",
             "max": null,
             "multiline": false
@@ -2874,6 +2888,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "width": 50,
             "kind": "checkboxes",
             "options": [
               {
@@ -2897,6 +2912,7 @@
             "indexed": true,
             "translatable": false,
             "default": "de",
+            "width": 50,
             "kind": "dropdown",
             "options": [
               {
@@ -2927,6 +2943,7 @@
             "required": false,
             "indexed": true,
             "translatable": false,
+            "width": 50,
             "kind": "number",
             "min": 0.0,
             "max": 1000.0,
@@ -2939,7 +2956,17 @@
             "required": false,
             "indexed": true,
             "translatable": false,
+            "width": 50,
             "kind": "boolean"
+          },
+          {
+            "handle": "imageHint",
+            "label": "Image hint",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "note",
+            "text": "**Bild** im Querformat (3:2), mindestens 1600 px breit: es steht in der Liste und oben auf der Seite."
           },
           {
             "handle": "image",
@@ -2947,6 +2974,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "width": 50,
             "kind": "assets",
             "images": true,
             "max": 1,
@@ -2958,6 +2986,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "width": 50,
             "kind": "assets",
             "images": false,
             "max": 1,
@@ -3105,6 +3134,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "width": 50,
             "kind": "text",
             "max": 200,
             "multiline": false
@@ -3116,6 +3146,7 @@
             "indexed": false,
             "translatable": false,
             "default": "wide",
+            "width": 50,
             "kind": "dropdown",
             "options": [
               {

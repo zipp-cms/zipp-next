@@ -39,6 +39,7 @@ pub fn site() -> Schema {
 				),
 				Field::email("contact"),
 				Field::boolean("listed").default(true),
+				Field::note("howto", "Images in **landscape**.").width(50),
 			],
 		)
 		.transform(Transform::new("small").width(100))
@@ -137,6 +138,37 @@ fn finds_mistakes() {
 	s.check().unwrap();
 	let s = site().doc("pages", "Pages", "");
 	assert_eq!(s.check().unwrap_err(), "doc pages exists twice");
+}
+
+#[test]
+fn widths_and_notes() {
+	let with = |f: Field| site().block("x", "X", [f]).check();
+	with(Field::text("t").width(25)).unwrap();
+	assert_eq!(
+		with(Field::text("t").width(30)).unwrap_err(),
+		"x.t: the width is 25, 50, 75 or 100"
+	);
+	// 100 is the default and stays out of the JSON
+	let json = serde_json::to_value(Field::text("t")).unwrap();
+	assert!(json.get("width").is_none());
+	let json = serde_json::to_value(Field::text("t").width(50)).unwrap();
+	assert_eq!(json["width"], 50);
+
+	with(Field::note("n", "**Bilder** im Querformat")).unwrap();
+	assert_eq!(
+		with(Field::note("n", " ")).unwrap_err(),
+		"x.n: a note needs a text"
+	);
+	assert!(
+		with(Field::note("n", "Hi").required())
+			.unwrap_err()
+			.contains("a note holds no value")
+	);
+	assert!(
+		with(Field::note("n", "Hi").default("x"))
+			.unwrap_err()
+			.contains("only fields of plain values")
+	);
 }
 
 #[test]

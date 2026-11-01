@@ -35,6 +35,7 @@ noindex and robots.txt disallow everything.
   `Schema::finish`, which fills the choice of sections and types.
 - Title patterns know `{title}`, `{siteName}` and `{sectionName}`, not
   Craft's object templates.
-- `postDate` is when the entry was created; zipp has no scheduled posts.
+- `postDate` is the entry's post date like Craft's: set when it is
+  first published, editors change it, a future one schedules the entry.
 - Without a site name the title uses the site's name (like "Deutsch"):
   set the site name in the settings.

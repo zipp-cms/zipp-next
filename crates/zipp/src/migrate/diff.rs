@@ -6,6 +6,8 @@ pub fn diff(
 	new: &Schema,
 	renames: &[Rename],
 ) -> Result<Vec<Op>, String> {
+	// notes hold no content, adding, changing or removing one is free
+	let (old, new) = (&without_notes(old), &without_notes(new));
 	let mut ops = vec![];
 	let mut cur = old.clone();
 	let mut push = |op: Op, cur: &mut Schema| {
@@ -151,4 +153,12 @@ pub fn diff(
 	}
 
 	Ok(ops)
+}
+
+fn without_notes(schema: &Schema) -> Schema {
+	let mut schema = schema.clone();
+	for c in &mut schema.components {
+		c.fields.retain(|f| f.kind.has_value());
+	}
+	schema
 }

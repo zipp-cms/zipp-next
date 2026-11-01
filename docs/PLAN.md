@@ -117,9 +117,10 @@ commit.
 
 - [ ] Conditions: fields (and tabs) shown only when another field has a
       value, like Craft's field conditions (zandi's `hasPage`)
-- [ ] A read-only markdown field: it only shows its text in the field
+- [x] A read-only markdown field: it only shows its text in the field
       layout (a note, a how-to), like Craft's tip; editors don't edit it
-- [ ] Field width in the editor: 25 %, 50 %, 75 %, 100 %
+      (`Field::note`)
+- [x] Field width in the editor: 25 %, 50 %, 75 %, 100 % (`.width(50)`)
 - [ ] Settings (globals) without the big title above the fields
 - [ ] Tabs inside blocks?
 - [ ] Max level of a structure?

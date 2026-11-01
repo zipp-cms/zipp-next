@@ -11,6 +11,7 @@ import GroupField from './GroupField.svelte';
 import LinkField from './LinkField.svelte';
 import MarkdownField from './MarkdownField.svelte';
 import NavigationField from './NavigationField.svelte';
+import NoteField from './NoteField.svelte';
 import NumberField from './NumberField.svelte';
 import RelationField from './RelationField.svelte';
 import RichTextField from './RichTextField.svelte';
@@ -53,6 +54,7 @@ const FIELDS: { [K in Field['kind']]: Component<FieldProps<FieldOf<K>>> } = {
 	navigation: NavigationField,
 	blocks: BlocksField,
 	custom: CustomField,
+	note: NoteField,
 };
 
 /** The component of a field. */

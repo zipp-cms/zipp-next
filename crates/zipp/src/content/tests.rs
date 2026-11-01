@@ -160,6 +160,17 @@ fn emails_are_addresses() {
 }
 
 #[test]
+fn notes_hold_no_value() {
+	let s = site();
+	let comp = s.get("event").unwrap();
+	let empty = json!({ "howto": null });
+	assert_eq!(validate(&s, comp, &empty).unwrap(), json!({}));
+	let err = validate(&s, comp, &json!({ "howto": "x" })).unwrap_err();
+	assert_eq!(err[0].path, "howto");
+	assert_eq!(err[0].message, "a note holds no value");
+}
+
+#[test]
 fn defaults_fit_their_field() {
 	let talk = |f: Field| {
 		site()
