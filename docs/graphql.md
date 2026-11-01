@@ -40,6 +40,9 @@ assets are strings (`ID`) like Craft's. Entries have
 `localized`
 (the entry in the other sites), images `focalPoint`, `title` and
 `url(width: 800)` for the widths of `.image_widths([400, 800, 1600])`.
+Every asset has `kind` (`image` or `file`), `mimeType` (`video/mp4`
+for a video) and `size`, and the schema's asset fields
+(`image { url credit }`).
 
 ## crelte
 

@@ -1,12 +1,14 @@
 <script lang="ts">
-	import { assetUrl, type Asset } from './api';
+	import { assetUrl, isVideo, type Asset } from './api';
+	import { duration } from '../core/format';
 	import Icon from 'zipp-ui/Icon.svelte';
 
 	/**
-	 * A square tile of a file: the image, or an icon with its name
-	 * (without `named` only the icon, the name is next to it). `small` is
-	 * for a row's few pixels: an icon and a name don't fit there, a file
-	 * shows only its type and an image only itself.
+	 * A square tile of a file: the image, a video's first frame with how
+	 * long it plays, or an icon with its name (without `named` only the
+	 * icon, the name is next to it). `small` is for a row's few pixels:
+	 * an icon and a name don't fit there, a file shows only its type and
+	 * an image only itself.
 	 */
 	let {
 		asset,
@@ -15,11 +17,26 @@
 	}: { asset: Asset; named?: boolean; small?: boolean } = $props();
 
 	const ext = $derived(asset.filename.split('.').pop()?.toUpperCase() ?? '');
+	// the browser knows it once it read the start of the file
+	let seconds = $state(0);
 </script>
 
 <div class="thumb">
 	{#if asset.kind === 'image'}
 		<img src={assetUrl(asset, true)} alt={asset.alt} loading="lazy" />
+	{:else if isVideo(asset) && !small}
+		<!-- a frame just after the start, the server makes no posters;
+		only the start of the file loads -->
+		<video
+			src="{assetUrl(asset)}#t=0.1"
+			preload="metadata"
+			muted
+			playsinline
+			tabindex="-1"
+			bind:duration={seconds}
+		></video>
+		<span class="play"><Icon name="play" size={18} /></span>
+		{#if seconds}<span class="duration">{duration(seconds)}</span>{/if}
 	{:else if small}
 		<span class="type">{ext}</span>
 	{:else}
@@ -42,11 +59,43 @@
 		overflow: hidden;
 	}
 
-	img {
+	img,
+	video {
 		display: block;
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+	}
+
+	video {
+		pointer-events: none;
+	}
+
+	.play {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		display: grid;
+		place-items: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		color: var(--text);
+		background: rgba(255, 255, 255, 0.88);
+		border-radius: 50%;
+		transform: translate(-50%, -50%);
+	}
+
+	.duration {
+		position: absolute;
+		right: 0.375rem;
+		bottom: 0.375rem;
+		padding: 0 0.3125rem;
+		font-size: var(--fs-2xs);
+		font-weight: 600;
+		line-height: 1rem;
+		color: var(--text-2);
+		background: rgba(255, 255, 255, 0.88);
+		border-radius: var(--radius-sm);
 	}
 
 	.file {

@@ -41,10 +41,13 @@ pub use field::FieldKind;
 pub use field::Holds;
 pub use field::LinkKind;
 use field::*;
-pub use field::{Column, ColumnKind};
+pub use field::{Column, ColumnKind, VIDEOS};
 
 /// The single of the texts of the frontend, see [`Schema::translations`].
 pub const TRANSLATIONS: &str = "translations";
+
+/// The component of the fields of assets, see [`Schema::asset_fields`].
+pub const ASSET: &str = "asset";
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Schema {
@@ -423,6 +426,15 @@ impl Schema {
 		let field = Field::texts(namespace, keys);
 		self.get_mut(TRANSLATIONS).unwrap().fields.push(field);
 		self
+	}
+
+	/// Fields of every asset beside title and alt, like a photographer or
+	/// a licence: `.asset_fields([Field::text("credit")])`. They are a
+	/// component `asset`, so validation and migrations are the ones of
+	/// blocks; the values are the same in all sites, GraphQL has them on
+	/// `Asset`.
+	pub fn asset_fields(self, fields: impl IntoIterator<Item = Field>) -> Self {
+		self.component(ASSET, "Asset", false, fields)
 	}
 
 	/// A role of studio users, see [`Role`].

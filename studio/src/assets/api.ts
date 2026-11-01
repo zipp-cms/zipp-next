@@ -1,4 +1,5 @@
 import { download, request } from '../core/client';
+import type { Values } from '../core/schema';
 
 export type Asset = {
 	id: number;
@@ -24,7 +25,35 @@ export type Asset = {
 	version: string;
 	/** null: on the top, not in a folder */
 	folderId: number | null;
+	/** the values of the schema's asset fields (the component `asset`) */
+	fields: Values;
 };
+
+/** The component of the asset fields, in the schema when it has some. */
+export const ASSET_FIELDS = 'asset';
+
+/** The extensions of `Field::videos`. */
+export const VIDEOS = ['mp4', 'webm', 'mov'];
+
+/** Whether a field of these extensions takes only videos. */
+export function onlyVideos(extensions: string[] | undefined): boolean {
+	return !!extensions?.length && extensions.every(e => VIDEOS.includes(e));
+}
+
+/** Whether a file is a video the browser plays. */
+export function isVideo(a: Asset): boolean {
+	return a.mime.startsWith('video/');
+}
+
+/** What the library can show: all, or only one type. */
+export type AssetKind = 'image' | 'video' | 'document';
+
+export const KINDS: { value: AssetKind | ''; label: string }[] = [
+	{ value: '', label: 'All' },
+	{ value: 'image', label: 'Images' },
+	{ value: 'video', label: 'Videos' },
+	{ value: 'document', label: 'Documents' },
+];
 
 /**
  * What the image editor changes, the uploaded file stays: rotate, flip,
@@ -108,6 +137,8 @@ export type AssetQuery = {
 	/** null: the top, none: all folders */
 	folder?: number | null;
 	images?: boolean;
+	/** only images, videos or documents (files but videos and audio) */
+	kind?: AssetKind;
 	extensions?: string[];
 };
 
@@ -117,7 +148,7 @@ export function listAssets(q: AssetQuery): Promise<Asset[]> {
 	if (q.ids) p.set('ids', q.ids.join(','));
 	if (q.folder !== undefined)
 		p.set('folder', q.folder === null ? 'top' : `${q.folder}`);
-	if (q.images) p.set('kind', 'image');
+	if (q.images || q.kind) p.set('kind', q.images ? 'image' : q.kind!);
 	if (q.extensions?.length) p.set('extensions', q.extensions.join(','));
 	return request('GET', '/assets?' + p);
 }
@@ -131,6 +162,8 @@ export function updateAsset(
 		focalY: number;
 		filename?: string;
 		edits?: Edits | null;
+		/** unchanged when missing */
+		fields?: Values;
 	},
 ): Promise<Asset> {
 	return request('PUT', '/assets/' + id, data);

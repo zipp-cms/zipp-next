@@ -749,6 +749,51 @@
     {
       "op": "addComponent",
       "component": {
+        "handle": "asset",
+        "name": "Asset",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "credit",
+            "label": "Credit",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Who made it, shown under the image.",
+            "width": 50,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "licence",
+            "label": "Licence",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "width": 50,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "own",
+                "label": "Own"
+              },
+              {
+                "value": "cc",
+                "label": "CC BY"
+              },
+              {
+                "value": "press",
+                "label": "Press image"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
         "handle": "home",
         "name": "Home",
         "entry": true,
@@ -788,6 +833,7 @@
             "types": [
               "text",
               "images",
+              "video",
               "button",
               "events",
               "contact"
@@ -874,6 +920,7 @@
             "types": [
               "text",
               "images",
+              "video",
               "button",
               "events",
               "contact"
@@ -1035,6 +1082,7 @@
             "types": [
               "text",
               "images",
+              "video",
               "button",
               "events",
               "contact"
@@ -1495,6 +1543,54 @@
           "lucide": "images"
         },
         "title_field": "caption"
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "video",
+        "name": "Video",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "video",
+            "label": "Video",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": false,
+            "max": 1,
+            "extensions": [
+              "mp4",
+              "webm",
+              "mov"
+            ]
+          },
+          {
+            "handle": "poster",
+            "label": "Poster",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown until it plays, empty: its first frame.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "loop",
+            "label": "Loop",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Plays muted and over again, like a moving image.",
+            "kind": "boolean"
+          }
+        ],
+        "icon": {
+          "lucide": "video"
+        }
       }
     },
     {
@@ -2539,6 +2635,48 @@
         ]
       },
       {
+        "handle": "asset",
+        "name": "Asset",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "credit",
+            "label": "Credit",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Who made it, shown under the image.",
+            "width": 50,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "licence",
+            "label": "Licence",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "width": 50,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "own",
+                "label": "Own"
+              },
+              {
+                "value": "cc",
+                "label": "CC BY"
+              },
+              {
+                "value": "press",
+                "label": "Press image"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "handle": "home",
         "name": "Home",
         "entry": true,
@@ -2578,6 +2716,7 @@
             "types": [
               "text",
               "images",
+              "video",
               "button",
               "events",
               "contact"
@@ -2661,6 +2800,7 @@
             "types": [
               "text",
               "images",
+              "video",
               "button",
               "events",
               "contact"
@@ -2816,6 +2956,7 @@
             "types": [
               "text",
               "images",
+              "video",
               "button",
               "events",
               "contact"
@@ -3264,6 +3405,51 @@
           "lucide": "images"
         },
         "title_field": "caption"
+      },
+      {
+        "handle": "video",
+        "name": "Video",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "video",
+            "label": "Video",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": false,
+            "max": 1,
+            "extensions": [
+              "mp4",
+              "webm",
+              "mov"
+            ]
+          },
+          {
+            "handle": "poster",
+            "label": "Poster",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown until it plays, empty: its first frame.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "loop",
+            "label": "Loop",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Plays muted and over again, like a moving image.",
+            "kind": "boolean"
+          }
+        ],
+        "icon": {
+          "lucide": "video"
+        }
       },
       {
         "handle": "button",

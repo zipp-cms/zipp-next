@@ -89,6 +89,10 @@ pub struct Asset {
 	pub alt: String,
 	pub focal_x: f64,
 	pub focal_y: f64,
+	/// the values of the asset fields, see
+	/// [`Schema::asset_fields`](crate::Schema::asset_fields)
+	#[serde(default)]
+	pub fields: serde_json::Value,
 	pub created_at: i64,
 }
 
@@ -124,7 +128,7 @@ impl Asset {
 
 const COLUMNS: &str = "id, filename, kind, mime, size, width, height, alt, \
 	focal_x, focal_y, created_at, title, edits, \
-	(SELECT email FROM users WHERE id = uploaded_by), folder_id";
+	(SELECT email FROM users WHERE id = uploaded_by), folder_id, fields";
 
 fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 	let (width, height): (Option<u32>, Option<u32>) = (r.get(5)?, r.get(6)?);
@@ -156,6 +160,8 @@ fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 		focal_y,
 		created_at: r.get(10)?,
 		title: r.get(11)?,
+		fields: serde_json::from_str(&r.get::<_, String>(15)?)
+			.unwrap_or_default(),
 	})
 }
 
@@ -194,8 +200,8 @@ pub(crate) fn trashed(
 	let rows = stmt.query_map([], |r| {
 		Ok(crate::trash::TrashedAsset {
 			asset: from_row(r)?,
-			deleted_at: r.get(15)?,
-			deleted_by: r.get(16)?,
+			deleted_at: r.get(16)?,
+			deleted_by: r.get(17)?,
 		})
 	})?;
 	Ok(rows.collect::<rusqlite::Result<_>>()?)

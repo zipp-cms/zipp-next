@@ -199,7 +199,28 @@ downloads it with its subfolders as a zip (`GET /api/assets/zip`, the
 files as uploaded, nothing from the trash), and a zip uploaded in the
 library can be unpacked into folders (`POST /api/assets/unzip`: folders
 of the same name merge, hidden files and `__MACOSX` stay out, at most
-2000 files and 1 GB unpacked).
+2000 files and 1 GB unpacked). The library filters by type: images,
+videos or documents (`GET /api/assets?kind=video`).
+
+Assets can have fields of their own beside title and alt, like Craft's
+asset field layout: `.asset_fields([Field::text("credit"),
+Field::dropdown("licence", [...])])`. They are the component `asset`,
+so they are checked like a block's fields, take part in migrations
+(`makemigration --rename asset.credit=photographer` renames the key in
+every asset) and are edited in the asset panel; GraphQL has them on
+`Asset` (`image { url credit }`), `zipp types` writes `AssetFields`.
+Their values are the same in all sites (like the alt text), they have
+no defaults and can't be indexed; their relations don't count as the
+usage of an asset or entry.
+
+Videos are files: `Field::videos("clip")` takes mp4, webm and mov
+(`.extensions` of those), GraphQL's `kind` is `file` and `mimeType`
+`video/mp4`, so a frontend knows to show a `<video>`. The studio plays
+them in the asset panel and shows their first frame and length in the
+library. The files are served with ranges, so a video seeks without
+loading all of it. The server makes no posters; a frontend takes the
+first frame or an image field next to the video (the example's video
+block has one).
 
 ## Translations
 

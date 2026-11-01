@@ -144,6 +144,8 @@ const MIGRATIONS: &[&str] = &[r#"
 		created_at INTEGER NOT NULL,
 		-- the image editor's, JSON
 		edits TEXT,
+		-- the values of the schema's asset fields, JSON
+		fields TEXT NOT NULL DEFAULT '{}',
 		uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
 		-- NULL: on the top, in no folder
 		folder_id INTEGER REFERENCES asset_folders(id),

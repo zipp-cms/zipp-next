@@ -1,14 +1,17 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import {
+		ASSET_FIELDS,
 		assetUrl,
+		isVideo,
 		ROOT,
 		folderRows,
 		transparentEdges,
 		type Asset,
 		type Folder,
 	} from './api';
-	import { type Schema } from '../core/schema';
+	import { componentOf, type Schema } from '../core/schema';
+	import Fields from '../fields/Fields.svelte';
 	import { entryPath } from '../core/router.svelte';
 	import { canAssets } from '../core/access';
 	import { AssetForm } from './assetForm.svelte';
@@ -23,10 +26,11 @@
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
 
 	/**
-	 * A file like Craft's asset panel: the image editor, title, alt text
-	 * and filename, what it is and who uploaded it, download, copy the
-	 * url, replace the file, its folder, and where it is used. In a
-	 * flyout with Save and Cancel.
+	 * A file like Craft's asset panel: the image editor or a player,
+	 * title, alt text, the asset fields of the schema and filename, what
+	 * it is and who uploaded it, download, copy the url, replace the
+	 * file, its folder, and where it is used. In a flyout with Save and
+	 * Cancel.
 	 */
 	let {
 		schema,
@@ -50,6 +54,7 @@
 	// the flyout is keyed by the asset
 	const form = untrack(() => new AssetForm(asset));
 	const current = $derived(form.current);
+	const assetFields = $derived(componentOf(schema, ASSET_FIELDS));
 	let copied = $state(false);
 
 	/** Whether the changes may go: none, or the editor says so. */
@@ -99,6 +104,24 @@
 						editable={canEdit}
 					/>
 				{/key}
+			{:else if isVideo(current)}
+				{#key current.filename + current.size}
+					<!-- svelte-ignore a11y_media_has_caption -->
+					<video
+						class="player"
+						src={assetUrl(current)}
+						controls
+						preload="metadata"
+					></video>
+				{/key}
+			{:else if current.mime.startsWith('audio/')}
+				{#key current.filename + current.size}
+					<audio
+						src={assetUrl(current)}
+						controls
+						preload="metadata"
+					></audio>
+				{/key}
 			{:else}
 				<div class="file"><Thumb asset={current} /></div>
 			{/if}
@@ -122,6 +145,18 @@
 						disabled={!canEdit}
 					/>
 				</label>
+				{#if assetFields?.fields.length}
+					<!-- a disabled fieldset disables every input in it -->
+					<fieldset disabled={!canEdit}>
+						<Fields
+							{schema}
+							component={assetFields}
+							values={form.values}
+							errors={form.fields}
+							refs={{}}
+						/>
+					</fieldset>
+				{/if}
 				<label class="stacked">
 					Filename
 					<input bind:value={form.filename} disabled={!canEdit} />
@@ -249,6 +284,18 @@
 
 	.file {
 		width: 15rem;
+	}
+
+	.player {
+		display: block;
+		width: 100%;
+		max-height: 70vh;
+		background: var(--text);
+		border-radius: var(--radius);
+	}
+
+	audio {
+		width: 100%;
 	}
 
 	aside {

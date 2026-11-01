@@ -1,12 +1,31 @@
 use super::*;
 
+/// An asset as the parent of its fields, with the site of the content
+/// it is in for the relations of its asset fields.
+pub(super) struct SiteAsset {
+	pub asset: Asset,
+	pub site: String,
+}
+
+pub(super) fn asset_value(asset: Asset, site: &str) -> FieldValue<'static> {
+	FieldValue::owned_any(SiteAsset {
+		asset,
+		site: site.into(),
+	})
+}
+
+fn asset_of<'a>(ctx: &ResolverContext<'a>) -> async_graphql::Result<&'a Asset> {
+	Ok(&ctx.parent_value.try_downcast_ref::<SiteAsset>()?.asset)
+}
+
 /// An asset, like Craft's: `url(transform: "medium")` and the size after
-/// the transform. Transforms are the named ones of the schema.
-pub(super) fn asset_object() -> Object {
+/// the transform. Transforms are the named ones of the schema, the asset
+/// fields of the schema are fields of it.
+pub(super) fn asset_object(schema: &Schema) -> Object {
 	let plain = |name: &'static str, ty: TypeRef| {
 		GqlField::new(name, ty, move |ctx| {
 			FieldFuture::new(async move {
-				let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+				let a = asset_of(&ctx)?;
 				let v = match name {
 					"id" => GqlValue::from(a.id.to_string()),
 					"filename" => GqlValue::from(a.filename.clone()),
@@ -36,8 +55,15 @@ pub(super) fn asset_object() -> Object {
 	let s = || TypeRef::named_nn(TypeRef::STRING);
 	let f = || TypeRef::named_nn(TypeRef::FLOAT);
 
-	Object::new("Asset")
-		.field(plain("id", TypeRef::named_nn(TypeRef::ID)))
+	let mut obj = Object::new("Asset");
+	if let Some(comp) = schema.get(ASSET) {
+		for field in &comp.fields {
+			if let Some(f) = content_field(schema, ASSET, field) {
+				obj = obj.field(f);
+			}
+		}
+	}
+	obj.field(plain("id", TypeRef::named_nn(TypeRef::ID)))
 		.field(plain("filename", s()))
 		.field(plain("kind", s()))
 		.field(plain("mimeType", s()))
@@ -53,7 +79,7 @@ pub(super) fn asset_object() -> Object {
 		.field(
 			GqlField::new("url", s(), |ctx| {
 				FieldFuture::new(async move {
-					let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+					let a = asset_of(&ctx)?;
 					let t = transform_of(&ctx, a)?;
 					let url = asset_url(
 						&ctx,
@@ -83,7 +109,7 @@ pub(super) fn asset_object() -> Object {
 		.field(
 			GqlField::new("srcset", TypeRef::named(TypeRef::STRING), |ctx| {
 				FieldFuture::new(async move {
-					let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+					let a = asset_of(&ctx)?;
 					let schema = ctx.data::<Arc<Schema>>()?;
 					let mut parts = vec![];
 					for name in ctx.args.try_get("transforms")?.list()?.iter() {
@@ -160,7 +186,7 @@ pub(super) fn asset_size(
 	pick: fn((u32, u32)) -> u32,
 ) -> FieldFuture {
 	FieldFuture::new(async move {
-		let a = ctx.parent_value.try_downcast_ref::<Asset>()?;
+		let a = asset_of(&ctx)?;
 		let size = match transform_of(&ctx, a)? {
 			Some(t) => a.size_after(&t),
 			None => a.width.zip(a.height),

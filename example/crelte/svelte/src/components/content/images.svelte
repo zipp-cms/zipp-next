@@ -10,6 +10,10 @@
 		<Img {img} />
 	{/each}
 	{#if caption}<figcaption>{caption}</figcaption>{/if}
+	<!-- the asset field credit of each image -->
+	{#each images.filter(i => i.credit) as img (img.url)}
+		<figcaption class="credit">© {img.credit}</figcaption>
+	{/each}
 </figure>
 
 <style lang="scss">
@@ -44,5 +48,10 @@
 		margin-top: 0.4rem;
 		color: #666;
 		font-size: 0.9rem;
+	}
+
+	.credit {
+		margin-top: 0.1rem;
+		font-size: 0.75rem;
 	}
 </style>

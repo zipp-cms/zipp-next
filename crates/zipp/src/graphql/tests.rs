@@ -3,6 +3,7 @@ use serde_json::json;
 use super::*;
 use crate::entries::save;
 use crate::entries::tests::input;
+use crate::schema::Field;
 use crate::schema::tests::site;
 
 async fn run(gql: &GqlSchema, query: &str, published_only: bool) -> Value {
@@ -173,6 +174,64 @@ async fn assets_with_transforms() {
 		img["srcset"],
 		"https://cms.test/assets/1/small/hero.png 100w, \
 		https://cms.test/assets/1/square/hero.png 50w"
+	);
+	std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test]
+async fn asset_fields_and_videos() {
+	let db = Db::memory().unwrap();
+	let mut s = site().asset_fields([
+		Field::text("credit"),
+		Field::relation("event", ["event"]).max(1),
+	]);
+	let event = s.get_mut("event").unwrap();
+	event.fields.push(Field::videos("clip").max(1));
+	let s = Arc::new(s);
+	let gql = build(
+		s.clone(),
+		db.clone(),
+		"https://cms.test".into(),
+		SiteUrls::new(),
+	)
+	.unwrap();
+	let dir = std::env::temp_dir()
+		.join(format!("zipp-gql-{}", rand::random::<u32>()));
+	{
+		let conn = db.conn();
+		let a =
+			crate::assets::store(&conn, &dir, "clip.mp4", b"v", None).unwrap();
+		let jazz = input("events", "event", "Jazz", json!({}));
+		let jazz = save(&conn, &s, None, jazz, None).unwrap();
+		let change = crate::assets::AssetChange {
+			fields: Some(json!({ "credit": "Anna", "event": [jazz.id] })),
+			..Default::default()
+		};
+		crate::assets::update(&conn, &dir, &s, a.id, change).unwrap();
+		let fields = json!({ "clip": [a.id] });
+		let e = input("events", "event", "Film", fields);
+		save(&conn, &s, None, e, None).unwrap();
+	}
+
+	// a frontend knows a video by its type, the event in the site asked
+	let data = run(
+		&gql,
+		r#"{ entry(uri: "events/film", site: "en") {
+			... on event_Entry { clip {
+				kind mimeType size credit event { title site }
+			} } } }"#,
+		true,
+	)
+	.await;
+	assert_eq!(
+		data["entry"]["clip"][0],
+		json!({
+			"kind": "file",
+			"mimeType": "video/mp4",
+			"size": 1,
+			"credit": "Anna",
+			"event": [{ "title": "Jazz", "site": "en" }],
+		})
 	);
 	std::fs::remove_dir_all(dir).unwrap();
 }

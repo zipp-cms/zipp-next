@@ -56,6 +56,11 @@ impl Schema {
 					None => format!("component {} exists twice", comp.handle),
 				});
 			}
+			if comp.handle == ASSET && comp.entry {
+				return Err(format!(
+					"{ASSET} is the handle of the asset fields, not of an entry type"
+				));
+			}
 			for (j, tab) in comp.tabs.iter().enumerate() {
 				let at = format!("{}: tab {}", comp.handle, tab.name);
 				if tab.name.trim().is_empty() {
@@ -82,6 +87,9 @@ impl Schema {
 				}
 				let reserved = match comp.entry {
 					true => crate::graphql::ENTRY_FIELDS,
+					false if comp.handle == ASSET => {
+						crate::graphql::ASSET_FIELDS
+					}
 					false => crate::graphql::BLOCK_FIELDS,
 				};
 				if reserved.contains(&field.handle.as_str()) {
@@ -377,6 +385,14 @@ impl Schema {
 				return Err(format!("unknown component {component}"));
 			}
 		}
+		// the asset fields only live on assets
+		let group = match &field.kind {
+			FieldKind::Group { component } => Some(component),
+			_ => None,
+		};
+		if types.iter().chain(group).any(|t| t == ASSET) {
+			return Err(format!("{ASSET} holds the asset fields, no content"));
+		}
 		for t in types {
 			match self.get(t) {
 				Some(c) if c.entry == entry => {}
@@ -400,6 +416,10 @@ impl Schema {
 			}
 		}
 
+		// uploads start empty, they know no schema
+		if comp.handle == ASSET && field.default.is_some() {
+			return Err("asset fields have no defaults".into());
+		}
 		crate::content::check_default(self, field)
 			.map_err(|e| format!("default: {e}"))?;
 

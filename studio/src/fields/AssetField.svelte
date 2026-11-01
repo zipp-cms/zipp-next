@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Asset } from '../assets/api';
+	import { onlyVideos, type Asset } from '../assets/api';
 	import type { FieldOf, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
 	import AddButton from 'zipp-ui/AddButton.svelte';
@@ -27,14 +27,17 @@
 	} from '../assets/uploads.svelte';
 
 	/**
-	 * Images as cards, other files as chips, in an order; a click opens
-	 * one in the flyout for its title, alt text and focal point. Files
-	 * dropped on the field or uploaded with its drop zone are added.
+	 * Images and videos as cards, other files as chips, in an order; a
+	 * click opens one in the flyout for its title, alt text and focal
+	 * point. Files dropped on the field or uploaded with its drop zone
+	 * are added.
 	 */
 	let { field, values }: { field: FieldOf<'assets'>; values: Values } =
 		$props();
 
 	const images = $derived(field.images);
+	const videos = $derived(onlyVideos(field.extensions));
+	const cards = $derived(images || videos);
 	const max = $derived(field.max);
 	const ids = $derived(valueOf(values, field) ?? []);
 	const full = $derived(isFull(ids.length, max));
@@ -43,12 +46,12 @@
 	const chosen = chosenAssets(() => ids);
 	let picking = $state(false);
 
-	// images side by side, files one under the other
+	// cards side by side, files one under the other
 	let list = $state<HTMLElement>();
 	const sort = new Sortable({
 		container: () => list,
 		depths: () => ids.map(() => 0),
-		grid: () => images,
+		grid: () => cards,
 		onmove: (from, drop) => set(moved(ids, from, drop)),
 	});
 
@@ -76,11 +79,14 @@
 
 	const drag = new FileDrag(upload, () => !full);
 	const kind = $derived(
-		field.extensions?.length
-			? field.extensions.map(e => e.toUpperCase()).join(', ') + ' files'
-			: images
-				? 'images'
-				: 'files',
+		videos
+			? 'videos'
+			: field.extensions?.length
+				? field.extensions.map(e => e.toUpperCase()).join(', ') +
+					' files'
+				: images
+					? 'images'
+					: 'files',
 	);
 </script>
 
@@ -94,7 +100,7 @@
 
 <div
 	class="assets"
-	class:images
+	class:images={cards}
 	bind:this={list}
 	role="group"
 	aria-label={field.label}
@@ -107,7 +113,7 @@
 	{#each ids as id, i (id)}
 		{@const a = chosen.get(id)}
 		<div data-sort class="item" class:sort-dragging={sort.dragging === i}>
-			{#if !images}{@render handle(i)}{/if}
+			{#if !cards}{@render handle(i)}{/if}
 			{#if a === null}
 				<div class="chip box gone">
 					<span class="note">A file that was deleted</span>
@@ -117,7 +123,7 @@
 				<div class="loading">
 					<span class="note">Loading…</span>
 				</div>
-			{:else if images}
+			{:else if cards}
 				<div class="card-size">
 					<AssetCard
 						asset={a}
@@ -198,6 +204,7 @@
 		gap: 0.375rem;
 	}
 
+	// images and videos as cards side by side
 	.images {
 		flex-direction: row;
 		flex-wrap: wrap;
@@ -240,7 +247,7 @@
 	}
 
 	// further from the files than they are from each other, like the
-	// Choose of a relation; images keep the gap of their grid
+	// Choose of a relation; cards keep the gap of their grid
 	.assets:not(.images) .item ~ .drop-zone {
 		margin-top: 0.375rem;
 	}

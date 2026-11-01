@@ -5,7 +5,11 @@ pub(super) fn chunk_union(schema: &Schema) -> Union {
 	let mut u = Union::new("Chunk")
 		.possible_type("Html")
 		.possible_type("Buttons");
-	for c in schema.components.iter().filter(|c| !c.entry) {
+	for c in schema
+		.components
+		.iter()
+		.filter(|c| !c.entry && c.handle != ASSET)
+	{
 		u = u.possible_type(format!("{}_Block", c.handle));
 	}
 	u

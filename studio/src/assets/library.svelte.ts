@@ -5,13 +5,14 @@ import {
 	listAssets,
 	listFolders,
 	type Asset,
+	type AssetKind,
 	type Folder,
 } from './api';
 
 /**
  * What the Assets page and the picker show of the library: its folders,
- * the open one (null: the top), a search that looks in all of them, and
- * the assets of that. A response that came after a newer request is
+ * the open one (null: the top), a search that looks in all of them, a
+ * type (images, videos, documents) and the assets of that. A response that came after a newer request is
  * dropped.
  */
 export class Library {
@@ -20,6 +21,8 @@ export class Library {
 	top = $state(0);
 	folder = $state<number | null>(null);
 	search = $state('');
+	/** empty: all types */
+	kind = $state<AssetKind | ''>('');
 	assets = $state<Asset[]>([]);
 	loaded = $state(false);
 	error = $state('');
@@ -44,7 +47,7 @@ export class Library {
 
 	/** What an empty list says. */
 	empty = $derived(
-		this.search
+		this.search || this.kind
 			? 'Nothing found'
 			: this.folder === null
 				? 'No assets yet'
@@ -58,6 +61,7 @@ export class Library {
 			const assets = await listAssets({
 				search: this.search,
 				folder: this.search ? undefined : this.folder,
+				kind: this.kind || undefined,
 				...this.only,
 			});
 			if (n !== this.asked) return;
@@ -84,6 +88,12 @@ export class Library {
 		clearTimeout(this.wait);
 		this.folder = id;
 		this.search = '';
+		this.load();
+	}
+
+	/** Only assets of a type, or all with none. */
+	filter(kind: AssetKind | '') {
+		this.kind = kind;
 		this.load();
 	}
 

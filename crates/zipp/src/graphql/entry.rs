@@ -178,13 +178,15 @@ pub(super) fn content_field(
 		let kind = kind.clone();
 		let custom = custom.clone();
 		FieldFuture::new(async move {
-			let (fields, site) = match ctx.parent_value.downcast_ref::<Entry>()
+			let parent = &ctx.parent_value;
+			let (fields, site) = if let Some(e) = parent.downcast_ref::<Entry>()
 			{
-				Some(e) => (&e.fields, e.site.clone()),
-				None => {
-					let b = ctx.parent_value.try_downcast_ref::<Block>()?;
-					(&b.fields, b.site.clone())
-				}
+				(&e.fields, e.site.clone())
+			} else if let Some(a) = parent.downcast_ref::<SiteAsset>() {
+				(&a.asset.fields, a.site.clone())
+			} else {
+				let b = parent.try_downcast_ref::<Block>()?;
+				(&b.fields, b.site.clone())
 			};
 			let value = fields.get(&handle).cloned().unwrap_or(Value::Null);
 
@@ -225,7 +227,7 @@ pub(super) fn content_field(
 					let db = ctx.data::<Db>()?;
 					let assets = get_many(&db.conn(), &ids)?;
 					Ok(Some(FieldValue::list(
-						assets.into_iter().map(FieldValue::owned_any),
+						assets.into_iter().map(|a| asset_value(a, &site)),
 					)))
 				}
 				FieldKind::Blocks { .. } => {
@@ -395,7 +397,8 @@ pub(super) fn content_objects(
 		}
 	}
 
-	for comp in &schema.components {
+	// the asset fields are on `Asset`
+	for comp in schema.components.iter().filter(|c| c.handle != ASSET) {
 		let mut obj = if comp.entry {
 			let mut obj = Object::new(format!("{}_Entry", comp.handle))
 				.implement("Entry");

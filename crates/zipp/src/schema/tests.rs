@@ -141,6 +141,35 @@ fn finds_mistakes() {
 }
 
 #[test]
+fn asset_fields() {
+	let s = site().asset_fields([Field::text("credit"), Field::videos("clip")]);
+	s.check().unwrap();
+	let FieldKind::Assets { extensions, .. } =
+		&s.get(ASSET).unwrap().fields[1].kind
+	else {
+		panic!()
+	};
+	assert_eq!(extensions, &["mp4", "webm", "mov"]);
+
+	let with = |f: Field| site().asset_fields([f]).check().unwrap_err();
+	assert_eq!(with(Field::text("url")), "field asset.url: url is built in");
+	assert!(with(Field::text("t").translatable()).contains("translatable"));
+	assert!(with(Field::text("t").default("x")).contains("no defaults"));
+
+	// they live on assets only, not in content
+	let s = site().asset_fields([Field::text("credit")]).block(
+		"x",
+		"X",
+		[Field::blocks("b", ["asset"])],
+	);
+	assert!(s.check().unwrap_err().contains("holds the asset fields"));
+	let s = site()
+		.block("x", "X", [Field::group("g", "asset")])
+		.asset_fields([]);
+	assert!(s.check().unwrap_err().contains("holds the asset fields"));
+}
+
+#[test]
 fn widths_and_notes() {
 	let with = |f: Field| site().block("x", "X", [f]).check();
 	with(Field::text("t").width(25)).unwrap();

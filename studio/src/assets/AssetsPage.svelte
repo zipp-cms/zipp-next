@@ -25,6 +25,7 @@
 	import { untrack } from 'svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import {
+		KINDS,
 		ROOT,
 		assetUsage,
 		deleteAsset,
@@ -39,6 +40,7 @@
 	import AssetGrid from './AssetGrid.svelte';
 	import AssetDetail from './AssetDetail.svelte';
 	import SearchInput from 'zipp-ui/SearchInput.svelte';
+	import Segmented from 'zipp-ui/Segmented.svelte';
 	import { Busy } from '../core/busy.svelte';
 	import DropOverlay from './DropOverlay.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
@@ -239,6 +241,12 @@
 			{/if}
 			<div class="top">
 				<h2>{lib.search ? 'In all folders' : lib.path}</h2>
+				<Segmented
+					options={KINDS}
+					value={lib.kind}
+					onchange={k => lib.filter(k)}
+					label="Type"
+				/>
 				<SearchInput
 					bind:value={() => lib.search, v => lib.type(v)}
 					placeholder="Search files"
@@ -314,7 +322,12 @@
 		gap: 1rem;
 		margin-bottom: 1rem;
 
+		@include max-tablet {
+			flex-wrap: wrap;
+		}
+
 		h2 {
+			flex: 1;
 			overflow: hidden;
 			margin: 0;
 			font-size: var(--fs-md);

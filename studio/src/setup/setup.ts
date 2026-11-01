@@ -2,6 +2,7 @@ import type { Component, Role, Schema, Section } from '../core/schema';
 import { can, isAdmin } from '../core/access';
 import { session } from '../core/session.svelte';
 import { capitalized } from '../core/format';
+import { ASSET_FIELDS } from '../assets/api';
 
 /** What Setup shows of the schema: only what the role may see. */
 
@@ -25,8 +26,9 @@ export function visibleEntryTypes(schema: Schema): Component[] {
 	);
 }
 
-/** The GraphQL type of an entry type or block. */
+/** The GraphQL type of an entry type or block, the asset fields' is `Asset`. */
 export function gqlType(c: Pick<Component, 'handle' | 'entry'>): string {
+	if (!c.entry && c.handle === ASSET_FIELDS) return 'Asset';
 	return `${c.handle}_${c.entry ? 'Entry' : 'Block'}`;
 }
 
@@ -40,6 +42,8 @@ export function usedIn(
 	schema: Schema,
 	c: Component,
 ): { text: string; href: string }[] {
+	if (!c.entry && c.handle === ASSET_FIELDS)
+		return [{ text: 'every asset', href: '/admin/assets' }];
 	const out = visibleSections(schema)
 		.filter(s => s.types.includes(c.handle))
 		.map(s => ({

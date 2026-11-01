@@ -11,10 +11,25 @@ import {
 	type Edits,
 } from './api';
 import { Busy } from '../core/busy.svelte';
+import type { Values } from '../core/schema';
+
+/** The values without empty ones, as the server keeps them. */
+function filled(v: Values): Values {
+	return Object.fromEntries(
+		Object.entries(v).filter(
+			([, x]) =>
+				x !== null &&
+				x !== undefined &&
+				x !== '' &&
+				!(Array.isArray(x) && !x.length),
+		),
+	);
+}
 
 /**
  * What the asset panel changes: title, alt text, filename, focal point
- * the image's edits and the folder, saved together; whether there is
+ * the image's edits, the asset fields and the folder, saved together;
+ * the errors of the asset fields are in `fields`; whether there is
  * something to save, replacing the file, where the asset is used.
  */
 export class AssetForm extends Busy {
@@ -24,6 +39,8 @@ export class AssetForm extends Busy {
 	filename = $state('');
 	focal = $state({ x: 0.5, y: 0.5 });
 	edits = $state<Edits>({ ...NO_EDITS });
+	/** of the asset fields */
+	values = $state<Values>({});
 	/** null: no folder */
 	folder = $state<number | null>(null);
 	usage = $state<AssetUsage[] | null>(null);
@@ -45,6 +62,7 @@ export class AssetForm extends Busy {
 		this.filename = asset.filename;
 		this.focal = { x: asset.focalX, y: asset.focalY };
 		this.edits = { ...NO_EDITS, ...(asset.edits ?? {}) };
+		this.values = { ...asset.fields };
 		this.folder = asset.folderId;
 		this.initial = this.form();
 	}
@@ -56,6 +74,7 @@ export class AssetForm extends Busy {
 			filename: this.filename,
 			focal: this.focal,
 			edits: $state.snapshot(this.edits),
+			values: filled($state.snapshot(this.values)),
 			folder: this.folder,
 		});
 	}
@@ -74,6 +93,7 @@ export class AssetForm extends Busy {
 				focalX: this.focal.x,
 				focalY: this.focal.y,
 				edits: noEdits(this.edits) ? null : $state.snapshot(this.edits),
+				fields: filled($state.snapshot(this.values)),
 			});
 			if (folder === folderId) return saved;
 			await moveAssets([id], folder);
@@ -81,14 +101,18 @@ export class AssetForm extends Busy {
 		});
 	}
 
-	/** Another file; the title and alt text stay, the rest starts new. */
+	/**
+	 * Another file; the title, alt text and asset fields stay, the rest
+	 * starts new.
+	 */
 	replace(file: File) {
 		return this.run(async () => {
 			const asset = await replaceAsset(this.current.id, file);
-			const { title, alt } = this;
+			const { title, alt, values } = this;
 			this.reset(asset);
 			this.title = title;
 			this.alt = alt;
+			this.values = values;
 			this.initial = this.form();
 		});
 	}

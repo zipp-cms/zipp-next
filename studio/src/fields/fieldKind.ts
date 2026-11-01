@@ -1,4 +1,5 @@
 import type { Field } from '../core/schema';
+import { onlyVideos } from '../assets/api';
 
 /** A field's kind and settings in a few words, for the content model. */
 export function describeField(f: Field): string {
@@ -32,7 +33,7 @@ export function describeField(f: Field): string {
 		case 'relation':
 			return `Entries: ${list(f.types)}${f.max ? `, max ${f.max}` : ''}`;
 		case 'assets':
-			return `${f.images ? 'Images' : 'Files'}${f.max ? `, max ${f.max}` : ''}`;
+			return `${f.images ? 'Images' : onlyVideos(f.extensions) ? 'Videos' : 'Files'}${f.max ? `, max ${f.max}` : ''}`;
 		case 'link':
 			return `Link to ${list(f.to)}${f.newTab ? '' : ', same tab'}`;
 		case 'richText': {

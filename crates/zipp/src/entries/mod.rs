@@ -36,6 +36,7 @@ pub(crate) mod tests;
 
 pub use routes::routes;
 pub use save::check;
+pub(crate) use save::check_relations;
 pub use save::reindex;
 pub use save::save;
 pub use save::write;

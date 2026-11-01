@@ -5,6 +5,7 @@ fragment Image on Asset {
 	width(transform: "medium")
 	height(transform: "medium")
 	alt
+	credit
 }
 
 fragment Hero on Asset {
@@ -83,6 +84,16 @@ fragment Content on Block {
 		width
 		images {
 			...Image
+		}
+	}
+	... on video_Block {
+		loop
+		video {
+			url
+			mimeType
+		}
+		poster {
+			url(transform: "medium")
 		}
 	}
 	... on button_Block {

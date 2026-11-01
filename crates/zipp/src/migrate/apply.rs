@@ -12,7 +12,7 @@ use crate::drafts::Doc;
 use crate::entries::{refresh_uris, reindex};
 use crate::error::{Error, Result};
 use crate::migrate::{Migration, Op};
-use crate::schema::{Schema, SectionKind};
+use crate::schema::{ASSET, Schema, SectionKind};
 
 /// Applies the migrations that didn't run yet and returns their names.
 /// All of them and the rebuild of the indexes are one transaction: when
@@ -121,6 +121,7 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 		}
 		_ => {
 			change_content(conn, schema, op)?;
+			change_assets(conn, schema, op)?;
 			change_docs(conn, &["drafts", "revisions"], |doc| {
 				// each with its own type, a draft or revision may have
 				// another than the entry
@@ -174,6 +175,34 @@ fn change_content(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 				params![ty, id],
 			)?;
 		}
+	}
+
+	Ok(())
+}
+
+/// Runs an op over the values of the asset fields of every asset, like
+/// over an entry of the type `asset`; removing the asset fields empties
+/// them.
+fn change_assets(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
+	if schema.get(ASSET).is_none() {
+		return Ok(());
+	}
+	let mut stmt = conn.prepare("SELECT id, fields FROM assets")?;
+	let rows = stmt
+		.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+		.collect::<rusqlite::Result<Vec<(i64, String)>>>()?;
+
+	for (id, fields) in rows {
+		let mut fields: Value =
+			serde_json::from_str(&fields).unwrap_or_default();
+		let mut ty = ASSET.to_string();
+		if !op.apply_entry(schema, &mut ty, &mut fields) {
+			fields = Value::Object(Default::default());
+		}
+		conn.execute(
+			"UPDATE assets SET fields = ?1 WHERE id = ?2",
+			params![fields.to_string(), id],
+		)?;
 	}
 
 	Ok(())
@@ -393,6 +422,44 @@ mod tests {
 		];
 		let q = Query::parse(&s2, &params).unwrap();
 		assert_eq!(list(&conn, &q).unwrap().1, 1);
+	}
+
+	#[test]
+	fn migrations_change_asset_fields() {
+		let db = Db::memory().unwrap();
+		let conn = db.conn();
+		let dir = std::env::temp_dir()
+			.join(format!("zipp-migrate-{}", rand::random::<u32>()));
+		let s = site()
+			.asset_fields([Field::text("credit"), Field::text("licence")]);
+		let first = migration("0001", &Schema::new(), &s, &[]);
+		apply_migrations(&conn, std::slice::from_ref(&first)).unwrap();
+		let a =
+			crate::assets::store(&conn, &dir, "a.pdf", b"%PDF", None).unwrap();
+		let change = crate::assets::AssetChange {
+			fields: Some(json!({ "credit": "Anna", "licence": "CC" })),
+			..Default::default()
+		};
+		crate::assets::update(&conn, &dir, &s, a.id, change).unwrap();
+		let fields = || crate::assets::get_asset(&conn, a.id).unwrap().fields;
+
+		// credit is renamed to photographer, licence goes
+		let s2 = site().asset_fields([Field::text("photographer")]);
+		let renames = [Rename::parse("asset.credit=photographer").unwrap()];
+		let second = migration("0002", &s, &s2, &renames);
+		let migrations = [first, second];
+		apply_migrations(&conn, &migrations).unwrap();
+		assert_eq!(fields(), json!({ "photographer": "Anna" }));
+
+		// without asset fields the values go
+		let third = migration("0003", &s2, &site(), &[]);
+		apply_migrations(
+			&conn,
+			&[migrations[0].clone(), migrations[1].clone(), third],
+		)
+		.unwrap();
+		assert_eq!(fields(), json!({}));
+		std::fs::remove_dir_all(dir).unwrap();
 	}
 
 	#[test]

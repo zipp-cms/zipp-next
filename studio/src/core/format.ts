@@ -39,6 +39,15 @@ export function fileSize(bytes: number): string {
 	return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+/** How long a video plays: `0:42`, `1:02:05`. */
+export function duration(seconds: number): string {
+	const s = Math.round(seconds);
+	const two = (n: number) => String(n).padStart(2, '0');
+	const h = Math.floor(s / 3600);
+	const m = Math.floor((s % 3600) / 60);
+	return h ? `${h}:${two(m)}:${two(s % 60)}` : `${m}:${two(s % 60)}`;
+}
+
 /** `1 entry`, `3 entries`. */
 export function plural(n: number, one: string, many: string): string {
 	return `${n} ${n === 1 ? one : many}`;

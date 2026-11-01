@@ -1,16 +1,16 @@
 use std::io::Cursor;
 
 use axum::body::{Body, to_bytes};
-use axum::http::{Request, StatusCode};
+use axum::http::{Request, StatusCode, header};
 use image::ImageFormat;
-use serde_json::json;
+use serde_json::{Value, json};
 
 use super::api::*;
 use super::*;
 use crate::entries::save;
 use crate::entries::tests::input;
-use crate::schema::Role;
 use crate::schema::tests::site_with_roles;
+use crate::schema::{Field, Role};
 use crate::testing::{Client, TestServer};
 
 fn png(w: u32, h: u32) -> Vec<u8> {
@@ -80,6 +80,7 @@ async fn uploads_changes_and_deletes() {
 			focal_y: 0.2,
 			filename: Some("hero.png".into()),
 			edits: None,
+			fields: None,
 		},
 	};
 	let changed = editor.call(&change).await.unwrap();
@@ -302,6 +303,116 @@ async fn lists_files_by_extension() {
 	assert_eq!(names(pdf), ["Form.PDF"]);
 	let two = editor.call(&by(".txt, png")).await.unwrap();
 	assert_eq!(names(two), ["a.png", "notes.txt"]);
+}
+
+#[tokio::test]
+async fn lists_files_by_kind() {
+	let ts = TestServer::new(site_with_roles());
+	let editor = ts.user(Some("editor"));
+	upload(&editor, "a.png", &png(2, 2)).await.unwrap();
+	upload(&editor, "clip.mp4", b"video").await.unwrap();
+	upload(&editor, "song.mp3", b"audio").await.unwrap();
+	upload(&editor, "form.pdf", b"%PDF-1.4").await.unwrap();
+
+	let of = async |kind: &str| {
+		let req = ListReq {
+			kind: Some(kind.into()),
+			..Default::default()
+		};
+		let list = editor.call(&req).await?;
+		let mut names: Vec<_> = list.into_iter().map(|a| a.filename).collect();
+		names.sort();
+		Ok::<_, Error>(names)
+	};
+	assert_eq!(of("image").await.unwrap(), ["a.png"]);
+	assert_eq!(of("video").await.unwrap(), ["clip.mp4"]);
+	assert_eq!(of("document").await.unwrap(), ["form.pdf"]);
+	assert_eq!(of("file").await.unwrap().len(), 3);
+	let err = of("movie").await.unwrap_err();
+	assert!(matches!(err, Error::Request(m) if m.contains("kind movie")));
+}
+
+#[tokio::test]
+async fn videos_play_in_ranges() {
+	let ts = TestServer::new(site_with_roles());
+	let editor = ts.user(Some("editor"));
+	let a = upload(&editor, "clip.mp4", b"0123456789").await.unwrap();
+	assert_eq!(a.mime, "video/mp4");
+
+	let req = Request::get(a.url(None))
+		.header(header::RANGE, "bytes=2-5")
+		.body(Body::empty())
+		.unwrap();
+	let resp = ts.anonymous().send(req).await;
+	assert_eq!(resp.status(), StatusCode::PARTIAL_CONTENT);
+	let headers = resp.headers();
+	assert_eq!(headers[header::CONTENT_TYPE], "video/mp4");
+	assert_eq!(headers[header::CONTENT_SECURITY_POLICY], "sandbox");
+	assert_eq!(headers[header::CONTENT_DISPOSITION], "inline");
+	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+	assert_eq!(&body[..], b"2345");
+}
+
+#[tokio::test]
+async fn asset_fields_are_checked_and_saved() {
+	let schema = site_with_roles().asset_fields([
+		Field::text("credit").max(10),
+		Field::dropdown("licence", [("cc", "CC BY"), ("all", "All rights")]),
+		Field::images("poster").max(1),
+	]);
+	let ts = TestServer::new(schema);
+	let editor = ts.user(Some("editor"));
+	let clip = upload(&editor, "clip.mp4", b"video").await.unwrap();
+	assert_eq!(clip.fields, json!({}));
+	let poster = upload(&editor, "poster.png", &png(4, 4)).await.unwrap();
+
+	let change = |fields: Value| UpdateReq {
+		id: clip.id,
+		change: AssetChange {
+			alt: "A clip".into(),
+			fields: Some(fields),
+			..Default::default()
+		},
+	};
+	let fields =
+		json!({ "credit": "Anna", "licence": "cc", "poster": [poster.id] });
+	let saved = editor.call(&change(fields.clone())).await.unwrap();
+	assert_eq!(saved.fields, fields);
+
+	// checked like the fields of a block, all mistakes at once
+	let wrong =
+		json!({ "credit": "Anna Muster-Meier", "licence": "x", "other": 1 });
+	let err = editor.call(&change(wrong)).await.unwrap_err();
+	let Error::Invalid(errors) = err else {
+		panic!("{err:?}")
+	};
+	let mut paths: Vec<_> = errors.iter().map(|e| e.path.as_str()).collect();
+	paths.sort();
+	assert_eq!(paths, ["credit", "licence", "other"]);
+	// the poster takes only images
+	let err = editor
+		.call(&change(json!({ "poster": [clip.id] })))
+		.await
+		.unwrap_err();
+	let Error::Invalid(errors) = err else {
+		panic!("{err:?}")
+	};
+	assert_eq!(errors[0].path, "poster");
+
+	// a rename without fields keeps them
+	let rename = UpdateReq {
+		id: clip.id,
+		change: AssetChange {
+			filename: Some("film.mp4".into()),
+			..Default::default()
+		},
+	};
+	let renamed = editor.call(&rename).await.unwrap();
+	assert_eq!(renamed.fields, fields);
+	assert_eq!(
+		get_asset(&ts.state.db.conn(), clip.id).unwrap().fields,
+		fields
+	);
 }
 
 #[tokio::test]

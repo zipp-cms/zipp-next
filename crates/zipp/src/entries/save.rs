@@ -291,7 +291,7 @@ pub(super) fn field_error(path: &str, message: &str) -> FieldError {
 /// Relations must point to existing entries of the allowed types, asset
 /// fields to existing assets (images if they only take images, files
 /// with the allowed extensions).
-pub(super) fn check_relations(
+pub(crate) fn check_relations(
 	conn: &Connection,
 	schema: &Schema,
 	ty: &str,

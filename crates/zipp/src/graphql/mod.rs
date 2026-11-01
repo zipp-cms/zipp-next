@@ -52,7 +52,7 @@ use crate::error::{Error, Result};
 use crate::field_type::{GraphqlType, Scalar as FieldScalar};
 use crate::query::Query;
 use crate::richtext::{self, Chunk};
-use crate::schema::{FieldKind, Schema};
+use crate::schema::{ASSET, FieldKind, Schema};
 
 #[cfg(test)]
 mod api_tests;
@@ -100,6 +100,24 @@ pub const ENTRY_FIELDS: &[&str] = &[
 
 /// Fields every block has.
 pub const BLOCK_FIELDS: &[&str] = &["id", "typeHandle"];
+
+/// Fields every asset has, asset fields can't use them.
+pub const ASSET_FIELDS: &[&str] = &[
+	"id",
+	"filename",
+	"kind",
+	"mimeType",
+	"size",
+	"alt",
+	"focalX",
+	"focalY",
+	"focalPoint",
+	"title",
+	"url",
+	"width",
+	"height",
+	"srcset",
+];
 
 /// Put before asset urls.
 struct PublicUrl(String);
@@ -230,7 +248,7 @@ pub fn build(
 		.register(block_iface)
 		.register(where_input())
 		.register(site_object())
-		.register(asset_object())
+		.register(asset_object(&schema))
 		.register(link_object())
 		.register(nav_item_object())
 		.register(rich_text_object())

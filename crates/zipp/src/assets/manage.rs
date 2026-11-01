@@ -1,7 +1,12 @@
 //! What editors do with assets: find, change, replace, delete them and
 //! see where they are used.
 
+use serde_json::Value;
+
 use super::*;
+use crate::content::validate;
+use crate::entries::check_relations;
+use crate::schema::{ASSET, Schema};
 
 /// The newest assets whose filename contains `search`, of a kind.
 /// Where to look for assets: all folders, or one (`None` the top).
@@ -11,7 +16,9 @@ pub enum InFolder {
 	Folder(Option<i64>),
 }
 
-/// With `extensions` only files that end so (lowercase, without dot).
+/// With `kind` only `image`s, `file`s (no images), `video`s or
+/// `document`s (files but videos and audio); with `extensions` only
+/// files that end so (lowercase, without dot).
 pub fn search(
 	conn: &Connection,
 	search: &str,
@@ -19,32 +26,43 @@ pub fn search(
 	folder: InFolder,
 	extensions: &[String],
 ) -> Result<Vec<Asset>> {
+	let kind = match kind {
+		None => "",
+		Some("image") => "AND kind = 'image'",
+		Some("file") => "AND kind = 'file'",
+		Some("video") => "AND kind = 'file' AND mime LIKE 'video/%'",
+		Some("document") => {
+			"AND kind = 'file' AND mime NOT LIKE 'video/%' \
+			AND mime NOT LIKE 'audio/%'"
+		}
+		Some(k) => {
+			return Err(Error::Request(format!(
+				"kind {k}: image, file, video or document"
+			)));
+		}
+	};
 	let (any, folder) = match folder {
 		InFolder::All => (true, None),
 		InFolder::Folder(f) => (false, f),
 	};
-	// one LIKE per extension, after the four params
+	// one LIKE per extension, after the three params
 	let ends = if extensions.is_empty() {
 		String::new()
 	} else {
 		let likes: Vec<String> = (0..extensions.len())
-			.map(|i| format!("lower(filename) LIKE ?{}", i + 5))
+			.map(|i| format!("lower(filename) LIKE ?{}", i + 4))
 			.collect();
 		format!("AND ({})", likes.join(" OR "))
 	};
 	let sql = format!(
 		"SELECT {COLUMNS} FROM assets
-		WHERE deleted_at IS NULL AND filename LIKE ?1 ESCAPE '\\' AND (?2 IS NULL OR kind = ?2)
-		AND (?3 OR folder_id IS ?4) {ends}
+		WHERE deleted_at IS NULL AND filename LIKE ?1 ESCAPE '\\' {kind}
+		AND (?2 OR folder_id IS ?3) {ends}
 		ORDER BY id DESC LIMIT 200"
 	);
 	let search = format!("%{}%", escape_like(search));
-	let mut values: Vec<Box<dyn rusqlite::ToSql>> = vec![
-		Box::new(search),
-		Box::new(kind.map(String::from)),
-		Box::new(any),
-		Box::new(folder),
-	];
+	let mut values: Vec<Box<dyn rusqlite::ToSql>> =
+		vec![Box::new(search), Box::new(any), Box::new(folder)];
 	for e in extensions {
 		values.push(Box::new(format!("%.{e}")));
 	}
@@ -110,17 +128,26 @@ pub struct AssetChange {
 	/// the image editor's, none resets to the original
 	#[serde(default)]
 	pub edits: Option<Edits>,
+	/// the values of the asset fields, unchanged when missing
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub fields: Option<Value>,
 }
 
 /// Changes an asset: a new name moves the file, new edits or a new
-/// focal point delete the transforms.
+/// focal point delete the transforms. The values of the asset fields
+/// are checked like those of a block.
 pub fn update(
 	conn: &Connection,
 	files: &FsPath,
+	schema: &Schema,
 	id: i64,
 	change: AssetChange,
 ) -> Result<Asset> {
 	let old = get_asset(conn, id)?;
+	let fields = match &change.fields {
+		Some(v) => Some(check_fields(conn, schema, v)?.to_string()),
+		None => None,
+	};
 	let (fx, fy) = (
 		change.focal_x.clamp(0.0, 1.0),
 		change.focal_y.clamp(0.0, 1.0),
@@ -146,7 +173,8 @@ pub fn update(
 	let tx = conn.unchecked_transaction()?;
 	tx.execute(
 		"UPDATE assets SET title = IFNULL(?1, title), alt = ?2, focal_x = ?3,
-		focal_y = ?4, filename = ?5, edits = ?6 WHERE id = ?7",
+		focal_y = ?4, filename = ?5, edits = ?6, fields = IFNULL(?7, fields)
+		WHERE id = ?8",
 		params![
 			change.title.as_deref().map(str::trim),
 			change.alt,
@@ -154,6 +182,7 @@ pub fn update(
 			fy,
 			filename,
 			json,
+			fields,
 			id
 		],
 	)?;
@@ -174,6 +203,24 @@ pub fn update(
 		let _ = fs::remove_dir_all(dir.join(TRANSFORMS));
 	}
 	get_asset(conn, id)
+}
+
+/// The values of the asset fields cleaned up, or what is wrong with
+/// them; nothing to check without asset fields.
+fn check_fields(
+	conn: &Connection,
+	schema: &Schema,
+	fields: &Value,
+) -> Result<Value> {
+	let Some(comp) = schema.get(ASSET) else {
+		return Ok(Value::Object(Default::default()));
+	};
+	let fields = validate(schema, comp, fields).map_err(Error::Invalid)?;
+	let errors = check_relations(conn, schema, ASSET, &fields)?;
+	if !errors.is_empty() {
+		return Err(Error::Invalid(errors));
+	}
+	Ok(fields)
 }
 
 /// Edits only of images, and not bigger than [`MAX_PIXELS`].

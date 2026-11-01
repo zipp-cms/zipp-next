@@ -1,5 +1,9 @@
 use std::io::Seek;
 
+use axum::http::StatusCode;
+use tower::ServiceExt;
+use tower_http::services::ServeFile;
+
 use super::api::*;
 use super::*;
 use crate::api::{ApiResult, ApiRouter, Req};
@@ -26,6 +30,7 @@ pub(super) async fn serve_original(
 	State(state): State<AppState>,
 	Path((id, filename)): Path<(i64, String)>,
 	Query(p): Query<OriginalParam>,
+	req: axum::extract::Request,
 ) -> Result<Response> {
 	let asset = get_asset(&state.db.conn(), id)?;
 	if asset.filename != filename {
@@ -41,9 +46,22 @@ pub(super) async fn serve_original(
 		)
 		.await;
 	}
+	// from the disk with ranges, a video plays and seeks without
+	// loading the whole file
 	let path = asset_dir(&state.files, id).join(&asset.filename);
-	let data = fs::read(path).map_err(|_| Error::NotFound)?;
-	Ok(file_response(&asset.mime, data))
+	let mime = asset.mime.parse().map_err(|_| Error::NotFound)?;
+	let resp = ServeFile::new_with_mime(path, &mime)
+		.oneshot(req)
+		.await
+		.map_err(|e| Error::Internal(e.to_string()))?;
+	if resp.status() == StatusCode::NOT_FOUND {
+		return Err(Error::NotFound);
+	}
+	let (mut parts, body) = resp.into_parts();
+	for (name, value) in file_headers(&asset.mime) {
+		parts.headers.insert(name, value.parse().unwrap());
+	}
+	Ok(Response::from_parts(parts, axum::body::Body::new(body)))
 }
 
 pub(super) async fn serve_transform(
@@ -91,24 +109,24 @@ async fn transformed(
 /// there. Images, video, audio and pdf show in the browser, everything
 /// else (svg too) downloads.
 pub(super) fn file_response(mime: &str, data: Vec<u8>) -> Response {
+	(file_headers(mime), data).into_response()
+}
+
+fn file_headers(mime: &str) -> [(header::HeaderName, String); 5] {
 	let inline = (mime.starts_with("image/") && mime != "image/svg+xml")
 		|| mime.starts_with("video/")
 		|| mime.starts_with("audio/")
 		|| mime == "application/pdf";
-	(
-		[
-			(header::CONTENT_TYPE, mime.to_string()),
-			(header::CACHE_CONTROL, "public, max-age=86400".into()),
-			(header::X_CONTENT_TYPE_OPTIONS, "nosniff".into()),
-			(header::CONTENT_SECURITY_POLICY, "sandbox".into()),
-			(
-				header::CONTENT_DISPOSITION,
-				if inline { "inline" } else { "attachment" }.into(),
-			),
-		],
-		data,
-	)
-		.into_response()
+	[
+		(header::CONTENT_TYPE, mime.to_string()),
+		(header::CACHE_CONTROL, "public, max-age=86400".into()),
+		(header::X_CONTENT_TYPE_OPTIONS, "nosniff".into()),
+		(header::CONTENT_SECURITY_POLICY, "sandbox".into()),
+		(
+			header::CONTENT_DISPOSITION,
+			if inline { "inline" } else { "attachment" }.into(),
+		),
+	]
 }
 
 /// Transforms generated at once, each decodes a whole image.
@@ -303,7 +321,13 @@ pub(super) async fn update_route(
 	Req(req): Req<UpdateReq>,
 ) -> ApiResult<UpdateReq> {
 	let conn = state.db.conn();
-	Ok(Json(update(&conn, &state.files, req.id, req.change)?))
+	Ok(Json(update(
+		&conn,
+		&state.files,
+		&state.schema,
+		req.id,
+		req.change,
+	)?))
 }
 
 pub(super) async fn usage_route(

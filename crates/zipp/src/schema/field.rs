@@ -1,5 +1,8 @@
 use super::*;
 
+/// The extensions of videos browsers play, see [`Field::videos`].
+pub const VIDEOS: &[&str] = &["mp4", "webm", "mov"];
+
 /// An option of a dropdown: the value that is stored and its label.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Choice {
@@ -592,6 +595,11 @@ impl Field {
 				extensions: vec![],
 			},
 		)
+	}
+
+	/// Only videos, the files of [`VIDEOS`].
+	pub fn videos(handle: &str) -> Self {
+		Self::assets(handle).extensions(VIDEOS.iter().copied())
 	}
 
 	pub fn blocks<'a>(

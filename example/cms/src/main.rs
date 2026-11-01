@@ -34,7 +34,7 @@ fn schema() -> Schema {
 	let content = || {
 		Field::blocks(
 			"content",
-			["text", "images", "button", "events", "contact"],
+			["text", "images", "video", "button", "events", "contact"],
 		)
 		.translatable()
 	};
@@ -169,6 +169,18 @@ fn schema() -> Schema {
 				),
 			],
 		)
+		// on every image and file beside title and alt, GraphQL has them
+		// on Asset
+		.asset_fields([
+			Field::text("credit")
+				.width(50)
+				.instructions("Who made it, shown under the image."),
+			Field::dropdown(
+				"licence",
+				[("own", "Own"), ("cc", "CC BY"), ("press", "Press image")],
+			)
+			.width(50),
+		])
 		.transform(Transform::new("hero").width(1600).height(700).crop())
 		.transform(Transform::new("small").width(600))
 		.transform(Transform::new("medium").width(1200))
@@ -339,6 +351,19 @@ fn schema() -> Schema {
 			],
 		)
 		.block(
+			"video",
+			"Video",
+			[
+				Field::videos("video").max(1).required(),
+				Field::images("poster").max(1).instructions(
+					"Shown until it plays, empty: its first frame.",
+				),
+				Field::boolean("loop").instructions(
+					"Plays muted and over again, like a moving image.",
+				),
+			],
+		)
+		.block(
 			"button",
 			"Button",
 			[Field::link(
@@ -376,6 +401,7 @@ fn schema() -> Schema {
 		.icon("event", "calendar")
 		.icon("text", "text")
 		.icon("images", "images")
+		.icon("video", "video")
 		.icon("button", "mouse-pointer-click")
 		.icon("events", "calendar-days")
 		.icon("contact", "mail")

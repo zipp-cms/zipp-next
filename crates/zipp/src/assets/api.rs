@@ -17,7 +17,8 @@ pub struct ListReq {
 	pub search: Option<String>,
 	/// `1,2,3`, in this order
 	pub ids: Option<String>,
-	/// `image` or `file`
+	/// `image`, `file` (no image), `video` or `document` (a file but
+	/// no video or audio)
 	pub kind: Option<String>,
 	/// a folder's id, `top` for the ones in none
 	pub folder: Option<String>,

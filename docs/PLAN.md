@@ -129,8 +129,10 @@ commit.
 - [x] Settings (globals) without the big title above the fields, 4b457a1
 - [ ] Tabs inside blocks?
 - [x] Max level of a structure, 6317a46
-- [ ] Custom fields on assets (besides title, alt, focal point)?
-- [ ] Better support for video assets (player, poster, type filter)?
+- [x] Custom fields on assets (besides title, alt, focal point)
+      (`Schema::asset_fields`)
+- [x] Better support for video assets (player, first frame, type filter,
+      `Field::videos`, ranges)
 - [ ] A field type per column of a table (today text, url, email)?
 - [x] Number field: `Field::number` with min and max, `.unit("CHF")` and
       `.decimals(2)`

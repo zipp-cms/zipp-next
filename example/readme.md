@@ -26,7 +26,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Trash | delete a page or an asset → Trash in the navigation | it is gone from the website, **Restore** brings it back with the pages below it; after 30 days it is deleted for good |
 | Revisions | Options → Revisions | what each one changed; click to look, **Restore** to go back |
 | Two editors at once | log in twice | the second one is told instead of overwriting the first |
-| Blocks | Pages → Über uns → Content | text, images, button, upcoming events |
+| Blocks | Pages → Über uns → Content | text, images, video, button, upcoming events |
 | Rich text | the Intro tab · the Text block | the intro only with links; the block also with headings, lists, **buttons** (next to each other one row) and **images** inside the text |
 | Links | a Button block | entry, URL, email, phone or file; external ones open in a new tab |
 | Group, inline group | a page → SEO, Events → Tickets | fields of another component under one name in a box; the event's tickets are an inline group, its fields written right in the field (`Field::group_of`) |
@@ -43,6 +43,8 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Date, date and time | Events → Date, Doors open | the date picker; a day or a day and time, the website sorts events by the date |
 | Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them; the picker shows the pages as their tree, search "team" for a match with its path |
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |
+| Asset fields | Assets → an image → Credit, Licence | fields of every asset beside title and alt (`.asset_fields`); the website shows the credit under the images |
+| Videos | Assets → Videos · a page → Content → Video block | the library filters by type, a video plays in its panel and shows its first frame; the block takes only videos (`Field::videos`), a poster image and *loop* for a muted moving image |
 | Folders, file types, zips | Assets · Events → Tickets → Programm (PDF) · a folder's ⋯ → Download as zip · upload a zip | folders for the library, downloaded as a zip or unpacked from one; the event's program takes only PDFs and puts them into Events/Programs, its image picker opens in Events |
 | Icons | the navigation, Pages, a page's blocks | entry types, blocks and nav groups with Lucide icons from the code |
 | Block titles | a page's blocks: Button, Images, Upcoming events · Setup → Blocks → Button | a block's head and the outline show the field the code names (`.block_title`): the button's link, the caption, the city |
