@@ -18,12 +18,40 @@ switched off blocks never.
 ## Private GraphQL, dev and prod
 
 Like Craft's schema tokens, GraphQL
-only answers frontends that send `Authorization: Bearer <token>`, the
-token of `serve` (`ZIPP_GRAPHQL_TOKEN`; crelte reads it as
-`ENDPOINT_TOKEN` from `../craft/.env`), and the studio with its
-session. `serve --dev` (`ZIPP_DEV=1`) turns on GraphiQL with a GET on
-`/api/graphql` and opens GraphQL when there is no token. The rest api
-is the studio's, it needs a session.
+only answers frontends that send `Authorization: Bearer <token>` (crelte
+reads it as `ENDPOINT_TOKEN` from `../craft/.env`), and the studio with
+its session. An unknown, revoked or expired token gets 401 like none.
+The rest api is the studio's, it needs a session.
+
+## Tokens
+
+Admins make the tokens of frontends in the studio
+under GraphQL, like Craft's GraphQL schemas: a name, the sections and
+sites it reads (all or some), whether preview links show drafts with it
+(`?token=` of a preview, for the website that shows the studio's
+previews; without it they show what is live), an optional expiry. The
+token shows once when it is made, zipp keeps only its hash; the list
+shows when each was used last, a token is revoked there. The token of
+`serve --graphql-token` (`ZIPP_GRAPHQL_TOKEN`) reads everything, like
+before.
+
+A token reads only its sections and sites: `entries`, `entry`,
+`entryCount`, `globalSet`, `translations`, relations and links leave out
+the other entries, `sites` and `crelteSites` the other sites (the ids
+stay). Plugins load entries the same way: the SEO plugin's `seoJson`
+reads its settings from the section `seoSettings`, a token without it
+gets the defaults. Assets aren't scoped, a token gets the assets of the
+entries it reads.
+
+## GraphiQL
+
+A GET on `/api/graphql` opens GraphiQL. Its queries send the
+session of the studio, so an admin sees drafts and unpublished entries
+like in the studio (Try it on the GraphQL page opens it); without a
+session it goes to the login. In development (`serve --dev`,
+`ZIPP_DEV=1`) GraphQL is open without a token, unless `serve` has one;
+a wrong token gets 401 there too and a token reads only its scope.
+GraphiQL loads its scripts from unpkg.com.
 
 ## Craft's arguments and fields
 

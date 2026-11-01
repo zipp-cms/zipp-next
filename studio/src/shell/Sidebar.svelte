@@ -21,7 +21,8 @@
 
 	/**
 	 * The sidebar: the site, the groups of the schema's navigation with
-	 * the sections of the open one, assets, AI, Setup, users, the trash,
+	 * the sections of the open one, assets, AI, Setup, users, GraphQL, the
+	 * trash,
 	 * who is logged in; the search above them.
 	 */
 	let { schema, onlogout }: { schema: Schema; onlogout: () => void } =
@@ -31,7 +32,7 @@
 	const page = $derived(current.path.split('/')[2] ?? '');
 	// the pages that aren't a group of the nav
 	const other = $derived(
-		['assets', 'ai', 'users', 'setup', 'trash'].includes(page),
+		['assets', 'ai', 'users', 'graphql', 'setup', 'trash'].includes(page),
 	);
 	// only the sections the role may see
 	const groups = $derived(visibleNav(schema));
@@ -130,6 +131,14 @@
 			<a class="item" href="/admin/users" class:active={page === 'users'}>
 				<Icon name="users" />
 				Users
+			</a>
+			<a
+				class="item"
+				href="/admin/graphql"
+				class:active={page === 'graphql'}
+			>
+				<Icon name="graphql" />
+				GraphQL
 			</a>
 		{/if}
 		{#if canTrash(schema)}

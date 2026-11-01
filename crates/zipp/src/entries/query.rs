@@ -26,6 +26,8 @@ pub const MAX_LIMIT: i64 = 1000;
 pub struct Query {
 	pub site: String,
 	pub section: Option<String>,
+	/// only these sections, what the token of a frontend reads
+	pub sections: Option<Vec<String>>,
 	pub ty: Option<String>,
 	/// several types, `type=a,b`; filters and order need a single one
 	pub types: Vec<String>,
@@ -101,6 +103,7 @@ impl Query {
 		let mut q = Query {
 			site: schema.primary_site().handle.clone(),
 			section: None,
+			sections: None,
 			ty: None,
 			types: vec![],
 			not_ids: vec![],
@@ -345,6 +348,15 @@ impl Query {
 		let text = |s: &Option<String>| Value::Text(s.clone().unwrap());
 		if self.section.is_some() {
 			cond("e.section = ?".into(), vec![text(&self.section)]);
+		}
+		if let Some(sections) = &self.sections {
+			let values = sections.iter().map(|s| Value::Text(s.clone()));
+			// none of none
+			let sql = match sections.len() {
+				0 => "0".into(),
+				n => format!("e.section IN ({})", marks(n)),
+			};
+			cond(sql, values.collect());
 		}
 		if self.ty.is_some() {
 			cond("e.type = ?".into(), vec![text(&self.ty)]);

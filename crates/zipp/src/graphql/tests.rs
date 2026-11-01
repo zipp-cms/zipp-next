@@ -12,6 +12,7 @@ async fn run(gql: &GqlSchema, query: &str, published_only: bool) -> Value {
 		preview: None,
 		token: None,
 		indexing: true,
+		scope: Scope::ALL,
 	});
 	let resp = gql.execute(req).await;
 	assert!(resp.errors.is_empty(), "{:?}", resp.errors);
@@ -253,6 +254,7 @@ async fn assets_with_transforms() {
 			preview: None,
 			token: None,
 			indexing: true,
+			scope: Scope::ALL,
 		});
 		assert!(!gql.execute(req).await.errors.is_empty(), "{q}");
 	}
@@ -369,6 +371,7 @@ async fn answers_crelte_like_craft() {
 		preview: None,
 		token: None,
 		indexing: true,
+		scope: Scope::ALL,
 	});
 	let resp = gql.execute(req).await;
 	assert!(resp.errors.is_empty(), "{:?}", resp.errors);
@@ -413,6 +416,7 @@ async fn preview_shows_the_draft() {
 		preview: doc,
 		token: None,
 		indexing: true,
+		scope: Scope::ALL,
 	});
 	let data = gql.execute(req).await.data.into_json().unwrap();
 	assert_eq!(data["entry"], json!({ "title": "Draft", "intro": "new" }));
@@ -488,6 +492,7 @@ async fn site_preview_shows_every_draft() {
 			preview,
 			token: None,
 			indexing: true,
+			scope: Scope::ALL,
 		});
 		let gql = gql.clone();
 		async move { gql.execute(req).await.data.into_json().unwrap() }
@@ -525,6 +530,7 @@ async fn urls_of_a_preview_keep_the_token() {
 					preview,
 					token: token.map(Into::into),
 					indexing: true,
+					scope: Scope::ALL,
 				});
 		let gql = gql.clone();
 		async move {
@@ -1020,7 +1026,7 @@ async fn craft_arguments_and_fields() {
 	let req = async_graphql::Request::new(format!(
 		r#"{{ entry(id: [{a}]) {{ ... on event_Entry {{ image {{ url(width: 500) }} }} }} }}"#
 	))
-	.data(Viewer { published_only: true, preview: None, token: None, indexing: true });
+	.data(Viewer { published_only: true, preview: None, token: None, indexing: true, scope: Scope::ALL });
 	let resp = gql.execute(req).await;
 	assert!(resp.errors[0].message.contains("width 500 is not allowed"));
 	std::fs::remove_dir_all(dir).ok();
@@ -1110,4 +1116,39 @@ async fn switched_off_blocks_and_dates() {
 	assert_eq!(e["body"], json!([{ "content": "On" }]));
 	assert_eq!(e["expiryDate"], crate::db::iso(expiry));
 	assert!(e["postDate"].as_str().is_some_and(|d| d.starts_with("20")));
+}
+
+#[test]
+fn tokens_are_kept_hashed() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let scope = Scope {
+		sections: Some(vec!["events".into()]),
+		sites: None,
+		previews: false,
+	};
+	let (info, token) =
+		tokens::create(&conn, " Website ", &scope, None).unwrap();
+	assert_eq!(info.name, "Website");
+
+	// the database has no copy of it
+	let hash: String = conn
+		.query_row("SELECT hash FROM graphql_tokens", [], |r| r.get(0))
+		.unwrap();
+	assert_ne!(hash, token);
+	assert_eq!(hash.len(), 64);
+
+	let found = tokens::scope_of(&conn, &token).unwrap().unwrap();
+	assert!(found.section("events") && !found.section("pages"));
+	assert!(found.site("en"));
+	assert_eq!(tokens::scope_of(&conn, &hash).unwrap(), None);
+	assert!(tokens::get(&conn, info.id).unwrap().last_used_at.is_some());
+
+	// an empty list reads nothing
+	let none = Scope {
+		sections: Some(vec![]),
+		..Scope::ALL
+	};
+	assert!(!none.section("events"));
+	assert!(tokens::check(&site(), "x", &none).is_empty());
 }

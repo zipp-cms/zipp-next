@@ -58,8 +58,8 @@ password.
 | `--files` | `ZIPP_FILES` | where uploads go, default `files` |
 | `--public-url` | `ZIPP_PUBLIC_URL` | put before asset urls when the frontend runs elsewhere |
 | `--site-url de=https://…` | `ZIPP_SITE_URL` | the url of each site (environment: separated by commas) |
-| `--graphql-token` | `ZIPP_GRAPHQL_TOKEN` | the token frontends send, GraphQL is closed without it |
-| `--dev` | `ZIPP_DEV` | development: GraphiQL, GraphQL open without a token, noindex |
+| `--graphql-token` | `ZIPP_GRAPHQL_TOKEN` | a token frontends send that reads everything; admins make more in the studio (GraphQL), see docs/graphql.md |
+| `--dev` | `ZIPP_DEV` | development: GraphQL open without a token, noindex |
 | `--noindex` | `ZIPP_NOINDEX` | a staging site: noindex everywhere, robots.txt disallows all |
 | `--openrouter-key-file` | `ZIPP_OPENROUTER_KEY_FILE` | turns on the AI chat |
 | `--frame-ancestor` | `ZIPP_FRAME_ANCESTOR` | a site that may show the studio in a frame |
@@ -177,7 +177,9 @@ networks:
 ```
 
 `GRAPHQL_TOKEN` and `SMTP_URL` come from an `.env` next to the compose
-file. `./data` belongs to uid 1000 (`chown 1000:1000 data`). An update
+file; instead of `GRAPHQL_TOKEN` an admin can make the token of the
+website in the studio (GraphQL), with only the sections and sites it
+needs. `./data` belongs to uid 1000 (`chown 1000:1000 data`). An update
 is a new image: `serve` applies its migrations at the start.
 
 ## Migrations from the code

@@ -23,9 +23,7 @@ pub(super) async fn serve(
 	} = args;
 	let mail = mail.mailer()?;
 	if graphql_token.is_none() && !dev {
-		tracing::warn!(
-			"GraphQL is closed: set ZIPP_GRAPHQL_TOKEN for the frontends"
-		);
+		info!("GraphQL answers the tokens admins make in the studio");
 	}
 	let site_urls = site_urls
 		.iter()

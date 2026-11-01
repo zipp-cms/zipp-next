@@ -60,5 +60,6 @@ pub fn request(
 		preview: None,
 		token: None,
 		indexing,
+		scope: Scope::ALL,
 	})
 }

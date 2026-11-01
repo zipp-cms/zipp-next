@@ -21,7 +21,8 @@
 //! }
 //! ```
 //!
-//! Requests without a session only see published entries.
+//! Requests without a session only see published entries. Frontends
+//! send a token, its [`Scope`] says which sections and sites they read.
 
 use std::sync::Arc;
 
@@ -54,6 +55,7 @@ use crate::query::Query;
 use crate::richtext::{self, Chunk};
 use crate::schema::{ASSET, FieldKind, Format, Schema, Transform};
 
+pub mod api;
 #[cfg(test)]
 mod api_tests;
 mod asset;
@@ -62,9 +64,11 @@ pub mod ext;
 mod link;
 mod query;
 mod rich;
+mod routes;
 #[cfg(test)]
 pub(crate) mod tests;
 mod texts;
+pub mod tokens;
 
 pub(crate) use crate::content::markdown_html;
 use asset::*;
@@ -73,6 +77,7 @@ use link::*;
 use query::*;
 use rich::*;
 use texts::*;
+pub use tokens::Scope;
 
 /// Fields every entry has, field handles can't use them.
 pub const ENTRY_FIELDS: &[&str] = &[
@@ -133,6 +138,8 @@ struct Viewer {
 	token: Option<String>,
 	/// whether search engines may index, not in development
 	indexing: bool,
+	/// what the token of a frontend may read
+	scope: Scope,
 }
 
 /// A rich text field as parent of html and chunks.
@@ -302,8 +309,9 @@ pub fn build(
 		.data(db)
 		.data(PublicUrl(public_url))
 		.data(site_urls)
-		// nested relations multiply the work, anyone may ask
-		.limit_depth(12)
+		// nested relations multiply the work, anyone may ask; GraphiQL's
+		// introspection goes 15 deep
+		.limit_depth(15)
 		.limit_complexity(2000)
 		.finish()
 		.map_err(|e| e.to_string())
@@ -330,7 +338,7 @@ async fn graphql(
 	QueryParams(p): QueryParams<TokenParam>,
 	req: GraphQLRequest,
 ) -> Result<GraphQLResponse> {
-	let (published_only, preview) = {
+	let (published_only, preview, scope) = {
 		let conn = state.db.conn();
 		// only admins see every draft and unpublished entry, a role only
 		// some sections: it reads GraphQL like a frontend
@@ -338,17 +346,22 @@ async fn graphql(
 			Some(user) => role_of(&conn, user)?.is_none(),
 			None => false,
 		};
-		// private like Craft's: frontends send the token, the studio its
-		// session; development without a token is open
+		// private like Craft's: frontends send a token, the studio its
+		// session; development without the token of serve is open
 		let open = state.dev && state.graphql_token.is_none();
-		if !editor && !open && !has_token(&state, &headers) {
-			return Err(Error::MissingEndpointToken);
-		}
-		let preview = match &p.token {
-			Some(t) => preview(&conn, t)?,
-			None => None,
+		let scope = match (editor, bearer(&headers)) {
+			(true, _) => Scope::ALL,
+			// a wrong token fails in development too, like on the server
+			(false, Some(t)) => token_scope(&state, &conn, t)?
+				.ok_or(Error::MissingEndpointToken)?,
+			(false, None) if open => Scope::ALL,
+			(false, None) => return Err(Error::MissingEndpointToken),
 		};
-		(!editor, preview)
+		let preview = match &p.token {
+			Some(t) if scope.previews => preview(&conn, t)?,
+			_ => None,
+		};
+		(!editor, preview, scope)
 	};
 	let token = preview.as_ref().and(p.token);
 	let req = req.into_inner().data(Viewer {
@@ -356,6 +369,7 @@ async fn graphql(
 		preview,
 		token,
 		indexing: state.indexing,
+		scope,
 	});
 	Ok(state.gql.execute(req).await.into())
 }
@@ -369,6 +383,7 @@ pub async fn check_query(gql: &GqlSchema, query: &str) -> Vec<String> {
 		preview: None,
 		token: None,
 		indexing: true,
+		scope: Scope::ALL,
 	});
 	gql.execute(req)
 		.await
@@ -387,41 +402,71 @@ pub async fn check_query(gql: &GqlSchema, query: &str) -> Vec<String> {
 		.collect()
 }
 
-/// Whether the request has the endpoint token.
-fn has_token(state: &AppState, headers: &HeaderMap) -> bool {
-	let Some(token) = &state.graphql_token else {
-		return false;
-	};
-	let sent = headers
+/// The token of a request, `Authorization: Bearer <token>`.
+fn bearer(headers: &HeaderMap) -> Option<&str> {
+	headers
 		.get(axum::http::header::AUTHORIZATION)
 		.and_then(|v| v.to_str().ok())
 		.and_then(|v| v.strip_prefix("Bearer "))
-		.unwrap_or_default();
-	// as long whatever matches
-	sent.len() == token.len()
-		&& sent
-			.bytes()
-			.zip(token.bytes())
-			.fold(0, |acc, (a, b)| acc | (a ^ b))
-			== 0
 }
 
-/// The playground, only in development: it loads its scripts from a cdn.
-async fn graphiql(State(state): State<AppState>) -> Result<Html<String>> {
-	if !state.dev {
-		return Err(Error::NotFound);
+/// What a token may read: the one of `serve` everything, the ones of the
+/// studio their scope; `None` for an unknown or expired one.
+fn token_scope(
+	state: &AppState,
+	conn: &rusqlite::Connection,
+	sent: &str,
+) -> Result<Option<Scope>> {
+	if let Some(token) = &state.graphql_token {
+		// as long whatever matches
+		let same = sent.len() == token.len()
+			&& sent
+				.bytes()
+				.zip(token.bytes())
+				.fold(0, |acc, (a, b)| acc | (a ^ b))
+				== 0;
+		if same {
+			return Ok(Some(Scope::ALL));
+		}
 	}
-	Ok(Html(
-		GraphiQLSource::build().endpoint("/api/graphql").finish(),
-	))
+	tokens::scope_of(conn, sent)
+}
+
+/// The playground, for admins and in development. Its queries send the
+/// session of the studio (the same origin keeps it), so an admin sees
+/// drafts like in the studio; without one it goes to the login, except
+/// in development where GraphQL is open. It loads its scripts from a cdn.
+async fn graphiql(State(state): State<AppState>) -> Html<String> {
+	let html = GraphiQLSource::build()
+		.endpoint("/api/graphql")
+		.title("GraphiQL · zipp")
+		.finish();
+	let session = format!(
+		"<script>
+		const zippToken = localStorage.getItem('zipp-token')
+			?? sessionStorage.getItem('zipp-token');
+		if (!zippToken && !{dev}) location.replace('/admin');
+		const plainFetch = window.fetch;
+		window.fetch = (url, opts = {{}}) => plainFetch(url, zippToken
+			? {{ ...opts, headers: {{ ...opts.headers, 'session-token': zippToken }} }}
+			: opts);
+		</script>
+		</head>",
+		dev = state.dev,
+	);
+	Html(html.replacen("</head>", &session, 1))
 }
 
 pub fn routes() -> Router<AppState> {
-	Router::new().route(
-		"/graphql",
-		get(graphiql)
-			.post(graphql)
-			// async-graphql reads the body itself, past axum's limit
-			.layer(tower_http::limit::RequestBodyLimitLayer::new(256 * 1024)),
-	)
+	Router::new()
+		.route(
+			"/graphql",
+			get(graphiql)
+				.post(graphql)
+				// async-graphql reads the body itself, past axum's limit
+				.layer(tower_http::limit::RequestBodyLimitLayer::new(
+					256 * 1024,
+				)),
+		)
+		.merge(routes::routes())
 }

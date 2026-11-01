@@ -142,11 +142,11 @@ commit.
 - [x] Headings in the rich text: `.headings([2, 3])`
 - [x] Switching off a block (`"enabled": false`), e6ac8e3
 - [x] Search: full text in the studio (Cmd/Ctrl+K); for the website see Next
-- [ ] GraphQL tokens like Craft's schemas: several, each with what it may
-      read (today one `--graphql-token`)?
+- [x] GraphQL tokens like Craft's schemas: several, each with what it may
+      read, made by admins in the studio
 - [x] Logging in as a user (impersonation), 4d556eb
-- [ ] GraphiQL: in development today (`/api/graphql`); for admins in
-      production too?
+- [x] GraphiQL for admins in production too (`/api/graphql` with the
+      session)
 - [x] Live preview next to the editor (see Next)
 - [ ] A better Setup page?
 - [x] Post date, e6ac8e3

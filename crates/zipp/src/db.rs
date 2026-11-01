@@ -200,6 +200,22 @@ const MIGRATIONS: &[&str] = &[r#"
 		expires_at INTEGER NOT NULL
 	);
 
+	-- tokens frontends send to GraphQL, made by admins (graphql/tokens.rs)
+	CREATE TABLE graphql_tokens (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		-- sha256 of the token as hex, the token shows once
+		hash TEXT NOT NULL UNIQUE,
+		-- JSON lists of handles, NULL: all
+		sections TEXT,
+		sites TEXT,
+		-- whether preview tokens show drafts
+		previews INTEGER NOT NULL DEFAULT 0,
+		created_at INTEGER NOT NULL,
+		expires_at INTEGER,
+		last_used_at INTEGER
+	);
+
 	CREATE TABLE schema_migrations (
 		name TEXT PRIMARY KEY,
 		applied_at INTEGER NOT NULL

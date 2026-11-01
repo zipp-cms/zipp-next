@@ -55,9 +55,10 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   the editor in `edit/`, drafts), `assets/` (the library, the asset
   panel, the image editor in `image/`), `fields/` (one component per
   field kind, `registry.ts` maps the kinds, `rich/` the rich text),
-  `setup/`, `ai/`, `users/`, `auth/`. An area has its `api.ts` (the
-  requests of its server area), its pages and components and their
-  logic in `.ts`. What several areas use: `zipp-ui` (`studio/ui`, the
+  `setup/`, `ai/`, `users/`, `graphql/` (the tokens), `auth/`. An area
+  has its `api.ts` (the requests of its server area), its pages and
+  components and their logic in `.ts`. What several areas use:
+  `zipp-ui` (`studio/ui`, the
   components without an area and the icons, a package that plugins use
   too), `core/` (`client.ts` sends requests and reads
   streams, `schema.ts` the schema's types and lookups, `router` the
@@ -160,7 +161,7 @@ What the owner decided, so it doesn't get asked again:
 - AI models run through soe-llms on OpenRouter, never a provider's api
   directly; the AI only writes drafts and can do what its user can.
   Spending limits are set on the key, not in zipp.
-- GraphiQL only in development (`--dev`).
+- GraphiQL for admins (with their session) and in development.
 - Big JavaScript in the studio is fine, only editors load it, once.
 
 ## Before a commit

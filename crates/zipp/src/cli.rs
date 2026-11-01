@@ -38,12 +38,13 @@ pub(super) struct ServeArgs {
 	/// How many backups of `--backup-dir` stay
 	#[arg(long, env = "ZIPP_BACKUP_KEEP", default_value_t = 14)]
 	pub(super) backup_keep: usize,
-	/// The token frontends send to GraphQL as `Authorization: Bearer`,
-	/// like Craft's schema tokens; without it GraphQL is closed
+	/// A token frontends send to GraphQL as `Authorization: Bearer` that
+	/// reads everything; admins make tokens that read some sections and
+	/// sites in the studio, like Craft's schemas
 	#[arg(long, env = "ZIPP_GRAPHQL_TOKEN", hide_env_values = true)]
 	pub(super) graphql_token: Option<String>,
-	/// Development: GraphiQL on /api/graphql, and GraphQL is open when
-	/// there is no token
+	/// Development: GraphQL is open without a token when there is no
+	/// `--graphql-token`
 	#[arg(long, env = "ZIPP_DEV")]
 	pub(super) dev: bool,
 	/// Search engines may not index, like a staging site: noindex on

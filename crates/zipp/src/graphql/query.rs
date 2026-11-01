@@ -72,11 +72,15 @@ pub(super) fn sites_field(name: &str) -> GqlField {
 		FieldFuture::new(async move {
 			let schema = ctx.data::<Arc<Schema>>()?;
 			let urls = ctx.data::<SiteUrls>()?;
-			// offline sites only for previews and admins, the ids stay
-			let all = !hides_offline(ctx.data::<Viewer>()?);
+			// offline sites only for previews and admins, the ids stay;
+			// the ones a token reads
+			let viewer = ctx.data::<Viewer>()?;
+			let all = !hides_offline(viewer);
 			let sites = schema.sites.iter().enumerate();
-			let sites =
-				sites.filter(|(_, s)| all || !schema.is_offline(&s.handle));
+			let sites = sites.filter(|(_, s)| {
+				(all || !schema.is_offline(&s.handle))
+					&& viewer.scope.site(&s.handle)
+			});
 			let sites = sites.map(|(i, s)| {
 				let site = serde_json::json!({
 					"id": i + 1,
@@ -250,6 +254,17 @@ pub(super) fn query(
 	}
 	// a frontend gets nothing of an offline site, counts neither
 	q.nothing = schema.is_offline(&q.site) && hides_offline(viewer);
+
+	// nor of what its token doesn't read
+	let scope = &viewer.scope;
+	match &q.section {
+		Some(s) if !scope.section(s) => q.nothing = true,
+		Some(_) => {}
+		None => q.sections = scope.sections.clone(),
+	}
+	if !scope.site(&q.site) {
+		q.nothing = true;
+	}
 	Ok(q)
 }
 
