@@ -109,6 +109,7 @@ pub(crate) fn app(state: AppState, routes: Router<AppState>) -> Router {
 		.merge(trash::routes())
 		.merge(search::routes())
 		.merge(mail::routes())
+		.merge(change_requests::routes())
 		.merge(graphql::routes());
 	let mut app = Router::new()
 		.merge(assets::file_routes())

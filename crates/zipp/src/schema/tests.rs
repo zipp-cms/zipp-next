@@ -413,6 +413,39 @@ fn a_plugin_once() {
 	assert_eq!(s.check().unwrap_err(), "two plugins or field types twice");
 }
 
+#[test]
+fn a_plugin_says_what_it_added() {
+	struct Forms;
+	impl crate::Plugin for Forms {
+		fn name(&self) -> &'static str {
+			"forms"
+		}
+
+		fn schema(&self, schema: Schema) -> Schema {
+			schema.section(Section::single("forms", "forms")).entry(
+				"forms",
+				"Forms",
+				[Field::email("to")],
+			)
+		}
+
+		fn finish(&self, mut schema: Schema) -> Schema {
+			let page =
+				schema.components.iter_mut().find(|c| c.handle == "page");
+			page.unwrap().fields.push(Field::text("formTitle"));
+			schema
+		}
+	}
+	let s = site().plugin(Forms).finish();
+	let added = &s.plugins.added()[0];
+	assert_eq!(added.plugin, "forms");
+	assert_eq!(added.sections, ["forms"]);
+	assert_eq!(added.components, ["forms"]);
+	// the new type's own fields aren't listed, the one in page is
+	assert_eq!(added.fields, ["page.formTitle"]);
+	assert!(added.transforms.is_empty());
+}
+
 /// A block with a switch, a dropdown and fields that hang on them.
 fn with_conditions(fields: Vec<Field>) -> Result<(), String> {
 	let mut all = vec![

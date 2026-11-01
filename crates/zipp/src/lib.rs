@@ -7,6 +7,7 @@ pub mod api;
 pub mod assets;
 pub mod auth;
 pub mod backup;
+mod change_requests;
 mod cli;
 pub mod content;
 #[cfg(feature = "craft")]

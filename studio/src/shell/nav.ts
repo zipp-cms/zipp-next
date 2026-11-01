@@ -1,18 +1,26 @@
 import type { Schema } from '../core/schema';
-import { visibleNav } from '../core/access';
+import { isAdmin, visibleNav } from '../core/access';
 import { sectionOf } from '../core/schema';
 
 /** The navigation of the studio: its groups, their items and links. */
 
 export type NavGroup = ReturnType<typeof visibleNav>[number];
 
-/** The pages of Setup, also its crumbs. */
+/** The pages of Setup, also its crumbs; requests only for admins. */
 export const SETUP_TABS: [string, string][] = [
+	['overview', 'Overview'],
 	['sections', 'Sections'],
 	['types', 'Entry types'],
 	['blocks', 'Blocks'],
+	['fields', 'Fields'],
 	['sites', 'Sites, transforms and roles'],
+	['requests', 'Requests'],
 ];
+
+/** The pages of Setup the user sees. */
+export function setupTabs(schema: Schema): [string, string][] {
+	return SETUP_TABS.filter(([t]) => t !== 'requests' || isAdmin(schema));
+}
 
 /** A group of only globals is settings, others are content. */
 export function groupIcon(schema: Schema, group: NavGroup): string {

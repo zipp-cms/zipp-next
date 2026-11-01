@@ -46,6 +46,8 @@ pub struct SchemaResp {
 	pub offline: Vec<String>,
 	/// the plugins with a studio module and its data
 	pub plugins: Vec<PluginResp>,
+	/// what every plugin added to the content model, for Setup
+	pub plugins_added: Vec<crate::plugin::Added>,
 	/// development mode, see `serve --dev`
 	pub dev: bool,
 	/// the svgs of the Lucide icons the schema names, see

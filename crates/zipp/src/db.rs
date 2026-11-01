@@ -216,6 +216,18 @@ const MIGRATIONS: &[&str] = &[r#"
 		last_used_at INTEGER
 	);
 
+	-- what editors need changed in the content model, see change_requests
+	CREATE TABLE change_requests (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+		-- the path of the Setup page and what it shows
+		page TEXT NOT NULL,
+		context TEXT NOT NULL,
+		text TEXT NOT NULL,
+		created_at INTEGER NOT NULL,
+		done INTEGER NOT NULL DEFAULT 0
+	);
+
 	CREATE TABLE schema_migrations (
 		name TEXT PRIMARY KEY,
 		applied_at INTEGER NOT NULL

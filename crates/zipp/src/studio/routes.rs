@@ -116,6 +116,7 @@ async fn schema_route(
 				})
 			})
 			.collect(),
+		plugins_added: state.schema.plugins.added().to_vec(),
 		schema: (*state.schema).clone(),
 		site_urls: (*state.site_urls).clone(),
 		ai_models: match state.ai {

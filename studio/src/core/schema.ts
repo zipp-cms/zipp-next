@@ -202,6 +202,16 @@ export type Schema = {
 	icons: Record<string, string>;
 	/** the plugins with a studio module, `/_plugins/<name>.js` */
 	plugins: { name: string; data: unknown }[];
+	/** what each plugin added to the content model, handles */
+	pluginsAdded: {
+		plugin: string;
+		sections: string[];
+		components: string[];
+		/** in the site's own types, `page.seo` */
+		fields: string[];
+		fieldTypes: string[];
+		transforms: string[];
+	}[];
 	/** the models of the AI chat, empty if it is off */
 	aiModels: { id: string; name: string }[];
 	/** markdown files of the code, read only, as html */

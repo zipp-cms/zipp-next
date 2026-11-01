@@ -13,11 +13,13 @@
 //! own: it is in migrations and in Setup.
 
 use std::any::Any;
+use std::collections::BTreeSet;
 use std::fmt;
 use std::sync::Arc;
 
 use async_graphql::dynamic::{Field as GqlField, Type, TypeRef};
 use axum::Router;
+use serde::Serialize;
 use serde_json::Value;
 
 use crate::AppState;
@@ -151,9 +153,75 @@ impl PluginStudio {
 	}
 }
 
-/// The plugins of a schema, code like field types.
+/// The plugins of a schema, code like field types, and what each added
+/// to the content model, in the same order.
 #[derive(Clone, Default)]
-pub struct Plugins(pub(crate) Vec<Arc<dyn Plugin>>);
+pub struct Plugins(pub(crate) Vec<Arc<dyn Plugin>>, pub(crate) Vec<Added>);
+
+/// What a plugin added to the content model, for Setup.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Added {
+	pub plugin: String,
+	pub sections: Vec<String>,
+	/// entry types and blocks
+	pub components: Vec<String>,
+	/// fields in the site's own types, `page.seo`
+	pub fields: Vec<String>,
+	pub field_types: Vec<String>,
+	pub transforms: Vec<String>,
+}
+
+/// The handles of a schema, to see what a plugin added: sections,
+/// components, `type.field`, field types, transforms.
+fn handles(s: &Schema) -> [BTreeSet<String>; 5] {
+	let fields = s.components.iter().flat_map(|c| {
+		c.fields
+			.iter()
+			.map(|f| format!("{}.{}", c.handle, f.handle))
+	});
+	[
+		s.sections.iter().map(|x| x.handle.clone()).collect(),
+		// inline groups belong to their component
+		s.components
+			.iter()
+			.filter(|c| c.part_of.is_none())
+			.map(|c| c.handle.clone())
+			.collect(),
+		fields.collect(),
+		s.field_types
+			.0
+			.iter()
+			.map(|t| t.name().to_string())
+			.collect(),
+		s.transforms.iter().map(|t| t.handle.clone()).collect(),
+	]
+}
+
+impl Added {
+	/// Adds what is in `after` but not in `before`.
+	fn add(&mut self, before: &[BTreeSet<String>; 5], after: &Schema) {
+		let after = handles(after);
+		let new = |i: usize| after[i].difference(&before[i]).cloned();
+		self.sections.extend(new(0));
+		self.components.extend(new(1));
+		// the fields of new components are theirs
+		let fields = new(2).filter(|f| {
+			let comp = f.split('.').next().unwrap_or_default();
+			!self.components.iter().any(|c| c == comp)
+		});
+		self.fields.extend(fields.collect::<Vec<_>>());
+		self.field_types.extend(new(3));
+		self.transforms.extend(new(4));
+	}
+}
+
+impl Plugins {
+	/// What the plugins added, see [`Added`].
+	pub fn added(&self) -> &[Added] {
+		&self.1
+	}
+}
 
 impl Plugins {
 	pub fn get(&self, name: &str) -> Option<&Arc<dyn Plugin>> {
@@ -181,8 +249,15 @@ impl Schema {
 	/// when the server starts.
 	pub fn plugin(self, plugin: impl Plugin) -> Self {
 		let plugin = Arc::new(plugin);
+		let before = handles(&self);
 		let mut schema = plugin.schema(self);
+		let mut added = Added {
+			plugin: plugin.name().into(),
+			..Added::default()
+		};
+		added.add(&before, &schema);
 		schema.plugins.0.push(plugin);
+		schema.plugins.1.push(added);
 		schema
 	}
 
@@ -197,8 +272,12 @@ impl Schema {
 	/// Lets the plugins finish once the schema is complete.
 	/// [`Cms`](crate::Cms) calls it.
 	pub fn finish(mut self) -> Self {
-		for p in self.plugins.0.clone() {
+		for (i, p) in self.plugins.0.clone().into_iter().enumerate() {
+			let before = handles(&self);
 			self = p.finish(self);
+			let mut added = std::mem::take(&mut self.plugins.1[i]);
+			added.add(&before, &self);
+			self.plugins.1[i] = added;
 		}
 		self
 	}

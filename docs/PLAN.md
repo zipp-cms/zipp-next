@@ -93,8 +93,8 @@
 
 - Users read only too: roles are code already; a read-only view of who has
   which role for non-admins (question to the operator)
-- "Request a change" on read-only Setup pages: the editor writes what they
-  want, it becomes an issue for the developers (later)
+- [x] "Request a change" on read-only Setup pages: the editor writes what
+  they want, admins see it under Setup → Requests (and get a mail)
 - AI that changes the content model and Rust code, only in dev mode and for
   admins: it edits the schema code, the dev server rebuilds, the migration
   check shows the ops. In dev mode it gets merge rights too, otherwise its
@@ -148,7 +148,8 @@ commit.
 - [x] GraphiQL for admins in production too (`/api/graphql` with the
       session)
 - [x] Live preview next to the editor (see Next)
-- [ ] A better Setup page?
+- [x] A better Setup page: an overview of what is where, field usage,
+      what plugins add, change requests
 - [x] Post date, e6ac8e3
 - [x] Expiry date, e6ac8e3
 - [x] Changing the type of an entry later, 1ede0fb

@@ -88,6 +88,25 @@ their uri, the urls per site, which role may do what, the SEO defaults)
 and its entries as a short list on the side that links to the editor; a
 type's page its fields, with where it is used on the side.
 
+Setup starts with an overview of what is where: the counts (sections,
+entry types, blocks, fields, entries, sites), each nav group with its
+sections, their entries, entry types and the blocks and groups of their
+fields (a level deeper where blocks hold blocks), blocks no field uses,
+what each plugin added to the content model (sections, types, fields,
+field types, transforms) and the links to GraphQL, roles and mail. The
+Fields tab lists every field handle with its labels, kinds, the blocks
+it holds and where it is, like Craft's field usage; its search finds a
+handle, a label or a block (`button` shows every field that holds the
+button block).
+
+Because the model is code, an editor asks for a change on the page
+where it is: "Request a change" in the bar of every Setup page takes a
+text ("I need a subtitle field") with the page it was written on. Admins
+see the requests under Setup → Requests, the open ones first, and tick
+them done; with mails set up (`serve --smtp-url`) each admin gets a mail
+of a new one. The api: `POST /change-requests` for everyone, `GET` and
+`PUT /change-requests/{id}` (`done`) for admins.
+
 Admins see each field's handle next to its label, like Craft's "show
 field handles"; the handle links to the field in Setup, the entry type
 in the sidebar to the type's fields.

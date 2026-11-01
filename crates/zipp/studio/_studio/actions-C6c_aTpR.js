@@ -1,1 +1,0 @@
-import{w as c,n as o,aL as i,an as d,aM as m}from"./index-DUXCxiva.js";function k(n,e,a){c(()=>{var r=o(()=>e(n,a==null?void 0:a())||{});if(a&&(r!=null&&r.update)){var s=!1,t={};i(()=>{var f=a();d(f),s&&m(t,f)&&(t=f,r.update(f))}),s=!0}if(r!=null&&r.destroy)return()=>r.destroy()})}export{k as a};

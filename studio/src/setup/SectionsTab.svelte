@@ -1,24 +1,20 @@
 <script lang="ts">
 	import { type Schema } from '../core/schema';
-	import { listEntries } from '../entries/api';
 	import { accessOf } from '../core/access';
 	import { accessText, visibleSections } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
 
 	/** The sections the role sees, with how many entries each has. */
-	let { schema }: { schema: Schema } = $props();
+	let {
+		schema,
+		counts,
+	}: {
+		schema: Schema;
+		/** in the primary site, see Setup's `loadProps` */
+		counts: Record<string, number>;
+	} = $props();
 
 	const sections = $derived(visibleSections(schema));
-
-	// the number of entries of each section, in the primary site
-	let counts = $state<Record<string, number>>({});
-	$effect(() => {
-		for (const s of sections) {
-			listEntries({ section: s.handle, limit: '1' })
-				.then(r => (counts[s.handle] = r.total))
-				.catch(() => {});
-		}
-	});
 </script>
 
 <div class="card">

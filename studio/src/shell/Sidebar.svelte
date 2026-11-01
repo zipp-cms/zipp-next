@@ -14,7 +14,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import SiteSwitch from './SiteSwitch.svelte';
 	import UserMenu from './UserMenu.svelte';
-	import { SETUP_TABS, groupIcon, groupItems } from './nav';
+	import { setupTabs, groupIcon, groupItems } from './nav';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import { searchBox } from '../search/search.svelte';
 	import { sideNav } from './sideNav.svelte';
@@ -106,18 +106,14 @@
 		{/if}
 		<hr />
 		<!-- read only for everyone, a role sees its part -->
-		<a
-			class="item"
-			href="/admin/setup/sections"
-			class:active={page === 'setup'}
-		>
+		<a class="item" href="/admin/setup" class:active={page === 'setup'}>
 			<Icon name="settings" />
 			Setup
 		</a>
 		{#if page === 'setup'}
-			{@const tab = current.path.split('/')[3] ?? 'sections'}
+			{@const tab = current.path.split('/')[3] ?? 'overview'}
 			<div class="sub">
-				{#each SETUP_TABS as [handle, name] (handle)}
+				{#each setupTabs(schema) as [handle, name] (handle)}
 					<a
 						href="/admin/setup/{handle}"
 						class:active={tab === handle}

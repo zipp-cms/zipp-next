@@ -1,14 +1,35 @@
 <script module lang="ts">
 	import type { Schema as SchemaT } from '../core/schema';
 	import { listEntries } from '../entries/api';
+	import { isAdmin } from '../core/access';
+	import { listRequests } from './api';
+	import { entryCounts } from './setup';
 
-	/** A section of its own: its first entries come with the page. */
+	/**
+	 * A section of its own: its first entries come with the page; the
+	 * overview and the sections their counts, the requests their list.
+	 */
 	export async function loadProps(props: {
 		schema: SchemaT;
 		tab?: string;
 		handle?: string;
 	}) {
-		if (props.tab !== 'sections' || !props.handle) return {};
+		const tab = props.tab ?? 'overview';
+		if (tab === 'requests') return { requests: await listRequests() };
+		if (tab === 'overview') {
+			const admin = isAdmin(props.schema);
+			const [counts, requests] = await Promise.all([
+				entryCounts(props.schema),
+				admin ? listRequests() : Promise.resolve([]),
+			]);
+			return {
+				counts,
+				openRequests: requests.filter(r => !r.done).length,
+			};
+		}
+		if (tab === 'sections' && !props.handle)
+			return { counts: await entryCounts(props.schema) };
+		if (tab !== 'sections' || !props.handle) return {};
 		const section = props.schema.sections.find(
 			s => s.handle === props.handle,
 		);
@@ -26,11 +47,17 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
 	import type { EntryList } from '../entries/api';
+	import type { ChangeRequest } from './api';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import { SETUP_TABS } from '../shell/nav';
 	import { componentOf, sectionOf } from '../core/schema';
+	import { current } from '../core/router.svelte';
 	import ComponentPage from './ComponentPage.svelte';
 	import ComponentsTab from './ComponentsTab.svelte';
+	import FieldsTab from './FieldsTab.svelte';
+	import OverviewTab from './OverviewTab.svelte';
+	import RequestChange from './RequestChange.svelte';
+	import RequestsTab from './RequestsTab.svelte';
 	import SectionsTab from './SectionsTab.svelte';
 	import SetupSection from './SetupSection.svelte';
 	import SitesTab from './SitesTab.svelte';
@@ -42,15 +69,22 @@
 	 */
 	let {
 		schema,
-		tab = 'sections',
+		tab = 'overview',
 		handle = null,
 		list,
+		counts = {},
+		openRequests,
+		requests,
 	}: {
 		schema: Schema;
 		tab?: string;
 		handle?: string | null;
 		/** the entries of a section, see `loadProps` */
 		list?: EntryList;
+		/** entries per section */
+		counts?: Record<string, number>;
+		openRequests?: number;
+		requests?: ChangeRequest[];
 	} = $props();
 
 	const component = $derived(
@@ -61,7 +95,7 @@
 	const crumbs = $derived.by(() => {
 		const name = Object.fromEntries(SETUP_TABS)[tab] ?? tab;
 		const out: { label: string; href?: string }[] = [
-			{ label: 'Setup', href: '/admin/setup/sections' },
+			{ label: 'Setup', href: '/admin/setup' },
 			{ label: name, href: `/admin/setup/${tab}` },
 		];
 		if (handle) {
@@ -75,12 +109,30 @@
 	});
 </script>
 
-<PageTop {crumbs} note="Read only, the content model is code" />
+<PageTop {crumbs} note="Read only, the content model is code">
+	{#snippet actions()}
+		{#if tab !== 'requests'}
+			<RequestChange
+				page={current.path}
+				context={crumbs
+					.slice(1)
+					.map(c => c.label)
+					.join(' › ')}
+			/>
+		{/if}
+	{/snippet}
+</PageTop>
 
-{#if tab === 'sections' && handle && list}
+{#if tab === 'overview'}
+	<OverviewTab {schema} {counts} {openRequests} />
+{:else if tab === 'sections' && handle && list}
 	<SetupSection {schema} {handle} {list} />
 {:else if tab === 'sections'}
-	<SectionsTab {schema} />
+	<SectionsTab {schema} {counts} />
+{:else if tab === 'fields'}
+	<FieldsTab {schema} />
+{:else if tab === 'requests' && requests}
+	<RequestsTab {requests} />
 {:else if (tab === 'types' || tab === 'blocks') && handle}
 	{#if component}
 		<ComponentPage {schema} {component} />

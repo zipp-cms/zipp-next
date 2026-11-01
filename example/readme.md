@@ -56,6 +56,8 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Users, invites, login as | Users → New user without a password · a user's page → Access · the login → Forgot your password? | the invite and reset mails (on dev in Mailpit), **Log in as** with the bar to come back |
 | Contact form | the website → /kontakt · Settings → Forms | `crates/zipp-forms`: the form is code, the mail goes to who Forms names (on dev: Mailpit), the message after sending is from there |
 | Mail | Setup → Sites, transforms and roles → Mail (admins) | where mails go; **Send a test mail to me**. Without `--smtp-url` they are only logged |
+| Setup overview | Setup → Overview · Setup → Fields, search `button` | what is where: nav groups, sections with their entries, types and the blocks of their fields; the plugins forms and seo with what they added; every field handle and where it is |
+| Request a change | as an editor: Setup → Entry types → Page → **Request a change** · as an admin: Setup → Requests | the request with its page; admins tick it done and get a mail of it (on dev in Mailpit) |
 | Translations | Settings → Translations | the keys come from the code, editors only translate |
 | SEO | Settings → SEO, a page → SEO | the search result preview; on the website title, meta, JSON-LD, `/sitemap.xml` and `/robots.txt` from the npm package `meierlabs-seo` (the demo is noindex) |
 | Search | **Search** at the top of the sidebar, or Cmd/Ctrl+K | type a word of a page's text: entries by section with where it matched and files, Enter opens one; the author finds nothing of Settings (header, footer), which they may not see |
