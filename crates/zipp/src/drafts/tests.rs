@@ -275,6 +275,46 @@ fn tokens_show_the_draft() {
 	assert!(preview(&conn, "nope").unwrap().is_none());
 }
 
+/// The live preview keeps its token while the editor types: each save
+/// shows, a discard the live content again.
+#[test]
+fn a_token_follows_the_draft() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	let e = save(
+		&conn,
+		&s,
+		None,
+		input("pages", "page", "Live", json!({})),
+		None,
+	)
+	.unwrap();
+	let token = create_token(&conn, e.id).unwrap();
+	let title = || {
+		entry_doc(preview(&conn, &token).unwrap())["de"]
+			.title
+			.clone()
+	};
+
+	for t in ["D", "Dr", "Draft"] {
+		put_draft(
+			&conn,
+			&s,
+			e.id,
+			"de",
+			site_doc("page", t, json!({})),
+			base(&conn, e.id),
+			None,
+		)
+		.unwrap();
+		assert_eq!(title(), t);
+	}
+
+	discard(&conn, e.id).unwrap();
+	assert_eq!(title(), "Live");
+}
+
 /// [`site`] with concerts among the events: the same city (translatable
 /// there), the price as text, their own uris.
 fn with_concerts() -> Schema {

@@ -32,6 +32,10 @@
 	import EntrySidebar from './EntrySidebar.svelte';
 	import RevisionView from './RevisionView.svelte';
 	import TabBar from './TabBar.svelte';
+	import Preview from '../Preview.svelte';
+	import SplitHandle from 'zipp-ui/SplitHandle.svelte';
+	import { SitePreview } from '../preview.svelte';
+	import { previewToken } from '../drafts';
 
 	let {
 		schema,
@@ -88,6 +92,42 @@
 		delete: id !== null && !single && can(schema, ed.sec, 'delete'),
 	});
 	const url = $derived(entryUrl(schema, ed.site, ed.uri));
+
+	// the website next to the editor, on or off in this browser; an entry
+	// in the flyout or without a page (or an id) has none
+	const LIVE_KEY = 'zipp-live-preview';
+	let liveOn = $state(localStorage.getItem(LIVE_KEY) === '1');
+	const canLive = $derived(!onclose && id !== null && !!url);
+	const live = $derived(
+		canLive && liveOn
+			? untrack(
+					() =>
+						new SitePreview(schema, ed.site, url, () =>
+							previewToken(id!),
+						),
+				)
+			: null,
+	);
+	let liveWidth = $state(0);
+	let resizing = $state(false);
+
+	function toggleLive() {
+		liveOn = !liveOn;
+		localStorage.setItem(LIVE_KEY, liveOn ? '1' : '');
+	}
+
+	// the draft is new after every save, publish and discard; a published
+	// slug moves the page
+	let shownUrl = untrack(() => url);
+	$effect(() => {
+		void ed.draft;
+		const u = url;
+		untrack(() => {
+			if (u && u !== shownUrl) live?.open(u);
+			else live?.update();
+			shownUrl = u;
+		});
+	});
 
 	// every change goes into the draft, a moment after the last key
 	$effect(() => {
@@ -151,100 +191,154 @@
 		title={global ? secDef.name : ed.title}
 		{url}
 		{may}
+		live={canLive ? !!live : null}
+		onlive={toggleLive}
 		onpreview={() => url && ed.preview(url)}
 		ondiscard={discard}
 		onremove={remove}
 		onsave={save}
 	/>
 
-	<ConflictBanner
-		conflict={ed.conflict}
-		onloadtheirs={() => ed.loadTheirs()}
-		onkeepmine={() => ed.keepMine()}
-	/>
+	<div class:live style:--frame="{liveWidth}px">
+		<div>
+			<ConflictBanner
+				conflict={ed.conflict}
+				onloadtheirs={() => ed.loadTheirs()}
+				onkeepmine={() => ed.keepMine()}
+			/>
 
-	<div class="with-aside">
-		<div class="main">
-			{#if ed.error}<p class="error">{ed.error}</p>{/if}
+			<div class="with-aside">
+				<div class="main">
+					{#if ed.error}<p class="error">{ed.error}</p>{/if}
 
-			{#if ed.viewing}
-				<div class="card">
-					<RevisionView
-						{schema}
-						comp={componentOf(schema, ed.viewing.doc?.type ?? '') ??
-							comp}
-						refs={ed.refs}
-						{single}
-						rev={ed.viewing.rev}
-						doc={ed.viewing.doc}
-						changed={ed.viewing.changed}
-						onrestore={canEdit
-							? () => ed.restore(ed.viewing!.rev)
-							: null}
-						onback={() => (ed.viewing = null)}
-					/>
-				</div>
-			{:else}
-				<!-- read only for a role that may only look -->
-				<!-- a global has no title, the bar names it -->
-				{#if !global}
-					<fieldset disabled={!canEdit}>
-						<EntryHead
-							bind:title={ed.title}
-							changed={ed.changed}
-							errors={ed.errors}
-						/>
-					</fieldset>
-				{/if}
-				{#if tabs.length || isAdmin(schema)}
-					<div class="tabs-row">
-						{#if tabs.length}
-							<TabBar
-								{tabs}
-								bind:current={tab}
-								changed={ed.changed}
-								{errors}
+					{#if ed.viewing}
+						<div class="card">
+							<RevisionView
+								{schema}
+								comp={componentOf(
+									schema,
+									ed.viewing.doc?.type ?? '',
+								) ?? comp}
+								refs={ed.refs}
+								{single}
+								rev={ed.viewing.rev}
+								doc={ed.viewing.doc}
+								changed={ed.viewing.changed}
+								onrestore={canEdit
+									? () => ed.restore(ed.viewing!.rev)
+									: null}
+								onback={() => (ed.viewing = null)}
 							/>
+						</div>
+					{:else}
+						<!-- read only for a role that may only look -->
+						<!-- a global has no title, the bar names it -->
+						{#if !global}
+							<fieldset disabled={!canEdit}>
+								<EntryHead
+									bind:title={ed.title}
+									changed={ed.changed}
+									errors={ed.errors}
+								/>
+							</fieldset>
 						{/if}
-						{#if isAdmin(schema)}
-							<a
-								class="layout-link"
-								href={setupPath('types', comp.handle)}
-							>
-								Field layout «{comp.name}»
-							</a>
+						{#if tabs.length || isAdmin(schema)}
+							<div class="tabs-row">
+								{#if tabs.length}
+									<TabBar
+										{tabs}
+										bind:current={tab}
+										changed={ed.changed}
+										{errors}
+									/>
+								{/if}
+								{#if isAdmin(schema)}
+									<a
+										class="layout-link"
+										href={setupPath('types', comp.handle)}
+									>
+										Field layout «{comp.name}»
+									</a>
+								{/if}
+							</div>
 						{/if}
-					</div>
-				{/if}
-				<fieldset disabled={!canEdit}>
-					<Fields
-						{schema}
-						component={comp}
-						values={ed.fields}
-						{errors}
-						refs={ed.refs}
-						changed={ed.changed}
-						only={shownFields}
-					/>
-				</fieldset>
-			{/if}
+						<fieldset disabled={!canEdit}>
+							<Fields
+								{schema}
+								component={comp}
+								values={ed.fields}
+								{errors}
+								refs={ed.refs}
+								changed={ed.changed}
+								only={shownFields}
+							/>
+						</fieldset>
+					{/if}
+				</div>
+
+				<EntrySidebar
+					{schema}
+					{ed}
+					{secDef}
+					{comp}
+					{global}
+					{may}
+					{shownFields}
+					oncopy={copyFrom}
+					onview={view}
+				/>
+			</div>
 		</div>
 
-		<EntrySidebar
-			{schema}
-			{ed}
-			{secDef}
-			{comp}
-			{global}
-			{may}
-			{shownFields}
-			oncopy={copyFrom}
-			onview={view}
-		/>
+		{#if live}
+			<div class="frame">
+				<SplitHandle
+					bind:width={liveWidth}
+					bind:resizing
+					key="zipp-live-preview-width"
+					initial={560}
+					min={320}
+					side="end"
+					label="Width of the website"
+				/>
+				<Preview preview={live} {resizing} />
+			</div>
+		{/if}
 	</div>
 {/if}
 
 <style lang="scss">
+	// the website on the right, as high as the window under the bar
+	.live {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) var(--frame);
+		gap: 1.25rem;
+
+		.with-aside {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	.frame {
+		position: sticky;
+		top: 3rem;
+		align-self: start;
+		display: grid;
+		height: calc(100vh - 3rem);
+		margin: -1.25rem calc(-1 * var(--page-pad)) -2rem 0;
+		border-left: 1px solid var(--line);
+	}
+
+	@include max-tablet {
+		.live {
+			grid-template-columns: 1fr;
+		}
+
+		.frame {
+			display: none;
+		}
+	}
+
 	// the fields put their labels on the left when this is wide
 	.main {
 		container-type: inline-size;

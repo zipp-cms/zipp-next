@@ -11,6 +11,8 @@
 		title,
 		url,
 		may,
+		live,
+		onlive,
 		onpreview,
 		ondiscard,
 		onremove,
@@ -21,6 +23,9 @@
 		title: string;
 		url: string | null;
 		may: May;
+		/** the live preview is on; null: this entry has none */
+		live: boolean | null;
+		onlive: () => void;
 		onpreview: () => void;
 		ondiscard: () => void;
 		onremove: () => void;
@@ -65,7 +70,20 @@
 				Discard
 			</button>
 		{/if}
-		{#if url}
+		{#if live !== null}
+			<button
+				class="live"
+				class:on={live}
+				aria-pressed={live}
+				onclick={onlive}
+				title="The website next to the editor, with the draft"
+			>
+				<Icon name="live-preview" />
+				Live preview
+			</button>
+		{/if}
+		<!-- the live preview has its own link to a new tab -->
+		{#if url && !live}
 			{#if hasDraft}
 				<button onclick={onpreview}>
 					<Icon name="view" />
@@ -99,8 +117,20 @@
 		font-size: var(--fs-sm);
 	}
 
+	.on {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+
 	@include max-desktop {
 		.by {
+			display: none;
+		}
+	}
+
+	// too narrow for the website next to the editor
+	@include max-tablet {
+		.live {
 			display: none;
 		}
 	}

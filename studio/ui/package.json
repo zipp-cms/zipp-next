@@ -35,6 +35,7 @@
 		"./SearchList.svelte": "./src/SearchList.svelte",
 		"./Segmented.svelte": "./src/Segmented.svelte",
 		"./SortLine.svelte": "./src/SortLine.svelte",
+		"./SplitHandle.svelte": "./src/SplitHandle.svelte",
 		"./Table.svelte": "./src/Table.svelte",
 		"./UploadButton.svelte": "./src/UploadButton.svelte"
 	},

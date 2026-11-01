@@ -30,7 +30,8 @@
 - [x] Drafts (one per entry, all sites, saved while typing), publish in one transaction,
       revisions with restore, preview tokens that crelte passes to GraphQL
 - [ ] Releases: several drafts published together (Craft 6), on top of the drafts
-- [ ] Live preview: preview tokens, frontend renders unsaved content
+- [x] Live preview: the website next to the editor with the draft, updated after
+      every save (preview tokens, crelte's live preview mode keeps the scroll)
 - [ ] WebP/AVIF output for transforms, alt text per site
 - [x] Rich text field (TipTap): headings, lists, links, button rows, embedded blocks, html + chunks
 - [x] Field kinds as plugins: a crate with the Rust side and a studio
@@ -140,7 +141,7 @@ commit.
 - [x] Logging in as a user (impersonation), 4d556eb
 - [ ] GraphiQL: in development today (`/api/graphql`); for admins in
       production too?
-- [ ] Live preview next to the editor (see Next)?
+- [x] Live preview next to the editor (see Next)
 - [ ] A better Setup page?
 - [x] Post date, e6ac8e3
 - [x] Expiry date, e6ac8e3

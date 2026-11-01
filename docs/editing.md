@@ -11,6 +11,27 @@ writes them in one transaction and keeps a revision; an old revision
 can be restored into the draft. A preview token shows the draft on the
 website: crelte passes `?token=` on to GraphQL.
 
+*Live preview* in the bar of an entry with a page puts the website next
+to the editor, like Craft's: the page with the draft, as wide as a
+desktop, a tablet or a phone, the border dragged for more room (both
+kept in the browser, the switch too). One token per opening (it lasts a
+day, a new one comes before); after every save of the draft the page
+loads again where it is, like Craft's (crelte caches the queries of a
+page in the browser, only a load shows new content). A new entry has a
+preview once it is created, an entry in the flyout none.
+
+What a site's frontend needs for it (and for the AI page):
+
+- The studio may frame it: no `X-Frame-Options` and no CSP
+  `frame-ancestors` that leave out the studio's origin, at least for
+  urls with `?token=`.
+- crelte's live preview mode (`x-craft-live-preview`, the studio adds
+  it): it keeps the scroll position when the page loads again.
+- The bridge (`example/crelte/svelte/src/components/PreviewBridge.svelte`,
+  in `App.svelte`): it tells the studio which page it shows
+  (`zipp:location`), so a reload stays on a page clicked to in the
+  frame, and opens pages for the AI chat (`zipp:open`).
+
 The editor has the content on the left and a sidebar like Craft's on the
 right: published in the current site with the status in every site (a
 badge switches to that site), slug, post and expiry date (lists show
@@ -111,5 +132,6 @@ the right shows every draft with a token of the whole site
 (`POST /api/preview`), an editor publishes. The model knows the page on
 the right and its content; it stays there when the change shows on it
 and opens another page when not. A site tells the studio its page with
-a small bridge (`example/crelte/svelte/src/components/PreviewBridge.svelte`),
-crelte's live preview mode keeps the scroll position on reloads.
+a small bridge (`example/crelte/svelte/src/components/PreviewBridge.svelte`,
+see the live preview above), crelte's live preview mode keeps the scroll
+position on reloads.

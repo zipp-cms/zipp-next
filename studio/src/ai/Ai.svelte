@@ -3,13 +3,15 @@
 	import type { Schema } from '../core/schema';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import SplitHandle from 'zipp-ui/SplitHandle.svelte';
 	import { sideNav } from '../shell/sideNav.svelte';
 	import { hasAgent } from '../core/access';
 	import { Chat } from './chat.svelte';
 	import { markdown } from '../core/markdown';
-	import { SitePreview } from './preview.svelte';
+	import { SitePreview } from '../entries/preview.svelte';
 	import { entryPath, site } from '../core/router.svelte';
-	import Preview from './Preview.svelte';
+	import { sitePreviewToken } from '../entries/drafts';
+	import Preview from '../entries/Preview.svelte';
 
 	/**
 	 * The AI chat on the left, the website on the right with every draft.
@@ -34,55 +36,19 @@
 	);
 	const agent = untrack(() => hasAgent(schema));
 	const preview = untrack(
-		() => new SitePreview(schema, site.current, chat.savedView),
+		() =>
+			new SitePreview(
+				schema,
+				site.current,
+				chat.savedView,
+				sitePreviewToken,
+			),
 	);
 	let input = $state('');
 
 	// the chat's width, kept in this browser
-	const DEFAULT_WIDTH = 420;
-	const MIN_WIDTH = 300;
-	const WIDTH_KEY = 'zipp-ai-width';
-	const maxWidth = () => Math.max(MIN_WIDTH, Math.round(innerWidth * 0.6));
-	let width = $state(
-		clampWidth(Number(localStorage.getItem(WIDTH_KEY)) || DEFAULT_WIDTH),
-	);
+	let width = $state(0);
 	let resizing = $state(false);
-
-	function clampWidth(w: number) {
-		return Math.round(Math.min(Math.max(w, MIN_WIDTH), maxWidth()));
-	}
-
-	function setWidth(w: number) {
-		width = clampWidth(w);
-		localStorage.setItem(WIDTH_KEY, `${width}`);
-	}
-
-	function startResize(e: PointerEvent) {
-		if (e.button !== 0) return;
-		e.preventDefault();
-		const el = e.currentTarget as HTMLElement;
-		el.setPointerCapture(e.pointerId);
-		const from = e.clientX - width;
-		resizing = true;
-		const move = (ev: PointerEvent) => setWidth(ev.clientX - from);
-		const end = () => {
-			resizing = false;
-			el.removeEventListener('pointermove', move);
-			el.removeEventListener('pointerup', end);
-			el.removeEventListener('pointercancel', end);
-		};
-		el.addEventListener('pointermove', move);
-		el.addEventListener('pointerup', end);
-		el.addEventListener('pointercancel', end);
-	}
-
-	function resizeKey(e: KeyboardEvent) {
-		const step = e.shiftKey ? 80 : 20;
-		if (e.key === 'ArrowLeft') setWidth(width - step);
-		else if (e.key === 'ArrowRight') setWidth(width + step);
-		else return;
-		e.preventDefault();
-	}
 
 	// kept when an answer is done or the page changes, not with every
 	// word of the answer
@@ -123,24 +89,14 @@
 
 <div class="split" style:--chat="{width}px">
 	<section class="chat">
-		<!-- the border to the website: drag it, or the arrow keys; a
-		     focusable separator is ARIA's window splitter -->
-		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-		<div
-			class="resize"
-			class:resizing
-			role="separator"
-			aria-orientation="vertical"
-			aria-label="Width of the chat"
-			aria-valuenow={width}
-			aria-valuemin={MIN_WIDTH}
-			aria-valuemax={maxWidth()}
-			tabindex="0"
-			title="Drag to change the width, double click for the default"
-			onpointerdown={startResize}
-			ondblclick={() => setWidth(DEFAULT_WIDTH)}
-			onkeydown={resizeKey}
-		></div>
+		<SplitHandle
+			bind:width
+			bind:resizing
+			key="zipp-ai-width"
+			initial={420}
+			min={300}
+			label="Width of the chat"
+		/>
 		<PageTop title="AI" bleed={false}>
 			{#snippet lead()}
 				<button
@@ -208,8 +164,8 @@
 			{#if chat.busy && chat.lines[chat.lines.length - 1]?.who !== 'ai'}
 				<div class="msg ai busy">…</div>
 			{/if}
-			{#if chat.error || preview.error}
-				<p class="error">{chat.error || preview.error}</p>
+			{#if chat.error}
+				<p class="error">{chat.error}</p>
 			{/if}
 		</div>
 
@@ -259,40 +215,6 @@
 		min-height: 0;
 		background: var(--surface);
 		border-right: 1px solid var(--line);
-	}
-
-	// over the chat's right border, a line in the accent on hover
-	.resize {
-		position: absolute;
-		top: 0;
-		right: -4px;
-		bottom: 0;
-		z-index: var(--z-raised);
-		width: 7px;
-		cursor: col-resize;
-		touch-action: none;
-
-		&::after {
-			content: '';
-			position: absolute;
-			top: 0;
-			bottom: 0;
-			left: 3px;
-			width: 1px;
-			transition: background 0.15s;
-		}
-
-		&:hover::after,
-		&:focus-visible::after,
-		&.resizing::after {
-			left: 2px;
-			width: 3px;
-			background: var(--accent);
-		}
-
-		&:focus-visible {
-			outline: none;
-		}
 	}
 
 	.log {
