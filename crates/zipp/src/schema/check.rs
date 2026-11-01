@@ -78,6 +78,10 @@ impl Schema {
 				self.check_field(comp, field)
 					.map_err(|e| format!("{at}: {e}"))?;
 			}
+			if let Some(t) = &comp.title_field {
+				check_title_field(comp, t)
+					.map_err(|e| format!("{}: title {t}: {e}", comp.handle))?;
+			}
 		}
 
 		if !self.nav.is_empty() {
@@ -455,6 +459,28 @@ impl Schema {
 			| FieldKind::Note { .. }
 			| FieldKind::Blocks { .. } => None,
 		}
+	}
+}
+
+/// The title field of a block is one of its fields that holds a short
+/// text, the studio shows it in the block's head.
+fn check_title_field(comp: &Component, handle: &str) -> Result<(), String> {
+	let Some(field) = comp.fields.iter().find(|f| f.handle == handle) else {
+		return Err("the block has no such field".into());
+	};
+	match field.kind {
+		FieldKind::Text { .. }
+		| FieldKind::Email
+		| FieldKind::Number { .. }
+		| FieldKind::Date { .. }
+		| FieldKind::Dropdown { .. }
+		| FieldKind::RichText { .. }
+		| FieldKind::Markdown
+		| FieldKind::Link { .. }
+		| FieldKind::Relation { .. } => Ok(()),
+		_ => Err("only text, email, number, date, dropdown, rich text, \
+			markdown, link and relation fields give a title"
+			.into()),
 	}
 }
 

@@ -23,8 +23,36 @@ function docText(doc: any): string {
 }
 
 /**
- * What the head of a block shows: its first text or link (`Label →
- * target`), else how many images, entries or blocks it has.
+ * The value of a block's title field as a short text: a dropdown's label,
+ * a number with its unit, a link's label or target, an entry's title.
+ */
+function blockTitle(
+	comp: Component | undefined,
+	fields: Values,
+	refs: Refs = {},
+): string {
+	const f = comp?.fields.find(f => f.handle === comp.title_field);
+	const v = f && fields[f.handle];
+	if (!f || v === undefined || v === null || v === '') return '';
+	let t: string;
+	if (f.kind === 'dropdown')
+		t = f.options.find(o => o.value === v)?.label ?? String(v);
+	else if (f.kind === 'number') t = f.unit ? `${v} ${f.unit}` : String(v);
+	else if (f.kind === 'date') t = String(v).replace('T', ' ');
+	else if (f.kind === 'link')
+		t = hasTarget(v as Link)
+			? (v as Link).label || linkTarget(v as Link, refs)
+			: '';
+	else if (f.kind === 'relation')
+		t = Array.isArray(v) && v.length ? (refs[v[0]]?.title ?? '') : '';
+	else t = typeof v === 'string' ? v : docText(v);
+	return t.trim().slice(0, 80);
+}
+
+/**
+ * What the head of a block shows: its title field, else its first text
+ * or link (`Label → target`), else how many images, entries or blocks it
+ * has.
  */
 export function blockSummary(
 	comp: Component | undefined,
@@ -32,6 +60,8 @@ export function blockSummary(
 	refs: Refs = {},
 ): string {
 	if (!comp) return '';
+	const title = blockTitle(comp, fields, refs);
+	if (title) return title;
 	const counts: string[] = [];
 	for (const f of comp.fields) {
 		const v = fields[f.handle];

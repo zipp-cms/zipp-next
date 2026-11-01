@@ -70,6 +70,7 @@
 								{f.width ? `${f.width} %` : ''}
 								{f.required ? 'required' : ''}
 								{f.indexed ? 'indexed' : ''}
+								{f.handle === c.title_field ? 'title' : ''}
 							</td>
 						{/snippet}
 						{#snippet detail(f)}

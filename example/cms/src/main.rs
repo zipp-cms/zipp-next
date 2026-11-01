@@ -365,6 +365,10 @@ fn schema() -> Schema {
 		.icon("button", "mouse-pointer-click")
 		.icon("events", "calendar-days")
 		.icon("contact", "mail")
+		// the field that names a block in its head and the outline
+		.block_title("images", "caption")
+		.block_title("button", "link")
+		.block_title("events", "city")
 }
 
 /// A route of the site next to zipp's: the upcoming events as JSON, for a

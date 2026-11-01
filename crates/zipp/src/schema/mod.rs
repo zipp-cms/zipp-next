@@ -196,6 +196,10 @@ pub struct Component {
 	/// in the studio's lists and menus, only looks like the tabs
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub icon: Option<Icon>,
+	/// The field of a block that names it in the studio, see
+	/// [`Schema::block_title`]. Only looks.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub title_field: Option<String>,
 }
 
 /// How an indexed field is compared and sorted, see
@@ -277,6 +281,17 @@ impl Schema {
 			panic!("icon: there is no entry type or block {component}");
 		};
 		c.icon = Some(icon.into());
+		self
+	}
+
+	/// The field that names a block in the studio, after it, like Craft
+	/// shows a nested entry by a field: `.block_title("feedback",
+	/// "author")` shows `Feedback · Anna Muster` instead of only the type.
+	pub fn block_title(mut self, block: &str, field: &str) -> Self {
+		let Some(c) = self.get_mut(block).filter(|c| !c.entry) else {
+			panic!("block_title: there is no block {block}");
+		};
+		c.title_field = Some(field.into());
 		self
 	}
 
@@ -420,6 +435,7 @@ impl Schema {
 			fields: fields.into_iter().collect(),
 			tabs: vec![],
 			icon: None,
+			title_field: None,
 		});
 		self
 	}

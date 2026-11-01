@@ -280,6 +280,32 @@ fn icon_of_an_unknown_type() {
 }
 
 #[test]
+fn a_field_names_a_block() {
+	let s = site().block_title("button", "label");
+	s.check().unwrap();
+	assert_eq!(
+		s.get("button").unwrap().title_field.as_deref(),
+		Some("label")
+	);
+	let json = serde_json::to_value(s.get("button").unwrap()).unwrap();
+	assert_eq!(json["title_field"], "label");
+	// a relation gives its entry's title
+	site().block_title("button", "link").check().unwrap();
+
+	let err = site().block_title("button", "nope").check().unwrap_err();
+	assert_eq!(err, "button: title nope: the block has no such field");
+	let s = site().block("gallery", "Gallery", [Field::images("images")]);
+	let err = s.block_title("gallery", "images").check().unwrap_err();
+	assert!(err.starts_with("gallery: title images: only text"), "{err}");
+}
+
+#[test]
+#[should_panic(expected = "block_title: there is no block event")]
+fn only_blocks_get_a_title_field() {
+	let _ = site().block_title("event", "city");
+}
+
+#[test]
 fn asset_fields_with_a_folder_and_extensions() {
 	let f = Field::assets("docs")
 		.folder("/Docs/Forms/")

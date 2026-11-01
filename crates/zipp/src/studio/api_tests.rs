@@ -73,3 +73,17 @@ async fn the_schema_brings_its_lucide_icons() {
 	let svg = icons["calendar"].as_str().unwrap();
 	assert!(svg.starts_with("<svg") && svg.ends_with("</svg>"), "{svg}");
 }
+
+#[tokio::test]
+async fn the_schema_says_which_field_names_a_block() {
+	let schema = site_with_roles().block_title("button", "label");
+	let ts = TestServer::new(schema);
+	let resp = ts.user(Some("author")).call_json(&SchemaReq {}).await;
+	let comps = resp.unwrap()["components"].as_array().unwrap().clone();
+	let title = |h: &str| {
+		comps.iter().find(|c| c["handle"] == h).unwrap()["title_field"].clone()
+	};
+	assert_eq!(title("button"), "label");
+	// without one the block shows its type
+	assert!(title("text").is_null());
+}

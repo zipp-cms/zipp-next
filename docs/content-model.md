@@ -90,6 +90,13 @@ Icon::svg(include_str!("logo.svg")))` one of its own (drawn with
 studio's nav groups. The studio shows them in lists, menus and the
 blocks' heads; they are only looks like the tabs.
 
+`.block_title("feedback", "author")` names a block by one of its fields,
+like Craft shows a nested entry: its head and the outline show
+`Feedback · Anna Muster`, live while typing. Text, email, number, date,
+dropdown (its label), rich text, markdown, link (its label or target) and
+relation (the entry's title) fields can give it, the check refuses others.
+Without one, or while it is empty, a block shows its first text or link.
+
 ## Content is JSON
 
 An entry's fields are stored as one JSON document,

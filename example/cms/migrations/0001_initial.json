@@ -1117,7 +1117,7 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Empty: the website shows none.",
-            "width": 25,
+            "width": 50,
             "kind": "date",
             "time": true
           },
@@ -1127,7 +1127,7 @@
             "required": true,
             "indexed": true,
             "translatable": false,
-            "width": 50,
+            "width": 25,
             "kind": "text",
             "max": null,
             "multiline": false
@@ -1445,7 +1445,8 @@
         ],
         "icon": {
           "lucide": "images"
-        }
+        },
+        "title_field": "caption"
       }
     },
     {
@@ -1475,7 +1476,8 @@
         ],
         "icon": {
           "lucide": "mouse-pointer-click"
-        }
+        },
+        "title_field": "link"
       }
     },
     {
@@ -1498,7 +1500,8 @@
         ],
         "icon": {
           "lucide": "calendar-days"
-        }
+        },
+        "title_field": "city"
       }
     },
     {
@@ -2841,7 +2844,7 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Empty: the website shows none.",
-            "width": 25,
+            "width": 50,
             "kind": "date",
             "time": true
           },
@@ -2851,7 +2854,7 @@
             "required": true,
             "indexed": true,
             "translatable": false,
-            "width": 50,
+            "width": 25,
             "kind": "text",
             "max": null,
             "multiline": false
@@ -3166,7 +3169,8 @@
         ],
         "icon": {
           "lucide": "images"
-        }
+        },
+        "title_field": "caption"
       },
       {
         "handle": "button",
@@ -3193,7 +3197,8 @@
         ],
         "icon": {
           "lucide": "mouse-pointer-click"
-        }
+        },
+        "title_field": "link"
       },
       {
         "handle": "events",
@@ -3213,7 +3218,8 @@
         ],
         "icon": {
           "lucide": "calendar-days"
-        }
+        },
+        "title_field": "city"
       },
       {
         "handle": "contact",

@@ -123,6 +123,8 @@ export type Component = {
 	/** the tabs of the editor, none is one tab */
 	tabs?: Tab[];
 	icon?: SchemaIcon;
+	/** the field that names a block in its head and the outline */
+	title_field?: string;
 };
 
 /** An icon of the code: a Lucide icon by its name, or an svg of its own. */

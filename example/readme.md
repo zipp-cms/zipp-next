@@ -42,6 +42,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |
 | Folders, file types, zips | Assets · Events → Programm (PDF) · a folder's ⋯ → Download as zip · upload a zip | folders for the library, downloaded as a zip or unpacked from one; the event's program takes only PDFs and puts them into Events/Programs, its image picker opens in Events |
 | Icons | the navigation, Pages, a page's blocks | entry types, blocks and nav groups with Lucide icons from the code |
+| Block titles | a page's blocks: Button, Images, Upcoming events · Setup → Blocks → Button | a block's head and the outline show the field the code names (`.block_title`): the button's link, the caption, the city |
 | Globals | Settings → Header, Footer | singles without a url, crelte reads them like Craft's globals |
 | Session ends | type in an entry, in a second browser: your user → **Log out everywhere else** · type on | a dialog asks for the password, the page stays; after it the draft has what you typed |
 | Users, invites, login as | Users → New user without a password · a user's page → Access · the login → Forgot your password? | the invite and reset mails (on dev in Mailpit), **Log in as** with the bar to come back |

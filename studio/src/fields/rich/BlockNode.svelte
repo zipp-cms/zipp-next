@@ -72,7 +72,7 @@
 		{/if}
 	{/snippet}
 	{#snippet preview()}
-		{blockSummary(comp, fields.value) || 'Empty'}
+		{blockSummary(comp, fields.value, refs) || 'Empty'}
 	{/snippet}
 	{#if comp}
 		<fieldset disabled={!editable}>
