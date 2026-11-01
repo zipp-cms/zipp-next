@@ -108,6 +108,23 @@ async fn refuses_invalid_content() {
 		panic!("{err:?}")
 	};
 	assert_eq!(fields[0].path, "body.0.content");
+
+	// the price has two decimals
+	let err = ts
+		.admin()
+		.call(&CreateReq(input(
+			"events",
+			"event",
+			"Jazz",
+			json!({ "price": 12.555 }),
+		)))
+		.await
+		.unwrap_err();
+	let Error::Invalid(fields) = err else {
+		panic!("{err:?}")
+	};
+	assert_eq!(fields[0].path, "price");
+	assert_eq!(fields[0].message, "at most 2 decimal places");
 }
 
 #[tokio::test]

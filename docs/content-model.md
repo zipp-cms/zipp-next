@@ -38,6 +38,11 @@ number, boolean, date (`Field::date("date")`, a day `2026-11-14`;
 `.time()` a day and time `2026-11-14T19:30`, as the editor sees it,
 without a time zone, it sorts and filters as text), relation (ids of
 entries) and blocks (a list of blocks, nested as deep as needed).
+A number (`Field::number("price")`) takes `.range(0.0, 1000.0)`,
+`.decimals(2)`, at most that many places after the point (`0` for whole
+numbers; the server refuses more, the studio shows them, `12.50`), and
+`.unit("CHF")`, shown after the input. GraphQL gives numbers as `Float`,
+also with `decimals(0)`.
 `.label("…")` names a field, `.instructions("…")` tells editors what
 to put there, under the label in the studio (markdown: bold, links);
 the AI chat reads them too. Both are only looks, no migration.

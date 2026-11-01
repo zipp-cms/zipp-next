@@ -12,9 +12,19 @@ export function describeField(f: Field): string {
 				.filter(Boolean)
 				.join(', ');
 		case 'number':
-			return f.min !== null || f.max !== null
-				? `Number ${f.min ?? ''}–${f.max ?? ''}`
-				: 'Number';
+			return [
+				f.min !== null || f.max !== null
+					? `Number ${f.min ?? ''}–${f.max ?? ''}`
+					: 'Number',
+				f.decimals === 0
+					? 'whole'
+					: f.decimals !== undefined
+						? `${f.decimals} decimals`
+						: '',
+				f.unit ?? '',
+			]
+				.filter(Boolean)
+				.join(', ');
 		case 'boolean':
 			return 'Yes / no';
 		case 'relation':

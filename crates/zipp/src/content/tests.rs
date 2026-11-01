@@ -143,6 +143,35 @@ fn dropdowns_take_one_of_their_options() {
 }
 
 #[test]
+fn numbers_keep_their_decimals() {
+	let s = site()
+		.section(Section::channel("talks", ["talk"]).uri("{slug}"))
+		.entry(
+			"talk",
+			"Talk",
+			[
+				Field::number("price").unit("CHF").decimals(2),
+				Field::number("seats").decimals(0).range(0.0, 100.0),
+			],
+		);
+	s.check().unwrap();
+	let comp = s.get("talk").unwrap();
+	let ok = json!({ "price": 12.35, "seats": 40 });
+	assert_eq!(validate(&s, comp, &ok).unwrap(), ok);
+	assert!(validate(&s, comp, &json!({ "price": 0.3, "seats": 4.0 })).is_ok());
+
+	let err = validate(&s, comp, &json!({ "price": 12.355, "seats": 4.5 }))
+		.unwrap_err();
+	assert_eq!(err[0].message, "at most 2 decimal places");
+	assert_eq!(err[1].message, "a whole number");
+	let err = validate(&s, comp, &json!({ "seats": 101 })).unwrap_err();
+	assert_eq!(err[0].message, "out of range");
+
+	let s = site().block("x", "X", [Field::number("n").decimals(11)]);
+	assert_eq!(s.check().unwrap_err(), "x.n: decimals go from 0 to 10");
+}
+
+#[test]
 fn index_values_of_entry() {
 	let s = site();
 	let fields = json!({ "city": "Bern", "price": 12.5 });

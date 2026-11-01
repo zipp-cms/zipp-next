@@ -233,7 +233,11 @@ fn schema() -> Schema {
 				)
 				.indexed()
 				.label("Sprache"),
-				Field::number("price").range(0.0, 1000.0).indexed(),
+				Field::number("price")
+					.range(0.0, 1000.0)
+					.decimals(2)
+					.unit("CHF")
+					.indexed(),
 				Field::boolean("soldOut").indexed(),
 				// new images of events go into their folder
 				Field::images("image").max(1).folder("Events"),

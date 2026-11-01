@@ -14,7 +14,7 @@
 <h1>{entry.title}</h1>
 <Genre genre={entry.genre} />
 <p class="meta">
-	{entry.date} in {entry.city}{entry.spokenIn ? ` · ${entry.spokenIn.toUpperCase()}` : ''}{entry.price ? ` · CHF ${entry.price}` : ''}{entry.soldOut
+	{entry.date} in {entry.city}{entry.spokenIn ? ` · ${entry.spokenIn.toUpperCase()}` : ''}{entry.price ? ` · CHF ${entry.price.toFixed(2)}` : ''}{entry.soldOut
 		? ` · ${$t('events.soldOut')}`
 		: ''}
 </p>

@@ -61,6 +61,8 @@ export function fieldOptions(
 		case 'number':
 			add('Min', or(f.min));
 			add('Max', or(f.max));
+			add('Decimals', or(f.decimals ?? null, 'Any'));
+			add('Unit', f.unit ?? '–');
 			break;
 		case 'date':
 			add(

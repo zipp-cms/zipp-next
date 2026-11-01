@@ -126,8 +126,8 @@ commit.
 - [ ] Custom fields on assets (besides title, alt, focal point)?
 - [ ] Better support for video assets (player, poster, type filter)?
 - [ ] A field type per column of a table (today text, url, email)?
-- [x] Number field: `Field::number` with min and max; still open: units
-      (CHF, €, s) and decimals
+- [x] Number field: `Field::number` with min and max, `.unit("CHF")` and
+      `.decimals(2)`
 - [ ] Custom styles in the rich text (CKEditor's styles: classes on text
       and blocks)?
 - [x] Headings in the rich text: `.headings([2, 3])`

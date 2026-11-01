@@ -25,7 +25,13 @@ export type Column = {
 
 export type FieldKind =
 	| { kind: 'text'; max: number | null; multiline: boolean }
-	| { kind: 'number'; min: number | null; max: number | null }
+	| {
+			kind: 'number';
+			min: number | null;
+			max: number | null;
+			decimals?: number;
+			unit?: string;
+	  }
 	| { kind: 'boolean' }
 	| { kind: 'relation'; types: string[]; max: number | null }
 	| {

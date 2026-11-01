@@ -82,11 +82,25 @@ pub(super) fn validate_value(
 				error(errors, path, &format!("at most {max} characters"));
 			}
 		}
-		(FieldKind::Number { min, max }, Value::Number(n)) => {
+		(
+			FieldKind::Number {
+				min, max, decimals, ..
+			},
+			Value::Number(n),
+		) => {
 			let n = n.as_f64().unwrap_or_default();
 			if min.is_some_and(|min| n < min) || max.is_some_and(|max| n > max)
 			{
 				error(errors, path, "out of range");
+			} else if let Some(d) = decimals
+				&& !has_decimals(n, *d)
+			{
+				let want = match d {
+					0 => "a whole number".into(),
+					1 => "at most 1 decimal place".into(),
+					d => format!("at most {d} decimal places"),
+				};
+				error(errors, path, &want);
 			}
 		}
 		(FieldKind::Boolean, Value::Bool(_)) => {}
@@ -277,6 +291,14 @@ pub(super) fn validate_block(
 		out["enabled"] = false.into();
 	}
 	out
+}
+
+/// Whether `n` has at most `d` places after the point. JSON numbers are
+/// the closest f64 of what was sent, rounding to `d` places and back gives
+/// the same f64 only if there were no more.
+fn has_decimals(n: f64, d: u32) -> bool {
+	let p = 10f64.powi(d as i32);
+	(n * p).round() / p == n
 }
 
 /// Whether a date field may hold this: `2026-11-14`, with `time`

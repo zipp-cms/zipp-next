@@ -32,7 +32,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Navigation, table, checkboxes | Settings → Header, Footer · Events → Für wen | a menu with a second level, footer links as rows, some of the options |
 | Dropdown | Images block → Width (3 options: buttons), Events → Sprache (5: a select) | the website sizes the image, filters events by language |
 | A field type of another crate | Events → Genre | `crates/zipp-button-group`: Craft's button group with a color per option, its own editor and GraphQL type |
-| Boolean, number, indexed fields | Events | *sold out*, price; the website filters and sorts by them |
+| Boolean, number, indexed fields | Events | *sold out*, price (CHF, two decimals); the website filters and sorts by them |
 | Date, date and time | Events → Date, Doors open | the date picker; a day or a day and time, the website sorts events by the date |
 | Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them |
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |

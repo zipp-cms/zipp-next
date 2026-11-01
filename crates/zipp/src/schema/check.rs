@@ -261,6 +261,14 @@ impl Schema {
 		{
 			return Err("needs at least one type".into());
 		}
+		// more places than an f64 keeps exactly
+		if let FieldKind::Number {
+			decimals: Some(d), ..
+		} = &field.kind
+			&& *d > 10
+		{
+			return Err("decimals go from 0 to 10".into());
+		}
 		if let FieldKind::Link { to, .. } = &field.kind
 			&& to.is_empty()
 		{

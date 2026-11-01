@@ -29,7 +29,7 @@ pub fn site() -> Schema {
 			"Event",
 			[
 				Field::text("city").indexed(),
-				Field::number("price").indexed(),
+				Field::number("price").decimals(2).indexed(),
 				Field::relation("page", ["page"]).max(1),
 				Field::images("image").max(1),
 				Field::markdown("notes"),

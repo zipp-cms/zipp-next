@@ -105,9 +105,15 @@ pub enum FieldKind {
 		max: Option<u32>,
 		multiline: bool,
 	},
+	/// A number between `min` and `max`, with at most `decimals` places
+	/// (none: any); the studio shows `unit` after the input.
 	Number {
 		min: Option<f64>,
 		max: Option<f64>,
+		#[serde(default, skip_serializing_if = "Option::is_none")]
+		decimals: Option<u32>,
+		#[serde(default, skip_serializing_if = "Option::is_none")]
+		unit: Option<String>,
 	},
 	Boolean,
 	/// A day, `2026-11-14`, with `time` and a time of it,
@@ -269,6 +275,8 @@ impl Field {
 			FieldKind::Number {
 				min: None,
 				max: None,
+				decimals: None,
+				unit: None,
 			},
 		)
 	}
@@ -570,11 +578,29 @@ impl Field {
 	/// Number range.
 	pub fn range(mut self, from: f64, to: f64) -> Self {
 		match &mut self.kind {
-			FieldKind::Number { min, max } => {
+			FieldKind::Number { min, max, .. } => {
 				*min = Some(from);
 				*max = Some(to);
 			}
 			_ => panic!("{}: range is only for numbers", self.handle),
+		}
+		self
+	}
+
+	/// Most places after the point of a number, `0` for whole numbers.
+	pub fn decimals(mut self, n: u32) -> Self {
+		match &mut self.kind {
+			FieldKind::Number { decimals, .. } => *decimals = Some(n),
+			_ => panic!("{}: decimals are only for numbers", self.handle),
+		}
+		self
+	}
+
+	/// What a number counts, `CHF` or `s`, shown after its input.
+	pub fn unit(mut self, unit: &str) -> Self {
+		match &mut self.kind {
+			FieldKind::Number { unit: u, .. } => *u = Some(unit.into()),
+			_ => panic!("{}: unit is only for numbers", self.handle),
 		}
 		self
 	}

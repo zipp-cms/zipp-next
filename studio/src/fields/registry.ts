@@ -11,6 +11,7 @@ import GroupField from './GroupField.svelte';
 import LinkField from './LinkField.svelte';
 import MarkdownField from './MarkdownField.svelte';
 import NavigationField from './NavigationField.svelte';
+import NumberField from './NumberField.svelte';
 import RelationField from './RelationField.svelte';
 import RichTextField from './RichTextField.svelte';
 import SimpleField from './SimpleField.svelte';
@@ -35,7 +36,7 @@ export type FieldProps<F extends Field = Field> = {
 /** The component of each kind of field, it gets the field of its kind. */
 const FIELDS: { [K in Field['kind']]: Component<FieldProps<FieldOf<K>>> } = {
 	text: SimpleField,
-	number: SimpleField,
+	number: NumberField,
 	boolean: SimpleField,
 	relation: RelationField,
 	assets: AssetField,

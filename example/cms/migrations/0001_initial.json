@@ -1215,7 +1215,9 @@
             "translatable": false,
             "kind": "number",
             "min": 0.0,
-            "max": 1000.0
+            "max": 1000.0,
+            "decimals": 2,
+            "unit": "CHF"
           },
           {
             "handle": "soldOut",
@@ -2914,7 +2916,9 @@
             "translatable": false,
             "kind": "number",
             "min": 0.0,
-            "max": 1000.0
+            "max": 1000.0,
+            "decimals": 2,
+            "unit": "CHF"
           },
           {
             "handle": "soldOut",
