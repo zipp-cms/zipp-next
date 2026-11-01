@@ -29,7 +29,8 @@
 
 - [x] Drafts (one per entry, all sites, saved while typing), publish in one transaction,
       revisions with restore, preview tokens that crelte passes to GraphQL
-- [ ] Releases: several drafts published together (Craft 6), on top of the drafts
+- [ ] Releases: several drafts published together (Craft 6), on top of the drafts;
+      postponed to 0.2 (operator 2026-11-01)
 - [x] Live preview: the website next to the editor with the draft, updated after
       every save (preview tokens, crelte's live preview mode keeps the scroll)
 - [ ] WebP/AVIF output for transforms, alt text per site
