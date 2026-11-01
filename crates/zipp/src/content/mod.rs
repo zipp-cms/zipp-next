@@ -252,6 +252,23 @@ pub fn markdown_html(md: &str) -> String {
 	out
 }
 
+/// The text of markdown without its signs, a line per paragraph.
+pub fn markdown_text(md: &str) -> String {
+	use pulldown_cmark::{Event, Parser, TagEnd};
+	let mut out = String::new();
+	for e in Parser::new(md) {
+		match e {
+			Event::Text(t) | Event::Code(t) => out.push_str(&t),
+			Event::SoftBreak | Event::HardBreak => out.push(' '),
+			Event::End(
+				TagEnd::Paragraph | TagEnd::Heading(_) | TagEnd::Item,
+			) => out.push('\n'),
+			_ => {}
+		}
+	}
+	out.trim().to_string()
+}
+
 /// The texts of a texts field with the code's text where none is saved.
 pub fn texts_of(
 	keys: &[(String, String)],

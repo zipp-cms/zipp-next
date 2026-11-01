@@ -65,6 +65,32 @@ const MIGRATIONS: &[&str] = &[r#"
 	CREATE INDEX entry_relations_entry ON entry_relations(entry_id);
 	CREATE INDEX entry_relations_target ON entry_relations(target_id);
 
+	-- the texts of an entry in a site, for the studio's search (search/)
+	CREATE TABLE entry_texts (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+		site TEXT NOT NULL,
+		title TEXT NOT NULL,
+		slug TEXT NOT NULL,
+		body TEXT NOT NULL,
+		UNIQUE (entry_id, site)
+	);
+	-- its full text index, kept in step by the triggers (also when a
+	-- deleted entry takes its rows along)
+	CREATE VIRTUAL TABLE entry_search USING fts5(
+		title, slug, body,
+		content = 'entry_texts', content_rowid = 'id',
+		tokenize = 'unicode61 remove_diacritics 2'
+	);
+	CREATE TRIGGER entry_texts_insert AFTER INSERT ON entry_texts BEGIN
+		INSERT INTO entry_search (rowid, title, slug, body)
+		VALUES (new.id, new.title, new.slug, new.body);
+	END;
+	CREATE TRIGGER entry_texts_delete AFTER DELETE ON entry_texts BEGIN
+		INSERT INTO entry_search (entry_search, rowid, title, slug, body)
+		VALUES ('delete', old.id, old.title, old.slug, old.body);
+	END;
+
 	-- unpublished changes of an entry, all sites as JSON, one per entry
 	CREATE TABLE drafts (
 		entry_id INTEGER PRIMARY KEY REFERENCES entries(id) ON DELETE CASCADE,

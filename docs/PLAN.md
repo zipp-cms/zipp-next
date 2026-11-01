@@ -40,7 +40,8 @@
 - [ ] crelte adapter, so a crelte project can use zipp instead of Craft:
       a new adapter in crelte (no craft/.env, no Craft variable names); no
       hacks in the textrem port meanwhile (operator 2026-11-01)
-- [ ] Full text search
+- [x] Full text search in the studio (FTS5 over the live texts of entries,
+      assets by name); for the website still open
 - [ ] Storage backends: SQLite (today), in memory (SQLite `:memory:`,
       already used by the tests; for previews and throwaway instances),
       Postgres for bigger sites. Needs a small store interface around the
@@ -137,7 +138,7 @@ commit.
       and blocks)?
 - [x] Headings in the rich text: `.headings([2, 3])`
 - [x] Switching off a block (`"enabled": false`), e6ac8e3
-- [ ] Search: full text in the studio and for the website (see Next)?
+- [x] Search: full text in the studio (Cmd/Ctrl+K); for the website see Next
 - [ ] GraphQL tokens like Craft's schemas: several, each with what it may
       read (today one `--graphql-token`)?
 - [x] Logging in as a user (impersonation), 4d556eb

@@ -8,7 +8,7 @@
 </script>
 
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { tick, type Snippet } from 'svelte';
 	import { session } from '../core/session.svelte';
 	import { current, go } from '../core/router.svelte';
 	import { endSession } from '../core/router.svelte';
@@ -21,13 +21,16 @@
 	import { layer } from 'zipp-ui/layers';
 	import { providePageLead } from 'zipp-ui/pageLead';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import SearchBox from '../search/SearchBox.svelte';
+	import { searchBox } from '../search/search.svelte';
 
 	/**
 	 * The frame of the studio's pages: the sidebar, the page, the flyout
 	 * over it. The AI page takes the whole width, the live preview hides
 	 * the sidebar too (`sideNav`), and a phone has no room for it: then
 	 * it slides in over the page from the Menu button before the page's
-	 * title and goes again with the next page.
+	 * title and goes again with the next page. The search opens over all
+	 * of it.
 	 */
 	let { schema, children }: { schema: Schema; children: Snippet } = $props();
 
@@ -42,6 +45,17 @@
 	});
 
 	const close = () => (sideNav.open = false);
+
+	// Cmd+K (Ctrl+K) opens the search on every page, again closes it
+	async function onkeydown(e: KeyboardEvent) {
+		if (e.key !== 'k' || !(e.metaKey || e.ctrlKey) || e.altKey) return;
+		e.preventDefault();
+		// the drawer gives the focus back when it goes, before the search
+		// takes it
+		sideNav.open = false;
+		await tick();
+		searchBox.open = !searchBox.open;
+	}
 
 	async function onlogout() {
 		// logged in as someone: back to the own account
@@ -69,6 +83,7 @@
 	</button>
 {/snippet}
 
+<svelte:window {onkeydown} />
 <LoginAsBar />
 <!-- the AI chat and the website take the whole page -->
 <div class="layout" class:wide class:hidden>
@@ -82,6 +97,7 @@
 	</div>
 {/if}
 <FlyoutHost {schema} />
+{#if searchBox.open}<SearchBox {schema} />{/if}
 <UploadProgress />
 
 <style lang="scss">

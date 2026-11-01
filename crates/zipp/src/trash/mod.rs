@@ -130,11 +130,13 @@ pub fn trash_entry(
 			params![now, user_id, e],
 		)?;
 		// its uris are free, nothing links to it or finds it by a value
+		// or its text
 		for sql in [
 			"UPDATE entry_sites SET uri = NULL WHERE entry_id = ?1",
 			"DELETE FROM entry_values WHERE entry_id = ?1",
 			"DELETE FROM entry_relations WHERE entry_id = ?1",
 			"DELETE FROM asset_relations WHERE entry_id = ?1",
+			"DELETE FROM entry_texts WHERE entry_id = ?1",
 		] {
 			tx.execute(sql, [e])?;
 		}

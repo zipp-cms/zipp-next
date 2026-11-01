@@ -19,6 +19,7 @@ pub mod mail;
 pub mod migrate;
 pub mod plugin;
 pub mod schema;
+pub mod search;
 mod server;
 mod studio;
 #[cfg(any(test, feature = "testing"))]

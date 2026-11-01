@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { Schema } from '../core/schema';
 	import { current } from '../core/router.svelte';
 	import {
@@ -15,12 +16,13 @@
 	import UserMenu from './UserMenu.svelte';
 	import { SETUP_TABS, groupIcon, groupItems } from './nav';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
+	import { searchBox } from '../search/search.svelte';
+	import { sideNav } from './sideNav.svelte';
 
 	/**
 	 * The sidebar: the site, the groups of the schema's navigation with
 	 * the sections of the open one, assets, AI, Setup, users, the trash,
-	 * who is
-	 * logged in.
+	 * who is logged in; the search above them.
 	 */
 	let { schema, onlogout }: { schema: Schema; onlogout: () => void } =
 		$props();
@@ -40,10 +42,26 @@
 	const items = $derived(groupItems(schema, group));
 
 	const active = (handle: string) => current.section === handle;
+
+	// the key of the shortcut, see Shell
+	const mod = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl ';
+
+	// after the drawer is gone, which gives the focus back to its button
+	async function search() {
+		sideNav.open = false;
+		await tick();
+		searchBox.open = true;
+	}
 </script>
 
 <aside class="side">
 	<SiteSwitch {schema} />
+
+	<button type="button" class="open-search" onclick={search}>
+		<Icon name="search" size={14} />
+		Search
+		<kbd>{mod}K</kbd>
+	</button>
 
 	<nav>
 		{#each groups as g (g.name)}
@@ -137,6 +155,39 @@
 		overflow-y: auto;
 		background: var(--surface);
 		border-right: 1px solid var(--line);
+	}
+
+	.open-search {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.4375rem 0.625rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--surface);
+		color: var(--subtle);
+		font-size: var(--fs-md);
+		text-align: left;
+
+		@include hover {
+			&:hover {
+				color: var(--text-2);
+				background: var(--hover);
+			}
+		}
+
+		kbd {
+			margin-left: auto;
+			font-family: inherit;
+			font-size: var(--fs-xs);
+		}
+
+		// a phone has no keys for it
+		@include max-tablet {
+			kbd {
+				display: none;
+			}
+		}
 	}
 
 	nav {

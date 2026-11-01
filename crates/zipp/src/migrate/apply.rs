@@ -86,6 +86,7 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 				"entry_values",
 				"entry_relations",
 				"asset_relations",
+				"entry_texts",
 			] {
 				conn.execute(
 					&format!("DELETE FROM {table} WHERE site = ?1"),

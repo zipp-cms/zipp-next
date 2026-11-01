@@ -462,6 +462,38 @@ fn escape(s: &str) -> String {
 		.replace('"', "&quot;")
 }
 
+/// The text of a document without formatting, a line per paragraph and
+/// the labels of buttons; blocks are left out (they are components).
+pub fn plain_text(doc: &Value) -> String {
+	let mut out = String::new();
+	collect_text(doc, &mut out);
+	out.trim().to_string()
+}
+
+fn collect_text(node: &Value, out: &mut String) {
+	match node["type"].as_str() {
+		Some("embed") => return,
+		Some("text") => out.push_str(node["text"].as_str().unwrap_or("")),
+		Some("hardBreak") => out.push(' '),
+		Some("button") => {
+			let label = node["attrs"]["link"]["label"].as_str();
+			out.push_str(label.unwrap_or(""));
+			out.push('\n');
+		}
+		_ => {}
+	}
+	let Some(children) = node["content"].as_array() else {
+		return;
+	};
+	for child in children {
+		collect_text(child, out);
+	}
+	// words of two paragraphs stay apart
+	if !out.ends_with('\n') {
+		out.push('\n');
+	}
+}
+
 /// The blocks of a document, to walk into them.
 pub fn blocks_mut(doc: &mut Value) -> Vec<&mut Value> {
 	doc["content"]

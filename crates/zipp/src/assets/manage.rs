@@ -38,15 +38,7 @@ pub fn search(
 		AND (?3 OR folder_id IS ?4) {ends}
 		ORDER BY id DESC LIMIT 200"
 	);
-	// `%` and `_` in the search are themselves
-	let escaped: String = search
-		.chars()
-		.flat_map(|c| match c {
-			'\\' | '%' | '_' => vec!['\\', c],
-			c => vec![c],
-		})
-		.collect();
-	let search = format!("%{escaped}%");
+	let search = format!("%{}%", escape_like(search));
 	let mut values: Vec<Box<dyn rusqlite::ToSql>> = vec![
 		Box::new(search),
 		Box::new(kind.map(String::from)),
@@ -61,6 +53,47 @@ pub fn search(
 		.query_map(rusqlite::params_from_iter(values), from_row)?
 		.collect::<rusqlite::Result<_>>()?;
 	Ok(assets)
+}
+
+/// Assets whose filename, title or alt text contain every word, the
+/// newest first, for the studio's search.
+pub fn find(
+	conn: &Connection,
+	words: &[String],
+	limit: i64,
+) -> Result<Vec<Asset>> {
+	if words.is_empty() {
+		return Ok(vec![]);
+	}
+	let likes: Vec<String> = (1..=words.len())
+		.map(|i| {
+			format!(
+				"(filename LIKE ?{i} ESCAPE '\\' OR title LIKE ?{i} ESCAPE '\\' \
+				OR alt LIKE ?{i} ESCAPE '\\')"
+			)
+		})
+		.collect();
+	let sql = format!(
+		"SELECT {COLUMNS} FROM assets WHERE deleted_at IS NULL AND {}
+		ORDER BY id DESC LIMIT {limit}",
+		likes.join(" AND ")
+	);
+	let values = words.iter().map(|w| format!("%{}%", escape_like(w)));
+	let mut stmt = conn.prepare(&sql)?;
+	let assets = stmt
+		.query_map(rusqlite::params_from_iter(values), from_row)?
+		.collect::<rusqlite::Result<_>>()?;
+	Ok(assets)
+}
+
+/// `%` and `_` in a search are themselves.
+fn escape_like(s: &str) -> String {
+	s.chars()
+		.flat_map(|c| match c {
+			'\\' | '%' | '_' => vec!['\\', c],
+			c => vec![c],
+		})
+		.collect()
 }
 
 /// What an editor changes of an asset.

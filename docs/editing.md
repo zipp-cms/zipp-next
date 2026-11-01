@@ -101,7 +101,21 @@ and the arrow keys move it too, so it needs no dragging. Pages move at
 once, the rest goes into the draft.
 
 Lists of structures (Pages) have a search too; while searching, entries
-can't be moved. Globals (singles without a url) have no title field, the
+can't be moved.
+
+The search at the top of the sidebar (or Cmd+K, Ctrl+K, on every page)
+finds entries and files like Craft's: entries of the site by their
+title, slug and the text of their fields (text, markdown, rich text,
+tables, also in blocks and groups), files by name, title and alt text.
+Words match from their start, accents don't matter (`zurich` finds
+Zürich), every word has to be there. The results come as you type, by
+section, with the text around the match; the arrow keys choose, Enter
+opens an entry in its editor and a file in the flyout, Escape closes.
+Each role finds only the sections it may view, files only with access to
+them. Only the live content is searched, not drafts; entries in the
+trash are gone from it. The texts are kept in `entry_texts` with every
+save (and rebuilt with the other index rows), SQLite's FTS5 searches
+them. Globals (singles without a url) have no title field, the
 bar at the top names them (Settings / Header).
 
 ## Entries and images in other fields

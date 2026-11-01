@@ -49,7 +49,7 @@ pub use folders::{
 	top_count, update_folder,
 };
 pub use manage::{
-	AssetChange, InFolder, Usage, delete, replace, search, update, usage,
+	AssetChange, InFolder, Usage, delete, find, replace, search, update, usage,
 };
 
 pub use routes::api_routes;

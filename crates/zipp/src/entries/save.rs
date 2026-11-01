@@ -356,7 +356,12 @@ pub fn reindex(
 	ty: &str,
 	fields: &Value,
 ) -> Result<()> {
-	for table in ["entry_values", "entry_relations", "asset_relations"] {
+	for table in [
+		"entry_values",
+		"entry_relations",
+		"asset_relations",
+		"entry_texts",
+	] {
 		conn.execute(
 			&format!("DELETE FROM {table} WHERE entry_id = ?1 AND site = ?2"),
 			params![id, site],
@@ -367,6 +372,7 @@ pub fn reindex(
 		return Ok(());
 	};
 
+	crate::search::index(conn, schema, id, site, comp, fields)?;
 	for v in index_values(comp, fields) {
 		conn.execute(
 			"INSERT INTO entry_values (entry_id, site, field, text, num)

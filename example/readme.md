@@ -53,6 +53,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Mail | Setup → Sites, transforms and roles → Mail (admins) | where mails go; **Send a test mail to me**. Without `--smtp-url` they are only logged |
 | Translations | Settings → Translations | the keys come from the code, editors only translate |
 | SEO | Settings → SEO, a page → SEO | the search result preview; on the website title, meta, JSON-LD, `/sitemap.xml` and `/robots.txt` from the npm package `meierlabs-seo` (the demo is noindex) |
+| Search | **Search** at the top of the sidebar, or Cmd/Ctrl+K | type a word of a page's text: entries by section with where it matched and files, Enter opens one; the author finds nothing of Settings (header, footer), which they may not see |
 | Roles | Users (admins) | log in as `second@meierlabs.dev` (Author): only events and news, as drafts someone else publishes; pages and categories read only |
 | AI chat | AI in the top bar | ask for anything, also a new event; it writes drafts, stays on your page when the change shows there and opens another page when not |
 
