@@ -18,7 +18,8 @@ SQLite database, default `zipp.db`):
 - `mail <to> [--smtp-url url --mail-from from]`: sends a test mail, see
   Mail below
 - `import-craft <export.json> [--volume handle=dir] [--site craft=zipp]`:
-  imports a Craft site into a database without content, see below
+  imports a Craft site into a database without content, only with the
+  feature `craft`, see below
 - `backup <dir> [--files dir] [--keep n]`: a backup of the database and
   the files, also while the server runs, see Backups
 - `restore <backup> [--files dir]`: puts a backup back, the server
@@ -213,6 +214,11 @@ against the schema (unknown fields, wrong arguments), for CI:
 
 ## Import from Craft
 
+The import is only in a binary whose crate turns on zipp's feature
+`craft` (`zipp = { path = "…", features = ["craft"] }`), so a site that
+never came from Craft doesn't ship it; a port turns it on and off again
+once it is live.
+
 `crates/zipp/craft/export.php` writes the content of a Craft 5 site as
 JSON (`ddev craft exec "if (true) { $(sed 1d export.php) }"` in the
 Craft project, it writes `storage/zipp-export.json`), `import-craft`
@@ -225,7 +231,14 @@ fields to the field. Values follow the zipp field: a matrix becomes
 blocks or a navigation (each nested entry's link and the nested entries
 under it), a content block a group, categories a relation, CKEditor's
 html rich text (nested entries become embedded blocks, or buttons if
-they are only a link). Assets come with their title, alt text and focal
+they are only a link). A group that Craft didn't have takes the flat
+fields of the same entry or block with the handles of its fields, or
+with the group's handle before them: a group `sale` with `price` and
+`format` takes Craft's `price` and `format`, a group `contact` with
+`heading` takes `contactHeading` (or `heading`). A Craft field fills one
+place only: a field of the entry type itself wins, and a Craft field
+that fits two places (or two that fit one) is left out and listed, so
+rename one of them. Assets come with their title, alt text and focal
 point; entries keep Craft's post date, structures their order. What
 the schema doesn't have is left out and listed; slugs are made zipp's
 (`teddy--co.` becomes `teddy-co`), so redirect such urls in the

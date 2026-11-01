@@ -23,6 +23,7 @@ pub(crate) use validate::check_link;
 pub(crate) use validate::is_empty;
 pub(crate) use validate::safe_url;
 pub(crate) use validate::takes;
+#[cfg(any(test, feature = "craft"))]
 pub(crate) use validate::valid_date;
 pub use validate::valid_email;
 pub use validate::validate;

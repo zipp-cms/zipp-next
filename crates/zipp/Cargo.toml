@@ -34,3 +34,5 @@ zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
 [features]
 # `zipp::testing`: a test server for the tests of sites and plugins
 testing = []
+# `import-craft`: the import of a Craft site, for the crate of a port
+craft = []

@@ -209,6 +209,94 @@ fn imports_a_site() {
 }
 
 #[test]
+fn fills_groups_from_flat_fields() {
+	let schema = Schema::new()
+		.site("de", "Deutsch", "de-CH")
+		.section(Section::channel("mappen", ["mappe"]))
+		.entry(
+			"mappe",
+			"Mappe",
+			[
+				Field::number("year"),
+				Field::group("sale", "sale"),
+				Field::group_of(
+					"notes",
+					[
+						Field::text("year"),
+						Field::text("note"),
+						Field::text("author"),
+					],
+				),
+				Field::group_of("extra", [Field::text("note")]),
+				Field::blocks("sections", ["section"]),
+			],
+		)
+		.block(
+			"sale",
+			"Sale",
+			[
+				Field::number("price"),
+				Field::number("priceForeign"),
+				Field::text("format"),
+			],
+		)
+		.block(
+			"section",
+			"Section",
+			[Field::group_of("contact", [Field::text("heading")])],
+		);
+	schema.check().unwrap();
+	let export: Export = serde_json::from_value(json!({
+		"sites": [{ "handle": "default" }],
+		"sections": { "mappen": { "sites": { "default": [{
+			"id": 1, "type": "mappe", "title": "A", "slug": "a",
+			"enabled": true, "parentId": null,
+			"fields": {
+				"year": 2020, "price": "12", "priceForeign": 15,
+				"format": "A4", "saleFormat": "A3", "note": "x",
+				"author": "Sue",
+				"sections": [{ "id": 2, "type": "section", "enabled": true,
+					"fields": { "contactHeading": "Hi" } }],
+			},
+		}] } } },
+	}))
+	.unwrap();
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let opts = Options {
+		sites: vec![],
+		volumes: HashMap::new(),
+	};
+
+	let report =
+		import(&conn, &schema, &std::env::temp_dir(), &export, &opts).unwrap();
+	assert_eq!(report.entries, 1);
+	// a Craft field for two places or two for one fill nothing
+	assert_eq!(
+		report.skipped,
+		[
+			"mappe: the Craft fields format and saleFormat fit sale.format",
+			"mappe: the Craft field note fits notes.note and extra.note",
+		]
+	);
+
+	let fields: String = conn
+		.query_row("SELECT fields FROM entry_sites", [], |r| r.get(0))
+		.unwrap();
+	let fields: Value = serde_json::from_str(&fields).unwrap();
+	assert_eq!(fields["year"], 2020);
+	assert_eq!(fields["sale"], json!({ "price": 12.0, "priceForeign": 15 }));
+	// year is a field of the entry type, not of the group
+	assert_eq!(fields["notes"], json!({ "author": "Sue" }));
+	assert!(fields.get("extra").is_none());
+	// in a block too, and with the group's handle before the field's
+	assert_eq!(
+		fields["sections"][0]["fields"]["contact"],
+		json!({ "heading": "Hi" })
+	);
+}
+
+#[test]
 fn parses_iso_dates() {
 	assert_eq!(parse_iso("1970-01-01T00:00:00Z"), Some(0));
 	assert_eq!(parse_iso("1970-01-01T01:00:00+01:00"), Some(0));

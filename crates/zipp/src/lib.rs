@@ -9,6 +9,7 @@ pub mod auth;
 pub mod backup;
 mod cli;
 pub mod content;
+#[cfg(feature = "craft")]
 mod craft;
 pub mod db;
 pub mod drafts;
@@ -270,6 +271,7 @@ impl Cms {
 				print!("{}", typescript::generate(&schema));
 				Ok(())
 			}
+			#[cfg(feature = "craft")]
 			Cmd::ImportCraft {
 				export,
 				files,

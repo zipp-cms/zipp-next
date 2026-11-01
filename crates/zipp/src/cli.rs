@@ -102,6 +102,7 @@ pub(super) enum Cmd {
 	},
 	/// Import a Craft site into a database without content: the JSON of
 	/// zipp's `craft/export.php` and the files of its volumes.
+	#[cfg(feature = "craft")]
 	ImportCraft {
 		export: PathBuf,
 		/// Where uploaded files go, like `serve --files`
@@ -280,6 +281,7 @@ pub(super) fn add_user(
 }
 
 /// See [`Cmd::ImportCraft`].
+#[cfg(feature = "craft")]
 pub(super) fn import_craft(
 	schema: &Schema,
 	db_path: &Path,

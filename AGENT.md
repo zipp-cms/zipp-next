@@ -166,7 +166,8 @@ What the owner decided, so it doesn't get asked again:
 ## Before a commit
 
 - `cargo fmt`, `cargo clippy --workspace --all-targets --features
-  zipp/testing`, `cargo test --workspace`, and in
+  zipp/testing,zipp/craft`, `cargo test --workspace --features
+  zipp/craft` (the import is a feature, see docs/operations.md), and in
   `studio/` `npx prettier --write src` and `npx svelte-check`.
 - A change of the studio: `npm run build` in `studio/` and commit the
   embedded build in `crates/zipp/studio`.

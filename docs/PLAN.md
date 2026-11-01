@@ -161,7 +161,7 @@ commit.
       to be exact and outputs pseudo code, which an AI then turns into the
       real schema code
 - [ ] The studio in the user's language?
-- [ ] The Craft import out of the main binary (its own crate or command)?
+- [x] The Craft import out of the main binary: zipp's feature `craft`
 - [x] A better page picker (the tree, search) for relations and links
 - [x] A login dialog when the session expires, so unsaved work stays, 4b457a1
 - [x] The link box of a link field clickable over its whole height, not
@@ -170,5 +170,6 @@ commit.
   stay in the site, not in zipp-forms: in the crelte server as today or
   later as routes of its cms crate with `state.mail`, either is fine
   (operator 2026-11-01)
-- [ ] Import mapping for Craft: fill a group from flat Craft fields, so a
-      port can group fields that were flat in Craft (textrem, 2026-11-01)
+- [x] Import mapping for Craft: fill a group from flat Craft fields, so a
+      port can group fields that were flat in Craft (textrem, 2026-11-01);
+      by handle, also `contactHeading` into `contact.heading`

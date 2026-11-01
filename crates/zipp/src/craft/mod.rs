@@ -8,10 +8,11 @@
 //!
 //! Values are converted to the kind of the zipp field: matrix to blocks or
 //! to a navigation (each nested entry's link field and the nested entries
-//! under it), content blocks to groups, CKEditor's html to rich text
-//! (nested entries become embedded blocks or, if they are only a link,
-//! buttons), categories to relations. Assets are copied with their title,
-//! alt text and focal point.
+//! under it), content blocks to groups (and flat fields to a group with
+//! their handles), CKEditor's html to rich text (nested entries become
+//! embedded blocks or, if they are only a link, buttons), categories to
+//! relations. Assets are copied with their title, alt text and focal
+//! point.
 
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
@@ -471,17 +472,114 @@ impl Importer<'_> {
 
 	/// The fields of a component from Craft's values of the same handles.
 	fn fields(&mut self, comp: &Component, craft: &Value) -> Value {
+		let mut flat = self.flat_groups(comp, craft);
 		let mut out = Map::new();
 		for field in &comp.fields {
-			let Some(v) = craft.get(&field.handle).filter(|v| !v.is_null())
-			else {
-				continue;
+			let v = match craft.get(&field.handle).filter(|v| !v.is_null()) {
+				Some(v) => self.value(field, v),
+				None => match flat.remove(&field.handle) {
+					Some(group) => {
+						self.value(field, &json!({ "fields": group }))
+					}
+					None => continue,
+				},
 			};
-			if let Some(v) = self.value(field, v) {
+			if let Some(v) = v {
 				out.insert(field.handle.clone(), v);
 			}
 		}
 		Value::Object(out)
+	}
+
+	/// Groups that Craft didn't have: a group without a value of its own
+	/// takes the flat Craft fields of its fields' handles, or of the
+	/// group's handle and theirs (`contactHeading` for `heading` of a
+	/// group `contact`), so a port can group what was flat in Craft. A
+	/// Craft field fills one place only: none when the component has a
+	/// field of its handle, and none when it fits several places or a
+	/// place fits several Craft fields (that is reported).
+	fn flat_groups(
+		&mut self,
+		comp: &Component,
+		craft: &Value,
+	) -> HashMap<String, Map<String, Value>> {
+		let schema = self.schema;
+		let groups: Vec<(&str, &Component)> = comp
+			.fields
+			.iter()
+			.filter(|f| craft.get(&f.handle).is_none_or(Value::is_null))
+			.filter_map(|f| match &f.kind {
+				FieldKind::Group { component } => {
+					Some((f.handle.as_str(), schema.get(component)?))
+				}
+				_ => None,
+			})
+			.collect();
+		if groups.is_empty() {
+			return HashMap::new();
+		}
+
+		// each flat Craft field with the places it fits
+		let mut fits = vec![];
+		for (handle, v) in craft.as_object().into_iter().flatten() {
+			if v.is_null() || comp.fields.iter().any(|f| &f.handle == handle) {
+				continue;
+			}
+			let mut places = vec![];
+			for (group, g) in &groups {
+				for f in &g.fields {
+					if &f.handle == handle
+						|| handle.strip_prefix(group)
+							== Some(&upper_first(&f.handle))
+					{
+						places.push((*group, f.handle.as_str()));
+					}
+				}
+			}
+			if !places.is_empty() {
+				fits.push((handle, v, places));
+			}
+		}
+
+		let mut flat: HashMap<String, Map<String, Value>> = HashMap::new();
+		for (handle, v, places) in &fits {
+			let place = places[0];
+			let shared = fits
+				.iter()
+				.filter(|(h, ..)| h != handle)
+				.find(|(.., p)| p.contains(&place));
+			let what = match (&places[..], shared) {
+				([_], None) => {
+					let fields = flat.entry(place.0.to_string()).or_default();
+					fields.insert(place.1.to_string(), (*v).clone());
+					continue;
+				}
+				([_], Some((other, ..))) => {
+					let mut both = [handle, other];
+					both.sort();
+					format!(
+						"{}: the Craft fields {} and {} fit {}.{}",
+						comp.handle, both[0], both[1], place.0, place.1
+					)
+				}
+				_ => {
+					let places: Vec<String> = places
+						.iter()
+						.map(|(g, f)| format!("{g}.{f}"))
+						.collect();
+					format!(
+						"{}: the Craft field {handle} fits {}",
+						comp.handle,
+						places.join(" and ")
+					)
+				}
+			};
+			// once, not for every entry
+			if !self.report.skipped.contains(&what) {
+				self.skip(what);
+			}
+		}
+		flat
 	}
 
 	fn value(&mut self, field: &Field, v: &Value) -> Option<Value> {
@@ -801,6 +899,13 @@ impl Importer<'_> {
 		}
 		Some(link)
 	}
+}
+
+fn upper_first(s: &str) -> String {
+	let mut c = s.chars();
+	c.next()
+		.map(|f| f.to_uppercase().chain(c).collect())
+		.unwrap_or_default()
 }
 
 #[cfg(test)]
