@@ -96,6 +96,9 @@ fragment Content on Block {
 	... on events_Block {
 		city
 	}
+	... on contact_Block {
+		title
+	}
 }
 
 query ($uri: [String], $siteId: [QueryArgument]) {

@@ -3,6 +3,49 @@
     {
       "op": "addComponent",
       "component": {
+        "handle": "formSettings",
+        "name": "Forms",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "contactTo",
+            "label": "Contact: send to",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "One or more addresses, separated by commas. Without one the form can't send.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "contactSubject",
+            "label": "Contact: subject",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "Empty: *New message: Contact*",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "contactSuccess",
+            "label": "Contact: message after sending",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "Empty: *Thank you, your message is sent.*",
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
         "handle": "seoSettings",
         "name": "SEO",
         "entry": true,
@@ -673,6 +716,30 @@
               [
                 "news.none",
                 "Noch keine Neuigkeiten"
+              ],
+              [
+                "contact.name",
+                "Name"
+              ],
+              [
+                "contact.email",
+                "E-Mail"
+              ],
+              [
+                "contact.phone",
+                "Telefon"
+              ],
+              [
+                "contact.message",
+                "Nachricht"
+              ],
+              [
+                "contact.send",
+                "Senden"
+              ],
+              [
+                "contact.failed",
+                "Das hat nicht geklappt, bitte später nochmals."
               ]
             ]
           }
@@ -722,7 +789,8 @@
               "text",
               "images",
               "button",
-              "events"
+              "events",
+              "contact"
             ],
             "min": null,
             "max": null
@@ -807,7 +875,8 @@
               "text",
               "images",
               "button",
-              "events"
+              "events",
+              "contact"
             ],
             "min": null,
             "max": null
@@ -967,7 +1036,8 @@
               "text",
               "images",
               "button",
-              "events"
+              "events",
+              "contact"
             ],
             "min": null,
             "max": null
@@ -1409,6 +1479,30 @@
       }
     },
     {
+      "op": "addComponent",
+      "component": {
+        "handle": "contact",
+        "name": "Contact form",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "title",
+            "label": "Title",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Above the form, empty: none.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ],
+        "icon": {
+          "lucide": "mail"
+        }
+      }
+    },
+    {
       "op": "addSite",
       "site": {
         "handle": "de",
@@ -1497,6 +1591,18 @@
         "kind": "single",
         "types": [
           "footer"
+        ],
+        "uri": null
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "formSettings",
+        "name": "Forms",
+        "kind": "single",
+        "types": [
+          "formSettings"
         ],
         "uri": null
       }
@@ -1600,6 +1706,15 @@
         "uri": null
       },
       {
+        "handle": "formSettings",
+        "name": "Forms",
+        "kind": "single",
+        "types": [
+          "formSettings"
+        ],
+        "uri": null
+      },
+      {
         "handle": "seoSettings",
         "name": "SEO",
         "kind": "single",
@@ -1619,6 +1734,46 @@
       }
     ],
     "components": [
+      {
+        "handle": "formSettings",
+        "name": "Forms",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "contactTo",
+            "label": "Contact: send to",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "One or more addresses, separated by commas. Without one the form can't send.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "contactSubject",
+            "label": "Contact: subject",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "Empty: *New message: Contact*",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "contactSuccess",
+            "label": "Contact: message after sending",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "Empty: *Thank you, your message is sent.*",
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          }
+        ]
+      },
       {
         "handle": "seoSettings",
         "name": "SEO",
@@ -2278,6 +2433,30 @@
               [
                 "news.none",
                 "Noch keine Neuigkeiten"
+              ],
+              [
+                "contact.name",
+                "Name"
+              ],
+              [
+                "contact.email",
+                "E-Mail"
+              ],
+              [
+                "contact.phone",
+                "Telefon"
+              ],
+              [
+                "contact.message",
+                "Nachricht"
+              ],
+              [
+                "contact.send",
+                "Senden"
+              ],
+              [
+                "contact.failed",
+                "Das hat nicht geklappt, bitte später nochmals."
               ]
             ]
           }
@@ -2324,7 +2503,8 @@
               "text",
               "images",
               "button",
-              "events"
+              "events",
+              "contact"
             ],
             "min": null,
             "max": null
@@ -2406,7 +2586,8 @@
               "text",
               "images",
               "button",
-              "events"
+              "events",
+              "contact"
             ],
             "min": null,
             "max": null
@@ -2560,7 +2741,8 @@
               "text",
               "images",
               "button",
-              "events"
+              "events",
+              "contact"
             ],
             "min": null,
             "max": null
@@ -2975,6 +3157,27 @@
         "icon": {
           "lucide": "calendar-days"
         }
+      },
+      {
+        "handle": "contact",
+        "name": "Contact form",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "title",
+            "label": "Title",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Above the form, empty: none.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ],
+        "icon": {
+          "lucide": "mail"
+        }
       }
     ],
     "transforms": [
@@ -3029,7 +3232,8 @@
           "header",
           "footer",
           "translations",
-          "seoSettings"
+          "seoSettings",
+          "formSettings"
         ],
         "icon": {
           "lucide": "sliders-horizontal"

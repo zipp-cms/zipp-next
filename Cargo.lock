@@ -817,6 +817,7 @@ dependencies = [
  "tokio",
  "zipp",
  "zipp-button-group",
+ "zipp-forms",
  "zipp-seo",
 ]
 
@@ -3482,6 +3483,17 @@ name = "zipp-button-group"
 version = "0.1.0"
 dependencies = [
  "serde_json",
+ "zipp",
+]
+
+[[package]]
+name = "zipp-forms"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
  "zipp",
 ]
 

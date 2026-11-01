@@ -12,6 +12,7 @@ use zipp::{
 	Transform,
 };
 use zipp_button_group::{ButtonGroup, button_group};
+use zipp_forms::{Form, FormField, Forms};
 use zipp_seo::{Seo, SeoDefaults, seo_field};
 
 fn schema() -> Schema {
@@ -31,8 +32,11 @@ fn schema() -> Schema {
 		]
 	};
 	let content = || {
-		Field::blocks("content", ["text", "images", "button", "events"])
-			.translatable()
+		Field::blocks(
+			"content",
+			["text", "images", "button", "events", "contact"],
+		)
+		.translatable()
 	};
 	// for search engines the intro is the description, the hero the image
 	let from_intro = || {
@@ -78,7 +82,13 @@ fn schema() -> Schema {
 		)
 		.nav(
 			"Settings",
-			["header", "footer", "translations", "seoSettings"],
+			[
+				"header",
+				"footer",
+				"translations",
+				"seoSettings",
+				"formSettings",
+			],
 		)
 		// icons of the studio, Lucide's by name or an svg of its own
 		.nav_icon("Content", "folder-open")
@@ -86,6 +96,16 @@ fn schema() -> Schema {
 		// the SEO plugin, like the Craft plugin meierlabs-seo: the global
 		// settings are the single seoSettings, defaults per section and
 		// entry type here
+		// a contact form like valgistesshots', mailed to who Forms names
+		.plugin(
+			Forms::new().form(
+				Form::new("contact", "Contact")
+					.field(FormField::text("name").required())
+					.field(FormField::email("email").required().reply_to())
+					.field(FormField::text("phone"))
+					.field(FormField::multiline("message").required()),
+			),
+		)
 		.plugin(
 			Seo::new()
 				.section(
@@ -103,7 +123,13 @@ fn schema() -> Schema {
 		.role(
 			Role::new("editor", "Editor")
 				.sections(
-					["pages", "header", "footer", "translations"],
+					[
+						"pages",
+						"header",
+						"footer",
+						"translations",
+						"formSettings",
+					],
 					Access::Publish,
 				)
 				.sections(["news", "categories"], Access::Delete)
@@ -132,6 +158,15 @@ fn schema() -> Schema {
 				("events.soldOut", "Ausverkauft"),
 				("news.all", "Alle"),
 				("news.none", "Noch keine Neuigkeiten"),
+				("contact.name", "Name"),
+				("contact.email", "E-Mail"),
+				("contact.phone", "Telefon"),
+				("contact.message", "Nachricht"),
+				("contact.send", "Senden"),
+				(
+					"contact.failed",
+					"Das hat nicht geklappt, bitte später nochmals.",
+				),
 			],
 		)
 		.transform(Transform::new("hero").width(1600).height(700).crop())
@@ -284,6 +319,15 @@ fn schema() -> Schema {
 			"Upcoming events",
 			[Field::text("city").label("Only in city")],
 		)
+		// the contact form of zipp-forms, its texts are the frontend's
+		.block(
+			"contact",
+			"Contact form",
+			[
+				Field::text("title")
+					.instructions("Above the form, empty: none."),
+			],
+		)
 		// in the lists, the add menus and the blocks' heads
 		.icon("home", "house")
 		.icon("page", "file-text")
@@ -295,6 +339,7 @@ fn schema() -> Schema {
 		.icon("images", "images")
 		.icon("button", "mouse-pointer-click")
 		.icon("events", "calendar-days")
+		.icon("contact", "mail")
 }
 
 /// A route of the site next to zipp's: the upcoming events as JSON, for a

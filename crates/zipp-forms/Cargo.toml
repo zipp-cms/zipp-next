@@ -1,0 +1,15 @@
+[package]
+name = "zipp-forms"
+version = "0.1.0"
+edition = "2024"
+description = "Forms of the website for zipp, like Craft's Contact Form: declared in code, sent by mail"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+tracing = "0.1"
+zipp = { path = "../zipp" }
+
+[dev-dependencies]
+zipp = { path = "../zipp", features = ["testing"] }
+tokio = { version = "1.45", features = ["rt-multi-thread", "macros"] }
