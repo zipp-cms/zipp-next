@@ -239,6 +239,12 @@
 		justify-content: space-between;
 	}
 
+	// further from the files than they are from each other, like the
+	// Choose of a relation; images keep the gap of their grid
+	.assets:not(.images) .item ~ .drop-zone {
+		margin-top: 0.375rem;
+	}
+
 	// where files are dropped, uploaded or chosen
 	.drop-zone {
 		display: flex;

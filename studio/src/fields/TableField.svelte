@@ -90,6 +90,11 @@
 		width: 100%;
 		margin-bottom: 0.375rem;
 		border-collapse: collapse;
+
+		// the button further from the rows than from the column labels
+		&:has(tbody tr) {
+			margin-bottom: 0.75rem;
+		}
 	}
 
 	th {

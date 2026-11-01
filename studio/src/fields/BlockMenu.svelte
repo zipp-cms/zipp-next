@@ -112,10 +112,6 @@
 {/if}
 
 <style lang="scss">
-	.bar {
-		margin-top: 0.875rem;
-	}
-
 	// between two blocks, it shows when the pointer is near
 	.inline {
 		position: relative;

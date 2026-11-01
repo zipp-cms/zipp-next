@@ -238,6 +238,10 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
+	}
+
+	// no space above the button while there are no links
+	.items:has(.row) + .add {
 		margin-top: 0.75rem;
 	}
 </style>

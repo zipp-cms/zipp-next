@@ -211,6 +211,12 @@
 		margin-top: 0.75rem;
 	}
 
+	// the bar further from the last block than they are from each other,
+	// none above it while the field is empty
+	.block ~ :global(.bar) {
+		margin-top: 0.875rem;
+	}
+
 	.tools {
 		margin-bottom: 0.375rem;
 		display: flex;

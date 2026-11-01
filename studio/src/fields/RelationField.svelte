@@ -58,7 +58,7 @@
 	<SortLine sortable={sort} />
 
 	{#if !isFull(ids.length, max)}
-		<div>
+		<div class="choose">
 			<EntrySearch
 				{schema}
 				{types}
@@ -76,6 +76,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.375rem;
+	}
+
+	// the button further from the chips than they are from each other,
+	// none above it while the field is empty
+	.item ~ .choose {
+		margin-top: 0.375rem;
 	}
 
 	// its handle, then the chip
