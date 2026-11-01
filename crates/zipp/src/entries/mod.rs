@@ -14,6 +14,7 @@ use serde_json::Value;
 use crate::auth::Authed;
 use crate::content::{
 	FieldError, Target, convert, index_values, relations, share, validate,
+	with_defaults,
 };
 use crate::db::{marks, now};
 use crate::drafts::record_revision;

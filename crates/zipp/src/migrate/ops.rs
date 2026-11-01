@@ -83,7 +83,6 @@ impl Op {
 		match self {
 			// sites and sections change rows, see apply::apply_migrations
 			Self::AddComponent { .. }
-			| Self::AddField { .. }
 			| Self::AddSite { .. }
 			| Self::RemoveSite { .. }
 			| Self::AddSection { .. }
@@ -117,6 +116,18 @@ impl Op {
 							b["type"] = to.clone().into();
 						}
 					});
+				});
+			}
+			// the content there starts with the default too, so a new
+			// boolean that is on is on for the old entries
+			Self::AddField { component, field } => {
+				let Some(default) = default_of(schema, field) else {
+					return true;
+				};
+				walk_mut(schema, comp, fields, &mut |c, obj| {
+					if &c.handle == component {
+						obj.entry(&field.handle).or_insert(default.clone());
+					}
 				});
 			}
 			Self::RemoveField { component, field } => {

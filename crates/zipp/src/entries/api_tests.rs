@@ -160,6 +160,51 @@ async fn refuses_invalid_content() {
 }
 
 #[tokio::test]
+async fn emails_and_defaults_of_new_entries() {
+	let ts = TestServer::new(site_with_roles());
+	let author = ts.user(Some("author"));
+
+	let event =
+		|title, fields| CreateReq(input("events", "event", title, fields));
+	let err = author
+		.call(&event("Jazz", json!({ "contact": "info at textrem" })))
+		.await
+		.unwrap_err();
+	let Error::Invalid(fields) = err else {
+		panic!("{err:?}")
+	};
+	assert_eq!(fields[0].path, "contact");
+	assert_eq!(fields[0].message, "an email address like name@example.com");
+
+	// a new entry without the field gets its default, one that sends it
+	// keeps its value
+	let e = author
+		.call(&event("Jazz", json!({ "contact": "info@textrem.ch" })))
+		.await
+		.unwrap();
+	assert_eq!(e.fields["listed"], true);
+	assert_eq!(e.fields["contact"], "info@textrem.ch");
+	let off = author
+		.call(&event("Blues", json!({ "listed": false })))
+		.await
+		.unwrap();
+	assert_eq!(off.fields["listed"], false);
+
+	// an update without it doesn't bring it back
+	let mut up = input("events", "event", "Jazz", json!({}));
+	up.slug = e.slug.clone();
+	let e = ts
+		.admin()
+		.call(&UpdateReq {
+			id: e.id,
+			input: up,
+		})
+		.await
+		.unwrap();
+	assert!(e.fields.get("listed").is_none());
+}
+
+#[tokio::test]
 async fn roles_on_entries() {
 	let ts = TestServer::new(site_with_roles());
 	let admin = ts.admin();

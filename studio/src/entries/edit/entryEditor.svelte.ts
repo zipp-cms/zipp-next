@@ -2,6 +2,7 @@ import { ApiError } from '../../core/client';
 import { Busy } from '../../core/busy.svelte';
 import {
 	componentOf,
+	defaults,
 	sameKind,
 	type Schema,
 	type Values,
@@ -177,6 +178,7 @@ export class EntryEditor {
 		}
 		const sec = schema.sections.find(s => s.handle === section);
 		ed.ty = sec?.types[0] ?? '';
+		ed.fields = defaults(schema, ed.ty);
 		if (sec?.kind === 'structure') await ed.loadParents();
 		return ed;
 	}
@@ -302,6 +304,9 @@ export class EntryEditor {
 		this.fields = Object.fromEntries(
 			Object.entries(this.fields).filter(([h]) => kept(h)),
 		);
+		// a new entry starts with the defaults of the other type
+		if (this.id === null)
+			this.fields = { ...defaults(this.schema, to), ...this.fields };
 		this.ty = to;
 		return true;
 	}

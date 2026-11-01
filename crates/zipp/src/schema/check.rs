@@ -360,6 +360,9 @@ impl Schema {
 			}
 		}
 
+		crate::content::check_default(self, field)
+			.map_err(|e| format!("default: {e}"))?;
+
 		if field.translatable && !comp.entry {
 			return Err("only fields of entries can be translatable, blocks \
 				follow their field"
@@ -372,7 +375,7 @@ impl Schema {
 			}
 			if self.index_kind(&field.kind).is_none() {
 				return Err(
-					"only text, number, boolean and dropdowns can be indexed"
+					"only text, email, number, boolean and dropdowns can be indexed"
 						.into(),
 				);
 			}
@@ -410,6 +413,7 @@ impl Schema {
 		match kind {
 			// a date sorts as text, `2026-11-14T20:00`
 			FieldKind::Text { .. }
+			| FieldKind::Email
 			| FieldKind::Dropdown { .. }
 			| FieldKind::Date { .. } => Some(IndexKind::Text),
 			FieldKind::Number { .. } | FieldKind::Boolean => {

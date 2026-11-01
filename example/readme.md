@@ -32,6 +32,8 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Markdown | Events → Description | written as markdown, the website gets it as html |
 | Navigation, table, checkboxes | Settings → Header, Footer · Events → Für wen | a menu with a second level, footer links as rows, some of the options |
 | Dropdown | Images block → Width (3 options: buttons), Events → Sprache (5: a select) | the website sizes the image, filters events by language |
+| Default values | Images block → Width, Events → Sprache | a new block starts *Wide*, a new event *Deutsch* |
+| Email | Settings → Footer → Contact email | the server takes only an address, the website links it with `mailto:` |
 | A field type of another crate | Events → Genre | `crates/zipp-button-group`: Craft's button group with a color per option, its own editor and GraphQL type |
 | Boolean, number, indexed fields | Events | *sold out*, price (CHF, two decimals); the website filters and sorts by them |
 | Date, date and time | Events → Date, Doors open | the date picker; a day or a day and time, the website sorts events by the date |

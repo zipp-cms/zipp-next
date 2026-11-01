@@ -23,6 +23,7 @@ query ($siteId: [QueryArgument]) {
 	footer: globalSet(handle: "footer", siteId: $siteId) {
 		... on footer_Entry {
 			text
+			email
 			links {
 				label
 				url

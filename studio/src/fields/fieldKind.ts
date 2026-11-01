@@ -27,6 +27,8 @@ export function describeField(f: Field): string {
 				.join(', ');
 		case 'boolean':
 			return 'Yes / no';
+		case 'email':
+			return 'Email address';
 		case 'relation':
 			return `Entries: ${list(f.types)}${f.max ? `, max ${f.max}` : ''}`;
 		case 'assets':

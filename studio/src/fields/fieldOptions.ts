@@ -49,6 +49,9 @@ export function fieldOptions(
 				? 'Yes, lists and GraphQL filter and sort by it'
 				: 'No',
 		},
+		...(f.default !== undefined
+			? [{ name: 'Default', value: JSON.stringify(f.default) }]
+			: []),
 	];
 	const add = (name: string, value: string, links?: FieldOption['links']) =>
 		out.push({ name, value, links });

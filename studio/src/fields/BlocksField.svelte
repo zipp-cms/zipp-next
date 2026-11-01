@@ -13,7 +13,7 @@
 	import { blockMissing, blockSummary, focus } from './blocks.svelte';
 	import { rememberOpen, wasOpen } from './opened';
 	import { inserted, isFull, removed } from '../core/list';
-	import { componentOf } from '../core/schema';
+	import { componentOf, defaults } from '../core/schema';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 
 	/**
@@ -75,7 +75,7 @@
 	}
 
 	const add = (type: string, at = blocks.length) =>
-		insert({ type, fields: {} }, at);
+		insert({ type, fields: defaults(schema, type) }, at);
 
 	function duplicate(i: number) {
 		const copy: Block = $state.snapshot(blocks[i]);

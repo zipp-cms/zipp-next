@@ -142,7 +142,9 @@ pub(super) fn content_field(
 				None => TypeRef::named(TypeRef::STRING),
 			}
 		}
-		FieldKind::Text { .. } => TypeRef::named(TypeRef::STRING),
+		FieldKind::Text { .. } | FieldKind::Email => {
+			TypeRef::named(TypeRef::STRING)
+		}
 		FieldKind::Number { .. } => TypeRef::named(TypeRef::FLOAT),
 		FieldKind::Boolean => TypeRef::named(TypeRef::BOOLEAN),
 		FieldKind::Relation { .. } => TypeRef::named_nn_list_nn("Entry"),
@@ -289,6 +291,7 @@ pub(super) fn content_field(
 				| FieldKind::RichText { .. }
 				| FieldKind::Link { .. } => Ok(None),
 				FieldKind::Text { .. }
+				| FieldKind::Email
 				| FieldKind::Number { .. }
 				| FieldKind::Boolean
 				| FieldKind::Date { .. }

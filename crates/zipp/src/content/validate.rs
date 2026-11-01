@@ -51,6 +51,40 @@ pub(crate) fn validate_fields(
 	Value::Object(out)
 }
 
+/// Whether a field's default is a value it takes. Defaults are for plain
+/// values, not for ids of the database or content with blocks.
+pub(crate) fn check_default(
+	schema: &Schema,
+	field: &Field,
+) -> Result<(), String> {
+	let Some(default) = &field.default else {
+		return Ok(());
+	};
+	let plain = matches!(
+		field.kind,
+		FieldKind::Text { .. }
+			| FieldKind::Email
+			| FieldKind::Number { .. }
+			| FieldKind::Boolean
+			| FieldKind::Date { .. }
+			| FieldKind::Markdown
+			| FieldKind::Dropdown { .. }
+			| FieldKind::Checkboxes { .. }
+			| FieldKind::Custom { .. }
+	);
+	if !plain {
+		return Err("only fields of plain values have one".into());
+	}
+
+	let mut errors = vec![];
+	let value = validate_value(schema, field, default, "", &mut errors);
+	match (errors.first(), value) {
+		(Some(e), _) => Err(e.message.clone()),
+		(None, None) => Err("is empty".into()),
+		(None, Some(_)) => Ok(()),
+	}
+}
+
 pub(super) fn validate_value(
 	schema: &Schema,
 	field: &Field,
@@ -104,6 +138,11 @@ pub(super) fn validate_value(
 			}
 		}
 		(FieldKind::Boolean, Value::Bool(_)) => {}
+		(FieldKind::Email, Value::String(s)) => {
+			if !valid_email(s) {
+				error(errors, path, "an email address like name@example.com");
+			}
+		}
 		(FieldKind::Markdown, Value::String(_)) => {}
 		(FieldKind::Date { time }, Value::String(s)) => {
 			if !valid_date(s, *time) {
@@ -147,7 +186,7 @@ pub(super) fn validate_value(
 					let ok = match c.kind {
 						ColumnKind::Text => true,
 						ColumnKind::Url => safe_url(text),
-						ColumnKind::Email => text.contains('@'),
+						ColumnKind::Email => valid_email(text),
 					};
 					if !ok {
 						error(
@@ -301,6 +340,20 @@ fn has_decimals(n: f64, d: u32) -> bool {
 	(n * p).round() / p == n
 }
 
+/// Whether this looks like an address mail can go to: `name@host.tld`,
+/// no spaces; whether it exists only a mail tells.
+pub fn valid_email(s: &str) -> bool {
+	let Some((user, host)) = s.split_once('@') else {
+		return false;
+	};
+	!user.is_empty()
+		&& host.contains('.')
+		&& !host.starts_with('.')
+		&& !host.ends_with('.')
+		&& !host.contains('@')
+		&& !s.contains(|c: char| c.is_whitespace() || "<>,;\"".contains(c))
+}
+
 /// Whether a date field may hold this: `2026-11-14`, with `time`
 /// `2026-11-14T20:00`, a day the calendar has.
 pub(crate) fn valid_date(s: &str, time: bool) -> bool {
@@ -367,7 +420,7 @@ pub(crate) fn check_link(
 	let ok = match kind {
 		LinkKind::Entry | LinkKind::Asset => value.is_i64(),
 		LinkKind::Url => value.as_str().is_some_and(safe_url),
-		LinkKind::Email => value.as_str().is_some_and(|e| e.contains('@')),
+		LinkKind::Email => value.as_str().is_some_and(valid_email),
 		LinkKind::Phone => value.as_str().is_some_and(|p| {
 			!p.is_empty()
 				&& p.chars()

@@ -231,6 +231,8 @@ fn schema() -> Schema {
 						("en", "English"),
 					],
 				)
+				// most events are in German, new ones start so
+				.default("de")
 				.indexed()
 				.label("Sprache"),
 				Field::number("price")
@@ -268,6 +270,7 @@ fn schema() -> Schema {
 			"Footer",
 			[
 				Field::text("text").multiline().translatable(),
+				Field::email("email").label("Contact email"),
 				Field::table(
 					"links",
 					[Column::text("label"), Column::url("url")],
@@ -300,7 +303,8 @@ fn schema() -> Schema {
 						("wide", "Wide"),
 						("full", "Full width"),
 					],
-				),
+				)
+				.default("wide"),
 			],
 		)
 		.block(

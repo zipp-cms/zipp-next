@@ -18,9 +18,11 @@ mod validate;
 pub use relations::RelationRef;
 pub use relations::Target;
 pub use relations::relations;
+pub(crate) use validate::check_default;
 pub(crate) use validate::check_link;
 pub(crate) use validate::safe_url;
 pub(crate) use validate::valid_date;
+pub use validate::valid_email;
 pub use validate::validate;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -166,6 +168,46 @@ pub fn walk_mut(
 			walk_mut(schema, c, fields, f);
 		}
 	}
+}
+
+/// What the fields of a new entry or block start with: their defaults,
+/// a group's inside its object.
+pub fn defaults(schema: &Schema, comp: &Component) -> Map<String, Value> {
+	comp.fields
+		.iter()
+		.filter_map(|f| Some((f.handle.clone(), default_of(schema, f)?)))
+		.collect()
+}
+
+/// The default of a field, of a group the defaults of its fields.
+pub fn default_of(schema: &Schema, field: &Field) -> Option<Value> {
+	if let Some(v) = &field.default {
+		return Some(v.clone());
+	}
+	let FieldKind::Group { component } = &field.kind else {
+		return None;
+	};
+	let d = defaults(schema, schema.get(component)?);
+	(!d.is_empty()).then_some(Value::Object(d))
+}
+
+/// `fields` with the defaults of the fields it doesn't have; one that is
+/// there, also empty, stays as it is.
+pub fn with_defaults(
+	schema: &Schema,
+	comp: &Component,
+	fields: &Value,
+) -> Value {
+	let mut out = match fields {
+		Value::Object(o) => o.clone(),
+		Value::Null => Map::new(),
+		// validate says what is wrong
+		_ => return fields.clone(),
+	};
+	for (handle, v) in defaults(schema, comp) {
+		out.entry(handle).or_insert(v);
+	}
+	Value::Object(out)
 }
 
 /// Markdown to html, raw html in it is dropped (editors write text) and

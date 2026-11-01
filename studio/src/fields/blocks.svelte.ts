@@ -36,7 +36,8 @@ export function blockSummary(
 	for (const f of comp.fields) {
 		const v = fields[f.handle];
 		if (v === undefined || v === null || v === '') continue;
-		if (f.kind === 'text' && typeof v === 'string') return v.slice(0, 80);
+		if ((f.kind === 'text' || f.kind === 'email') && typeof v === 'string')
+			return v.slice(0, 80);
 		if (f.kind === 'link' && hasTarget(v as Link)) {
 			const link = v as Link;
 			const target = linkTarget(link, refs);

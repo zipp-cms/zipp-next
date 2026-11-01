@@ -38,6 +38,7 @@ const FIELDS: { [K in Field['kind']]: Component<FieldProps<FieldOf<K>>> } = {
 	text: SimpleField,
 	number: NumberField,
 	boolean: SimpleField,
+	email: SimpleField,
 	relation: RelationField,
 	assets: AssetField,
 	link: LinkField,
@@ -71,6 +72,7 @@ const HOSTED: {
 	[K in Field['kind']]?: Component<HostedProps<FieldOf<K>>>;
 } = {
 	text: SimpleField,
+	email: SimpleField,
 	assets: AssetField,
 	dropdown: DropdownField,
 	checkboxes: CheckboxesField,

@@ -1,13 +1,13 @@
 <script lang="ts">
 	import type { FieldOf, Values } from '../core/schema';
 
-	/** A field that is one input: text, boolean. */
+	/** A field that is one input: text, email, boolean. */
 	let {
 		field,
 		values,
 		path,
 	}: {
-		field: FieldOf<'text' | 'boolean'>;
+		field: FieldOf<'text' | 'email' | 'boolean'>;
 		values: Values;
 		path: string;
 	} = $props();
@@ -27,6 +27,8 @@
 		maxlength={field.max ?? undefined}
 		bind:value={values[field.handle]}
 	></textarea>
+{:else if field.kind === 'email'}
+	<input id={path} type="email" bind:value={values[field.handle]} />
 {:else}
 	<input
 		id={path}

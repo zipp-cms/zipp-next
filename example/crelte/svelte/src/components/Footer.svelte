@@ -9,6 +9,9 @@
 
 <footer>
 	<p>{$footer?.text ?? ''}</p>
+	{#if $footer?.email}
+		<p><a href="mailto:{$footer.email}">{$footer.email}</a></p>
+	{/if}
 	<!-- a table field: rows of label and url -->
 	{#if $footer?.links?.length}
 		<p>

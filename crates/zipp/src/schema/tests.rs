@@ -37,6 +37,8 @@ pub fn site() -> Schema {
 					"ticket",
 					[LinkKind::Url, LinkKind::Entry, LinkKind::Email],
 				),
+				Field::email("contact"),
+				Field::boolean("listed").default(true),
 			],
 		)
 		.transform(Transform::new("small").width(100))

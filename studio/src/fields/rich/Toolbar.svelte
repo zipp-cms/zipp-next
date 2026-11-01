@@ -161,7 +161,8 @@
 				<button
 					type="button"
 					class="popup-item"
-					onclick={() => insert(() => insertBlock(editor, b.handle))}
+					onclick={() =>
+						insert(() => insertBlock(editor, schema, b.handle))}
 				>
 					<SchemaIcon icon={b.icon} size={14} />
 					{b.name}

@@ -1183,6 +1183,7 @@
             "required": false,
             "indexed": true,
             "translatable": false,
+            "default": "de",
             "kind": "dropdown",
             "options": [
               {
@@ -1319,6 +1320,14 @@
             "multiline": true
           },
           {
+            "handle": "email",
+            "label": "Contact email",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "email"
+          },
+          {
             "handle": "links",
             "label": "Links",
             "required": false,
@@ -1405,6 +1414,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "default": "wide",
             "kind": "dropdown",
             "options": [
               {
@@ -2886,6 +2896,7 @@
             "required": false,
             "indexed": true,
             "translatable": false,
+            "default": "de",
             "kind": "dropdown",
             "options": [
               {
@@ -3016,6 +3027,14 @@
             "multiline": true
           },
           {
+            "handle": "email",
+            "label": "Contact email",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "email"
+          },
+          {
             "handle": "links",
             "label": "Links",
             "required": false,
@@ -3096,6 +3115,7 @@
             "required": false,
             "indexed": false,
             "translatable": false,
+            "default": "wide",
             "kind": "dropdown",
             "options": [
               {

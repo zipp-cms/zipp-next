@@ -1,7 +1,12 @@
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { Placeholder } from '@tiptap/extensions';
-import type { FieldOf, Link, Schema } from '../../core/schema';
+import {
+	defaults,
+	type FieldOf,
+	type Link,
+	type Schema,
+} from '../../core/schema';
 import type { Refs } from '../../entries/api';
 import { Block, Button, EndLine, ZippLink } from './extensions.svelte';
 import type { Sortable } from 'zipp-ui/sortable';
@@ -133,9 +138,11 @@ export function insertButton(editor: Editor) {
 		.run();
 }
 
-export function insertBlock(editor: Editor, type: string) {
+/** A new block, with the defaults of its fields. */
+export function insertBlock(editor: Editor, schema: Schema, type: string) {
+	const fields = defaults(schema, type);
 	chain(editor)
-		.insertContent({ type: 'embed', attrs: { id: null, type, fields: {} } })
+		.insertContent({ type: 'embed', attrs: { id: null, type, fields } })
 		.run();
 }
 

@@ -495,6 +495,7 @@ impl Importer<'_> {
 				crate::content::valid_date(s, *time).then(|| Value::from(s))
 			}
 			FieldKind::Text { .. }
+			| FieldKind::Email
 			| FieldKind::Markdown
 			| FieldKind::Dropdown { .. } => match v {
 				Value::String(s) if !s.is_empty() => Some(v.clone()),

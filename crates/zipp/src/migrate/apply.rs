@@ -6,6 +6,7 @@
 use rusqlite::{Connection, params};
 use serde_json::Value;
 
+use crate::content::defaults;
 use crate::db::{marks, now};
 use crate::drafts::Doc;
 use crate::entries::{refresh_uris, reindex};
@@ -237,7 +238,8 @@ fn share_primary(
 	Ok(())
 }
 
-/// Every single has its entry, titled like the section.
+/// Every single has its entry, titled like the section, with the defaults
+/// of its fields.
 pub fn create_singles(conn: &Connection, schema: &Schema) -> Result<()> {
 	let singles = schema
 		.sections
@@ -253,6 +255,9 @@ pub fn create_singles(conn: &Connection, schema: &Schema) -> Result<()> {
 			continue;
 		}
 
+		let comp = schema.entry_type(&section.types[0]);
+		let fields = comp.map(|c| defaults(schema, c)).unwrap_or_default();
+		let fields = Value::Object(fields).to_string();
 		let now = now();
 		conn.execute(
 			"INSERT INTO entries (section, type, created_at, updated_at)
@@ -264,8 +269,15 @@ pub fn create_singles(conn: &Connection, schema: &Schema) -> Result<()> {
 			conn.execute(
 				"INSERT INTO entry_sites (entry_id, site, title, slug, uri,
 				published, fields, updated_at)
-				VALUES (?1, ?2, ?3, ?4, NULL, 1, '{}', ?5)",
-				params![id, site.handle, section.name, section.handle, now],
+				VALUES (?1, ?2, ?3, ?4, NULL, 1, ?5, ?6)",
+				params![
+					id,
+					site.handle,
+					section.name,
+					section.handle,
+					fields,
+					now
+				],
 			)?;
 		}
 	}
@@ -303,6 +315,7 @@ mod tests {
 	use crate::entries::{get_entry, list, save};
 	use crate::migrate::{Rename, diff};
 	use crate::query::Query;
+	use crate::schema::Field;
 	use crate::schema::tests::site;
 
 	fn migration(
@@ -379,6 +392,56 @@ mod tests {
 		];
 		let q = Query::parse(&s2, &params).unwrap();
 		assert_eq!(list(&conn, &q).unwrap().1, 1);
+	}
+
+	#[test]
+	fn new_fields_bring_their_default() {
+		let db = Db::memory().unwrap();
+		let conn = db.conn();
+		let s = site();
+		let first = migration("0001", &Schema::new(), &s, &[]);
+		apply_migrations(&conn, std::slice::from_ref(&first)).unwrap();
+		let e = save(
+			&conn,
+			&s,
+			None,
+			input("events", "event", "E", json!({})),
+			None,
+		)
+		.unwrap();
+
+		// a boolean that is on, also for the event and the home of before,
+		// and a text without a default
+		let mut s2 = s.clone();
+		for ty in ["event", "page"] {
+			let c = s2.get_mut(ty).unwrap();
+			c.fields.push(Field::boolean("teasers").default(true));
+			c.fields.push(Field::text("cta"));
+		}
+		let second = migration("0002", &s, &s2, &[]);
+		apply_migrations(&conn, &[first, second]).unwrap();
+
+		let event = get_entry(&conn, e.id, "en").unwrap();
+		assert_eq!(event.fields["teasers"], true);
+		assert!(event.fields.get("cta").is_none());
+		let params = vec![("uri".to_string(), String::new())];
+		let (home, _) =
+			list(&conn, &Query::parse(&s2, &params).unwrap()).unwrap();
+		assert_eq!(home[0].fields["teasers"], true);
+	}
+
+	#[test]
+	fn singles_start_with_defaults() {
+		let db = Db::memory().unwrap();
+		let conn = db.conn();
+		let mut s = site();
+		let page = s.get_mut("page").unwrap();
+		page.fields.push(Field::boolean("teasers").default(true));
+		create_singles(&conn, &s).unwrap();
+
+		let home = get_entry(&conn, 1, "en").unwrap();
+		assert_eq!(home.section, "home");
+		assert_eq!(home.fields, json!({ "teasers": true }));
 	}
 
 	#[test]

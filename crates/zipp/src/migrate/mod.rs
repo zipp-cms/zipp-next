@@ -5,16 +5,17 @@
 //! file, next to the resulting schema. On start the server applies new
 //! migration files to all content.
 //!
-//! Labels, names, `required` and the field order are free to change, they
-//! don't touch content. Everything else needs a migration. A rename can't
-//! be told apart from a remove and an add, it is passed as a hint.
+//! Labels, names, `required`, defaults and the field order are free to
+//! change, they don't touch content. Everything else needs a migration.
+//! A rename can't be told apart from a remove and an add, it is passed as
+//! a hint.
 
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::content::walk_mut;
+use crate::content::{default_of, walk_mut};
 use crate::schema::{
 	Component, Field, FieldKind, Holds, Schema, Section, Site,
 };

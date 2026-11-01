@@ -122,6 +122,7 @@ pub(super) fn collect_relations(
 			| FieldKind::Text { .. }
 			| FieldKind::Number { .. }
 			| FieldKind::Boolean
+			| FieldKind::Email
 			| FieldKind::Markdown
 			| FieldKind::Date { .. }
 			| FieldKind::Checkboxes { .. }

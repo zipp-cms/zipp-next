@@ -25,7 +25,7 @@ pub fn check(
 	conn: &Connection,
 	schema: &Schema,
 	id: Option<i64>,
-	input: EntryInput,
+	mut input: EntryInput,
 ) -> Result<Checked> {
 	let site = input
 		.site
@@ -68,6 +68,11 @@ pub fn check(
 			input.parent_id
 		}
 	};
+	// a new entry starts with the defaults of what it doesn't send, before
+	// the uri, which may depend on a boolean
+	if id.is_none() {
+		input.fields = with_defaults(schema, comp, &input.fields);
+	}
 
 	let mut errors = vec![];
 	let title = input.title.trim().to_string();

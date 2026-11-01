@@ -143,6 +143,89 @@ fn dropdowns_take_one_of_their_options() {
 }
 
 #[test]
+fn emails_are_addresses() {
+	let s = site();
+	let comp = s.get("event").unwrap();
+	let ok = json!({ "contact": "info@textrem.ch" });
+	assert_eq!(validate(&s, comp, &ok).unwrap(), ok);
+	for bad in ["info", "info@textrem", "in fo@textrem.ch", "@textrem.ch"] {
+		let err = validate(&s, comp, &json!({ "contact": bad })).unwrap_err();
+		assert_eq!(err[0].message, "an email address like name@example.com");
+	}
+
+	assert!(valid_email("a.b+c@mail.example.org"));
+	assert!(!valid_email("a@b@c.ch"));
+	assert!(!valid_email("a@.ch"));
+	assert!(!valid_email("<a@b.ch>"));
+}
+
+#[test]
+fn defaults_fit_their_field() {
+	let talk = |f: Field| {
+		site()
+			.section(Section::channel("talks", ["talk"]).uri("{slug}"))
+			.entry("talk", "Talk", [f])
+	};
+	let size = || Field::dropdown("size", [("s", "Small"), ("l", "Large")]);
+	talk(size().default("l")).check().unwrap();
+	talk(Field::boolean("on").default(true)).check().unwrap();
+	talk(Field::number("n").decimals(0).default(3))
+		.check()
+		.unwrap();
+	talk(Field::text("cta").default("Mehr")).check().unwrap();
+
+	let err = |f: Field| talk(f).check().unwrap_err();
+	assert_eq!(
+		err(size().default("m")),
+		"talk.size: default: not one of the options"
+	);
+	assert_eq!(
+		err(Field::boolean("on").default("yes")),
+		"talk.on: default: wrong type"
+	);
+	assert_eq!(
+		err(Field::email("to").default("info")),
+		"talk.to: default: an email address like name@example.com"
+	);
+	assert_eq!(
+		err(Field::text("cta").default("")),
+		"talk.cta: default: is empty"
+	);
+	assert_eq!(
+		err(Field::relation("page", ["page"]).default(json!([1]))),
+		"talk.page: default: only fields of plain values have one"
+	);
+}
+
+#[test]
+fn defaults_fill_what_is_missing() {
+	let s = site()
+		.section(Section::channel("talks", ["talk"]).uri("{slug}"))
+		.entry(
+			"talk",
+			"Talk",
+			[
+				Field::boolean("on").default(true),
+				Field::text("cta").default("Mehr"),
+				Field::group("seo", "teaser"),
+				Field::text("city"),
+			],
+		)
+		.block("teaser", "Teaser", [Field::text("more").default("Weiter")]);
+	s.check().unwrap();
+	let comp = s.get("talk").unwrap();
+	let all = json!({ "on": true, "cta": "Mehr", "seo": { "more": "Weiter" } });
+	assert_eq!(with_defaults(&s, comp, &Value::Null), all);
+	// what is there stays, also off or empty
+	let given = json!({ "on": false, "cta": "", "city": "Bern" });
+	assert_eq!(
+		with_defaults(&s, comp, &given),
+		json!({ "on": false, "cta": "", "city": "Bern",
+			"seo": { "more": "Weiter" } })
+	);
+}
+
+#[test]
 fn numbers_keep_their_decimals() {
 	let s = site()
 		.section(Section::channel("talks", ["talk"]).uri("{slug}"))

@@ -84,7 +84,7 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 	let mut out = "{\n".to_string();
 	for f in &comp.fields {
 		let ty = match &f.kind {
-			FieldKind::Text { .. } => "string".into(),
+			FieldKind::Text { .. } | FieldKind::Email => "string".into(),
 			// `2026-11-14`, with a time `2026-11-14T20:00`
 			FieldKind::Date { .. } => "string".into(),
 			FieldKind::Number { .. } => "number".into(),

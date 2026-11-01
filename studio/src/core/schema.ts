@@ -33,6 +33,7 @@ export type FieldKind =
 			unit?: string;
 	  }
 	| { kind: 'boolean' }
+	| { kind: 'email' }
 	| { kind: 'relation'; types: string[]; max: number | null }
 	| {
 			kind: 'assets';
@@ -79,6 +80,8 @@ export type Field = FieldKind & {
 	translatable: boolean;
 	/** a hint for editors under the label, markdown */
 	instructions?: string;
+	/** what a new entry or block starts with */
+	default?: unknown;
 };
 
 /** What a field is besides its kind and options, see [`sameKind`]. */
@@ -89,6 +92,7 @@ const FIELD_KEYS = [
 	'indexed',
 	'translatable',
 	'instructions',
+	'default',
 ];
 
 /**
@@ -193,6 +197,7 @@ export type ValueOf = {
 	text: string;
 	number: number;
 	boolean: boolean;
+	email: string;
 	relation: number[];
 	assets: number[];
 	link: Link;
@@ -262,6 +267,24 @@ export function componentOf(
 	handle: string,
 ): Component | undefined {
 	return schema.components.find(c => c.handle === handle);
+}
+
+/**
+ * What the fields of a new entry or block start with: their defaults, a
+ * group's inside its object. Like the server's, which fills them in for
+ * new entries of the api.
+ */
+export function defaults(schema: Schema, handle: string): Values {
+	const out: Values = {};
+	for (const f of componentOf(schema, handle)?.fields ?? []) {
+		if (f.default !== undefined) {
+			out[f.handle] = structuredClone(f.default);
+		} else if (f.kind === 'group') {
+			const inner = defaults(schema, f.component);
+			if (Object.keys(inner).length) out[f.handle] = inner;
+		}
+	}
+	return out;
 }
 
 /** The name of an entry type or block, its handle if it is unknown. */

@@ -93,6 +93,9 @@ pub struct Field {
 	/// the studio, markdown; only looks like the label, no migration
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub instructions: Option<String>,
+	/// What a new entry or block starts with, see [`Field::default`].
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub default: Option<Value>,
 	#[serde(flatten)]
 	pub kind: FieldKind,
 }
@@ -116,6 +119,8 @@ pub enum FieldKind {
 		unit: Option<String>,
 	},
 	Boolean,
+	/// An email address, `name@host.tld`.
+	Email,
 	/// A day, `2026-11-14`, with `time` and a time of it,
 	/// `2026-11-14T20:00`: as the editor sees it, no time zone; it sorts
 	/// as text.
@@ -231,6 +236,7 @@ impl FieldKind {
 			Self::Text { .. }
 			| Self::Number { .. }
 			| Self::Boolean
+			| Self::Email
 			| Self::Relation { .. }
 			| Self::Assets { .. }
 			| Self::Link { .. }
@@ -255,6 +261,7 @@ impl Field {
 			indexed: false,
 			translatable: false,
 			instructions: None,
+			default: None,
 			kind,
 		}
 	}
@@ -283,6 +290,11 @@ impl Field {
 
 	pub fn boolean(handle: &str) -> Self {
 		Self::new(handle, FieldKind::Boolean)
+	}
+
+	/// One email address, the server refuses anything else.
+	pub fn email(handle: &str) -> Self {
+		Self::new(handle, FieldKind::Email)
 	}
 
 	pub fn relation<'a>(
@@ -549,6 +561,14 @@ impl Field {
 	/// `.instructions("Shown as the **teaser** on the home page.")`
 	pub fn instructions(mut self, text: &str) -> Self {
 		self.instructions = Some(text.into());
+		self
+	}
+
+	/// What a new entry or block starts with, in the studio and through
+	/// the api: `.default(true)`, `.default("Mehr")`, a dropdown's value.
+	/// Existing entries get it when a migration adds the field.
+	pub fn default(mut self, value: impl Into<Value>) -> Self {
+		self.default = Some(value.into());
 		self
 	}
 

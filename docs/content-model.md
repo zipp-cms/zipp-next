@@ -50,6 +50,18 @@ A number (`Field::number("price")`) takes `.range(0.0, 1000.0)`,
 numbers; the server refuses more, the studio shows them, `12.50`), and
 `.unit("CHF")`, shown after the input. GraphQL gives numbers as `Float`,
 also with `decimals(0)`.
+`Field::email("formEmail")` takes one address, `name@host.tld` without
+spaces (the server refuses anything else, the same check as email links
+and table columns), a `String` in GraphQL.
+`.default(true)`, `.default("Mehr")` or a dropdown's value is what a new
+entry or block starts with: the studio fills it in, an entry created
+through the api without the field gets it, and a single starts with it.
+The schema check refuses a default the field wouldn't take; only fields
+of plain values (text, email, number, boolean, date, markdown, dropdown,
+checkboxes, a plugin's) have one. Existing content keeps what it has,
+but a migration that adds a field with a default writes it into the
+entries, drafts and revisions of before, so a new boolean that is on is
+on for old content too. Changing a default later needs no migration.
 `.label("…")` names a field, `.instructions("…")` tells editors what
 to put there, under the label in the studio (markdown: bold, links);
 the AI chat reads them too. Both are only looks, no migration.

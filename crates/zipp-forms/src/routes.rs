@@ -12,6 +12,7 @@ use zipp::axum::extract::{Path, Query, State};
 use zipp::axum::http::{HeaderMap, StatusCode};
 use zipp::axum::response::{IntoResponse, Response};
 use zipp::axum::routing::post;
+use zipp::content::valid_email;
 use zipp::db::now;
 use zipp::mail::Mail;
 
@@ -202,7 +203,7 @@ pub(crate) fn check(
 			));
 		} else if !v.is_empty()
 			&& f.kind == FormFieldKind::Email
-			&& !is_email(&v)
+			&& !valid_email(&v)
 		{
 			errors.push(error(&f.handle, "An email address"));
 		} else if f.kind != FormFieldKind::Multiline && v.contains(['\n', '\r'])
@@ -219,18 +220,6 @@ pub(crate) fn check(
 
 fn error(path: &str, message: &str) -> Value {
 	json!({ "path": path, "message": message })
-}
-
-/// `name@host.tld`, nothing around it.
-fn is_email(s: &str) -> bool {
-	let Some((user, host)) = s.split_once('@') else {
-		return false;
-	};
-	!user.is_empty()
-		&& host.contains('.')
-		&& !host.starts_with('.')
-		&& !host.ends_with('.')
-		&& !s.contains(|c: char| c.is_whitespace() || "<>,;\"".contains(c))
 }
 
 /// The lines of the mail: short fields first, the long ones after.
