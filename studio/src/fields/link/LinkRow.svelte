@@ -9,7 +9,8 @@
 	 * A link as a row: the icon of its kind, title, where it goes, whether
 	 * it opens in a new tab; a click on it edits it (`onedit`), the ⋯ menu
 	 * has the rest. The link field, a navigation, the links and buttons of
-	 * a rich text.
+	 * a rich text. The click area covers the box around the row: the
+	 * nearest positioned parent (`position: relative`).
 	 */
 	let {
 		link,
@@ -47,8 +48,9 @@
 	</span>
 {/snippet}
 
+<!-- the handle comes after the button so it paints above its click area,
+	`order` puts it back on the left -->
 <div class="link-row" data-menu-area>
-	{@render handle?.()}
 	{#if onedit}
 		<button
 			type="button"
@@ -67,6 +69,9 @@
 			<Icon name="external" size={12} />
 			New tab
 		</span>
+	{/if}
+	{#if handle}
+		<span class="handle">{@render handle()}</span>
 	{/if}
 	<Menu items={menu} label="Actions for the link" />
 </div>
@@ -102,10 +107,34 @@
 		text-align: left;
 	}
 
+	// its click area covers the whole box, the handle and the menu (both
+	// positioned, after it) stay above it
+	button.main {
+		&::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border-radius: var(--radius-lg);
+		}
+
+		&:focus-visible {
+			outline: none;
+
+			&::after {
+				@include focus-ring(-2px);
+			}
+		}
+	}
+
 	@include hover {
 		button.main:hover strong {
 			color: var(--accent);
 		}
+	}
+
+	.handle {
+		display: flex;
+		order: -1;
 	}
 
 	.text {

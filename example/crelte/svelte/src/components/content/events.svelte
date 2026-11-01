@@ -9,7 +9,8 @@
 	export async function loadData(cr, block) {
 		const today = new Date().toISOString().slice(0, 10);
 		const where = [{ field: 'date', op: 'gte', value: today }];
-		if (block.city) where.push({ field: 'city', op: 'eq', value: block.city });
+		if (block.city)
+			where.push({ field: 'city', op: 'eq', value: block.city });
 		return await cr.query(eventsQuery, { where });
 	}
 </script>
@@ -25,7 +26,10 @@
 <ul>
 	{#each events as e (e.url)}
 		<li>
-			{#each e.image as img (img.url)}<img src={img.url} alt={img.alt} />{/each}
+			{#each e.image as img (img.url)}<img
+					src={img.url}
+					alt={img.alt}
+				/>{/each}
 			<a href={e.url}>{e.title}</a>
 			<Genre genre={e.genre} />
 			<span>{e.date}, {e.city}</span>

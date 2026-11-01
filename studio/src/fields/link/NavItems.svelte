@@ -215,8 +215,10 @@
 		border-top: 1px solid var(--line);
 	}
 
-	// a link under another is indented in its row, the line goes across
+	// a link under another is indented in its row, the line goes across;
+	// the click area of the LinkRow
 	.item {
+		position: relative;
 		padding: 0.625rem 0.75rem 0.625rem
 			calc(0.75rem + var(--depth, 0) * 2.25rem);
 

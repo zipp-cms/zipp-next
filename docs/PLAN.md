@@ -161,7 +161,7 @@ commit.
 - [ ] The Craft import out of the main binary (its own crate or command)?
 - [ ] A better page picker (the tree, search) for relations and links?
 - [x] A login dialog when the session expires, so unsaved work stays, 4b457a1
-- [ ] The link box of a link field clickable over its whole height, not
+- [x] The link box of a link field clickable over its whole height, not
       only on its text (operator 2026-11-01)
 - textrem's forms (contact, Mappenabo, orders with prices from the cms)
   stay in the site, not in zipp-forms: in the crelte server as today or

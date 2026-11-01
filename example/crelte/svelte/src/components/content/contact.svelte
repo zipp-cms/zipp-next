@@ -15,6 +15,15 @@
 		message: '',
 		website: '',
 	});
+	// the inputs besides the message
+	/** @type {{ key: 'name' | 'email' | 'phone', type: string, required: boolean }[]} */
+	const INPUTS = [
+		{ key: 'name', type: 'text', required: true },
+		{ key: 'email', type: 'email', required: true },
+		{ key: 'phone', type: 'tel', required: false },
+	];
+
+	/** @type {Record<string, string>} */
 	let errors = $state({});
 	let sent = $state('');
 	let failed = $state('');
@@ -52,7 +61,7 @@
 		<p class="sent" role="status">{sent}</p>
 	{:else}
 		<form onsubmit={submit}>
-			{#each [['name', 'text', true], ['email', 'email', true], ['phone', 'tel', false]] as [key, type, required] (key)}
+			{#each INPUTS as { key, type, required } (key)}
 				<label>
 					{$t(`contact.${key}`)}{required ? '*' : ''}
 					<input

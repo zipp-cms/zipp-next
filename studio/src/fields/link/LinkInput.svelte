@@ -153,7 +153,9 @@
 		}
 	}
 
+	// the click area of the LinkRow
 	.row {
+		position: relative;
 		padding: 0.5rem 0.5rem 0.5rem 0.625rem;
 	}
 
