@@ -32,6 +32,7 @@ use crate::schema::Transform;
 pub mod api;
 #[cfg(test)]
 mod api_tests;
+mod archive;
 mod edits;
 mod folders;
 mod manage;
@@ -40,7 +41,9 @@ mod routes;
 pub(crate) mod tests;
 mod transform;
 
+pub use archive::{Limits, Unzipped, ZipOf, unzip, write_zip, zip_files};
 pub use edits::{Canvas, Crop, Edits, Resize};
+use folders::folder_named;
 pub use folders::{
 	Folder, check_folder, create_folder, delete_folder, folders, move_assets,
 	top_count, update_folder,
@@ -266,6 +269,9 @@ fn file_mime(filename: &str) -> &'static str {
 		_ => "application/octet-stream",
 	}
 }
+
+/// The most bytes of an upload, of a file or a zip.
+pub const MAX_UPLOAD: usize = 200 * 1024 * 1024;
 
 /// Images above this many pixels are refused, decoding them for a
 /// transform would take too much memory.

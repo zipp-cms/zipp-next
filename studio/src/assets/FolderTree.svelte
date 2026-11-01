@@ -33,6 +33,7 @@
 		onchange,
 		onmove,
 		onupload,
+		ondownload,
 		top = 0,
 	}: {
 		folders: Folder[];
@@ -47,6 +48,8 @@
 		onchange?: (folder?: Folder) => void;
 		onmove?: (ids: number[], folder: number | null) => void;
 		onupload?: (items: Upload[], folder: number | null) => void;
+		/** a folder's ⋯ downloads it as a zip */
+		ondownload?: (folder: Folder) => void;
 		/** the assets in no folder */
 		top?: number;
 	} = $props();
@@ -174,6 +177,12 @@
 				},
 			);
 		}
+		if (ondownload)
+			list.push({
+				label: 'Download as zip',
+				icon: 'download',
+				onclick: () => ondownload(f),
+			});
 		if (deletable) {
 			list.push({
 				label: 'Delete',

@@ -1,11 +1,14 @@
 import { upload } from '../core/client';
-import { createFolder, listFolders, type Asset } from './api';
+import { createFolder, listFolders, type Asset, type Unzipped } from './api';
 
 /** What an asset tile carries when it is dragged: the asset ids. */
 export const ASSETS_DRAG = 'application/x-zipp-assets';
 
-/** A file to upload, `dir` the folders it was in, below the target. */
-export type Upload = { file: File; dir: string[] };
+/**
+ * A file to upload, `dir` the folders it was in, below the target;
+ * `unzip`: a zip the server unpacks into folders there.
+ */
+export type Upload = { file: File; dir: string[]; unzip?: boolean };
 
 /** The files of the file dialog, a chosen folder with its subfolders. */
 export function fromInput(files: FileList): Upload[] {
@@ -159,15 +162,24 @@ class Uploads {
 				const form = new FormData();
 				form.append('file', item.file, item.file.name);
 				const path =
-					into === null ? '/assets' : `/assets?folder=${into}`;
+					(item.unzip ? '/assets/unzip' : '/assets') +
+					(into === null ? '' : `?folder=${into}`);
 				try {
-					const assets = await upload<Asset[]>(path, form, s => {
-						// the form is a bit larger than the file
-						const now = Math.min(s, item.file.size);
-						this.sent += now - sent;
-						sent = now;
-					});
-					added.push(...assets);
+					const done = await upload<Asset[] | Unzipped>(
+						path,
+						form,
+						s => {
+							// the form is a bit larger than the file
+							const now = Math.min(s, item.file.size);
+							this.sent += now - sent;
+							sent = now;
+						},
+					);
+					if (Array.isArray(done)) added.push(...done);
+					else {
+						added.push(...done.assets);
+						this.errors.push(...done.skipped);
+					}
 				} catch (e) {
 					this.errors.push(
 						`${item.file.name}: ${(e as Error).message}`,

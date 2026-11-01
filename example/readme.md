@@ -37,7 +37,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Date, date and time | Events → Date, Doors open | the date picker; a day or a day and time, the website sorts events by the date |
 | Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them |
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |
-| Folders, file types | Assets · Events → Programm (PDF) | folders for the library; the event's program takes only PDFs and puts them into Events/Programs, its image picker opens in Events |
+| Folders, file types, zips | Assets · Events → Programm (PDF) · a folder's ⋯ → Download as zip · upload a zip | folders for the library, downloaded as a zip or unpacked from one; the event's program takes only PDFs and puts them into Events/Programs, its image picker opens in Events |
 | Icons | the navigation, Pages, a page's blocks | entry types, blocks and nav groups with Lucide icons from the code |
 | Globals | Settings → Header, Footer | singles without a url, crelte reads them like Craft's globals |
 | Session ends | type in an entry, in a second browser: your user → **Log out everywhere else** · type on | a dialog asks for the password, the page stays; after it the draft has what you typed |

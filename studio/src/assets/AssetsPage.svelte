@@ -44,7 +44,13 @@
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
 	import type { MenuItem } from 'zipp-ui/Menu.svelte';
 	import { Library } from './library.svelte';
-	import { confirmDelete, linkItems } from './actions';
+	import {
+		confirmDelete,
+		confirmUnzip,
+		downloadZip,
+		isZip,
+		linkItems,
+	} from './actions';
 	import {
 		FileDrag,
 		fromInput,
@@ -96,8 +102,14 @@
 		reload();
 	}
 
-	/** Files, or folders with theirs, into a folder of the tree. */
+	/**
+	 * Files, or folders with theirs, into a folder of the tree; zips are
+	 * unpacked into folders when the editor wants.
+	 */
 	async function upload(items: Upload[], into = lib.folder) {
+		const zips = items.filter(i => isZip(i.file)).map(i => i.file);
+		if (zips.length && confirmUnzip(zips))
+			items = items.map(i => (isZip(i.file) ? { ...i, unzip: true } : i));
 		// the new folders show while the files go up
 		await uploads.run(items, into, () => lib.loadFolders());
 		reload();
@@ -108,6 +120,15 @@
 		items => upload(items),
 		() => canEdit,
 	);
+
+	/** The folder whose zip is being made. */
+	let zipping = $state('');
+
+	async function download(f: Folder) {
+		zipping = f.name;
+		await action.run(() => downloadZip({ folder: f.id }, f.name));
+		zipping = '';
+	}
 
 	function open(a: Asset) {
 		current = a;
@@ -170,7 +191,7 @@
 	ondragover={drag.dragover}
 	ondrop={drag.drop}
 >
-	<PageTop title="Assets">
+	<PageTop title="Assets" note={zipping ? `Zipping ${zipping}…` : undefined}>
 		{#snippet actions()}
 			{#if canEdit}
 				<UploadButton
@@ -208,6 +229,7 @@
 				onchange={() => lib.loadFolders()}
 				onmove={move}
 				onupload={upload}
+				ondownload={download}
 			/>
 		</aside>
 

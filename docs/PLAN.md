@@ -143,8 +143,8 @@ commit.
 - [x] Post date, e6ac8e3
 - [x] Expiry date, e6ac8e3
 - [x] Changing the type of an entry later, 1ede0fb
-- [ ] Download assets or a folder as a zip?
-- [ ] Upload a zip and unpack it into folders?
+- [x] Download assets or a folder as a zip
+- [x] Upload a zip and unpack it into folders
 - [ ] Backups (database and files, from the studio or `serve`)?
 - [ ] The coding AI (`zipp-agent`, development only today): how far?
 - [ ] A section builder in the studio (maybe, operator 2026-11-01): a

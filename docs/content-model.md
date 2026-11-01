@@ -135,7 +135,12 @@ frontends on other domains. Like in Craft an asset has a title (GraphQL
 In the studio assets are in folders (only there, urls don't change). An
 asset field can say where its uploads go and its picker opens,
 `.folder("Events/Programs")` (made on the first upload), and which
-files it takes, `.extensions(["pdf"])`; saving checks it.
+files it takes, `.extensions(["pdf"])`; saving checks it. A folder's ⋯
+downloads it with its subfolders as a zip (`GET /api/assets/zip`, the
+files as uploaded, nothing from the trash), and a zip uploaded in the
+library can be unpacked into folders (`POST /api/assets/unzip`: folders
+of the same name merge, hidden files and `__MACOSX` stay out, at most
+2000 files and 1 GB unpacked).
 
 ## Translations
 

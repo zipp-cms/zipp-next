@@ -136,6 +136,16 @@ export async function request<T = unknown>(
 }
 
 /**
+ * A file of the api, like a zip, with the session: a plain link can't
+ * send its header.
+ */
+export async function download(path: string): Promise<Blob> {
+	const resp = await send('GET', path);
+	if (!resp.ok) throw failed(resp, await resp.json().catch(() => null));
+	return resp.blob();
+}
+
+/**
  * A form sent with its progress, `onprogress` gets the bytes sent and
  * all of them; fetch can't tell how far an upload is.
  */

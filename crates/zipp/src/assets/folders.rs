@@ -67,8 +67,9 @@ fn check_name(
 	id: Option<i64>,
 ) -> Result<String> {
 	let name = name.trim();
-	if name.is_empty() || name.contains('/') {
-		return Err(Error::Request("a name, without /".into()));
+	// `.` and `..` would be paths in a zip
+	if name.is_empty() || name.contains('/') || name == "." || name == ".." {
+		return Err(Error::Request("a name, without / and not . or ..".into()));
 	}
 	let taken: Option<i64> = conn
 		.query_row(
@@ -105,6 +106,27 @@ pub fn create_folder(
 		params![parent, name, now()],
 	)?;
 	folder(conn, conn.last_insert_rowid())
+}
+
+/// The folder of this name in `parent`, made when there is none; names
+/// match like [`check_name`] compares them.
+pub(crate) fn folder_named(
+	conn: &Connection,
+	parent: Option<i64>,
+	name: &str,
+) -> Result<i64> {
+	let found: Option<i64> = conn
+		.query_row(
+			"SELECT id FROM asset_folders WHERE parent_id IS ?1
+			AND name = ?2 COLLATE NOCASE",
+			params![parent, name.trim()],
+			|r| r.get(0),
+		)
+		.optional()?;
+	match found {
+		Some(id) => Ok(id),
+		None => Ok(create_folder(conn, parent, name)?.id),
+	}
 }
 
 /// A new name or place; not into itself or a folder in it.

@@ -1,4 +1,4 @@
-import { request } from '../core/client';
+import { download, request } from '../core/client';
 
 export type Asset = {
 	id: number;
@@ -176,6 +176,17 @@ export function updateFolder(
 export function deleteFolder(id: number): Promise<void> {
 	return request('DELETE', '/asset-folders/' + id);
 }
+
+/** A zip of the assets, or of a folder with its subfolders. */
+export function zipAssets(
+	of: { ids: number[] } | { folder: number },
+): Promise<Blob> {
+	const q = 'ids' in of ? `ids=${of.ids.join(',')}` : `folder=${of.folder}`;
+	return download('/assets/zip?' + q);
+}
+
+/** What an unpacked zip gave: its assets, the files left out and why. */
+export type Unzipped = { assets: Asset[]; skipped: string[] };
 
 /** Into a folder, or null for the top. */
 export function moveAssets(ids: number[], folderId: number | null) {

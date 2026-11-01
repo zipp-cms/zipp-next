@@ -1,3 +1,5 @@
+use std::io::Seek;
+
 use super::api::*;
 use super::*;
 use crate::api::{ApiResult, ApiRouter, Req};
@@ -172,6 +174,93 @@ pub(super) async fn replace_route(
 	Ok(Json(asset))
 }
 
+/// `POST /assets/unzip?folder=<id>`, multipart: a zip, its folders
+/// become folders in the folder, its files assets.
+pub(super) async fn unzip_route(
+	State(state): State<AppState>,
+	AssetAccess { auth, .. }: AssetAccess<Edit>,
+	Query(params): Query<UploadParams>,
+	mut multipart: Multipart,
+) -> Result<Json<Unzipped>> {
+	let field = multipart
+		.next_field()
+		.await
+		.map_err(|e| Error::Request(e.to_string()))?
+		.ok_or_else(|| Error::Request("no file".into()))?;
+	let data = field
+		.bytes()
+		.await
+		.map_err(|e| Error::Request(e.to_string()))?;
+	let user = Some(auth.user_id);
+	let unzipped = tokio::task::spawn_blocking(move || {
+		let conn = state.db.conn();
+		let limits = Limits::default();
+		unzip(&conn, &state.files, &data, params.folder, user, &limits)
+	})
+	.await??;
+	Ok(Json(unzipped))
+}
+
+#[derive(Deserialize)]
+pub(super) struct ZipParams {
+	/// `1,2,3`
+	ids: Option<String>,
+	folder: Option<i64>,
+}
+
+/// `GET /assets/zip?ids=1,2,3` or `?folder=<id>`: a zip of the assets,
+/// or of the folder with its subfolders. It is made in a file without a
+/// name, gone once sent, so a big one takes no memory.
+pub(super) async fn zip_route(
+	State(state): State<AppState>,
+	_access: AssetAccess<View>,
+	Query(p): Query<ZipParams>,
+) -> Result<Response> {
+	let (of, name) = match (p.folder, p.ids) {
+		(Some(id), _) => {
+			let f = folders(&state.db.conn())?
+				.into_iter()
+				.find(|f| f.id == id)
+				.ok_or(Error::NotFound)?;
+			(ZipOf::Folder(id), f.name)
+		}
+		(None, Some(ids)) => {
+			let ids = ids.split(',').filter_map(|i| i.parse().ok());
+			(ZipOf::Assets(ids.collect()), "assets".to_string())
+		}
+		(None, None) => {
+			return Err(Error::Request("ids or a folder".into()));
+		}
+	};
+	let entries = zip_files(&state.db.conn(), &of)?;
+	let files = state.files.clone();
+	let zip = tokio::task::spawn_blocking(move || -> Result<fs::File> {
+		let mut zip =
+			write_zip(&files, &entries, tempfile::tempfile_in(&files)?)?;
+		zip.rewind()?;
+		Ok(zip)
+	})
+	.await??;
+
+	let len = zip.metadata()?.len();
+	let body = axum::body::Body::from_stream(
+		tokio_util::io::ReaderStream::new(tokio::fs::File::from_std(zip)),
+	);
+	let filename = format!("{}.zip", clean_filename(&name));
+	Ok((
+		[
+			(header::CONTENT_TYPE, "application/zip".to_string()),
+			(header::CONTENT_LENGTH, len.to_string()),
+			(
+				header::CONTENT_DISPOSITION,
+				format!("attachment; filename=\"{filename}\""),
+			),
+		],
+		body,
+	)
+		.into_response())
+}
+
 pub(super) async fn list_route(
 	State(state): State<AppState>,
 	_access: AssetAccess<View>,
@@ -298,9 +387,11 @@ pub(super) async fn move_route(
 
 /// The api, under `/api`.
 pub fn api_routes() -> Router<AppState> {
-	let big = || DefaultBodyLimit::max(200 * 1024 * 1024);
+	let big = || DefaultBodyLimit::max(MAX_UPLOAD);
 	Router::new()
 		.route("/assets", post(upload).layer(big()))
+		.route("/assets/unzip", post(unzip_route).layer(big()))
+		.route("/assets/zip", get(zip_route))
 		.route("/assets/{id}/file", post(replace_route).layer(big()))
 		.api::<ListReq, _>(list_route)
 		.api::<UpdateReq, _>(update_route)

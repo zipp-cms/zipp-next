@@ -233,3 +233,74 @@ fn knows_where_assets_are_used() {
 	assert!(!used(&conn).is_empty());
 	fs::remove_dir_all(dir).unwrap();
 }
+
+/// A zip of these files, a name ending in `/` is a folder.
+pub(crate) fn zip_of(files: &[(&str, &[u8])]) -> Vec<u8> {
+	use std::io::Write;
+	let mut zip = zip::ZipWriter::new(Cursor::new(vec![]));
+	let options = zip::write::SimpleFileOptions::default();
+	for (name, data) in files {
+		if name.ends_with('/') {
+			zip.add_directory(*name, options).unwrap();
+		} else {
+			zip.start_file(*name, options).unwrap();
+			zip.write_all(data).unwrap();
+		}
+	}
+	zip.finish().unwrap().into_inner()
+}
+
+#[test]
+fn unzips_within_limits() {
+	let db = crate::db::Db::memory().unwrap();
+	let dir = std::env::temp_dir()
+		.join(format!("zipp-test-{}", rand::random::<u32>()));
+	let conn = db.conn();
+	let zip = zip_of(&[("a.txt", b"hello"), ("b.txt", b"world!")]);
+	let limits = Limits {
+		files: 2,
+		size: 11,
+		file: 6,
+	};
+	let refused = |limits: Limits| {
+		let err = unzip(&conn, &dir, &zip, None, None, &limits).unwrap_err();
+		assert!(matches!(err, Error::Request(_)), "{err:?}");
+	};
+	refused(Limits { files: 1, ..limits });
+	refused(Limits { size: 10, ..limits });
+	refused(Limits { file: 5, ..limits });
+	let done = unzip(&conn, &dir, &zip, None, None, &limits).unwrap();
+	assert_eq!(done.assets.len(), 2);
+	fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn a_zip_that_holds_more_than_it_says_stores_nothing() {
+	let db = crate::db::Db::memory().unwrap();
+	let dir = std::env::temp_dir()
+		.join(format!("zipp-test-{}", rand::random::<u32>()));
+	let mut zip = zip_of(&[("a.txt", b"fine"), ("b.txt", b"0123456789")]);
+	// b.txt says it is 2 bytes, in its header and the directory
+	for (sig, at) in [([0x50, 0x4b, 3, 4], 22), ([0x50, 0x4b, 1, 2], 24)] {
+		let starts: Vec<usize> = zip
+			.windows(4)
+			.enumerate()
+			.filter(|(_, w)| *w == sig)
+			.map(|(i, _)| i)
+			.collect();
+		let i = starts[1] + at;
+		zip[i..i + 4].copy_from_slice(&2u32.to_le_bytes());
+	}
+
+	let conn = db.conn();
+	let err = unzip(&conn, &dir, &zip, None, None, &Limits::default());
+	let larger = matches!(&err, Err(Error::Request(m)) if m.contains("larger"));
+	assert!(larger, "{err:?}");
+	let n: i64 = conn
+		.query_row("SELECT COUNT(*) FROM assets", [], |r| r.get(0))
+		.unwrap();
+	assert_eq!(n, 0);
+	let left = fs::read_dir(&dir).map(|d| d.count()).unwrap_or(0);
+	assert_eq!(left, 0);
+	let _ = fs::remove_dir_all(dir);
+}
