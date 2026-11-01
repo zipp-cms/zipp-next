@@ -8,7 +8,7 @@ pub fn validate(
 	fields: &Value,
 ) -> Result<Value, Vec<FieldError>> {
 	let mut errors = vec![];
-	let out = validate_fields(schema, comp, fields, "", &mut errors);
+	let out = validate_fields(schema, comp, fields, "", false, &mut errors);
 	if errors.is_empty() {
 		Ok(out)
 	} else {
@@ -16,11 +16,14 @@ pub fn validate(
 	}
 }
 
+/// `hidden`: the fields are inside a field hidden by its condition, they
+/// keep their values but needn't be filled.
 pub(crate) fn validate_fields(
 	schema: &Schema,
 	comp: &Component,
 	fields: &Value,
 	prefix: &str,
+	hidden: bool,
 	errors: &mut Vec<FieldError>,
 ) -> Value {
 	let mut out = Map::new();
@@ -43,12 +46,46 @@ pub(crate) fn validate_fields(
 	for field in &comp.fields {
 		let path = format!("{prefix}{}", field.handle);
 		let value = obj.get(&field.handle).unwrap_or(&Value::Null);
-		if let Some(v) = validate_value(schema, field, value, &path, errors) {
+		// a hidden field keeps its value but needn't be filled, also
+		// not the fields inside it
+		let hidden = hidden || !comp.is_shown(&field.handle, obj);
+		if let Some(v) =
+			validate_value(schema, field, value, &path, hidden, errors)
+		{
 			out.insert(field.handle.clone(), v);
 		}
 	}
 
 	Value::Object(out)
+}
+
+/// Whether a value counts as nothing before it is checked: null, an
+/// empty text or list, a link without a target.
+fn is_blank(field: &Field, value: &Value) -> bool {
+	match value {
+		Value::Null => true,
+		Value::String(s) => s.is_empty(),
+		Value::Array(a) => a.is_empty(),
+		Value::Object(_) if matches!(field.kind, FieldKind::Link { .. }) => {
+			link_is_empty(value)
+		}
+		_ => false,
+	}
+}
+
+/// Whether a field has no value, like its required check says; for the
+/// conditions of fields.
+pub(crate) fn is_empty(field: &Field, value: &Value) -> bool {
+	is_blank(field, value)
+		|| (matches!(field.kind, FieldKind::RichText { .. })
+			&& richtext::is_empty(value))
+}
+
+/// Whether a field takes a value as it is, nothing empty.
+pub(crate) fn takes(schema: &Schema, field: &Field, value: &Value) -> bool {
+	let mut errors = vec![];
+	let out = validate_value(schema, field, value, "", false, &mut errors);
+	errors.is_empty() && out.as_ref() == Some(value)
 }
 
 /// Whether a field's default is a value it takes. Defaults are for plain
@@ -77,7 +114,7 @@ pub(crate) fn check_default(
 	}
 
 	let mut errors = vec![];
-	let value = validate_value(schema, field, default, "", &mut errors);
+	let value = validate_value(schema, field, default, "", false, &mut errors);
 	match (errors.first(), value) {
 		(Some(e), _) => Err(e.message.clone()),
 		(None, None) => Err("is empty".into()),
@@ -90,19 +127,13 @@ pub(super) fn validate_value(
 	field: &Field,
 	value: &Value,
 	path: &str,
+	hidden: bool,
 	errors: &mut Vec<FieldError>,
 ) -> Option<Value> {
-	let empty = match value {
-		Value::Null => true,
-		Value::String(s) => s.is_empty(),
-		Value::Array(a) => a.is_empty(),
-		Value::Object(_) if matches!(field.kind, FieldKind::Link { .. }) => {
-			link_is_empty(value)
-		}
-		_ => false,
-	};
-	if empty {
-		if field.required {
+	// hidden by its condition it needn't be filled, its value is checked
+	let required = field.required && !hidden;
+	if is_blank(field, value) {
+		if required {
 			error(errors, path, "is required");
 		}
 		return None;
@@ -233,9 +264,10 @@ pub(super) fn validate_value(
 		(FieldKind::Group { component }, Value::Object(_)) => {
 			let comp = schema.get(component).unwrap();
 			let prefix = format!("{path}.");
-			let out = validate_fields(schema, comp, value, &prefix, errors);
+			let out =
+				validate_fields(schema, comp, value, &prefix, hidden, errors);
 			if out.as_object().is_some_and(|o| o.is_empty()) {
-				if field.required {
+				if required {
 					error(errors, path, "is required");
 				}
 				return None;
@@ -244,9 +276,11 @@ pub(super) fn validate_value(
 		}
 		(kind @ FieldKind::RichText { .. }, Value::Object(_)) => {
 			let allowed = richtext::Allowed::of(kind).unwrap();
-			let doc = richtext::validate(schema, &allowed, value, path, errors);
+			let doc = richtext::validate_in(
+				schema, &allowed, value, path, hidden, errors,
+			);
 			if richtext::is_empty(&doc) {
-				if field.required {
+				if required {
 					error(errors, path, "is required");
 				}
 				return None;
@@ -266,7 +300,8 @@ pub(super) fn validate_value(
 			check_count(errors, path, ids.len(), None, *max);
 		}
 		(FieldKind::Blocks { types, min, max }, Value::Array(blocks)) => {
-			check_count(errors, path, blocks.len(), *min, *max);
+			let min = min.filter(|_| !hidden);
+			check_count(errors, path, blocks.len(), min, *max);
 			let blocks = blocks
 				.iter()
 				.enumerate()
@@ -276,6 +311,7 @@ pub(super) fn validate_value(
 						types,
 						b,
 						&format!("{path}.{i}"),
+						hidden,
 						errors,
 					)
 				})
@@ -304,6 +340,7 @@ pub(super) fn validate_block(
 	types: &[String],
 	block: &Value,
 	path: &str,
+	hidden: bool,
 	errors: &mut Vec<FieldError>,
 ) -> Value {
 	let ty = block["type"].as_str().unwrap_or_default();
@@ -324,6 +361,7 @@ pub(super) fn validate_block(
 		comp,
 		&block["fields"],
 		&format!("{path}."),
+		hidden,
 		errors,
 	);
 

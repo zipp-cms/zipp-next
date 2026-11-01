@@ -64,6 +64,19 @@ pub fn validate(
 	path: &str,
 	errors: &mut Vec<FieldError>,
 ) -> Value {
+	validate_in(schema, allowed, doc, path, false, errors)
+}
+
+/// [`validate`] in a field that may be hidden by its condition, its
+/// embedded blocks needn't be filled then.
+pub(crate) fn validate_in(
+	schema: &Schema,
+	allowed: &Allowed,
+	doc: &Value,
+	path: &str,
+	hidden: bool,
+	errors: &mut Vec<FieldError>,
+) -> Value {
 	let mut err = |message: String| {
 		errors.push(FieldError {
 			path: path.into(),
@@ -125,6 +138,7 @@ pub fn validate(
 					allowed.blocks,
 					&node["attrs"],
 					&format!("{path}.{i}"),
+					hidden,
 					&mut nested,
 				);
 				let name = schema.get(bt).map_or(bt, |c| c.name.as_str());

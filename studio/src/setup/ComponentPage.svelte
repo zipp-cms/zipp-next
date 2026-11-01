@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Component, Field, Schema } from '../core/schema';
 	import { describeField } from '../fields/fieldKind';
+	import { describeCondition } from '../fields/conditions';
 	import { fieldOptions } from '../fields/fieldOptions';
 	import { gqlType, usedIn } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
@@ -14,16 +15,18 @@
 
 	// the tabs of the editor, else one card of all fields
 	const groups = $derived.by(() => {
-		if (!c.tabs?.length) return [{ name: 'Fields', fields: c.fields }];
+		if (!c.tabs?.length)
+			return [{ name: 'Fields', fields: c.fields, when: undefined }];
 		const byTab = c.tabs.map(t => ({
 			name: t.name,
 			fields: c.fields.filter(f => t.fields.includes(f.handle)),
+			when: t.when,
 		}));
 		const rest = c.fields.filter(
 			f => !c.tabs!.some(t => t.fields.includes(f.handle)),
 		);
 		return rest.length
-			? [...byTab, { name: 'Other', fields: rest }]
+			? [...byTab, { name: 'Other', fields: rest, when: undefined }]
 			: byTab;
 	});
 
@@ -43,6 +46,9 @@
 			<div class="card">
 				<h2>
 					{g.name}
+					{#if g.when}<span class="muted when">
+							shown when {describeCondition(c, g.when)}
+						</span>{/if}
 					{#if i === 0}<code class="gql">{gqlType(c)}</code>{/if}
 				</h2>
 				{#if g.fields.length}
@@ -69,13 +75,14 @@
 							<td class="muted">
 								{f.width ? `${f.width} %` : ''}
 								{f.required ? 'required' : ''}
+								{f.when ? 'conditional' : ''}
 								{f.indexed ? 'indexed' : ''}
 								{f.handle === c.title_field ? 'title' : ''}
 							</td>
 						{/snippet}
 						{#snippet detail(f)}
 							<dl class="options">
-								{#each fieldOptions(schema, f, c.entry) as o (o.name)}
+								{#each fieldOptions(schema, f, c) as o (o.name)}
 									<dt>{o.name}</dt>
 									<dd>
 										{#if o.links?.length}
@@ -124,6 +131,11 @@
 
 	.gql {
 		margin-left: auto;
+	}
+
+	.when {
+		font-size: var(--fs-md);
+		font-weight: 400;
 	}
 
 	// all options of an open field, a name and its value a line

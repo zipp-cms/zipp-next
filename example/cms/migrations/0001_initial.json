@@ -1118,6 +1118,13 @@
             "translatable": false,
             "instructions": "Empty: the website shows none.",
             "width": 50,
+            "when": {
+              "test": "oneOf",
+              "field": "genre",
+              "values": [
+                "concert"
+              ]
+            },
             "kind": "date",
             "time": true
           },
@@ -1234,6 +1241,27 @@
             "translatable": false,
             "width": 50,
             "kind": "boolean"
+          },
+          {
+            "handle": "waitlist",
+            "label": "Warteliste",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "when": {
+              "test": "oneOf",
+              "field": "soldOut",
+              "values": [
+                true
+              ]
+            },
+            "kind": "link",
+            "to": [
+              "url",
+              "email"
+            ],
+            "labels": true,
+            "newTab": true
           },
           {
             "handle": "image",
@@ -2845,6 +2873,13 @@
             "translatable": false,
             "instructions": "Empty: the website shows none.",
             "width": 50,
+            "when": {
+              "test": "oneOf",
+              "field": "genre",
+              "values": [
+                "concert"
+              ]
+            },
             "kind": "date",
             "time": true
           },
@@ -2961,6 +2996,27 @@
             "translatable": false,
             "width": 50,
             "kind": "boolean"
+          },
+          {
+            "handle": "waitlist",
+            "label": "Warteliste",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "when": {
+              "test": "oneOf",
+              "field": "soldOut",
+              "values": [
+                true
+              ]
+            },
+            "kind": "link",
+            "to": [
+              "url",
+              "email"
+            ],
+            "labels": true,
+            "newTab": true
           },
           {
             "handle": "imageHint",

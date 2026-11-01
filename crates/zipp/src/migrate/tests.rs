@@ -306,3 +306,18 @@ fn widths_and_notes_need_no_migration() {
 		}]
 	);
 }
+
+#[test]
+fn conditions_need_no_migration() {
+	use crate::schema::{Condition, Tab};
+	let s = site();
+	let mut s2 = s.clone();
+	let event = s2.get_mut("event").unwrap();
+	event.fields[0].when = Some(Condition::on("listed"));
+	event.tabs = vec![Tab {
+		name: "Content".into(),
+		fields: vec!["city".into()],
+		when: Some(Condition::filled("price")),
+	}];
+	assert_eq!(diff(&s, &s2, &[]).unwrap(), []);
+}

@@ -1,4 +1,5 @@
-import type { Field, Schema } from '../core/schema';
+import type { Component, Field, Schema } from '../core/schema';
+import { describeCondition } from './conditions';
 import { LINK_NAMES } from './link/link';
 
 /**
@@ -26,19 +27,24 @@ function components(schema: Schema, handles: string[]) {
 export function fieldOptions(
 	schema: Schema,
 	f: Field,
-	entry: boolean,
+	c: Component,
 ): FieldOption[] {
-	const width = { name: 'Width', value: `${f.width ?? 100} % of a row` };
+	const layout = [
+		{ name: 'Width', value: `${f.width ?? 100} % of a row` },
+		...(f.when
+			? [{ name: 'Shown when', value: describeCondition(c, f.when) }]
+			: []),
+	];
 	// a note only has its text
-	if (f.kind === 'note') return [{ name: 'Text', value: f.text }, width];
+	if (f.kind === 'note') return [{ name: 'Text', value: f.text }, ...layout];
 
 	const out: FieldOption[] = [
 		...(f.instructions
 			? [{ name: 'Instructions', value: f.instructions }]
 			: []),
 		{ name: 'Required', value: yes(f.required) },
-		width,
-		...(entry
+		...layout,
+		...(c.entry
 			? [
 					{
 						name: 'Sites',

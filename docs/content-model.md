@@ -76,12 +76,29 @@ the code shows in a grey box, with a width too. It holds nothing: the
 server refuses a value for it, GraphQL and the TypeScript types don't
 have it, and adding, changing or removing a note needs no migration.
 Its handle places it in tabs like a field's.
+`.when(Condition::on("hasPage"))` shows a field only while another
+field of the same entry type or block has a value, like Craft's field
+layout conditions: `Condition::on`/`off` for a boolean (one never set
+is off), `Condition::is("genre", "concert")` or `one_of("genre",
+["concert", "reading"])` for a dropdown or a plugin's field like the
+button group, `Condition::filled("note")`/`empty` for any field but a
+group. The studio hides and shows it live while editing, also in blocks
+and groups, and a field hanging on a hidden one hides too. A hidden
+field keeps its value (GraphQL returns it as stored, like Craft) and
+isn't required: neither it nor the fields and blocks inside it need to
+be filled, other mistakes in its value still count. The schema check
+refuses a condition on an unknown field, on the field itself, on a value
+the field doesn't take, and conditions that go in a circle. A condition
+is only looks, changing it needs no migration; Setup shows it.
 
 `entry_tabs("page", "Page", [("Content", vec![...]), ("SEO",
 vec![seo_field("seo")])])` puts the fields of an entry type in tabs of
 the editor, like Craft's field layout; the title is in the first tab. Tabs
 are only looks: the fields are one list, moving a field to another tab
 needs no migration. Setup shows each type's editor as editors see it.
+`.tab_when("page", "Page", Condition::on("hasPage"))` after the type
+shows a tab only while the condition holds, for all its fields; it
+can't look at a field of the tab itself.
 
 `.icon("event", "calendar")` gives an entry type or a block an icon of
 [Lucide](https://lucide.dev/icons) by its name, `.icon("logo",

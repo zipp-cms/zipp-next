@@ -115,8 +115,9 @@
 The operator's list; `?` were open questions on it. Done ones keep their
 commit.
 
-- [ ] Conditions: fields (and tabs) shown only when another field has a
+- [x] Conditions: fields (and tabs) shown only when another field has a
       value, like Craft's field conditions (zandi's `hasPage`)
+      (`.when(Condition::on("hasPage"))`, `Schema::tab_when`)
 - [x] A read-only markdown field: it only shows its text in the field
       layout (a note, a how-to), like Craft's tip; editors don't edit it
       (`Field::note`)

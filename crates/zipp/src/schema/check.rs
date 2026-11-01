@@ -56,6 +56,10 @@ impl Schema {
 				if tab.fields.is_empty() {
 					return Err(format!("{at} has no fields"));
 				}
+				if let Some(c) = &tab.when {
+					self.check_condition(comp, c, &tab.fields)
+						.map_err(|e| format!("{at}: {e}"))?;
+				}
 			}
 
 			for (j, field) in comp.fields.iter().enumerate() {
@@ -77,11 +81,18 @@ impl Schema {
 				}
 				self.check_field(comp, field)
 					.map_err(|e| format!("{at}: {e}"))?;
+				if let Some(c) = &field.when {
+					let of = [field.handle.clone()];
+					self.check_condition(comp, c, &of)
+						.map_err(|e| format!("{at}: {e}"))?;
+				}
 			}
 			if let Some(t) = &comp.title_field {
 				check_title_field(comp, t)
 					.map_err(|e| format!("{}: title {t}: {e}", comp.handle))?;
 			}
+			Self::check_cycles(comp)
+				.map_err(|e| format!("{}: {e}", comp.handle))?;
 		}
 
 		if !self.nav.is_empty() {

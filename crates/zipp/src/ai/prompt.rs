@@ -25,7 +25,8 @@ pub(super) fn system_prompt(
 		document, links are {{\"type\", \"value\", \"label\"}}).\n\
 		- Fields marked translatable have a value per site, the others are the same \
 		in every site. Notes (kind `note`) are texts for editors and hold no \
-		value.\n\
+		value. A field or tab with `when` shows only while its condition on \
+		another field holds; hidden, it keeps its value and needn't be filled.\n\
 		- After a change, look at the page the editor sees (its fields are below). If \
 		the change shows there, stay: the preview reloads and keeps its scroll \
 		position. It shows there if it is the page itself, a global like the header \

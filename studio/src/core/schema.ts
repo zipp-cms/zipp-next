@@ -86,7 +86,14 @@ export type Field = FieldKind & {
 	default?: unknown;
 	/** the part of a row in the editor in percent, none is 100 */
 	width?: 25 | 50 | 75;
+	/** shown only when it holds */
+	when?: Condition;
 };
+
+/** When a field or tab shows, by another field of the same component. */
+export type Condition =
+	| { test: 'oneOf'; field: string; values: unknown[] }
+	| { test: 'filled' | 'empty'; field: string };
 
 /** What a field is besides its kind and options, see [`sameKind`]. */
 const FIELD_KEYS = [
@@ -98,6 +105,7 @@ const FIELD_KEYS = [
 	'instructions',
 	'default',
 	'width',
+	'when',
 ];
 
 /**
@@ -131,7 +139,7 @@ export type Component = {
 export type SchemaIcon = { lucide: string } | { svg: string };
 
 /** A tab of the editor with the handles of its fields. */
-export type Tab = { name: string; fields: string[] };
+export type Tab = { name: string; fields: string[]; when?: Condition };
 
 export type Site = { handle: string; name: string; language: string };
 

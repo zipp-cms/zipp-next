@@ -6,6 +6,7 @@ use super::api::*;
 use super::tests::input;
 use crate::error::Error;
 use crate::schema::tests::site_with_roles;
+use crate::schema::{Condition, Field};
 use crate::testing::TestServer;
 use crate::{Change, ChangeKind};
 
@@ -222,6 +223,29 @@ async fn notes_take_no_value() {
 	};
 	assert_eq!(fields[0].path, "howto");
 	assert_eq!(fields[0].message, "a note holds no value");
+}
+
+#[tokio::test]
+async fn hidden_fields_aren_t_required() {
+	let mut schema = site_with_roles();
+	let why = Field::text("why").required().when(Condition::off("listed"));
+	schema.get_mut("event").unwrap().fields.push(why);
+	let ts = TestServer::new(schema);
+	let author = ts.user(Some("author"));
+	let event =
+		|title, fields| CreateReq(input("events", "event", title, fields));
+
+	// listed by its default, the reason is hidden
+	author.call(&event("Jazz", json!({}))).await.unwrap();
+	let err = author
+		.call(&event("Blues", json!({ "listed": false })))
+		.await
+		.unwrap_err();
+	let Error::Invalid(fields) = err else {
+		panic!("{err:?}")
+	};
+	assert_eq!(fields[0].path, "why");
+	assert_eq!(fields[0].message, "is required");
 }
 
 #[tokio::test]

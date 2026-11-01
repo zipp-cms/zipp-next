@@ -33,6 +33,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Navigation, table, checkboxes | Settings → Header, Footer · Events → Für wen | a menu with a second level, footer links as rows, some of the options |
 | Dropdown | Images block → Width (3 options: buttons), Events → Sprache (5: a select) | the website sizes the image, filters events by language |
 | Field widths, notes | Events · Images block | date, doors and city in one row, two fields a row below; a note on how the event's image should be (on a phone all full width) |
+| Conditions | Events → Genre, Sold out | *Doors open* only for a concert, *Warteliste* only while the event is sold out; the fields come and go as you click |
 | Default values | Images block → Width, Events → Sprache | a new block starts *Wide*, a new event *Deutsch* |
 | Email | Settings → Footer → Contact email | the server takes only an address, the website links it with `mailto:` |
 | A field type of another crate | Events → Genre | `crates/zipp-button-group`: Craft's button group with a color per option, its own editor and GraphQL type |

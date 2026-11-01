@@ -18,6 +18,7 @@
 	import { entryUrl, type Schema } from '../../core/schema';
 	import { entryPath, go } from '../../core/router.svelte';
 	import Fields from '../../fields/Fields.svelte';
+	import { pathShown, tabShown } from '../../fields/conditions';
 	import { can, isAdmin } from '../../core/access';
 	import { sectionCrumbs, sectionPath, setupPath } from '../../core/paths';
 	import { EntryEditor } from './entryEditor.svelte';
@@ -53,8 +54,18 @@
 	const secDef = $derived(sectionOf(schema, ed.sec));
 	const comp = $derived(componentOf(schema, ed.ty));
 	const single = $derived(secDef?.kind === 'single');
-	// the tabs of the entry type, the first one open
-	const tabs = $derived(comp?.tabs ?? []);
+	// the tabs of the entry type whose conditions hold, the first one open
+	const tabs = $derived(
+		(comp?.tabs ?? []).filter(t => tabShown(comp!, t, ed.fields)),
+	);
+	// a hidden field's errors don't show, also not in the tab's count
+	const errors = $derived(
+		Object.fromEntries(
+			Object.entries(ed.errors).filter(
+				([p]) => !comp || pathShown(schema, comp, ed.fields, p),
+			),
+		),
+	);
 	let tab = $state('');
 	$effect(() => {
 		if (tabs.length && !tabs.some(t => t.name === tab)) tab = tabs[0].name;
@@ -192,7 +203,7 @@
 								{tabs}
 								bind:current={tab}
 								changed={ed.changed}
-								errors={ed.errors}
+								{errors}
 							/>
 						{/if}
 						{#if isAdmin(schema)}
@@ -210,7 +221,7 @@
 						{schema}
 						component={comp}
 						values={ed.fields}
-						errors={ed.errors}
+						{errors}
 						refs={ed.refs}
 						changed={ed.changed}
 						only={shownFields}

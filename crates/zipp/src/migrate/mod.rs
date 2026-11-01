@@ -5,9 +5,9 @@
 //! file, next to the resulting schema. On start the server applies new
 //! migration files to all content.
 //!
-//! Labels, names, `required`, defaults, widths, notes and the field order
-//! are free to change, they don't touch content. Everything else needs a
-//! migration.
+//! Labels, names, `required`, defaults, widths, notes, conditions and the
+//! field order are free to change, they don't touch content. Everything
+//! else needs a migration.
 //! A rename can't be told apart from a remove and an add, it is passed as
 //! a hint.
 

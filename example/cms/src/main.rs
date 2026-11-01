@@ -8,8 +8,8 @@ use zipp::axum::routing::get;
 use zipp::error::Result;
 use zipp::query::Query;
 use zipp::{
-	Access, AppState, Cms, Column, Field, LinkKind, Role, Schema, Section,
-	Transform,
+	Access, AppState, Cms, Column, Condition, Field, LinkKind, Role, Schema,
+	Section, Transform,
 };
 use zipp_button_group::{ButtonGroup, button_group};
 use zipp_forms::{Form, FormField, Forms};
@@ -200,12 +200,14 @@ fn schema() -> Schema {
 						"Past events leave the list of upcoming ones.",
 					)
 					.width(25),
-				// a day and time, 2026-11-14T19:30
+				// a day and time, 2026-11-14T19:30; only concerts have
+				// doors, the editor shows it when the genre is concert
 				Field::date("doors")
 					.time()
 					.label("Doors open")
 					.instructions("Empty: the website shows none.")
-					.width(50),
+					.width(50)
+					.when(Condition::is("genre", "concert")),
 				Field::text("city").required().indexed().width(25),
 				button_group(
 					"genre",
@@ -250,6 +252,10 @@ fn schema() -> Schema {
 					.indexed()
 					.width(50),
 				Field::boolean("soldOut").indexed().width(50),
+				// where to get on the waiting list, only while sold out
+				Field::link("waitlist", [LinkKind::Url, LinkKind::Email])
+					.label("Warteliste")
+					.when(Condition::on("soldOut")),
 				// how the image should be, for the editors
 				Field::note(
 					"imageHint",

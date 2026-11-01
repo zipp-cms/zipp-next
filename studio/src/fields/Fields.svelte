@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Component, Schema, Values } from '../core/schema';
 	import type { Refs } from '../entries/api';
+	import { isShown } from './conditions';
 	import FieldLabel from './FieldLabel.svelte';
 	import { fieldComponent } from './registry';
 
@@ -49,10 +50,13 @@
 			});
 	}
 
+	// those of the tab whose conditions hold, live while editing
 	const shown = $derived(
-		only
-			? component.fields.filter(f => only.includes(f.handle))
-			: component.fields,
+		component.fields.filter(
+			f =>
+				(!only || only.includes(f.handle)) &&
+				isShown(component, f.handle, values),
+		),
 	);
 </script>
 

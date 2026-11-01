@@ -158,6 +158,22 @@ mod tests {
 	}
 
 	#[test]
+	fn conditions_take_its_options() {
+		use zipp::Condition;
+		let with = |when: Condition| {
+			let mut s = schema();
+			let doors = Field::text("doors").when(when);
+			s.get_mut("event").unwrap().fields.push(doors);
+			s.check()
+		};
+		with(Condition::is("genre", "concert")).unwrap();
+		assert_eq!(
+			with(Condition::is("genre", "film")).unwrap_err(),
+			"event.doors: condition: genre can't be \"film\""
+		);
+	}
+
+	#[test]
 	fn graphql_gives_the_option() {
 		let options = json!([{ "value": "concert", "label": "Konzert", "color": "#2b6cb0" }]);
 		let out = ButtonGroup.output(&options, &json!("concert"));

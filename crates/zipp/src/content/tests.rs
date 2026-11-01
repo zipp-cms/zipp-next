@@ -299,3 +299,74 @@ fn dates_are_days_of_the_calendar() {
 		validate(&s, comp, &json!({ "day": "2026-11-14T20:00" })).unwrap_err();
 	assert_eq!(errs[0].path, "day");
 }
+
+#[test]
+fn hidden_fields_needn_t_be_filled() {
+	use crate::schema::Condition;
+	let s = site().block(
+		"x",
+		"X",
+		[
+			Field::boolean("hasLink"),
+			Field::text("url").required().when(Condition::on("hasLink")),
+			Field::blocks("more", ["text"])
+				.min(2)
+				.when(Condition::on("hasLink")),
+		],
+	);
+	let x = s.get("x").unwrap();
+
+	// off: nothing missing, but a value is kept and still checked
+	let out = validate(&s, x, &json!({ "url": "https://x.ch" })).unwrap();
+	assert_eq!(out, json!({ "url": "https://x.ch" }));
+	let fields = json!({ "more": [{ "type": "text", "fields": {} }] });
+	assert_eq!(
+		validate(&s, x, &fields).unwrap()["more"][0]["fields"],
+		json!({})
+	);
+	let err = validate(&s, x, &json!({ "url": 5 })).unwrap_err();
+	assert_eq!(
+		(err[0].path.as_str(), err[0].message.as_str()),
+		("url", "wrong type")
+	);
+
+	// on: all of it is needed
+	let fields = json!({
+		"hasLink": true,
+		"more": [{ "type": "text", "fields": {} }],
+	});
+	let err = validate(&s, x, &fields).unwrap_err();
+	let paths: Vec<_> = err.iter().map(|e| e.path.as_str()).collect();
+	assert_eq!(paths, ["url", "more", "more.0.content"]);
+}
+
+#[test]
+fn fields_in_a_hidden_group_needn_t_be_filled() {
+	use crate::schema::Condition;
+	let s = site()
+		.block(
+			"box",
+			"Box",
+			[Field::text("title").required(), Field::text("note")],
+		)
+		.block(
+			"x",
+			"X",
+			[
+				Field::boolean("hasBox"),
+				Field::group("box", "box").when(Condition::on("hasBox")),
+			],
+		);
+	let x = s.get("x").unwrap();
+
+	let fields = json!({ "box": { "note": "Hi" } });
+	assert_eq!(validate(&s, x, &fields).unwrap(), fields);
+	let err = validate(&s, x, &json!({ "box": { "title": 5 } })).unwrap_err();
+	assert_eq!(err[0].path, "box.title");
+	assert_eq!(err[0].message, "wrong type");
+
+	let fields = json!({ "hasBox": true, "box": { "note": "Hi" } });
+	let err = validate(&s, x, &fields).unwrap_err();
+	assert_eq!(err[0].path, "box.title");
+	assert_eq!(err[0].message, "is required");
+}

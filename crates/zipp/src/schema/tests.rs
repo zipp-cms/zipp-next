@@ -337,3 +337,128 @@ fn a_plugin_once() {
 	let s = site().plugin(Twice).plugin(Twice);
 	assert_eq!(s.check().unwrap_err(), "two plugins or field types twice");
 }
+
+/// A block with a switch, a dropdown and fields that hang on them.
+fn with_conditions(fields: Vec<Field>) -> Result<(), String> {
+	let mut all = vec![
+		Field::boolean("hasLink"),
+		Field::dropdown("kind", [("talk", "Talk"), ("concert", "Concert")]),
+		Field::text("note"),
+	];
+	all.extend(fields);
+	site().block("x", "X", all).check()
+}
+
+#[test]
+fn checks_conditions() {
+	with_conditions(vec![
+		Field::text("url").when(Condition::on("hasLink")),
+		Field::text("doors").when(Condition::one_of("kind", ["concert"])),
+		Field::text("more").when(Condition::filled("note")),
+	])
+	.unwrap();
+
+	let err = |f: Field| with_conditions(vec![f]).unwrap_err();
+	assert_eq!(
+		err(Field::text("u").when(Condition::on("nope"))),
+		"x.u: condition: unknown field nope"
+	);
+	assert_eq!(
+		err(Field::text("u").when(Condition::filled("u"))),
+		"x.u: condition: it can't look at u itself"
+	);
+	assert_eq!(
+		err(Field::text("u").when(Condition::is("kind", "film"))),
+		"x.u: condition: kind can't be \"film\""
+	);
+	assert_eq!(
+		err(Field::text("u").when(Condition::is("hasLink", "yes"))),
+		"x.u: condition: hasLink can't be \"yes\""
+	);
+	assert!(
+		err(Field::text("u").when(Condition::is("note", "x")))
+			.contains("note is no boolean, dropdown or field type")
+	);
+
+	// a and b hide each other
+	let s = site().block(
+		"x",
+		"X",
+		[
+			Field::text("a").when(Condition::filled("b")),
+			Field::text("b").when(Condition::empty("a")),
+		],
+	);
+	assert_eq!(
+		s.check().unwrap_err(),
+		"x: conditions go in a circle: a → b → a"
+	);
+
+	// the JSON of the studio and the migrations
+	let json =
+		serde_json::to_value(Field::text("url").when(Condition::on("hasLink")))
+			.unwrap();
+	assert_eq!(
+		json["when"],
+		serde_json::json!({ "test": "oneOf", "field": "hasLink", "values": [true] })
+	);
+}
+
+#[test]
+fn tabs_have_conditions() {
+	let tabs = |when: Condition| {
+		site()
+			.section(Section::channel("news", ["news"]))
+			.entry_tabs(
+				"news",
+				"News",
+				[
+					("Content", vec![Field::boolean("hasPage")]),
+					("Page", vec![Field::text("intro")]),
+				],
+			)
+			.tab_when("news", "Page", when)
+	};
+	let s = tabs(Condition::on("hasPage"));
+	s.check().unwrap();
+	let news = s.get("news").unwrap();
+	let on = serde_json::json!({ "hasPage": true });
+	assert!(news.is_shown("intro", on.as_object().unwrap()));
+	assert!(!news.is_shown("intro", &Default::default()));
+
+	assert_eq!(
+		tabs(Condition::filled("intro")).check().unwrap_err(),
+		"news: tab Page: condition: it can't look at intro itself"
+	);
+}
+
+#[test]
+fn shows_fields_by_their_conditions() {
+	let s = site().block(
+		"x",
+		"X",
+		[
+			Field::boolean("hasLink"),
+			Field::dropdown("kind", [("a", "A"), ("b", "B")])
+				.when(Condition::on("hasLink")),
+			Field::text("b").when(Condition::is("kind", "b")),
+			Field::text("off").when(Condition::off("hasLink")),
+		],
+	);
+	let x = s.get("x").unwrap();
+	let shown =
+		|v: serde_json::Value, h: &str| x.is_shown(h, v.as_object().unwrap());
+	// an unset boolean is off
+	assert!(shown(serde_json::json!({}), "off"));
+	assert!(!shown(serde_json::json!({}), "kind"));
+	assert!(shown(
+		serde_json::json!({ "hasLink": true, "kind": "b" }),
+		"b"
+	));
+	// b's dropdown is hidden, so is b, whatever it holds
+	assert!(!shown(
+		serde_json::json!({ "hasLink": false, "kind": "b" }),
+		"b"
+	));
+	assert!(shown(serde_json::json!({ "hasLink": false }), "hasLink"));
+}

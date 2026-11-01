@@ -27,12 +27,14 @@ pub use role::{Access, Role};
 
 mod builders;
 mod check;
+mod condition;
 mod field;
 pub mod field_type;
 pub mod role;
 #[cfg(test)]
 pub(crate) mod tests;
 
+pub use condition::Condition;
 pub use field::Choice;
 pub use field::Field;
 pub use field::FieldKind;
@@ -215,6 +217,9 @@ pub enum IndexKind {
 pub struct Tab {
 	pub name: String,
 	pub fields: Vec<String>,
+	/// shown only when it holds, see [`Schema::tab_when`]
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub when: Option<Condition>,
 }
 
 impl Schema {
@@ -404,6 +409,7 @@ impl Schema {
 			layout.push(Tab {
 				name: tab.into(),
 				fields: tab_fields.iter().map(|f| f.handle.clone()).collect(),
+				when: None,
 			});
 			fields.extend(tab_fields);
 		}

@@ -100,6 +100,10 @@ pub struct Field {
 	/// 50, 75 or 100; only layout, no migration
 	#[serde(default = "full_width", skip_serializing_if = "is_full_width")]
 	pub width: u8,
+	/// Shown in the studio only when this holds, see [`Field::when`];
+	/// only layout, no migration
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub when: Option<Condition>,
 	#[serde(flatten)]
 	pub kind: FieldKind,
 }
@@ -288,6 +292,7 @@ impl Field {
 			instructions: None,
 			default: None,
 			width: 100,
+			when: None,
 			kind,
 		}
 	}
@@ -610,6 +615,15 @@ impl Field {
 	/// screens show every field full width.
 	pub fn width(mut self, percent: u8) -> Self {
 		self.width = percent;
+		self
+	}
+
+	/// Shows the field only when another field of the same entry type or
+	/// block has a value: `.when(Condition::on("hasPage"))`,
+	/// `.when(Condition::is("genre", "concert"))`. Hidden, it keeps its
+	/// value and isn't required.
+	pub fn when(mut self, condition: Condition) -> Self {
+		self.when = Some(condition);
 		self
 	}
 
