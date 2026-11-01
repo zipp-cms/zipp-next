@@ -3,6 +3,7 @@
 	import type { FieldOf, Schema, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
+	import FieldGroup from 'zipp-ui/FieldGroup.svelte';
 	import Fields from './Fields.svelte';
 	import { componentOf } from '../core/schema';
 
@@ -46,7 +47,7 @@
 </script>
 
 {#if comp}
-	<div class="group box">
+	<FieldGroup>
 		<Fields
 			{schema}
 			component={comp}
@@ -56,12 +57,5 @@
 			prefix="{path}."
 			{changed}
 		/>
-	</div>
+	</FieldGroup>
 {/if}
-
-<style lang="scss">
-	/* a white box like an open block, its fields on the left */
-	.group {
-		padding: 0.875rem;
-	}
-</style>

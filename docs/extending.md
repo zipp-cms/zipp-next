@@ -41,7 +41,9 @@ The editors of field types and the modules of plugins look like the
 studio with `zipp-ui` (`studio/ui`), the components the studio itself is
 built of: `Table`, `Segmented`, `Popover`, `Flyout`, `ItemCard`,
 `ItemActions`, `AddGroup`, `SearchInput`, `DatePicker` (a day, with
-`time` its time, like the date field), `Icon` and more. A module
+`time` its time, like the date field), `FieldGroup` and `FieldRow` (a
+card of values with their labels on the left, like a group field; the
+SEO field uses them), `Icon` and more. A module
 bundles them like its Svelte; they look right because they use the
 studio's CSS variables and some of its global classes, which are on the
 page (listed in `studio/ui/README.md`, they are part of the contract).

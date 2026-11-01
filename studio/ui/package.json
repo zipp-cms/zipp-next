@@ -21,6 +21,8 @@
 		"./Crumbs.svelte": "./src/Crumbs.svelte",
 		"./DatePicker.svelte": "./src/DatePicker.svelte",
 		"./DragHandle.svelte": "./src/DragHandle.svelte",
+		"./FieldGroup.svelte": "./src/FieldGroup.svelte",
+		"./FieldRow.svelte": "./src/FieldRow.svelte",
 		"./Flyout.svelte": "./src/Flyout.svelte",
 		"./Icon.svelte": "./src/Icon.svelte",
 		"./ItemActions.svelte": "./src/ItemActions.svelte",

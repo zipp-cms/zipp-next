@@ -83,7 +83,9 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
     `sortable` (`zipp-ui/sortable`: rows with `data-sort` and a depth,
     drag, its menu and the arrow keys; trees move a level up and down),
     `SortLine` shows where;
-  - fields: `ItemCard` (blocks, embeds, nav items), `ItemActions`
+  - fields: `ItemCard` (blocks, embeds, nav items), `FieldGroup` and
+    `FieldRow` (the card of a group, rows with the label on the left,
+    for the fields of plugins), `ItemActions`
     (duplicate, remove in every list), `EntryChip` and `AssetChip` (a
     chosen entry or file), `AddButton`, `UploadButton`, `SearchInput`,
     `Segmented` (tabs and short choices), `entries/EntrySearch`,

@@ -1,11 +1,17 @@
 <script>
+	import FieldGroup from 'zipp-ui/FieldGroup.svelte';
+	import FieldRow from 'zipp-ui/FieldRow.svelte';
+
 	/**
 	 * The SEO of a single entry, like the Craft plugin's field: every value
 	 * is optional, the inherited one is the placeholder; a search result
 	 * shows how it looks. The images are the studio's own field, lent by
-	 * the host.
+	 * the host. It looks like a group field: a card with its values in
+	 * rows.
 	 */
 	let { value, onchange, entryId, site, host } = $props();
+	// the ids of its inputs, an entry can have more than one SEO field
+	const uid = $props.id();
 
 	const ROBOTS = [
 		'index, follow',
@@ -73,82 +79,84 @@
 	}
 </script>
 
-<div class="seo">
-	<div class="preview" aria-label="Search result">
-		<span class="url">{defaults?.url ?? ''}</span>
-		<span class="title">{title}</span>
-		<span class="description">{description}</span>
-	</div>
-
-	<label>
-		<span>
-			Title <small class:over={title.length > 60}>{title.length} / 60</small>
-		</span>
-		<input bind:value={seo.title} placeholder={defaults?.title ?? ''} />
-	</label>
-	<label>
-		<span>
-			Description
-			<small class:over={description.length > 160}>
+<FieldGroup>
+	<FieldRow label="Preview">
+		<div class="preview" aria-label="Search result">
+			<span class="url">{defaults?.url ?? ''}</span>
+			<span class="title">{title}</span>
+			<span class="description">{description}</span>
+		</div>
+	</FieldRow>
+	<FieldRow label="Title" for="{uid}-title">
+		{#snippet info()}
+			<span class:over={title.length > 60}>{title.length} / 60</span>
+		{/snippet}
+		<input
+			id="{uid}-title"
+			bind:value={seo.title}
+			placeholder={defaults?.title ?? ''}
+		/>
+	</FieldRow>
+	<FieldRow label="Description" for="{uid}-description">
+		{#snippet info()}
+			<span class:over={description.length > 160}>
 				{description.length} / 160
-			</small>
-		</span>
+			</span>
+		{/snippet}
 		<textarea
+			id="{uid}-description"
 			rows="3"
 			bind:value={seo.description}
 			placeholder={defaults?.description ?? ''}
 		></textarea>
-	</label>
-	<div class="row">
-		<span>Image</span>
+	</FieldRow>
+	<FieldRow label="Image">
 		<div use:image={'image'}></div>
-	</div>
-	<label>
-		<span>Robots</span>
-		<select bind:value={seo.robots}>
+	</FieldRow>
+	<FieldRow label="Robots" for="{uid}-robots">
+		<select id="{uid}-robots" bind:value={seo.robots}>
 			<option value={undefined}>
 				Inherit: {defaults?.robots ?? 'index, follow'}
 			</option>
 			{#each ROBOTS as r (r)}<option value={r}>{r}</option>{/each}
 		</select>
-	</label>
-	<label>
-		<span>Canonical URL</span>
+	</FieldRow>
+	<FieldRow label="Canonical URL" for="{uid}-canonical">
 		<input
+			id="{uid}-canonical"
 			bind:value={seo.canonicalUrl}
 			placeholder={defaults?.canonicalUrl ?? ''}
 		/>
-	</label>
+	</FieldRow>
 
-	<button type="button" class="link" onclick={() => (social = !social)}>
-		{social ? 'Hide' : 'Show'} sharing (Open Graph, X)
-	</button>
+	<FieldRow>
+		<button type="button" class="link" onclick={() => (social = !social)}>
+			{social ? 'Hide' : 'Show'} sharing (Open Graph, X)
+		</button>
+	</FieldRow>
 	{#if social}
-		<label>
-			<span>Social title</span>
-			<input bind:value={seo.socialTitle} placeholder={title} />
-		</label>
-		<label>
-			<span>Social description</span>
+		<FieldRow label="Social title" for="{uid}-social-title">
+			<input
+				id="{uid}-social-title"
+				bind:value={seo.socialTitle}
+				placeholder={title}
+			/>
+		</FieldRow>
+		<FieldRow label="Social description" for="{uid}-social-description">
 			<textarea
+				id="{uid}-social-description"
 				rows="2"
 				bind:value={seo.socialDescription}
 				placeholder={description}
 			></textarea>
-		</label>
-		<div class="row">
-			<span>Social image</span>
+		</FieldRow>
+		<FieldRow label="Social image">
 			<div use:image={'socialImage'}></div>
-		</div>
+		</FieldRow>
 	{/if}
-</div>
+</FieldGroup>
 
 <style>
-	.seo {
-		display: grid;
-		gap: 0.75rem;
-	}
-
 	.preview {
 		display: grid;
 		gap: 2px;
@@ -174,28 +182,7 @@
 		color: #4d5156;
 	}
 
-	label,
-	.row {
-		display: grid;
-		gap: 0.375rem;
-	}
-
-	label > span,
-	.row > span {
-		display: flex;
-		justify-content: space-between;
-		font-size: 0.875rem;
-	}
-
-	small {
-		color: var(--muted);
-	}
-
-	small.over {
+	.over {
 		color: var(--danger);
-	}
-
-	.link {
-		justify-self: start;
 	}
 </style>
