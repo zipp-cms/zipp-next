@@ -109,3 +109,47 @@
   plugin is on. Should the chat be a plugin too, or both one feature?
 - Where translation keys live: in code (today) or in the frontend's JSON
   (question, open since the textrem plans)
+
+## Backlog (operator 2026-11-01)
+
+The operator's list; `?` were open questions on it. Done ones keep their
+commit.
+
+- [ ] Conditions: fields (and tabs) shown only when another field has a
+      value, like Craft's field conditions (zandi's `hasPage`)
+- [ ] Markdown field for text editors edit there: `Field::markdown` exists
+      (Events → Description); what is missing is open (a read-only text in
+      the field layout like Craft's tip? a better editor?)
+- [ ] Field width in the editor: 25 %, 50 %, 75 %, 100 %
+- [ ] Settings (globals) without the big title above the fields
+- [ ] Tabs inside blocks?
+- [ ] Max level of a structure?
+- [ ] Custom fields on assets (besides title, alt, focal point)?
+- [ ] Better support for video assets (player, poster, type filter)?
+- [ ] A field type per column of a table (today text, url, email)?
+- [x] Number field: `Field::number` with min and max; still open: units
+      (CHF, €, s) and decimals
+- [ ] Custom styles in the rich text (CKEditor's styles: classes on text
+      and blocks)?
+- [x] Headings in the rich text: `.headings([2, 3])`
+- [x] Switching off a block (`"enabled": false`), e6ac8e3
+- [ ] Search: full text in the studio and for the website (see Next)?
+- [ ] GraphQL tokens like Craft's schemas: several, each with what it may
+      read (today one `--graphql-token`)?
+- [x] Logging in as a user (impersonation), 4d556eb
+- [ ] GraphiQL: in development today (`/api/graphql`); for admins in
+      production too?
+- [ ] Live preview next to the editor (see Next)?
+- [ ] A better Setup page?
+- [x] Post date, e6ac8e3
+- [x] Expiry date, e6ac8e3
+- [x] Changing the type of an entry later, 1ede0fb
+- [ ] Download assets or a folder as a zip?
+- [ ] Upload a zip and unpack it into folders?
+- [ ] Backups (database and files, from the studio or `serve`)?
+- [ ] The coding AI (`zipp-agent`, development only today): how far?
+- [ ] A section builder in the studio (how does it fit code-first)?
+- [ ] The studio in the user's language?
+- [ ] The Craft import out of the main binary (its own crate or command)?
+- [ ] A better page picker (the tree, search) for relations and links?
+- [ ] A login dialog when the session expires, so unsaved work stays?
