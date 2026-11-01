@@ -23,6 +23,7 @@
 	import { EntryEditor } from './entryEditor.svelte';
 	import { setEditing } from '../../core/editing';
 	import { flyout } from '../../core/flyout.svelte';
+	import { session } from '../../core/session.svelte';
 	import { componentOf, sectionOf } from '../../core/schema';
 	import ConflictBanner from './ConflictBanner.svelte';
 	import EditHeader from './EditHeader.svelte';
@@ -100,6 +101,8 @@
 
 	// what was typed last is saved, the next editor waits for it
 	onDestroy(() => ed.flush());
+	// the session ended while typing: saved after the new login
+	onDestroy(session.onRenewed(() => ed.retry()));
 
 	async function remove() {
 		if (!confirm(`Move ${ed.title} to the trash?`)) return;
@@ -172,17 +175,16 @@
 				</div>
 			{:else}
 				<!-- read only for a role that may only look -->
-				<fieldset disabled={!canEdit}>
-					{#if global}
-						<h1 class="global">{secDef.name}</h1>
-					{:else}
+				<!-- a global has no title, the bar names it -->
+				{#if !global}
+					<fieldset disabled={!canEdit}>
 						<EntryHead
 							bind:title={ed.title}
 							changed={ed.changed}
 							errors={ed.errors}
 						/>
-					{/if}
-				</fieldset>
+					</fieldset>
+				{/if}
 				{#if tabs.length || isAdmin(schema)}
 					<div class="tabs-row">
 						{#if tabs.length}
@@ -235,13 +237,6 @@
 	// the fields put their labels on the left when this is wide
 	.main {
 		container-type: inline-size;
-	}
-
-	.global {
-		margin-bottom: 1.125rem;
-		font-size: var(--fs-title);
-		line-height: 1.25;
-		font-weight: 700;
 	}
 
 	.tabs-row {

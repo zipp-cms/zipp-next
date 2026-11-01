@@ -154,4 +154,4 @@ commit.
 - [ ] The studio in the user's language?
 - [ ] The Craft import out of the main binary (its own crate or command)?
 - [ ] A better page picker (the tree, search) for relations and links?
-- [ ] A login dialog when the session expires, so unsaved work stays?
+- [x] A login dialog when the session expires, so unsaved work stays

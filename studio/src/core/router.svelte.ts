@@ -131,6 +131,8 @@ export type Page = {
 	props: Props;
 	/** a new key renders the page new */
 	key: string;
+	/** a page without a login, `isPublic` */
+	isPublic: boolean;
 };
 
 export const view = $state<{ page: Page | null; loading: number }>({
@@ -188,7 +190,15 @@ async function resolve(
 	const key = req.pathname + req.url.search + '|' + site.current;
 	if (!route) {
 		const NotFound = (await fallbacks.notFound()).default;
-		return { page: { layout: null, component: NotFound, props: {}, key } };
+		return {
+			page: {
+				layout: null,
+				component: NotFound,
+				props: {},
+				key,
+				isPublic: true,
+			},
+		};
 	}
 
 	try {
@@ -205,7 +215,13 @@ async function resolve(
 			? (await fallbacks.error()).default
 			: mod.default;
 		return {
-			page: { layout: mod.layout ?? null, component, props, key },
+			page: {
+				layout: mod.layout ?? null,
+				component,
+				props,
+				key,
+				isPublic: !!mod.isPublic,
+			},
 		};
 	} catch (e) {
 		const ErrorPage = (await fallbacks.error()).default;
@@ -215,6 +231,7 @@ async function resolve(
 				component: ErrorPage,
 				props: { loadError: e },
 				key,
+				isPublic: false,
 			},
 		};
 	}
@@ -229,12 +246,28 @@ export function endSession(login = true) {
 }
 
 /**
+ * A request found the session gone. While a page of the studio is open
+ * the page stays and the dialog asks for the login, so nothing typed is
+ * lost; before the first page and on public pages it is the login page.
+ */
+function sessionLost() {
+	if (session.loggedIn && view.page && !view.page.isPublic) session.expire();
+	else endSession();
+}
+
+/** After the new login a page that couldn't load loads again. */
+function renewed() {
+	if (view.page?.props.loadError) router.reload();
+}
+
+/**
  * Starts the router: `onfirst` is called when the first page is ready,
  * to mount the app.
  */
 export function startRouter(pages: Fallbacks, onfirst: () => void) {
 	fallbacks = pages;
-	onSessionLost(endSession);
+	onSessionLost(sessionLost);
+	session.onRenewed(renewed);
 	router.currentRequest.subscribe(req => {
 		if (req) current.path = req.pathname;
 	});

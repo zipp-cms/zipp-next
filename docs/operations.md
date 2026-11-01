@@ -27,6 +27,12 @@ A login lasts 30 days; the studio renews it when it opens and less than
 session, a new password (`user`) ends all of the user's. After 10 wrong
 passwords an email waits 15 minutes.
 
+When a session ends while the studio is open, the page stays and a
+dialog asks for the password again; the draft that couldn't be saved
+meanwhile is saved after it. Another user logging in there loads the
+studio new, logged in as someone else it only goes back to the own
+account or to the login.
+
 ## Users
 
 Admins manage the users in the studio (Users): a page per user with

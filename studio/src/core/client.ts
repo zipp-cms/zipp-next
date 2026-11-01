@@ -44,7 +44,10 @@ export class ApiError extends Error {
 
 let sessionLost = () => {};
 
-/** What happens when the session is missing or gone: the login. */
+/**
+ * What happens when the session is missing or gone: the login, or the
+ * dialog that asks for it while the studio is in use.
+ */
 export function onSessionLost(f: () => void) {
 	sessionLost = f;
 }
@@ -54,6 +57,11 @@ const TOKEN = 'zipp-token';
 /** The token of the session, kept in this browser or only this tab. */
 export function token(): string | null {
 	return localStorage.getItem(TOKEN) ?? sessionStorage.getItem(TOKEN);
+}
+
+/** Whether the token is kept in this browser, not only in this tab. */
+export function tokenRemembered(): boolean {
+	return localStorage.getItem(TOKEN) !== null;
 }
 
 /** `remember`: in this browser, else it ends with the tab. */
@@ -94,17 +102,14 @@ export function isSessionError(e: ApiError): boolean {
 	);
 }
 
-/** The error of a response, a session that is missing or gone logs out. */
+/** The error of a response, a session that is missing or gone is lost. */
 function failed(
 	resp: { status: number; statusText: string },
 	data: any,
 ): ApiError {
 	const err = ApiError.fromJson(resp.status, data, resp.statusText);
 	// a role that may not do something only gets the error
-	if (isSessionError(err)) {
-		setToken(null);
-		sessionLost();
-	}
+	if (isSessionError(err)) sessionLost();
 	return err;
 }
 

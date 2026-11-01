@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { view } from '../core/router.svelte';
+	import { session } from '../core/session.svelte';
 	import PageLoader from './PageLoader.svelte';
+	import SessionDialog from '../auth/SessionDialog.svelte';
 
 	/** The page of the router in its frame, see core/router.svelte.ts. */
 	const page = $derived(view.page!);
@@ -20,3 +22,6 @@
 		<page.component {...page.props} />
 	{/key}
 {/if}
+
+<!-- over the page, which stays as it was -->
+{#if session.expired}<SessionDialog />{/if}

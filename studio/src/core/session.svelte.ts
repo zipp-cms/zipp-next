@@ -1,4 +1,11 @@
-import { ApiError, isSessionError, request, setToken, token } from './client';
+import {
+	ApiError,
+	isSessionError,
+	request,
+	setToken,
+	token,
+	tokenRemembered,
+} from './client';
 
 /** A user of the studio, `role` null is an admin. */
 export type User = {
@@ -34,6 +41,16 @@ export class Session {
 	user = $state<User | null>(null);
 	/** the admin who is logged in as the user, see `loginAs` */
 	impersonatedBy = $state<string | null>(null);
+	/**
+	 * The session ended while the studio was open: the page stays and a
+	 * dialog asks for the login again, see `expire`.
+	 */
+	expired = $state(false);
+
+	/** where the token was kept, the new one goes there too */
+	private remember = true;
+	/** what waits for a new login of the same user, see `onRenewed` */
+	private renewed = new Set<() => void>();
 
 	get loggedIn(): boolean {
 		return this.user !== null;
@@ -83,6 +100,42 @@ export class Session {
 		this.use(auth);
 	}
 
+	/**
+	 * The session ended while the studio is open: the user stays for the
+	 * dialog, the token goes. Requests that come back without one after
+	 * it don't change where the token was kept.
+	 */
+	expire() {
+		if (this.expired) return;
+		this.remember = tokenRemembered();
+		this.expired = true;
+		setToken(null);
+	}
+
+	/**
+	 * Logs in again after `expire`; whether it is the same user, then
+	 * what waits for it goes on (`onRenewed`). Another user has other
+	 * rights, the caller loads the studio new.
+	 */
+	async renew(email: string, password: string): Promise<boolean> {
+		const before = this.user?.id;
+		const auth = await request<Authenticated>('POST', '/auth/login', {
+			email,
+			password,
+		});
+		this.use(auth, this.remember);
+		this.expired = false;
+		if (auth.user.id !== before) return false;
+		for (const f of this.renewed) f();
+		return true;
+	}
+
+	/** `f` after a new login of the same user; the result removes it. */
+	onRenewed(f: () => void): () => void {
+		this.renewed.add(f);
+		return () => this.renewed.delete(f);
+	}
+
 	/** Back to the own session of before, if there was one; whether. */
 	async endLoginAs(): Promise<boolean> {
 		await request('POST', '/auth/logout').catch(() => {});
@@ -106,6 +159,7 @@ export class Session {
 		this.expiresAt = null;
 		this.user = null;
 		this.impersonatedBy = null;
+		this.expired = false;
 		setToken(null);
 	}
 

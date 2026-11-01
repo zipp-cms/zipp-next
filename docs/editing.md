@@ -70,8 +70,8 @@ and the arrow keys move it too, so it needs no dragging. Pages move at
 once, the rest goes into the draft.
 
 Lists of structures (Pages) have a search too; while searching, entries
-can't be moved. Globals (singles without a url) have no title field, their
-name is the section's.
+can't be moved. Globals (singles without a url) have no title field, the
+bar at the top names them (Settings / Header).
 
 ## Entries and images in other fields
 

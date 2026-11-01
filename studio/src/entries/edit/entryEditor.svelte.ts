@@ -337,6 +337,13 @@ export class EntryEditor {
 		return p;
 	}
 
+	/** After a new login: the save that failed goes again. */
+	retry() {
+		if (this.draftState !== 'failed') return;
+		this.error = '';
+		this.flush();
+	}
+
 	private stopTimer() {
 		if (this.timer === undefined) return;
 		clearTimeout(this.timer);
