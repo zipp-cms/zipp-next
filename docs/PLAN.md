@@ -23,7 +23,7 @@
 
 ## Next
 
-- [ ] `localized` on entries (the same entry in the other sites) for language switches
+- [x] `localized` on entries (the same entry in the other sites) for language switches
 - [x] Globals as singles without a url, `globalSet(handle:)` in GraphQL, navigation groups
       in the schema (`.nav("Settings", [...])`), preview button, status per site in lists
 

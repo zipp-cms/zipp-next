@@ -1152,3 +1152,100 @@ fn tokens_are_kept_hashed() {
 	assert!(!none.section("events"));
 	assert!(tokens::check(&site(), "x", &none).is_empty());
 }
+
+#[tokio::test]
+async fn localized_lists_the_live_versions_a_viewer_may_see() {
+	let db = Db::memory().unwrap();
+	let s = Arc::new(
+		site()
+			.site("fr", "Français", "fr")
+			.site("it", "Italiano", "it")
+			.offline("it"),
+	);
+	s.check().unwrap();
+	let urls = SiteUrls::from([
+		("de".to_string(), "https://x.ch".to_string()),
+		("en".to_string(), "https://x.ch/en".to_string()),
+		("fr".to_string(), "https://x.ch/fr".to_string()),
+	]);
+	let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
+	let id = {
+		let conn = db.conn();
+		let about = save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "Über uns", json!({})),
+			None,
+		)
+		.unwrap();
+		let mut en = input("pages", "page", "About us", json!({}));
+		en.site = Some("en".into());
+		save(&conn, &s, Some(about.id), en, None).unwrap();
+		// not published in French
+		let mut fr = input("pages", "page", "À propos", json!({}));
+		fr.site = Some("fr".into());
+		fr.published = false;
+		save(&conn, &s, Some(about.id), fr, None).unwrap();
+		about.id
+	};
+
+	let q = format!(
+		r#"{{ entry(id: {id}) {{ localized {{
+			siteId siteHandle language title uri url }} }} }}"#
+	);
+	let viewer = |published_only, preview, sites: Option<Vec<&str>>| Viewer {
+		published_only,
+		preview,
+		token: None,
+		indexing: true,
+		scope: Scope {
+			sites: sites.map(|l| l.into_iter().map(Into::into).collect()),
+			..Scope::ALL
+		},
+	};
+	let sites = async |v: Viewer| {
+		let req = async_graphql::Request::new(q.clone()).data(v);
+		let resp = gql.execute(req).await;
+		assert!(resp.errors.is_empty(), "{:?}", resp.errors);
+		let data = resp.data.into_json().unwrap();
+		let list = data["entry"]["localized"].as_array().unwrap().clone();
+		list.iter()
+			.map(|e| e["siteHandle"].as_str().unwrap().to_string())
+			.collect::<Vec<_>>()
+	};
+
+	// a frontend: not the unpublished French one nor the offline site
+	let data = run(&gql, &q, true).await;
+	assert_eq!(
+		data["entry"]["localized"],
+		json!([{
+			"siteId": 2,
+			"siteHandle": "en",
+			"language": "en",
+			"title": "About us",
+			"uri": "about-us",
+			"url": "https://x.ch/en/about-us",
+		}])
+	);
+
+	// a token of German and French reads no English
+	assert_eq!(
+		sites(viewer(true, None, Some(vec!["de", "fr"]))).await,
+		Vec::<String>::new()
+	);
+	// admins see every version
+	assert_eq!(sites(viewer(false, None, None)).await, ["en", "fr", "it"]);
+	// the preview of the entry shows it in every site, offline ones too
+	let preview = Preview::Entry(id, Default::default());
+	assert_eq!(
+		sites(viewer(true, Some(preview), None)).await,
+		["en", "fr", "it"]
+	);
+	// but not the sites out of the token's scope
+	let preview = Preview::Entry(id, Default::default());
+	assert_eq!(
+		sites(viewer(true, Some(preview), Some(vec!["de", "en"]))).await,
+		["en"]
+	);
+}

@@ -64,10 +64,13 @@ offerCategory: 5)` the entries pointing to 5, `offerCategory:
 ":notempty:"` to anything, `":empty:"` to nothing. Image transforms may
 have Craft's names like `land_w800`. Ids of entries and
 assets are strings (`ID`) like Craft's. Entries have
-`postDate`, `expiryDate`, `dateCreated`, `dateUpdated`, `language` and
-`localized`
-(the entry in the other sites), images `focalPoint`, `title` and
-`url(width: 800)` for the widths of `.image_widths([400, 800, 1600])`,
+`postDate`, `expiryDate`, `dateCreated`, `dateUpdated`, `language`,
+`siteHandle` and `localized`, the entry in the other sites for a
+language switch (`localized { siteId siteHandle language title uri url
+}`): only where it is live and the request may read it, like any query
+of that site (published, no offline site for frontends, the sites of
+the token; a preview shows its entry in every site). Images have
+`focalPoint`, `title` and `url(width: 800)` for the widths of `.image_widths([400, 800, 1600])`,
 `url(transform: "hero", format: "webp")` and `srcset(transforms: [...],
 format: "webp")` in another type (`webp`, `jpg`, `png`), and `alt` of
 the site asked, else of the primary site.

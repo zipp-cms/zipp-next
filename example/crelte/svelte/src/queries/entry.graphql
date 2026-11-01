@@ -118,6 +118,11 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 		seoJson
 		siteId
 		url
+		# the same page in the other languages, for the switch in the header
+		localized {
+			siteId
+			url
+		}
 		sectionHandle
 		typeHandle
 		title

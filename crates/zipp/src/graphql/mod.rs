@@ -85,6 +85,7 @@ pub const ENTRY_FIELDS: &[&str] = &[
 	"sectionHandle",
 	"typeHandle",
 	"site",
+	"siteHandle",
 	"siteId",
 	"url",
 	"title",

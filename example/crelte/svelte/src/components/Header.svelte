@@ -1,5 +1,5 @@
 <script>
-	import { getGlobal, getRouter, getSite } from 'crelte';
+	import { getEntry, getGlobal, getRouter, getSite } from 'crelte';
 	import { getTranslations } from 'crelte/translations';
 
 	const t = getTranslations();
@@ -8,6 +8,13 @@
 	const header = getGlobal('header');
 	const site = getSite();
 	const sites = getRouter().sites;
+	const entry = getEntry();
+
+	// the url of this page in the other sites; where it isn't live the
+	// switch goes to the site's home page
+	let localized = $derived(
+		new Map(($entry?.localized ?? []).map(l => [l.siteId, l.url])),
+	);
 </script>
 
 <header>
@@ -33,7 +40,10 @@
 	</nav>
 	<nav>
 		{#each sites as s (s.id)}
-			<a href={s.url.href} class:active={s.id === $site.id}>
+			<a
+				href={localized.get(s.id) ?? s.url.href}
+				class:active={s.id === $site.id}
+			>
 				{s.language.slice(0, 2).toUpperCase()}
 			</a>
 		{/each}

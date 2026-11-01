@@ -8,6 +8,8 @@ pub(super) fn entry_common() -> Vec<(&'static str, TypeRef)> {
 		("sectionHandle", s()),
 		("typeHandle", s()),
 		("site", s()),
+		// Craft's name of it
+		("siteHandle", s()),
 		// the position of the site, crelte knows sites by number
 		("siteId", TypeRef::named_nn(TypeRef::INT)),
 		("url", TypeRef::named(TypeRef::STRING)),
@@ -45,7 +47,7 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 				"id" => GqlValue::from(e.id.to_string()),
 				"sectionHandle" => GqlValue::from(e.section.clone()),
 				"typeHandle" => GqlValue::from(e.ty.clone()),
-				"site" => GqlValue::from(e.site.clone()),
+				"site" | "siteHandle" => GqlValue::from(e.site.clone()),
 				"siteId" => GqlValue::from(site_id(&ctx, &e.site)?),
 				"url" => match &e.uri {
 					Some(uri) => GqlValue::from(entry_url(&ctx, &e.site, uri)?),
@@ -74,6 +76,7 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 						schema.get_site(&e.site).map(|s| s.language.clone());
 					GqlValue::from(site.unwrap_or_default())
 				}
+				// live there and readable, like any query of the site
 				"localized" => {
 					let schema = ctx.data::<Arc<Schema>>()?;
 					let mut out = vec![];
