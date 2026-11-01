@@ -166,6 +166,67 @@ fn structures_build_uris_from_parents() {
 	assert!(err.is_err());
 }
 
+/// [`site`] with pages `max` levels deep.
+pub fn site_with_levels(max: u32) -> Schema {
+	let mut s = site();
+	s.sections
+		.iter_mut()
+		.find(|x| x.handle == "pages")
+		.unwrap()
+		.max_level = Some(max);
+	s
+}
+
+fn page(
+	conn: &Connection,
+	s: &Schema,
+	title: &str,
+	parent: Option<i64>,
+) -> i64 {
+	let mut p = input("pages", "page", title, json!({}));
+	p.parent_id = parent;
+	save(conn, s, None, p, None).unwrap().id
+}
+
+#[test]
+fn structures_stay_within_their_max_level() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site_with_levels(2);
+
+	let about = page(&conn, &s, "About", None);
+	let team = page(&conn, &s, "Team", Some(about));
+	let mut deep = input("pages", "page", "Deep", json!({}));
+	deep.parent_id = Some(team);
+	let err = save(&conn, &s, None, deep, None).unwrap_err();
+	assert_eq!(
+		err,
+		Error::Request(
+			"the entry goes too deep, pages has entries down to level 2".into()
+		)
+	);
+
+	// an entry with a child doesn't fit below another
+	let jobs = page(&conn, &s, "Jobs", None);
+	let open = page(&conn, &s, "Open", Some(jobs));
+	let err = move_entry(&conn, &s, jobs, Some(about), 0).unwrap_err();
+	assert!(
+		matches!(err, Error::Request(m) if m.contains("with its children"))
+	);
+	let err = move_entry(&conn, &s, open, Some(team), 0).unwrap_err();
+	assert_eq!(
+		err,
+		Error::Request(
+			"the entry goes too deep, pages has entries down to level 2".into()
+		)
+	);
+
+	// without its child it does
+	move_entry(&conn, &s, open, Some(about), 1).unwrap();
+	move_entry(&conn, &s, jobs, Some(about), 2).unwrap();
+	assert_eq!(get_entry(&conn, jobs, "de").unwrap().parent_id, Some(about));
+}
+
 #[test]
 fn rejects_invalid_content() {
 	let db = Db::memory().unwrap();

@@ -32,6 +32,7 @@ import {
 import { site } from '../../core/router.svelte';
 import { changedPaths, clean } from './diff';
 import { slugify } from '../../core/format';
+import { depth } from '../tree';
 
 /** What the role may do with the entry; the server checks it too. */
 export type May = { edit: boolean; publish: boolean; delete: boolean };
@@ -245,14 +246,20 @@ export class EntryEditor {
 		this.perSite = list.published[id] ?? {};
 	}
 
-	/** A new entry of a structure: where it can go. */
+	/** A new entry of a structure: where it can go, within its max level. */
 	async loadParents() {
 		const r = await listEntries({
 			section: this.sec,
 			site: this.site,
 			order: 'structure',
 		});
-		this.parents = r.entries;
+		const max = this.schema.sections.find(
+			s => s.handle === this.sec,
+		)?.max_level;
+		// a child of the top (depth 0) is on level 2
+		this.parents = r.entries.filter(
+			e => !max || depth(r.entries, e) + 2 <= max,
+		);
 	}
 
 	/**

@@ -96,6 +96,38 @@ async fn creates_reads_moves_and_deletes() {
 }
 
 #[tokio::test]
+async fn refuses_entries_below_the_max_level() {
+	let mut schema = site_with_roles();
+	for s in schema.sections.iter_mut().filter(|s| s.handle == "pages") {
+		s.max_level = Some(1);
+	}
+	let ts = TestServer::new(schema);
+	let admin = ts.admin();
+	let about = admin
+		.call(&CreateReq(input("pages", "page", "About", json!({}))))
+		.await
+		.unwrap();
+	let team = admin
+		.call(&CreateReq(input("pages", "page", "Team", json!({}))))
+		.await
+		.unwrap();
+
+	let mut child = input("pages", "page", "Child", json!({}));
+	child.parent_id = Some(about.id);
+	let err = admin.call(&CreateReq(child)).await.unwrap_err();
+	let too_deep = Error::Request(
+		"the entry goes too deep, pages has entries down to level 1".into(),
+	);
+	assert_eq!(err, too_deep);
+	let below = MoveReq {
+		id: team.id,
+		parent_id: Some(about.id),
+		index: 0,
+	};
+	assert_eq!(admin.call(&below).await.unwrap_err(), too_deep);
+}
+
+#[tokio::test]
 async fn refuses_invalid_content() {
 	let ts = TestServer::new(site_with_roles());
 	let body = json!({ "body": [{ "type": "text", "fields": {} }] });

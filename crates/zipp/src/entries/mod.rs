@@ -41,6 +41,7 @@ pub use save::write;
 pub use structure::move_entry;
 pub use structure::refresh_uris;
 use structure::*;
+pub(crate) use structure::{fits_below, levels_of};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -138,7 +138,8 @@ pub fn diff(
 					|| o.uri != section.uri
 					|| o.type_uris != section.type_uris
 					|| o.site_uris != section.site_uris
-					|| o.uri_if != section.uri_if =>
+					|| o.uri_if != section.uri_if
+					|| o.max_level != section.max_level =>
 			{
 				Op::ChangeSection {
 					section: section.clone(),

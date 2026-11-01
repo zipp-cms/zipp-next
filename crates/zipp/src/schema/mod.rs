@@ -166,6 +166,10 @@ pub struct Section {
 	/// `{% if hasPage %}` in a uri format.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub uri_if: Option<String>,
+	/// How deep a structure goes, 1 is only entries on the top, like
+	/// Craft's max levels. `None` has no limit.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub max_level: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

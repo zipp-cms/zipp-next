@@ -26,6 +26,74 @@ pub(super) fn check_parent(
 	Ok(())
 }
 
+/// Refuses to put `levels` levels (an entry and its children) below
+/// `parent` when they go deeper than the section's max level.
+pub(super) fn check_level(
+	conn: &Connection,
+	section: &Section,
+	parent: i64,
+	levels: u32,
+) -> Result<()> {
+	if fits_below(conn, section, parent, levels)? {
+		return Ok(());
+	}
+	let max = section.max_level.unwrap_or_default();
+	let what = match levels {
+		1 => "the entry",
+		_ => "the entry with its children",
+	};
+	Err(Error::Request(format!(
+		"{what} goes too deep, {} has entries down to level {max}",
+		section.handle
+	)))
+}
+
+/// Whether `levels` levels fit below `parent` in the section's max level.
+pub(crate) fn fits_below(
+	conn: &Connection,
+	section: &Section,
+	parent: i64,
+	levels: u32,
+) -> Result<bool> {
+	let Some(max) = section.max_level else {
+		return Ok(true);
+	};
+	// the level of the parent, 1 on the top
+	let level: u32 = conn.query_row(
+		"WITH RECURSIVE up(id) AS (
+			SELECT ?1
+			UNION ALL
+			SELECT e.parent_id FROM entries e JOIN up ON e.id = up.id
+			WHERE e.parent_id IS NOT NULL
+		)
+		SELECT COUNT(*) FROM up",
+		[parent],
+		|r| r.get(0),
+	)?;
+	Ok(level + levels <= max)
+}
+
+/// How many levels an entry and its children take, 1 without children.
+/// The children that are in the same state: live ones (`None`) or the
+/// ones trashed with it.
+pub(crate) fn levels_of(
+	conn: &Connection,
+	id: i64,
+	deleted_at: Option<i64>,
+) -> Result<u32> {
+	Ok(conn.query_row(
+		"WITH RECURSIVE tree(id, depth) AS (
+			SELECT ?1, 1
+			UNION ALL
+			SELECT e.id, t.depth + 1 FROM entries e JOIN tree t
+			ON e.parent_id = t.id WHERE e.deleted_at IS ?2
+		)
+		SELECT MAX(depth) FROM tree",
+		params![id, deleted_at],
+		|r| r.get(0),
+	)?)
+}
+
 /// The uri of an entry in a site, after the uri of its parent.
 pub(super) fn uri_for(
 	conn: &Connection,
@@ -155,6 +223,7 @@ pub fn move_entry(
 				|r| r.get(0),
 			)?;
 		}
+		check_level(conn, section, p, levels_of(conn, id, None)?)?;
 	} else if section.kind != SectionKind::Structure {
 		return Err(Error::Request("only entries of a structure move".into()));
 	}

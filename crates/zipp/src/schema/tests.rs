@@ -108,6 +108,17 @@ fn finds_mistakes() {
 	let s = site().section(Section::channel("news", ["page"]).uri("news"));
 	assert_eq!(s.check().unwrap_err(), "section news: the uri needs {slug}");
 
+	let s = site().section(Section::structure("x", ["page"]).max_level(0));
+	assert_eq!(
+		s.check().unwrap_err(),
+		"section x: the max level is at least 1"
+	);
+	let s = site().section(Section::channel("x", ["page"]).max_level(2));
+	assert_eq!(
+		s.check().unwrap_err(),
+		"section x: only structures have a max level"
+	);
+
 	let s = site().nav("Content", ["home", "pages"]);
 	assert_eq!(
 		s.check().unwrap_err(),

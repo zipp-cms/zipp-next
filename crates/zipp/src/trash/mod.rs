@@ -15,7 +15,7 @@ use serde_json::Value;
 
 use crate::auth::Authed;
 use crate::db::now;
-use crate::entries::reindex;
+use crate::entries::{fits_below, levels_of, reindex};
 use crate::error::{Error, Result};
 use crate::schema::{Access, Schema, SectionKind};
 
@@ -145,7 +145,8 @@ pub fn trash_entry(
 
 /// Brings an entry back from the trash with the children that went with
 /// it, at the end of its siblings; under its parent if that isn't in the
-/// trash, else on the top. Its section, for the change hooks.
+/// trash and it still fits in the section's max level, else on the top.
+/// Its section, for the change hooks.
 pub fn restore_entry(
 	conn: &Connection,
 	schema: &Schema,
@@ -171,6 +172,14 @@ pub fn restore_entry(
 				|r| r.get::<_, i64>(0),
 			)
 			.optional()?,
+		None => None,
+	};
+	// the parent may have moved deeper meanwhile, the top always fits
+	let parent = match parent {
+		Some(p) => {
+			let levels = levels_of(conn, id, Some(deleted_at))?;
+			fits_below(conn, sec, p, levels)?.then_some(p)
+		}
 		None => None,
 	};
 

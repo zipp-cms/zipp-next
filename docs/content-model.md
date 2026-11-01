@@ -31,6 +31,13 @@ publishing writes the type, its uris and index.
 that boolean field on a page, like Craft's `{% if hasPage %}` in a uri
 format.
 
+`Section::structure("pages", [..]).max_level(2)` limits how deep a
+structure goes, like Craft's max levels (1 is only the top). Creating
+and moving refuse an entry, with its children, below it; the studio
+offers no such place. An entry from the trash whose parent is too deep
+now comes back on the top. Changing it is a migration that leaves
+deeper entries where they are, only new places are checked.
+
 ## Entry types and blocks
 
 Both are components made of fields: text,

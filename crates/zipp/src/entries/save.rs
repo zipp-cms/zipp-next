@@ -63,6 +63,7 @@ pub fn check(
 		None => {
 			if let Some(p) = input.parent_id {
 				check_parent(conn, section, p)?;
+				check_level(conn, section, p, 1)?;
 			}
 			input.parent_id
 		}

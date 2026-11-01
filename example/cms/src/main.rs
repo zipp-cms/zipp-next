@@ -69,7 +69,7 @@ fn schema() -> Schema {
 		)
 		.section(Section::channel("news", ["article"]).uri("news/{slug}"))
 		// no pages: the news page filters by them
-		.section(Section::structure("categories", ["category"]))
+		.section(Section::structure("categories", ["category"]).max_level(2))
 		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
 		// globals: singles without a url
 		.section(Section::single("header", "header"))

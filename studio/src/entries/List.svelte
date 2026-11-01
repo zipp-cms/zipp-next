@@ -114,7 +114,8 @@
 	const sort = new Sortable({
 		container: () => rows,
 		depths: () => depths,
-		maxDepth: () => 20,
+		// depths count from 0, levels from 1
+		maxDepth: () => (sec.max_level ?? 21) - 1,
 		indent: 21,
 		inset: 16,
 		onmove: async (from, drop) => {

@@ -136,6 +136,8 @@ export type Section = {
 	site_uris?: Record<string, string>;
 	/** a boolean field, only entries with it on have a page */
 	uri_if?: string;
+	/** how deep a structure goes, 1 is only the top; none: no limit */
+	max_level?: number;
 };
 
 /** A named image size, only these exist. */

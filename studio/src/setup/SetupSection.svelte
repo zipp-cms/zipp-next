@@ -71,6 +71,15 @@
 					<dd><code>{section.handle}</code></dd>
 					<dt>Kind</dt>
 					<dd>{KINDS[section.kind]}</dd>
+					{#if section.kind === 'structure'}
+						<dt>Max level</dt>
+						<dd>
+							{section.max_level === 1
+								? '1, only entries on the top'
+								: (section.max_level ??
+									'none, as deep as needed')}
+						</dd>
+					{/if}
 					{#if section.uri_if}
 						<dt>Pages</dt>
 						<dd>

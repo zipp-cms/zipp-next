@@ -16,6 +16,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | The home page in the tree | Pages → Willkommen | the entry type `home` gets the uri `/` (`uri_of`) |
 | Change the type | a page → Type in the sidebar → News | the intro stays, the blocks go after asking; the website keeps the page until **Publish** |
 | Drag and drop | Pages | drag the handle before a title: before, after or into a page |
+| Max level | Categories | two levels (`max_level(2)`): a category goes into a top one, not deeper; the Parent of a new one lists only top categories |
 | Sites and languages | the language switch top right | titles, slugs and text per site; fields marked *all sites* are shared |
 | Status per site | every list | `DE EN`: a badge per site, grey where it is not published |
 | Drafts | change any field | the orange *Unpublished changes*, the website stays as it is until **Publish** |

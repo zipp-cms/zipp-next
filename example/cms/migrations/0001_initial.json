@@ -1558,7 +1558,8 @@
         "types": [
           "category"
         ],
-        "uri": null
+        "uri": null,
+        "max_level": 2
       }
     },
     {
@@ -1678,7 +1679,8 @@
         "types": [
           "category"
         ],
-        "uri": null
+        "uri": null,
+        "max_level": 2
       },
       {
         "handle": "events",

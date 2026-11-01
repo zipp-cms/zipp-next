@@ -203,6 +203,21 @@ fn diff_sites_and_sections() {
 }
 
 #[test]
+fn max_level_changes_the_section() {
+	let new = crate::entries::tests::site_with_levels(2);
+	let ops = diff(&site(), &new, &[]).unwrap();
+	assert!(matches!(
+		&ops[..],
+		[Op::ChangeSection { section }] if section.max_level == Some(2)
+	));
+	assert!(
+		diff(&apply_all(&site(), &ops), &new, &[])
+			.unwrap()
+			.is_empty()
+	);
+}
+
+#[test]
 fn migration_file_roundtrip() {
 	let m = Migration {
 		name: String::new(),

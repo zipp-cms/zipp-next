@@ -2,8 +2,8 @@ use serde_json::json;
 
 use super::*;
 use crate::db::Db;
-use crate::entries::tests::input;
-use crate::entries::{get_entry, save};
+use crate::entries::tests::{input, site_with_levels};
+use crate::entries::{get_entry, move_entry, save};
 use crate::query::Query;
 use crate::schema::tests::site;
 
@@ -120,6 +120,37 @@ fn a_child_alone_comes_back_on_the_top() {
 		Err(Error::NotFound)
 	));
 	assert!(matches!(purge_entry(&conn, team.id), Err(Error::NotFound)));
+}
+
+#[test]
+fn an_entry_too_deep_for_its_parent_comes_back_on_the_top() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site_with_levels(3);
+	let page = |title: &str, parent: Option<i64>| {
+		let mut p = input("pages", "page", title, json!({}));
+		p.parent_id = parent;
+		save(&conn, &s, None, p, None).unwrap().id
+	};
+	let about = page("About", None);
+	let team = page("Team", Some(about));
+	let anna = page("Anna", Some(team));
+	let home = page("Home", None);
+
+	// team goes with anna, about moves a level down meanwhile
+	trash_entry(&conn, &s, team, None).unwrap();
+	move_entry(&conn, &s, about, Some(home), 0).unwrap();
+
+	restore_entry(&conn, &s, team).unwrap();
+	let back = get_entry(&conn, team, "de").unwrap();
+	assert_eq!((back.parent_id, back.uri.as_deref()), (None, Some("team")));
+	let child = get_entry(&conn, anna, "de").unwrap();
+	assert_eq!(child.uri.as_deref(), Some("team/anna"));
+
+	// where it fits it goes back under its parent
+	trash_entry(&conn, &s, anna, None).unwrap();
+	restore_entry(&conn, &s, anna).unwrap();
+	assert_eq!(get_entry(&conn, anna, "de").unwrap().parent_id, Some(team));
 }
 
 #[test]

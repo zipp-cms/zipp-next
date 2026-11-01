@@ -218,6 +218,14 @@ impl Schema {
 			}
 		}
 
+		match section.max_level {
+			Some(0) => return Err("the max level is at least 1".into()),
+			Some(_) if section.kind != SectionKind::Structure => {
+				return Err("only structures have a max level".into());
+			}
+			_ => {}
+		}
+
 		let uri = section.uri.as_deref().unwrap_or_default();
 		match section.kind {
 			SectionKind::Single if section.types.len() > 1 => {

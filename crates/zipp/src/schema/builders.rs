@@ -42,6 +42,7 @@ impl Section {
 			type_uris: BTreeMap::new(),
 			site_uris: BTreeMap::new(),
 			uri_if: None,
+			max_level: None,
 		}
 	}
 
@@ -89,6 +90,12 @@ impl Section {
 	/// Only entries with this boolean field on get a page and a uri.
 	pub fn uri_if(mut self, field: &str) -> Self {
 		self.uri_if = Some(field.into());
+		self
+	}
+
+	/// How deep the tree of a structure goes, 1 is only the top.
+	pub fn max_level(mut self, level: u32) -> Self {
+		self.max_level = Some(level);
 		self
 	}
 
