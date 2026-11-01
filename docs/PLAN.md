@@ -117,9 +117,8 @@ commit.
 
 - [ ] Conditions: fields (and tabs) shown only when another field has a
       value, like Craft's field conditions (zandi's `hasPage`)
-- [ ] Markdown field for text editors edit there: `Field::markdown` exists
-      (Events → Description); what is missing is open (a read-only text in
-      the field layout like Craft's tip? a better editor?)
+- [ ] A read-only markdown field: it only shows its text in the field
+      layout (a note, a how-to), like Craft's tip; editors don't edit it
 - [ ] Field width in the editor: 25 %, 50 %, 75 %, 100 %
 - [ ] Settings (globals) without the big title above the fields
 - [ ] Tabs inside blocks?
@@ -148,7 +147,10 @@ commit.
 - [ ] Upload a zip and unpack it into folders?
 - [ ] Backups (database and files, from the studio or `serve`)?
 - [ ] The coding AI (`zipp-agent`, development only today): how far?
-- [ ] A section builder in the studio (how does it fit code-first)?
+- [ ] A section builder in the studio (maybe, operator 2026-11-01): a
+      rough click-together of sections, types and fields that doesn't have
+      to be exact and outputs pseudo code, which an AI then turns into the
+      real schema code
 - [ ] The studio in the user's language?
 - [ ] The Craft import out of the main binary (its own crate or command)?
 - [ ] A better page picker (the tree, search) for relations and links?
