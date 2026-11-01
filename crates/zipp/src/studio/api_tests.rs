@@ -4,6 +4,7 @@ use axum::http::{Request, StatusCode, header};
 use super::api::*;
 use crate::error::Error;
 use crate::schema::tests::site_with_roles;
+use crate::schema::{Field, Section};
 use crate::testing::TestServer;
 
 #[tokio::test]
@@ -86,4 +87,28 @@ async fn the_schema_says_which_field_names_a_block() {
 	assert_eq!(title("button"), "label");
 	// without one the block shows its type
 	assert!(title("text").is_null());
+}
+
+#[tokio::test]
+async fn the_schema_says_which_tabs_are_cards() {
+	let schema = site_with_roles()
+		.section(Section::channel("posts", ["post"]).uri("posts/{slug}"))
+		.entry_tabs(
+			"post",
+			"Post",
+			[
+				("Intro", vec![Field::text("lead")]),
+				("Content", vec![Field::markdown("body")]),
+			],
+		)
+		.tab_card("post", "Intro")
+		.entry_card("event");
+	let ts = TestServer::new(schema);
+	let resp = ts.user(Some("author")).call_json(&SchemaReq {}).await;
+	let comps = resp.unwrap()["components"].as_array().unwrap().clone();
+	let comp = |h: &str| comps.iter().find(|c| c["handle"] == h).unwrap();
+	assert_eq!(comp("post")["tabs"][0]["card"], true);
+	assert!(comp("post")["tabs"][1]["card"].is_null());
+	assert!(comp("post")["card"].is_null());
+	assert_eq!(comp("event")["card"], true);
 }

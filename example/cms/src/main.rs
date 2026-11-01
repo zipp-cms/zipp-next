@@ -383,6 +383,9 @@ fn schema() -> Schema {
 		.block_title("images", "caption")
 		.block_title("button", "link")
 		.block_title("events", "city")
+		// short fields in one card with the labels on the left, like a group
+		.tab_card("article", "Intro")
+		.entry_card("event")
 }
 
 /// A route of the site next to zipp's: the upcoming events as JSON, for a

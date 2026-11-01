@@ -65,6 +65,7 @@
 			errors={{}}
 			{refs}
 			{changed}
+			card={!!comp.card}
 		/>
 	</fieldset>
 {:else}

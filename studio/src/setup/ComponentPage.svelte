@@ -16,17 +16,33 @@
 	// the tabs of the editor, else one card of all fields
 	const groups = $derived.by(() => {
 		if (!c.tabs?.length)
-			return [{ name: 'Fields', fields: c.fields, when: undefined }];
+			return [
+				{
+					name: 'Fields',
+					fields: c.fields,
+					when: undefined,
+					card: c.card,
+				},
+			];
 		const byTab = c.tabs.map(t => ({
 			name: t.name,
 			fields: c.fields.filter(f => t.fields.includes(f.handle)),
 			when: t.when,
+			card: c.card || t.card,
 		}));
 		const rest = c.fields.filter(
 			f => !c.tabs!.some(t => t.fields.includes(f.handle)),
 		);
 		return rest.length
-			? [...byTab, { name: 'Other', fields: rest, when: undefined }]
+			? [
+					...byTab,
+					{
+						name: 'Other',
+						fields: rest,
+						when: undefined,
+						card: false,
+					},
+				]
 			: byTab;
 	});
 
@@ -49,6 +65,7 @@
 					{#if g.when}<span class="muted when">
 							shown when {describeCondition(c, g.when)}
 						</span>{/if}
+					{#if g.card}<span class="muted when">in a card</span>{/if}
 					{#if i === 0}<code class="gql">{gqlType(c)}</code>{/if}
 				</h2>
 				{#if g.fields.length}

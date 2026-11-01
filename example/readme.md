@@ -30,6 +30,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Rich text | the Intro tab · the Text block | the intro only with links; the block also with headings, lists, **buttons** (next to each other one row) and **images** inside the text |
 | Links | a Button block | entry, URL, email, phone or file; external ones open in a new tab |
 | Group, inline group | a page → SEO, Events → Tickets | fields of another component under one name in a box; the event's tickets are an inline group, its fields written right in the field (`Field::group_of`) |
+| Tab in a card | News → an article → Intro · Events | the fields of a tab or a whole type in one card with the labels on the left, like a group (`.tab_card`, `.entry_card`) |
 | Markdown | Events → Description | written as markdown, the website gets it as html |
 | Navigation, table, checkboxes | Settings → Header, Footer · Events → Für wen | a menu with a second level, footer links as rows, some of the options |
 | Dropdown | Images block → Width (3 options: buttons), Events → Sprache (5: a select) | the website sizes the image, filters events by language |

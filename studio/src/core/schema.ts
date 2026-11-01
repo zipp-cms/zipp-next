@@ -130,6 +130,8 @@ export type Component = {
 	fields: Field[];
 	/** the tabs of the editor, none is one tab */
 	tabs?: Tab[];
+	/** all fields of the editor in one card like a group */
+	card?: boolean;
 	icon?: SchemaIcon;
 	/** the field that names a block in its head and the outline */
 	title_field?: string;
@@ -141,7 +143,13 @@ export type Component = {
 export type SchemaIcon = { lucide: string } | { svg: string };
 
 /** A tab of the editor with the handles of its fields. */
-export type Tab = { name: string; fields: string[]; when?: Condition };
+export type Tab = {
+	name: string;
+	fields: string[];
+	when?: Condition;
+	/** its fields in one card like a group */
+	card?: boolean;
+};
 
 export type Site = { handle: string; name: string; language: string };
 

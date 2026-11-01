@@ -4,10 +4,12 @@
 	import { isShown } from './conditions';
 	import FieldLabel from './FieldLabel.svelte';
 	import { fieldComponent } from './registry';
+	import FieldGroup from 'zipp-ui/FieldGroup.svelte';
 
 	/**
 	 * The fields of an entry type or block with their labels and errors:
-	 * on the page the label above its field, inside a block on its left.
+	 * on the page the label above its field, inside a block or a card on
+	 * its left.
 	 */
 	let {
 		schema,
@@ -18,6 +20,7 @@
 		prefix = '',
 		changed = new Set(),
 		only = null,
+		card = false,
 	}: {
 		schema: Schema;
 		component: Component;
@@ -29,6 +32,8 @@
 		changed?: Set<string>;
 		/** the handles of the fields to show, those of a tab */
 		only?: string[] | null;
+		/** in a card like a group, a tab or type of `card` in the code */
+		card?: boolean;
 	} = $props();
 
 	// kinds whose editor has no place for the errors inside its value
@@ -60,44 +65,52 @@
 	);
 </script>
 
-<div class="fields" class:nested={prefix !== ''}>
-	{#each shown as field (field.handle)}
-		{@const path = prefix + field.handle}
-		{@const Input = fieldComponent(field)}
-		<!-- the part of the row it takes, every field full width in narrow
+{#if card}
+	<FieldGroup>{@render list()}</FieldGroup>
+{:else}
+	{@render list()}
+{/if}
+
+{#snippet list()}
+	<div class="fields" class:nested={card || prefix !== ''}>
+		{#each shown as field (field.handle)}
+			{@const path = prefix + field.handle}
+			{@const Input = fieldComponent(field)}
+			<!-- the part of the row it takes, every field full width in narrow
 		places -->
-		<div
-			class="field"
-			class:part={(field.width ?? 100) < 100}
-			style:--span={(field.width ?? 100) / 25}
-		>
-			{#if field.kind !== 'note'}
-				<FieldLabel
-					{schema}
-					{component}
-					{field}
-					{path}
-					changed={changed.has(path)}
-				/>
-			{/if}
-			<div class="value">
-				<Input
-					{schema}
-					{field}
-					{values}
-					{errors}
-					{refs}
-					{path}
-					{changed}
-				/>
-				{#if errors[path]}<p class="error">{errors[path]}</p>{/if}
-				{#each inside(field, path) as e (e)}<p class="error">
-						{e}
-					</p>{/each}
+			<div
+				class="field"
+				class:part={(field.width ?? 100) < 100}
+				style:--span={(field.width ?? 100) / 25}
+			>
+				{#if field.kind !== 'note'}
+					<FieldLabel
+						{schema}
+						{component}
+						{field}
+						{path}
+						changed={changed.has(path)}
+					/>
+				{/if}
+				<div class="value">
+					<Input
+						{schema}
+						{field}
+						{values}
+						{errors}
+						{refs}
+						{path}
+						{changed}
+					/>
+					{#if errors[path]}<p class="error">{errors[path]}</p>{/if}
+					{#each inside(field, path) as e (e)}<p class="error">
+							{e}
+						</p>{/each}
+				</div>
 			</div>
-		</div>
-	{/each}
-</div>
+		{/each}
+	</div>
+{/snippet}
 
 <style lang="scss">
 	// a row has four quarters, a field takes as many as its width says
@@ -138,9 +151,16 @@
 			> :global(label) {
 				align-self: start;
 				flex-direction: column;
+				flex-wrap: nowrap;
 				align-items: flex-start;
 				gap: 1px;
 				padding-top: 0.4375rem;
+			}
+
+			// in a column its own line is just the next one
+			> :global(label .instructions) {
+				flex-basis: auto;
+				margin-top: 0.25rem;
 			}
 
 			// a note has no label, it sits where the values are

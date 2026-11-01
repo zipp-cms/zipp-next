@@ -195,6 +195,9 @@ pub struct Component {
 	/// migrations' ops.
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub tabs: Vec<Tab>,
+	/// all fields of the editor in one card, see [`Schema::entry_card`]
+	#[serde(default, skip_serializing_if = "std::ops::Not::not")]
+	pub card: bool,
 	/// in the studio's lists and menus, only looks like the tabs
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub icon: Option<Icon>,
@@ -222,6 +225,7 @@ impl Component {
 			entry,
 			fields,
 			tabs: vec![],
+			card: false,
 			icon: None,
 			title_field: None,
 			part_of,
@@ -274,6 +278,9 @@ pub struct Tab {
 	/// shown only when it holds, see [`Schema::tab_when`]
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub when: Option<Condition>,
+	/// its fields in one card, see [`Schema::tab_card`]
+	#[serde(default, skip_serializing_if = "std::ops::Not::not")]
+	pub card: bool,
 }
 
 impl Schema {
@@ -351,6 +358,30 @@ impl Schema {
 			panic!("block_title: there is no block {block}");
 		};
 		c.title_field = Some(field.into());
+		self
+	}
+
+	/// Shows the fields of a tab in one card with the labels on the left,
+	/// like a group, after the type: `.tab_card("article", "Intro")`. For
+	/// tabs of several short fields, a long column of them reads badly.
+	pub fn tab_card(mut self, component: &str, tab: &str) -> Self {
+		let t = self
+			.get_mut(component)
+			.and_then(|c| c.tabs.iter_mut().find(|t| t.name == tab));
+		let Some(t) = t else {
+			panic!("tab_card: {component} has no tab {tab}");
+		};
+		t.card = true;
+		self
+	}
+
+	/// [`Schema::tab_card`] for every tab of an entry type, or its one
+	/// page when it has none: `.entry_card("event")`.
+	pub fn entry_card(mut self, component: &str) -> Self {
+		let Some(c) = self.get_mut(component).filter(|c| c.entry) else {
+			panic!("entry_card: there is no entry type {component}");
+		};
+		c.card = true;
 		self
 	}
 
@@ -464,6 +495,7 @@ impl Schema {
 				name: tab.into(),
 				fields: tab_fields.iter().map(|f| f.handle.clone()).collect(),
 				when: None,
+				card: false,
 			});
 			fields.extend(tab_fields);
 		}

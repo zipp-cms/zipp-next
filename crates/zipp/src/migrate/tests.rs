@@ -318,6 +318,14 @@ fn conditions_need_no_migration() {
 		name: "Content".into(),
 		fields: vec!["city".into()],
 		when: Some(Condition::filled("price")),
+		card: false,
 	}];
+	assert_eq!(diff(&s, &s2, &[]).unwrap(), []);
+}
+
+#[test]
+fn cards_need_no_migration() {
+	let s = site();
+	let s2 = s.clone().entry_card("event");
 	assert_eq!(diff(&s, &s2, &[]).unwrap(), []);
 }

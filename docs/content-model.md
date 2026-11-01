@@ -99,6 +99,10 @@ needs no migration. Setup shows each type's editor as editors see it.
 `.tab_when("page", "Page", Condition::on("hasPage"))` after the type
 shows a tab only while the condition holds, for all its fields; it
 can't look at a field of the tab itself.
+`.tab_card("article", "Intro")` shows a tab's fields in one card with
+the labels on the left, like a group, `.entry_card("event")` all tabs of
+a type or its one page without tabs; the title stays above. Only looks
+too, no migration.
 
 `.icon("event", "calendar")` gives an entry type or a block an icon of
 [Lucide](https://lucide.dev/icons) by its name, `.icon("logo",
@@ -230,6 +234,10 @@ What an editor sees is the field list, so it should read like the page:
   `Field::group` when several types share them (an intro, SEO). A
   bordered box with a name is easier to read than a long flat list.
 - Big entry types get tabs (`entry_tabs`), e.g. Content and SEO.
+- A tab (or a type without tabs) of several short fields goes into a
+  card (`.tab_card`, `.entry_card`): a column of full-width fields with
+  their labels above reads badly, rows with the labels on the left like
+  a group read well. A tab of blocks stays without one.
 - Short fields share a row with `.width(25)` or `.width(50)`: a date,
   a city, a price, a switch.
 - Labels in the editors' language, `.instructions("…")` where a field

@@ -74,9 +74,9 @@
 	$effect(() => {
 		if (tabs.length && !tabs.some(t => t.name === tab)) tab = tabs[0].name;
 	});
-	const shownFields = $derived(
-		tabs.find(t => t.name === tab)?.fields ?? null,
-	);
+	const shownTab = $derived(tabs.find(t => t.name === tab));
+	const shownFields = $derived(shownTab?.fields ?? null);
+	const card = $derived(!!(comp?.card || shownTab?.card));
 	// a global: a single without a page, its title is the section's name
 	const global = $derived(
 		single &&
@@ -271,6 +271,7 @@
 								refs={ed.refs}
 								changed={ed.changed}
 								only={shownFields}
+								{card}
 							/>
 						</fieldset>
 					{/if}
