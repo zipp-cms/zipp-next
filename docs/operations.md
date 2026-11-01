@@ -19,6 +19,12 @@ SQLite database, default `zipp.db`):
   Mail below
 - `import-craft <export.json> [--volume handle=dir] [--site craft=zipp]`:
   imports a Craft site into a database without content, see below
+- `backup <dir> [--files dir] [--keep n]`: a backup of the database and
+  the files, also while the server runs, see Backups
+- `restore <backup> [--files dir]`: puts a backup back, the server
+  stopped
+
+`--db` can also be `ZIPP_DB`, `--files` `ZIPP_FILES`.
 
 ## Sessions
 
@@ -47,15 +53,17 @@ password.
 
 | Option | Environment | |
 |---|---|---|
-| `--listen` | | address, default `127.0.0.1:8090` |
-| `--files` | | where uploads go, default `files` |
-| `--public-url` | | put before asset urls when the frontend runs elsewhere |
-| `--site-url de=https://…` | | the url of each site |
+| `--listen` | `ZIPP_LISTEN` | address, default `127.0.0.1:8090` |
+| `--files` | `ZIPP_FILES` | where uploads go, default `files` |
+| `--public-url` | `ZIPP_PUBLIC_URL` | put before asset urls when the frontend runs elsewhere |
+| `--site-url de=https://…` | `ZIPP_SITE_URL` | the url of each site (environment: separated by commas) |
 | `--graphql-token` | `ZIPP_GRAPHQL_TOKEN` | the token frontends send, GraphQL is closed without it |
 | `--dev` | `ZIPP_DEV` | development: GraphiQL, GraphQL open without a token, noindex |
 | `--noindex` | `ZIPP_NOINDEX` | a staging site: noindex everywhere, robots.txt disallows all |
-| `--openrouter-key-file` | | turns on the AI chat |
-| `--frame-ancestor` | | a site that may show the studio in a frame |
+| `--openrouter-key-file` | `ZIPP_OPENROUTER_KEY_FILE` | turns on the AI chat |
+| `--frame-ancestor` | `ZIPP_FRAME_ANCESTOR` | a site that may show the studio in a frame |
+| `--backup-dir` | `ZIPP_BACKUP_DIR` | a backup a day into it, see Backups |
+| `--backup-keep` | `ZIPP_BACKUP_KEEP` | how many stay, default 14 |
 | `--smtp-url` | `ZIPP_SMTP_URL` | the SMTP server of mails, see below; without it mails are only logged |
 | `--mail-from` | `ZIPP_MAIL_FROM` | their sender, `Website <cms@example.ch>`, needed with `--smtp-url` |
 
@@ -70,8 +78,106 @@ Sites, transforms and roles and send themselves one there. In
 development Mailpit catches them: `mailpit --smtp 127.0.0.1:1025`, its
 inbox on `http://127.0.0.1:8025`.
 
+### Backups
+
+`<cms> backup /backups` writes `/backups/2026-11-01T08-00-00/` with
+`zipp.db` and `files/`. The database is a snapshot (`VACUUM INTO`), so
+it works while the server runs; never copy the `.db` of a running
+server, its last changes are in the `-wal` file. Files that didn't
+change since the last backup are hard links to it: each backup is a
+whole copy to restore from, but an asset library takes its space once.
+Image transforms are left out, they are made again. `--keep 14`
+removes all but the last 14.
+
+`serve --backup-dir /backups` does it itself: at the start when the
+last backup is older than a day, then daily, keeping `--backup-keep`
+(14). A failed backup is logged and tried again an hour later; the
+server goes on. Copy the backups to another machine too (rsync with
+`-H` keeps the links), a backup on the same disk only helps against
+mistakes.
+
+To restore: stop the server, `<cms> restore /backups/2026-11-01T08-00-00`
+(with the `--db` and `--files` of `serve`), start it. `restore`
+replaces the database and the files folder and refuses while a server
+has the database open. By hand it is the same: stop, copy `zipp.db` to
+`--db` (delete an old `zipp.db-wal` and `-shm`), copy `files/` to
+`--files`, start. A backup of an older version of the cms is migrated
+by `serve` like any database.
+
 A release build is a single binary with the api, the studio and the
 migrations; debug builds read the migrations from disk.
+
+## Hosting
+
+A site's cms runs as a container image: `example/cms/Dockerfile` builds
+the release binary (Rust image) and puts it into a slim Debian image as
+`cms`, run by the user `zipp` (uid 1000). Everything it keeps is in the
+volume `/data`: `zipp.db`, `files/` and a backup a day in `backups/`
+(`ZIPP_DB`, `ZIPP_FILES`, `ZIPP_BACKUP_DIR` are set). It listens on
+port 8090.
+
+- The example's context is the repository, zipp is a path dependency:
+  `docker build -f example/cms/Dockerfile -t example-cms .` (with the
+  `.dockerignore` of the repository).
+- A site's own cms crate (zipp as a git dependency) copies the
+  Dockerfile into its repository, builds from there and sets
+  `--build-arg PACKAGE=<its crate>`, the name of the binary.
+- The commands run in the container: `docker compose exec cms cms user
+  anna@example.ch`, `docker compose exec cms cms backup`; a restore
+  with the cms stopped: `docker compose stop cms`, `docker compose run
+  --rm cms restore /data/backups/2026-11-01T08-00-00`, `docker compose
+  start cms`.
+
+Next to a crelte frontend, behind traefik (on its network `traefik`,
+the hosts are the site's):
+
+```yaml
+services:
+  cms:
+    image: registry.example.ch/site/cms:latest
+    restart: unless-stopped
+    environment:
+      ZIPP_PUBLIC_URL: https://cms.example.ch
+      ZIPP_SITE_URL: de=https://example.ch,en=https://example.ch/en
+      ZIPP_GRAPHQL_TOKEN: ${GRAPHQL_TOKEN}
+      ZIPP_SMTP_URL: ${SMTP_URL}
+      ZIPP_MAIL_FROM: Website <cms@example.ch>
+    volumes:
+      - ./data:/data
+      # backups on another disk than the data
+      - /mnt/backups/site:/data/backups
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.site-cms.rule=Host(`cms.example.ch`)
+      - traefik.http.routers.site-cms.entrypoints=websecure
+      - traefik.http.routers.site-cms.tls.certresolver=letsencrypt
+      - traefik.http.services.site-cms.loadbalancer.server.port=8090
+    networks: [traefik]
+
+  frontend:
+    image: registry.example.ch/site/frontend:latest
+    restart: unless-stopped
+    volumes:
+      # crelte reads ENDPOINT_URL (https://cms.example.ch/api/graphql),
+      # ENDPOINT_TOKEN (the GRAPHQL_TOKEN), FRONTEND_URL and
+      # CRAFT_BASE_CP_URL (https://cms.example.ch) from ../craft/.env
+      - ./frontend.env:/craft/.env:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.site-web.rule=Host(`example.ch`)
+      - traefik.http.routers.site-web.entrypoints=websecure
+      - traefik.http.routers.site-web.tls.certresolver=letsencrypt
+      - traefik.http.services.site-web.loadbalancer.server.port=8080
+    networks: [traefik]
+
+networks:
+  traefik:
+    external: true
+```
+
+`GRAPHQL_TOKEN` and `SMTP_URL` come from an `.env` next to the compose
+file. `./data` belongs to uid 1000 (`chown 1000:1000 data`). An update
+is a new image: `serve` applies its migrations at the start.
 
 ## Migrations from the code
 

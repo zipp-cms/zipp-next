@@ -14,6 +14,8 @@ pub(super) async fn serve(
 		site_url: site_urls,
 		openrouter_key_file: key_file,
 		frame_ancestor,
+		backup_dir,
+		backup_keep,
 		graphql_token,
 		dev,
 		noindex,
@@ -79,6 +81,14 @@ pub(super) async fn serve(
 	};
 	tokio::spawn(watch_dates(state.clone()));
 	tokio::spawn(empty_trash(state.clone()));
+	if let Some(dir) = backup_dir {
+		tokio::spawn(backups(
+			db_path.into(),
+			state.files.clone(),
+			dir,
+			backup_keep,
+		));
+	}
 	let app = app(state, routes);
 
 	let listener = tokio::net::TcpListener::bind(&listen)
@@ -153,6 +163,43 @@ async fn empty_trash(state: AppState) {
 		if let Err(e) = crate::trash::purge_old(&state.db.conn(), &state.files)
 		{
 			tracing::warn!("emptying the trash: {e}");
+		}
+	}
+}
+
+/// A backup a day: checked hourly, so it runs at the start when the
+/// last one is older and then about the same time each day. A failure
+/// is logged and tried again the next hour.
+async fn backups(db: PathBuf, files: PathBuf, dir: PathBuf, keep: usize) {
+	const HOUR: i64 = 3600 * 1000;
+	let mut tick = tokio::time::interval(std::time::Duration::from_secs(3600));
+	loop {
+		tick.tick().await;
+		let (db, files, dir) = (db.clone(), files.clone(), dir.clone());
+		// a bit less than a day, the hourly tick doesn't move it later
+		let res = tokio::task::spawn_blocking(move || {
+			let now = crate::db::now();
+			let last = crate::backup::list(&dir)
+				.ok()
+				.and_then(|l| l.last().map(|(t, _)| *t));
+			if last.is_some_and(|t| now - t < 23 * HOUR) {
+				return Ok(None);
+			}
+			let w = crate::backup::backup(&db, &files, &dir, now)?;
+			crate::backup::prune(&dir, keep).map_err(|e| e.to_string())?;
+			Ok::<_, String>(Some(w))
+		})
+		.await;
+		match res {
+			Ok(Ok(Some(w))) => info!(
+				"backup {}: {} files copied, {} linked",
+				w.dir.display(),
+				w.copied,
+				w.linked
+			),
+			Ok(Ok(None)) => {}
+			Ok(Err(e)) => tracing::warn!("backup: {e}"),
+			Err(e) => tracing::warn!("backup: {e}"),
 		}
 	}
 }

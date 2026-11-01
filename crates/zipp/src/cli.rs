@@ -2,7 +2,7 @@ use super::*;
 
 #[derive(Debug, Parser)]
 pub(super) struct Opts {
-	#[arg(long, default_value = "zipp.db")]
+	#[arg(long, env = "ZIPP_DB", default_value = "zipp.db")]
 	pub(super) db: PathBuf,
 	#[command(subcommand)]
 	pub(super) cmd: Cmd,
@@ -10,26 +10,34 @@ pub(super) struct Opts {
 
 #[derive(Debug, clap::Args)]
 pub(super) struct ServeArgs {
-	#[arg(long, default_value = "127.0.0.1:8090")]
+	#[arg(long, env = "ZIPP_LISTEN", default_value = "127.0.0.1:8090")]
 	pub(super) listen: String,
 	/// Where uploaded files go
-	#[arg(long, default_value = "files")]
+	#[arg(long, env = "ZIPP_FILES", default_value = "files")]
 	pub(super) files: PathBuf,
 	/// Put before asset urls in GraphQL, e.g. `https://cms.example.com`
 	/// when the frontend runs on another domain
-	#[arg(long, default_value = "")]
+	#[arg(long, env = "ZIPP_PUBLIC_URL", default_value = "")]
 	pub(super) public_url: String,
 	/// The url of a site for crelte and `url` in GraphQL:
-	/// `--site-url de=https://example.ch`, repeat for each site
-	#[arg(long)]
+	/// `--site-url de=https://example.ch`, repeat for each site (in the
+	/// environment separated by commas)
+	#[arg(long, env = "ZIPP_SITE_URL", value_delimiter = ',')]
 	pub(super) site_url: Vec<String>,
 	/// A file with an OpenRouter api key, turns on the AI chat
-	#[arg(long)]
+	#[arg(long, env = "ZIPP_OPENROUTER_KEY_FILE")]
 	pub(super) openrouter_key_file: Option<PathBuf>,
 	/// A site that may show the studio in a frame, like a dashboard:
 	/// `--frame-ancestor https://dash.example.com`, repeat for more
-	#[arg(long)]
+	#[arg(long, env = "ZIPP_FRAME_ANCESTOR", value_delimiter = ',')]
 	pub(super) frame_ancestor: Vec<String>,
+	/// A backup a day into this folder (and at the start when the last
+	/// one is older), see `backup`
+	#[arg(long, env = "ZIPP_BACKUP_DIR")]
+	pub(super) backup_dir: Option<PathBuf>,
+	/// How many backups of `--backup-dir` stay
+	#[arg(long, env = "ZIPP_BACKUP_KEEP", default_value_t = 14)]
+	pub(super) backup_keep: usize,
 	/// The token frontends send to GraphQL as `Authorization: Bearer`,
 	/// like Craft's schema tokens; without it GraphQL is closed
 	#[arg(long, env = "ZIPP_GRAPHQL_TOKEN", hide_env_values = true)]
@@ -120,6 +128,65 @@ pub(super) enum Cmd {
 		#[command(flatten)]
 		mail: MailArgs,
 	},
+	/// Back up the database and the files into a new folder of `dir`,
+	/// also while the server runs. Unchanged files are hard links to
+	/// the last backup.
+	Backup {
+		#[arg(env = "ZIPP_BACKUP_DIR")]
+		dir: PathBuf,
+		#[arg(long, env = "ZIPP_FILES", default_value = "files")]
+		files: PathBuf,
+		/// Remove all but the last n backups after it
+		#[arg(long)]
+		keep: Option<usize>,
+	},
+	/// Replace the database and the files with a backup (a folder that
+	/// `backup` wrote). The server has to be stopped.
+	Restore {
+		backup: PathBuf,
+		#[arg(long, env = "ZIPP_FILES", default_value = "files")]
+		files: PathBuf,
+	},
+}
+
+/// See [`Cmd::Backup`].
+pub(super) fn backup(
+	db: &Path,
+	files: &Path,
+	dir: &Path,
+	keep: Option<usize>,
+) -> Result<(), String> {
+	let w = crate::backup::backup(db, files, dir, crate::db::now())?;
+	println!(
+		"Wrote {}: the database, {} files copied, {} unchanged linked",
+		w.dir.display(),
+		w.copied,
+		w.linked
+	);
+	if let Some(keep) = keep {
+		let removed =
+			crate::backup::prune(dir, keep).map_err(|e| e.to_string())?;
+		for path in removed {
+			println!("Removed {}", path.display());
+		}
+	}
+	Ok(())
+}
+
+/// See [`Cmd::Restore`].
+pub(super) fn restore(
+	db: &Path,
+	files: &Path,
+	from: &Path,
+) -> Result<(), String> {
+	crate::backup::restore(from, db, files)?;
+	println!(
+		"Restored {} into {} and {}",
+		from.display(),
+		db.display(),
+		files.display()
+	);
+	Ok(())
 }
 
 /// See [`Cmd::Mail`].

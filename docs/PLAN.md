@@ -146,7 +146,8 @@ commit.
 - [x] Changing the type of an entry later, 1ede0fb
 - [x] Download assets or a folder as a zip
 - [x] Upload a zip and unpack it into folders
-- [ ] Backups (database and files, from the studio or `serve`)?
+- [x] Backups of the database and files: `backup`, `restore`, daily by
+      `serve --backup-dir`; a container image (`example/cms/Dockerfile`)
 - [ ] The coding AI (`zipp-agent`, development only today): how far?
 - [ ] A section builder in the studio (maybe, operator 2026-11-01): a
       rough click-together of sections, types and fields that doesn't have

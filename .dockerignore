@@ -1,0 +1,9 @@
+# the build context of example/cms/Dockerfile is the repository
+target
+**/node_modules
+studio
+example/crelte
+example/cms/files
+**/*.db
+**/*.db-*
+.git

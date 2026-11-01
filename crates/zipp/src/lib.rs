@@ -6,6 +6,7 @@ mod ai;
 pub mod api;
 pub mod assets;
 pub mod auth;
+pub mod backup;
 mod cli;
 pub mod content;
 mod craft;
@@ -286,6 +287,12 @@ impl Cms {
 				add_user(&schema, &opts.db, &email, role.as_deref())
 			}
 			Cmd::Mail { to, mail } => test_mail(&to, &mail),
+			Cmd::Backup { dir, files, keep } => {
+				backup(&opts.db, &files, &dir, keep)
+			}
+			Cmd::Restore { backup, files } => {
+				restore(&opts.db, &files, &backup)
+			}
 		};
 
 		if let Err(e) = res {
