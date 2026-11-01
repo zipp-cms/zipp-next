@@ -146,7 +146,15 @@ arrive as one row. Links in the text point to entries by id.
 
 `Field::group("seo", "seo")` keeps the fields
 of another component together under one name (an object, not a list
-like blocks). `Field::markdown("text")` is shown rendered in the studio
+like blocks), in a box of the editor. Fields that are used only once
+don't need a component: `Field::group_of("tickets", [Field::number(
+"price"), Field::boolean("soldOut")])` lists them right there, the
+schema makes them a block named after the entry type and the field,
+`eventTickets` (GraphQL `eventTickets_Fields`; an inline group `sale`
+in it becomes `eventTicketsSale`), with the field's label as name. Setup shows
+it under its entry type, not with the blocks; a block of the same name
+is refused. Indexed fields stay at the top of an entry type, only those
+are in `entry_values`. `Field::markdown("text")` is shown rendered in the studio
 and comes as `markdown` and `html` from GraphQL.
 
 ## Dropdowns
@@ -212,6 +220,25 @@ studio; put its handle into a nav group like a section.
 like a disabled site in Craft: frontends get none of its entries and it
 is not in `crelteSites` or the sitemaps; editors fill it in, previews and
 admins see it.
+
+## Designing a content model
+
+What an editor sees is the field list, so it should read like the page:
+
+- Fields that belong together go into a group: an inline group
+  (`Field::group_of`) when they are used once, a block component and
+  `Field::group` when several types share them (an intro, SEO). A
+  bordered box with a name is easier to read than a long flat list.
+- Big entry types get tabs (`entry_tabs`), e.g. Content and SEO.
+- Short fields share a row with `.width(25)` or `.width(50)`: a date,
+  a city, a price, a switch.
+- Labels in the editors' language, `.instructions("…")` where a field
+  needs an explanation, `Field::note` for a how-to that concerns
+  several fields (image sizes, what shows where).
+- Fields the website filters or sorts by stay at the top with
+  `.indexed()`; they can't be in a group.
+
+The example's event and pages show it.
 
 ## Roles
 

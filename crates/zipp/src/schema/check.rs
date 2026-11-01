@@ -42,8 +42,19 @@ impl Schema {
 
 		for (i, comp) in self.components.iter().enumerate() {
 			check_handle(&comp.handle)?;
-			if self.components[..i].iter().any(|c| c.handle == comp.handle) {
-				return Err(format!("component {} exists twice", comp.handle));
+			let mut before = self.components[..i].iter();
+			if let Some(other) = before.find(|c| c.handle == comp.handle) {
+				// the handle of an inline group is made, say where from
+				let made =
+					[comp, other].into_iter().find_map(|c| c.part_of.as_ref());
+				return Err(match made {
+					Some(p) => format!(
+						"component {} exists twice, an inline group of {p} \
+						makes it",
+						comp.handle
+					),
+					None => format!("component {} exists twice", comp.handle),
+				});
 			}
 			for (j, tab) in comp.tabs.iter().enumerate() {
 				let at = format!("{}: tab {}", comp.handle, tab.name);

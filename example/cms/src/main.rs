@@ -245,17 +245,6 @@ fn schema() -> Schema {
 				.indexed()
 				.label("Sprache")
 				.width(50),
-				Field::number("price")
-					.range(0.0, 1000.0)
-					.decimals(2)
-					.unit("CHF")
-					.indexed()
-					.width(50),
-				Field::boolean("soldOut").indexed().width(50),
-				// where to get on the waiting list, only while sold out
-				Field::link("waitlist", [LinkKind::Url, LinkKind::Email])
-					.label("Warteliste")
-					.when(Condition::on("soldOut")),
 				// how the image should be, for the editors
 				Field::note(
 					"imageHint",
@@ -263,13 +252,32 @@ fn schema() -> Schema {
 					es steht in der Liste und oben auf der Seite.",
 				),
 				// new images of events go into their folder
-				Field::images("image").max(1).folder("Events").width(50),
-				Field::assets("program")
-					.extensions(["pdf"])
-					.max(1)
-					.folder("Events/Programs")
-					.label("Programm (PDF)")
-					.width(50),
+				Field::images("image").max(1).folder("Events"),
+				// fields that belong together in a box of their own, only
+				// used here: an inline group, the block eventTickets
+				Field::group_of(
+					"tickets",
+					[
+						Field::number("price")
+							.range(0.0, 1000.0)
+							.decimals(2)
+							.unit("CHF")
+							.width(50),
+						Field::boolean("soldOut").width(50),
+						// where to get on the waiting list, only while sold out
+						Field::link(
+							"waitlist",
+							[LinkKind::Url, LinkKind::Email],
+						)
+						.label("Warteliste")
+						.when(Condition::on("soldOut")),
+						Field::assets("program")
+							.extensions(["pdf"])
+							.max(1)
+							.folder("Events/Programs")
+							.label("Programm (PDF)"),
+					],
+				),
 				Field::markdown("description").translatable(),
 				Field::relation("page", ["page"]).max(1).label("More info"),
 			],

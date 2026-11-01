@@ -4,13 +4,16 @@
 	import { gqlType, usedIn, visibleEntryTypes } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
 
-	/** The entry types or the blocks, with where they are used. */
+	/**
+	 * The entry types or the blocks, with where they are used. Inline
+	 * groups are no blocks to reuse, their parent's page links them.
+	 */
 	let { schema, tab }: { schema: Schema; tab: 'types' | 'blocks' } = $props();
 
 	const components = $derived(
 		tab === 'types'
 			? visibleEntryTypes(schema)
-			: schema.components.filter(c => !c.entry),
+			: schema.components.filter(c => !c.entry && !c.part_of),
 	);
 </script>
 

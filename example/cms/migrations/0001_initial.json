@@ -1221,10 +1221,63 @@
             ]
           },
           {
+            "handle": "image",
+            "label": "Image",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1,
+            "folder": "Events"
+          },
+          {
+            "handle": "tickets",
+            "label": "Tickets",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "group",
+            "component": "eventTickets"
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "markdown"
+          },
+          {
+            "handle": "page",
+            "label": "More info",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "page"
+            ],
+            "max": 1
+          }
+        ],
+        "icon": {
+          "lucide": "calendar"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "eventTickets",
+        "name": "Tickets",
+        "entry": false,
+        "fields": [
+          {
             "handle": "price",
             "label": "Price",
             "required": false,
-            "indexed": true,
+            "indexed": false,
             "translatable": false,
             "width": 50,
             "kind": "number",
@@ -1237,7 +1290,7 @@
             "handle": "soldOut",
             "label": "Sold out",
             "required": false,
-            "indexed": true,
+            "indexed": false,
             "translatable": false,
             "width": 50,
             "kind": "boolean"
@@ -1264,24 +1317,11 @@
             "newTab": true
           },
           {
-            "handle": "image",
-            "label": "Image",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "width": 50,
-            "kind": "assets",
-            "images": true,
-            "max": 1,
-            "folder": "Events"
-          },
-          {
             "handle": "program",
             "label": "Programm (PDF)",
             "required": false,
             "indexed": false,
             "translatable": false,
-            "width": 50,
             "kind": "assets",
             "images": false,
             "max": 1,
@@ -1289,31 +1329,9 @@
             "extensions": [
               "pdf"
             ]
-          },
-          {
-            "handle": "description",
-            "label": "Description",
-            "required": false,
-            "indexed": false,
-            "translatable": true,
-            "kind": "markdown"
-          },
-          {
-            "handle": "page",
-            "label": "More info",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "kind": "relation",
-            "types": [
-              "page"
-            ],
-            "max": 1
           }
         ],
-        "icon": {
-          "lucide": "calendar"
-        }
+        "part_of": "event"
       }
     },
     {
@@ -2976,10 +2994,69 @@
             ]
           },
           {
+            "handle": "imageHint",
+            "label": "Image hint",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "note",
+            "text": "**Bild** im Querformat (3:2), mindestens 1600 px breit: es steht in der Liste und oben auf der Seite."
+          },
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1,
+            "folder": "Events"
+          },
+          {
+            "handle": "tickets",
+            "label": "Tickets",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "group",
+            "component": "eventTickets"
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "markdown"
+          },
+          {
+            "handle": "page",
+            "label": "More info",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "page"
+            ],
+            "max": 1
+          }
+        ],
+        "icon": {
+          "lucide": "calendar"
+        }
+      },
+      {
+        "handle": "eventTickets",
+        "name": "Tickets",
+        "entry": false,
+        "fields": [
+          {
             "handle": "price",
             "label": "Price",
             "required": false,
-            "indexed": true,
+            "indexed": false,
             "translatable": false,
             "width": 50,
             "kind": "number",
@@ -2992,7 +3069,7 @@
             "handle": "soldOut",
             "label": "Sold out",
             "required": false,
-            "indexed": true,
+            "indexed": false,
             "translatable": false,
             "width": 50,
             "kind": "boolean"
@@ -3019,33 +3096,11 @@
             "newTab": true
           },
           {
-            "handle": "imageHint",
-            "label": "Image hint",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "kind": "note",
-            "text": "**Bild** im Querformat (3:2), mindestens 1600 px breit: es steht in der Liste und oben auf der Seite."
-          },
-          {
-            "handle": "image",
-            "label": "Image",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "width": 50,
-            "kind": "assets",
-            "images": true,
-            "max": 1,
-            "folder": "Events"
-          },
-          {
             "handle": "program",
             "label": "Programm (PDF)",
             "required": false,
             "indexed": false,
             "translatable": false,
-            "width": 50,
             "kind": "assets",
             "images": false,
             "max": 1,
@@ -3053,31 +3108,9 @@
             "extensions": [
               "pdf"
             ]
-          },
-          {
-            "handle": "description",
-            "label": "Description",
-            "required": false,
-            "indexed": false,
-            "translatable": true,
-            "kind": "markdown"
-          },
-          {
-            "handle": "page",
-            "label": "More info",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "kind": "relation",
-            "types": [
-              "page"
-            ],
-            "max": 1
           }
         ],
-        "icon": {
-          "lucide": "calendar"
-        }
+        "part_of": "event"
       },
       {
         "handle": "header",

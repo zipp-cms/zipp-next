@@ -106,6 +106,10 @@ pub struct Field {
 	pub when: Option<Condition>,
 	#[serde(flatten)]
 	pub kind: FieldKind,
+	/// The fields of a [`Field::group_of`] until the schema makes them a
+	/// component of their own.
+	#[serde(skip)]
+	pub(crate) inline: Option<Vec<Field>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -294,6 +298,7 @@ impl Field {
 			width: 100,
 			when: None,
 			kind,
+			inline: None,
 		}
 	}
 
@@ -446,6 +451,19 @@ impl Field {
 				component: component.into(),
 			},
 		)
+	}
+
+	/// A group of fields of its own, for fields that belong together but
+	/// are only used here: `Field::group_of("tickets", [Field::number(
+	/// "price"), Field::boolean("soldOut")])`. The schema makes them a
+	/// block `eventTickets` of the entry type `event`, its GraphQL type.
+	pub fn group_of(
+		handle: &str,
+		fields: impl IntoIterator<Item = Field>,
+	) -> Self {
+		let mut field = Self::group(handle, "");
+		field.inline = Some(fields.into_iter().collect());
+		field
 	}
 
 	pub fn markdown(handle: &str) -> Self {

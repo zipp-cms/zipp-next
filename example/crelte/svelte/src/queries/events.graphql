@@ -10,7 +10,9 @@ query ($siteId: [QueryArgument], $where: [Where!]) {
 		... on event_Entry {
 			date
 			city
-			soldOut
+			tickets {
+				soldOut
+			}
 			genre {
 				value
 				label

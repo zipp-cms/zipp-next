@@ -8,6 +8,9 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   Build the smallest version that solves the actual need; every code path
   must be reachable today.
 - The content model is code. Don't add ways to change it at runtime.
+  Writing a site's schema: follow "Designing a content model" in
+  `docs/content-model.md` (groups for fields that belong together, tabs,
+  widths, instructions).
 - Content stays plain JSON. Whatever has to be queried gets its own rows
   (`entry_values`, `entry_relations`), written on every save and rebuilt
   after migrations, never a second copy that can drift.

@@ -462,3 +462,60 @@ fn shows_fields_by_their_conditions() {
 	));
 	assert!(shown(serde_json::json!({ "hasLink": false }), "hasLink"));
 }
+
+#[test]
+fn inline_groups_become_blocks_of_their_own() {
+	let s = site().entry_tabs(
+		"concert",
+		"Concert",
+		[(
+			"Content",
+			vec![
+				Field::group_of(
+					"tickets",
+					[
+						Field::number("price").width(50),
+						Field::group_of("sale", [Field::date("start")]),
+					],
+				)
+				.label("Tickets and sale"),
+			],
+		)],
+	);
+	let s = s.section(Section::channel("concerts", ["concert"]));
+	s.check().unwrap();
+
+	let concert = s.get("concert").unwrap();
+	assert_eq!(
+		concert.fields[0].kind,
+		FieldKind::Group {
+			component: "concertTickets".into()
+		}
+	);
+	assert_eq!(concert.tabs[0].fields, ["tickets"]);
+	let tickets = s.get("concertTickets").unwrap();
+	assert!(!tickets.entry);
+	assert_eq!(tickets.name, "Tickets and sale");
+	assert_eq!(tickets.part_of.as_deref(), Some("concert"));
+	assert_eq!(tickets.fields[0].width, 50);
+	let sale = s.get("concertTicketsSale").unwrap();
+	assert_eq!(sale.part_of.as_deref(), Some("concertTickets"));
+	assert_eq!(sale.fields[0].handle, "start");
+
+	// the schema of a migration keeps where it belongs
+	let json = serde_json::to_value(tickets).unwrap();
+	assert_eq!(json["part_of"], "concert");
+	assert!(serde_json::to_value(concert).unwrap()["part_of"].is_null());
+}
+
+#[test]
+fn an_inline_group_named_like_a_block() {
+	let s = site()
+		.section(Section::channel("news", ["news"]))
+		.block("newsTickets", "Tickets", [Field::text("info")])
+		.entry("news", "News", [Field::group_of("tickets", [])]);
+	assert_eq!(
+		s.check().unwrap_err(),
+		"component newsTickets exists twice, an inline group of news makes it"
+	);
+}

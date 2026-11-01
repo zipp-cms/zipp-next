@@ -133,6 +133,8 @@ export type Component = {
 	icon?: SchemaIcon;
 	/** the field that names a block in its head and the outline */
 	title_field?: string;
+	/** an inline group's component: the component it was made for */
+	part_of?: string;
 };
 
 /** An icon of the code: a Lucide icon by its name, or an svg of its own. */

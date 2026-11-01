@@ -29,20 +29,20 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Blocks | Pages → Über uns → Content | text, images, button, upcoming events |
 | Rich text | the Intro tab · the Text block | the intro only with links; the block also with headings, lists, **buttons** (next to each other one row) and **images** inside the text |
 | Links | a Button block | entry, URL, email, phone or file; external ones open in a new tab |
-| Group | a page → SEO | fields of another component under one name |
+| Group, inline group | a page → SEO, Events → Tickets | fields of another component under one name in a box; the event's tickets are an inline group, its fields written right in the field (`Field::group_of`) |
 | Markdown | Events → Description | written as markdown, the website gets it as html |
 | Navigation, table, checkboxes | Settings → Header, Footer · Events → Für wen | a menu with a second level, footer links as rows, some of the options |
 | Dropdown | Images block → Width (3 options: buttons), Events → Sprache (5: a select) | the website sizes the image, filters events by language |
-| Field widths, notes | Events · Images block | date, doors and city in one row, two fields a row below; a note on how the event's image should be (on a phone all full width) |
-| Conditions | Events → Genre, Sold out | *Doors open* only for a concert, *Warteliste* only while the event is sold out; the fields come and go as you click |
+| Field widths, notes | Events · Images block | date, doors and city in one row, two fields a row below and in the tickets; a note on how the event's image should be (on a phone all full width) |
+| Conditions | Events → Genre, Tickets → Sold out | *Doors open* only for a concert, *Warteliste* only while the event is sold out; the fields come and go as you click |
 | Default values | Images block → Width, Events → Sprache | a new block starts *Wide*, a new event *Deutsch* |
 | Email | Settings → Footer → Contact email | the server takes only an address, the website links it with `mailto:` |
 | A field type of another crate | Events → Genre | `crates/zipp-button-group`: Craft's button group with a color per option, its own editor and GraphQL type |
-| Boolean, number, indexed fields | Events | *sold out*, price (CHF, two decimals); the website filters and sorts by them |
+| Boolean, number, indexed fields | Events | *sold out*, price (CHF, two decimals) in the tickets; the website sorts by date and filters by city |
 | Date, date and time | Events → Date, Doors open | the date picker; a day or a day and time, the website sorts events by the date |
 | Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them |
 | Images and transforms | Assets | click an image to set the focal point; crops follow it |
-| Folders, file types, zips | Assets · Events → Programm (PDF) · a folder's ⋯ → Download as zip · upload a zip | folders for the library, downloaded as a zip or unpacked from one; the event's program takes only PDFs and puts them into Events/Programs, its image picker opens in Events |
+| Folders, file types, zips | Assets · Events → Tickets → Programm (PDF) · a folder's ⋯ → Download as zip · upload a zip | folders for the library, downloaded as a zip or unpacked from one; the event's program takes only PDFs and puts them into Events/Programs, its image picker opens in Events |
 | Icons | the navigation, Pages, a page's blocks | entry types, blocks and nav groups with Lucide icons from the code |
 | Block titles | a page's blocks: Button, Images, Upcoming events · Setup → Blocks → Button | a block's head and the outline show the field the code names (`.block_title`): the button's link, the caption, the city |
 | Globals | Settings → Header, Footer | singles without a url, crelte reads them like Craft's globals |

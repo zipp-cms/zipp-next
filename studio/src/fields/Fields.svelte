@@ -154,6 +154,7 @@
 	@container (min-width: 36rem) {
 		.nested .part {
 			display: flex;
+			align-items: stretch;
 			gap: 0.375rem;
 
 			> .value:only-child {
@@ -165,6 +166,7 @@
 	@include max-tablet {
 		.nested .field {
 			display: flex;
+			align-items: stretch;
 			gap: 0.375rem;
 
 			> .value:only-child {

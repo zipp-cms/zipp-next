@@ -108,18 +108,8 @@ async fn the_news_page_filters_by_category() {
 	// the query of the website's news page, `?category=<id>`
 	let query =
 		include_str!("../../crelte/svelte/src/queries/articles.graphql");
-	let body = json!({
-		"query": query,
-		"variables": { "categories": concerts.id.to_string(), "siteId": 1 },
-	});
-	let req = Request::post("/api/graphql")
-		.header(header::CONTENT_TYPE, "application/json")
-		.header(header::AUTHORIZATION, "Bearer test-token")
-		.body(Body::from(body.to_string()))
-		.unwrap();
-	let resp = ts.anonymous().send(req).await;
-	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
-	let data: Value = serde_json::from_slice(&body).unwrap();
+	let vars = json!({ "categories": concerts.id.to_string(), "siteId": 1 });
+	let data = graphql(&ts, query, vars).await;
 
 	let titles = |list: &str| -> Vec<&str> {
 		let list = data["data"][list].as_array();
@@ -128,4 +118,36 @@ async fn the_news_page_filters_by_category() {
 	};
 	assert_eq!(titles("articles"), ["Jazz im Park"]);
 	assert_eq!(titles("categories"), ["Konzerte", "Verein"]);
+}
+
+#[tokio::test]
+async fn tickets_are_a_group_of_the_event() {
+	let ts = TestServer::new(schema());
+	let mut jazz = event("Jazz", "2099-01-01");
+	jazz.0.fields["tickets"] = json!({ "price": 25, "soldOut": true });
+	ts.admin().call(&jazz).await.unwrap();
+	ts.admin()
+		.call(&event("Lesung", "2099-02-01"))
+		.await
+		.unwrap();
+
+	// the query of the events block, the group is the block eventTickets
+	let query = include_str!("../../crelte/svelte/src/queries/events.graphql");
+	let data = graphql(&ts, query, json!({ "siteId": 1 })).await;
+	let events = &data["data"]["events"];
+	assert_eq!(events[0]["tickets"], json!({ "soldOut": true }), "{data}");
+	assert_eq!(events[1]["tickets"], Value::Null);
+}
+
+/// A query of the website, with its token like crelte sends it.
+async fn graphql(ts: &TestServer, query: &str, variables: Value) -> Value {
+	let body = json!({ "query": query, "variables": variables });
+	let req = Request::post("/api/graphql")
+		.header(header::CONTENT_TYPE, "application/json")
+		.header(header::AUTHORIZATION, "Bearer test-token")
+		.body(Body::from(body.to_string()))
+		.unwrap();
+	let resp = ts.anonymous().send(req).await;
+	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+	serde_json::from_slice(&body).unwrap()
 }

@@ -202,6 +202,60 @@ pub struct Component {
 	/// [`Schema::block_title`]. Only looks.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub title_field: Option<String>,
+	/// The component of an inline group ([`Field::group_of`]): the
+	/// component it was made for. Setup lists it there, not as a block.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub part_of: Option<String>,
+}
+
+impl Component {
+	fn new(
+		handle: &str,
+		name: &str,
+		entry: bool,
+		fields: Vec<Field>,
+		part_of: Option<String>,
+	) -> Self {
+		Self {
+			handle: handle.into(),
+			name: name.into(),
+			entry,
+			fields,
+			tabs: vec![],
+			icon: None,
+			title_field: None,
+			part_of,
+		}
+	}
+}
+
+/// Makes the fields of inline groups blocks of their own, named after
+/// the parent and the field (`event` + `tickets` = `eventTickets`), so
+/// content, GraphQL and migrations only know normal groups.
+fn hoist_groups(parent: &str, fields: &mut [Field], out: &mut Vec<Component>) {
+	for f in fields {
+		let Some(mut inner) = f.inline.take() else {
+			continue;
+		};
+		let mut chars = f.handle.chars();
+		let first = chars.next().map(|c| c.to_ascii_uppercase());
+		let handle =
+			format!("{parent}{}{}", first.unwrap_or_default(), chars.as_str());
+		f.kind = FieldKind::Group {
+			component: handle.clone(),
+		};
+
+		let mut nested = vec![];
+		hoist_groups(&handle, &mut inner, &mut nested);
+		out.push(Component::new(
+			&handle,
+			&f.label,
+			false,
+			inner,
+			Some(parent.into()),
+		));
+		out.extend(nested);
+	}
 }
 
 /// How an indexed field is compared and sorted, see
@@ -414,7 +468,7 @@ impl Schema {
 			fields.extend(tab_fields);
 		}
 		self = self.component(handle, name, true, fields);
-		self.components.last_mut().unwrap().tabs = layout;
+		self.get_mut(handle).unwrap().tabs = layout;
 		self
 	}
 
@@ -434,15 +488,12 @@ impl Schema {
 		entry: bool,
 		fields: impl IntoIterator<Item = Field>,
 	) -> Self {
-		self.components.push(Component {
-			handle: handle.into(),
-			name: name.into(),
-			entry,
-			fields: fields.into_iter().collect(),
-			tabs: vec![],
-			icon: None,
-			title_field: None,
-		});
+		let mut fields: Vec<Field> = fields.into_iter().collect();
+		let mut parts = vec![];
+		hoist_groups(handle, &mut fields, &mut parts);
+		self.components
+			.push(Component::new(handle, name, entry, fields, None));
+		self.components.extend(parts);
 		self
 	}
 

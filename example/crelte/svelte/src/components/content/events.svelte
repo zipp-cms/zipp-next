@@ -29,7 +29,7 @@
 			<a href={e.url}>{e.title}</a>
 			<Genre genre={e.genre} />
 			<span>{e.date}, {e.city}</span>
-			{#if e.soldOut}<strong>{$t('events.soldOut')}</strong>{/if}
+			{#if e.tickets?.soldOut}<strong>{$t('events.soldOut')}</strong>{/if}
 		</li>
 	{:else}
 		<li>{$t('events.none')}</li>

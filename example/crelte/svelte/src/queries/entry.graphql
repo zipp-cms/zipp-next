@@ -138,9 +138,11 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 		... on event_Entry {
 			date
 			city
-			price
-			soldOut
 			spokenIn
+			tickets {
+				price
+				soldOut
+			}
 			genre {
 				value
 				label
