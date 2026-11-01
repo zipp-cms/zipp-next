@@ -203,21 +203,4 @@
 			}
 		}
 	}
-
-	@include max-tablet {
-		.side {
-			position: static;
-			height: auto;
-		}
-
-		nav {
-			flex-direction: row;
-			flex-wrap: wrap;
-		}
-
-		.sub,
-		hr {
-			display: none;
-		}
-	}
 </style>

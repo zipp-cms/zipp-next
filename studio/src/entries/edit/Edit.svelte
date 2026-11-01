@@ -30,12 +30,14 @@
 	import EditHeader from './EditHeader.svelte';
 	import EntryHead from './EntryHead.svelte';
 	import EntrySidebar from './EntrySidebar.svelte';
+	import EntryStatus from './EntryStatus.svelte';
 	import RevisionView from './RevisionView.svelte';
 	import TabBar from './TabBar.svelte';
 	import Preview from '../Preview.svelte';
 	import SplitHandle from 'zipp-ui/SplitHandle.svelte';
 	import { SitePreview } from '../preview.svelte';
 	import { previewToken } from '../drafts';
+	import { sideNav } from '../../shell/sideNav.svelte';
 
 	let {
 		schema,
@@ -110,6 +112,20 @@
 	);
 	let liveWidth = $state(0);
 	let resizing = $state(false);
+
+	// the editor gets the sidebar's room while the website is next to it
+	$effect(() => {
+		if (!live) return;
+		sideNav.hidden = true;
+		return () => (sideNav.hidden = false);
+	});
+
+	// too narrow for the entry's sidebar next to the content (live
+	// preview, tablets, phones): its status goes on top, the rest under
+	// it; the window's width until the editor is measured
+	const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+	let editorWidth = $state(0);
+	const narrow = $derived((editorWidth || innerWidth) < 56 * rem);
 
 	function toggleLive() {
 		liveOn = !liveOn;
@@ -200,14 +216,14 @@
 	/>
 
 	<div class:live style:--frame="{liveWidth}px">
-		<div>
+		<div bind:clientWidth={editorWidth}>
 			<ConflictBanner
 				conflict={ed.conflict}
 				onloadtheirs={() => ed.loadTheirs()}
 				onkeepmine={() => ed.keepMine()}
 			/>
 
-			<div class="with-aside">
+			<div class="with-aside" class:narrow>
 				<div class="main">
 					{#if ed.error}<p class="error">{ed.error}</p>{/if}
 
@@ -241,6 +257,18 @@
 									errors={ed.errors}
 								/>
 							</fieldset>
+							{#if narrow}
+								<aside class="strip" aria-label="Status">
+									<EntryStatus
+										{schema}
+										{ed}
+										{secDef}
+										{comp}
+										{may}
+										compact
+									/>
+								</aside>
+							{/if}
 						{/if}
 						{#if tabs.length || isAdmin(schema)}
 							<div class="tabs-row">
@@ -285,6 +313,7 @@
 					{global}
 					{may}
 					{shownFields}
+					{narrow}
 					oncopy={copyFrom}
 					onview={view}
 				/>
@@ -314,10 +343,19 @@
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) var(--frame);
 		gap: 1.25rem;
+	}
 
-		.with-aside {
-			grid-template-columns: 1fr;
+	// the entry's sidebar next to the content when there is room
+	.with-aside {
+		grid-template-columns: minmax(0, 1fr) 18.75rem;
+
+		&.narrow {
+			grid-template-columns: minmax(0, 1fr);
 		}
+	}
+
+	.strip {
+		margin-bottom: 1.125rem;
 	}
 
 	.frame {

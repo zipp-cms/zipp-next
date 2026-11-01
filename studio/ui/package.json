@@ -13,6 +13,7 @@
 		"./date": "./src/date.ts",
 		"./field": "./src/field.svelte.ts",
 		"./layers": "./src/layers.ts",
+		"./pageLead": "./src/pageLead.ts",
 		"./sortable": "./src/sortable.svelte.ts",
 		"./vars.scss": "./vars.scss",
 		"./AddButton.svelte": "./src/AddButton.svelte",

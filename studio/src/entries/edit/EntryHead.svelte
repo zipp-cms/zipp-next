@@ -55,4 +55,15 @@
 			border-bottom-color: var(--accent);
 		}
 	}
+
+	// a narrow editor, see Edit's .main
+	@container (max-width: 30rem) {
+		.head {
+			margin-bottom: 0.875rem;
+		}
+
+		input {
+			font-size: var(--fs-xl);
+		}
+	}
 </style>

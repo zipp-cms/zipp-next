@@ -66,33 +66,46 @@
 			</button>
 		{/if}
 		{#if hasDraft}
-			<button onclick={ondiscard} disabled={ed.busy || !may.edit}>
-				Discard
+			<button
+				onclick={ondiscard}
+				disabled={ed.busy || !may.edit}
+				title="Throw away the unpublished changes"
+			>
+				<Icon name="reset" />
+				<span class="text">Discard</span>
 			</button>
 		{/if}
 		{#if live !== null}
 			<button
-				class="live"
+				class="toggle"
 				class:on={live}
 				aria-pressed={live}
 				onclick={onlive}
 				title="The website next to the editor, with the draft"
 			>
 				<Icon name="live-preview" />
-				Live preview
+				<span class="text">Live preview</span>
 			</button>
 		{/if}
 		<!-- the live preview has its own link to a new tab -->
 		{#if url && !live}
 			{#if hasDraft}
-				<button onclick={onpreview}>
+				<button
+					onclick={onpreview}
+					title="Open the draft on the website"
+				>
 					<Icon name="view" />
-					Preview
+					<span class="text">Preview</span>
 				</button>
 			{:else}
-				<a class="light" href={url} target="_blank">
+				<a
+					class="light"
+					href={url}
+					target="_blank"
+					title="Open the page on the website"
+				>
 					<Icon name="external" />
-					View
+					<span class="text">View</span>
 				</a>
 			{/if}
 		{/if}
@@ -128,9 +141,25 @@
 		}
 	}
 
+	// a narrow editor (live preview, a phone): icons with their title
+	@mixin compact {
+		.text {
+			display: none;
+		}
+	}
+
+	@container page (max-width: 48rem) {
+		@include compact;
+	}
+
+	// in a flyout the bar is the flyout's
+	@include max-tablet {
+		@include compact;
+	}
+
 	// too narrow for the website next to the editor
 	@include max-tablet {
-		.live {
+		.toggle {
 			display: none;
 		}
 	}

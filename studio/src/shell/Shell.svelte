@@ -19,15 +19,21 @@
 	import LoginAsBar from './LoginAsBar.svelte';
 	import { sideNav } from './sideNav.svelte';
 	import { layer } from 'zipp-ui/layers';
+	import { providePageLead } from 'zipp-ui/pageLead';
+	import Icon from 'zipp-ui/Icon.svelte';
 
 	/**
 	 * The frame of the studio's pages: the sidebar, the page, the flyout
-	 * over it. The AI page takes the whole width, its sidebar slides in
-	 * over it (`sideNav`) and goes again with the next page.
+	 * over it. The AI page takes the whole width, the live preview hides
+	 * the sidebar too (`sideNav`), and a phone has no room for it: then
+	 * it slides in over the page from the Menu button before the page's
+	 * title and goes again with the next page.
 	 */
 	let { schema, children }: { schema: Schema; children: Snippet } = $props();
 
 	const wide = $derived(current.path === '/admin/ai');
+	const hidden = $derived(wide || sideNav.hidden);
+	providePageLead({ content: menu });
 
 	$effect(() => {
 		// a new page closes it
@@ -48,13 +54,28 @@
 	}
 </script>
 
+<!-- in every page's top, shown when there is no sidebar -->
+{#snippet menu()}
+	<button
+		type="button"
+		class="icon menu"
+		class:shown={hidden}
+		title="Menu"
+		aria-label="Menu"
+		aria-expanded={sideNav.open}
+		onclick={() => (sideNav.open = true)}
+	>
+		<Icon name="sidebar" size={16} />
+	</button>
+{/snippet}
+
 <LoginAsBar />
 <!-- the AI chat and the website take the whole page -->
-<div class="layout" class:wide>
-	{#if !wide}<Sidebar {schema} {onlogout} />{/if}
+<div class="layout" class:wide class:hidden>
+	{#if !hidden}<Sidebar {schema} {onlogout} />{/if}
 	<main>{@render children()}</main>
 </div>
-{#if wide && sideNav.open}
+{#if sideNav.open}
 	<div class="backdrop" role="presentation" onclick={close}></div>
 	<div class="drawer" use:layer={close}>
 		<Sidebar {schema} {onlogout} />
@@ -70,13 +91,18 @@
 		min-height: 100vh;
 	}
 
+	// a page lays out by its own width, e.g. the entry editor's bar
 	main {
+		container: page / inline-size;
 		min-width: 0;
 		padding: 0 var(--page-pad) 2rem;
 	}
 
-	.wide {
+	.hidden {
 		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.wide {
 		height: 100vh;
 
 		main {
@@ -99,6 +125,7 @@
 		left: 0;
 		z-index: var(--z-overlay);
 		width: 14.5rem;
+		max-width: 85vw;
 		box-shadow: var(--shadow-flyout);
 		animation: slide 0.18s ease-out;
 	}
@@ -109,9 +136,22 @@
 		}
 	}
 
+	.menu:not(.shown) {
+		display: none;
+	}
+
+	// a phone: the sidebar only from the Menu button
 	@include max-tablet {
 		.layout {
-			grid-template-columns: 1fr;
+			grid-template-columns: minmax(0, 1fr);
+
+			> :global(.side) {
+				display: none;
+			}
+		}
+
+		.menu:not(.shown) {
+			display: inline-flex;
 		}
 	}
 </style>

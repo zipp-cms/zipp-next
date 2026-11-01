@@ -81,10 +81,4 @@
 		color: var(--muted);
 		font-size: var(--fs-xs);
 	}
-
-	@include max-tablet {
-		.me {
-			margin-top: 0;
-		}
-	}
 </style>

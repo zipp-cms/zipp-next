@@ -95,6 +95,8 @@
 </div>
 
 <style lang="scss">
+	@use '../vars' as *;
+
 	.backdrop {
 		position: fixed;
 		inset: 0;
@@ -119,6 +121,13 @@
 
 	.narrow {
 		width: min(47.5rem, 92vw);
+	}
+
+	// a phone has no room for the page beside it
+	@include max-tablet {
+		.flyout {
+			width: 100vw;
+		}
 	}
 
 	@keyframes slide {

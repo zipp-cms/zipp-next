@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import Crumbs from './Crumbs.svelte';
 	import { flyoutBar } from './flyoutBar';
+	import { pageLead } from './pageLead';
 
 	/**
 	 * The bar at the top of every page: where it is (crumbs or a title), a
@@ -30,6 +31,8 @@
 
 	// in a flyout it is the flyout's bar
 	const host = flyoutBar();
+	// the frame's menu button, not in a flyout
+	const frame = pageLead();
 	$effect(() => {
 		if (!host) return;
 		host.content = inner;
@@ -38,6 +41,7 @@
 </script>
 
 {#snippet inner()}
+	{#if !host}{@render frame?.content?.()}{/if}
 	{@render lead?.()}
 	<h1>
 		{#if crumbs}<Crumbs items={crumbs} />{:else}{title}{/if}

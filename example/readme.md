@@ -21,7 +21,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Status per site | every list | `DE EN`: a badge per site, grey where it is not published |
 | Drafts | change any field | the orange *Unpublished changes*, the website stays as it is until **Publish** |
 | Preview | an entry with a draft → **Preview** | the website with your draft, for a day |
-| Live preview | an event → **Live preview**, type in the title | the page next to the editor, it shows the new title a moment later where you are; desktop, tablet or phone width, drag the border |
+| Live preview | an event → **Live preview**, type in the title | the page next to the editor, it shows the new title a moment later where you are; desktop, tablet or phone width, drag the border; the navigation makes room, the editor gets compact |
 | What changed | the orange dots | fields that differ from the live version, also inside blocks |
 | Trash | delete a page or an asset → Trash in the navigation | it is gone from the website, **Restore** brings it back with the pages below it; after 30 days it is deleted for good |
 | Revisions | Options → Revisions | what each one changed; click to look, **Restore** to go back |

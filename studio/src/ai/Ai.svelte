@@ -4,7 +4,6 @@
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import SplitHandle from 'zipp-ui/SplitHandle.svelte';
-	import { sideNav } from '../shell/sideNav.svelte';
 	import { hasAgent } from '../core/access';
 	import { Chat } from './chat.svelte';
 	import { markdown } from '../core/markdown';
@@ -98,18 +97,6 @@
 			label="Width of the chat"
 		/>
 		<PageTop title="AI" bleed={false}>
-			{#snippet lead()}
-				<button
-					type="button"
-					class="icon"
-					title="Menu"
-					aria-label="Menu"
-					aria-expanded={sideNav.open}
-					onclick={() => (sideNav.open = true)}
-				>
-					<Icon name="sidebar" size={16} />
-				</button>
-			{/snippet}
 			{#snippet actions()}
 				<button
 					onclick={() => chat.clear()}

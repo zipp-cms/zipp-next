@@ -18,7 +18,9 @@ kept in the browser, the switch too). One token per opening (it lasts a
 day, a new one comes before); after every save of the draft the page
 loads again where it is, like Craft's (crelte caches the queries of a
 page in the browser, only a load shows new content). A new entry has a
-preview once it is created, an entry in the flyout none.
+preview once it is created, an entry in the flyout none. The studio's
+navigation makes room while it is on, the Menu button before the title
+slides it in.
 
 What a site's frontend needs for it (and for the AI page):
 
@@ -40,6 +42,12 @@ parent and slug, copying the content from another site, and the
 revisions. The url isn't repeated there, View and the live preview open
 it. A global (a single without a page)
 has no title and only the copying and revisions there.
+
+A narrow editor (the live preview, a tablet, a phone) has no room for
+the sidebar: the status, dates, type and slug go between the title and
+the fields, compact, the rest under the fields with the revisions
+closed; the buttons of the bar keep only their icons. On a phone the
+navigation is behind the Menu button on every page.
 
 ## Users
 

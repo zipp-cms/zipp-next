@@ -1,15 +1,8 @@
 <script lang="ts">
-	import DateTime from './DateTime.svelte';
-	import Switch from 'zipp-ui/Switch.svelte';
-	import { dateState } from '../api';
-	import { shortTime } from '../../core/format';
-	import { setupPath } from '../../core/paths';
-	import SiteBadges from '../SiteBadges.svelte';
 	import BlockOutline from './BlockOutline.svelte';
-	import { componentName } from '../../core/schema';
+	import EntryStatus from './EntryStatus.svelte';
 	import type { Block, Component, Schema, Section } from '../../core/schema';
 	import type { Revision } from '../drafts';
-	import { setSite } from '../../core/router.svelte';
 	import RevisionList from './RevisionList.svelte';
 	import type { EntryEditor, May } from './entryEditor.svelte';
 
@@ -17,7 +10,9 @@
 	 * Next to the content like Craft's sidebar: the status in each site,
 	 * type, parent and slug, the outline of the blocks, copying from
 	 * another site and the revisions. A global has no page and is always
-	 * live, it has no status, slug or type.
+	 * live, it has no status, slug or type. A `narrow` editor has the
+	 * status on top (`EntryStatus`), the rest goes under the content with
+	 * the revisions closed.
 	 */
 	let {
 		schema,
@@ -27,6 +22,7 @@
 		global,
 		may,
 		shownFields,
+		narrow,
 		oncopy,
 		onview,
 	}: {
@@ -38,12 +34,13 @@
 		may: May;
 		/** the fields of the open tab, all without tabs */
 		shownFields: string[] | null;
+		/** the editor is too narrow for a column on the side */
+		narrow: boolean;
 		oncopy: (site: string) => void;
 		onview: (rev: Revision) => void;
 	} = $props();
 
 	const isNew = $derived(ed.id === null);
-	const single = $derived(secDef.kind === 'single');
 	const multiSite = $derived(schema.sites.length > 1);
 
 	// the blocks fields on screen, each with its blocks
@@ -57,144 +54,11 @@
 			}))
 			.filter(o => o.blocks.length),
 	);
-
-	/** a published entry its dates keep off the website, and why */
-	const waiting = $derived(dateState(ed.dates));
 </script>
 
-<aside>
-	{#if !global}
-		<!-- read only for a role that may only look; the status and the
-		dates that keep it off the website first, then what the entry is -->
-		<div class="card status">
-			<div class="part">
-				<fieldset class="inline" disabled={!may.edit}>
-					<Switch bind:checked={ed.published} disabled={!may.publish}>
-						<span class="published">
-							{#if ed.changed.has('published')}<span
-									class="changed-dot"
-								></span>{/if}
-							Published in {schema.sites.find(
-								s => s.handle === ed.site,
-							)?.name}
-						</span>
-					</Switch>
-				</fieldset>
-				<!-- the sites to switch to, also for who may only look -->
-				{#if multiSite && !isNew}
-					<SiteBadges
-						{schema}
-						published={ed.perSite}
-						onselect={setSite}
-					/>
-				{/if}
-				{#if ed.published && waiting}
-					<span class="note waiting">
-						{waiting === 'pending'
-							? `Not live yet, from ${shortTime(ed.dates.postDate!)}`
-							: `Not live anymore, expired ${shortTime(ed.dates.expiryDate!)}`}
-					</span>
-				{/if}
-			</div>
-
-			<!-- in every site, like Craft's -->
-			{#if !single}
-				<fieldset class="part" disabled={!may.edit}>
-					<label>
-						<span>
-							{#if ed.changed.has('postDate')}<span
-									class="changed-dot"
-								></span>{/if}Post date
-						</span>
-						<DateTime
-							label="Post date"
-							placeholder="When published"
-							value={ed.dates.postDate}
-							onchange={v => (ed.dates.postDate = v)}
-						/>
-					</label>
-					<label>
-						<span>
-							{#if ed.changed.has('expiryDate')}<span
-									class="changed-dot"
-								></span>{/if}Expiry date
-						</span>
-						<DateTime
-							label="Expiry date"
-							placeholder="Never"
-							value={ed.dates.expiryDate}
-							onchange={v => (ed.dates.expiryDate = v)}
-						/>
-						{#if ed.errors.expiryDate}<span class="error">
-								{ed.errors.expiryDate}
-							</span>{/if}
-					</label>
-				</fieldset>
-			{/if}
-
-			<fieldset class="part" disabled={!may.edit}>
-				<label>
-					<span>
-						{#if ed.changed.has('type')}<span
-								class="changed-dot"
-							></span>{/if}Type
-					</span>
-					{#if secDef.types.length > 1}
-						<select
-							value={ed.ty}
-							onchange={e => {
-								// asked first when content would go
-								if (!ed.changeType(e.currentTarget.value))
-									e.currentTarget.value = ed.ty;
-							}}
-						>
-							{#each secDef.types as t (t)}
-								<option value={t}>
-									{componentName(schema, t)}
-								</option>
-							{/each}
-						</select>
-					{:else}
-						<a
-							class="value"
-							href={setupPath('types', comp.handle)}
-							title="Its fields in Setup"
-						>
-							{comp.name}
-						</a>
-					{/if}
-				</label>
-
-				{#if isNew && ed.parents.length}
-					<label>
-						<span>Parent</span>
-						<select bind:value={ed.parentId}>
-							<option value={null}>None, on the top</option>
-							{#each ed.parents as p (p.id)}
-								<option value={p.id}>{p.title}</option>
-							{/each}
-						</select>
-					</label>
-				{/if}
-				<!-- the url is under View and in the live preview -->
-				{#if !single}
-					<label>
-						<span>
-							{#if ed.changed.has('slug')}<span
-									class="changed-dot"
-								></span>{/if}Slug
-						</span>
-						<input
-							placeholder="from the title"
-							bind:value={ed.slug}
-						/>
-						{#if ed.errors.slug}<span class="error">
-								{ed.errors.slug}
-							</span>{/if}
-					</label>
-				{/if}
-			</fieldset>
-		</div>
+<aside class:narrow>
+	{#if !global && !narrow}
+		<EntryStatus {schema} {ed} {secDef} {comp} {may} />
 	{/if}
 
 	{#each outlines as o (o.field.handle)}
@@ -227,16 +91,25 @@
 		</div>
 	{/if}
 
-	{#if ed.revisions.length}
+	{#snippet revisions()}
+		<RevisionList
+			revisions={ed.revisions}
+			{comp}
+			{multiSite}
+			{onview}
+			onrestore={may.edit ? rev => ed.restore(rev) : null}
+		/>
+	{/snippet}
+	{#if ed.revisions.length && narrow}
+		<!-- at the end of a long page, closed -->
+		<details class="card">
+			<summary>Revisions · {ed.revisions.length}</summary>
+			{@render revisions()}
+		</details>
+	{:else if ed.revisions.length}
 		<div class="card">
 			<h3>Revisions</h3>
-			<RevisionList
-				revisions={ed.revisions}
-				{comp}
-				{multiSite}
-				{onview}
-				onrestore={may.edit ? rev => ed.restore(rev) : null}
-			/>
+			{@render revisions()}
 		</div>
 	{/if}
 </aside>
@@ -250,6 +123,13 @@
 		gap: 0.75rem;
 		max-height: calc(100vh - 5rem);
 		overflow-y: auto;
+
+		// under the content
+		&.narrow {
+			position: static;
+			max-height: none;
+			overflow: visible;
+		}
 	}
 
 	.card {
@@ -257,23 +137,6 @@
 		flex-direction: column;
 		gap: 0.875rem;
 		padding: 0.75rem;
-	}
-
-	// the status card in parts with a line between them
-	.status {
-		gap: 0;
-		padding: 0;
-	}
-
-	.part {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 0.75rem;
-
-		& + .part {
-			border-top: 1px solid var(--line);
-		}
 	}
 
 	label {
@@ -287,27 +150,22 @@
 		}
 	}
 
-	.published {
-		font-size: var(--fs-md);
-		font-weight: 500;
-	}
-
-	.waiting {
-		color: var(--warn);
-	}
-
-	// only disables, the card lays out what is in it
-	.inline {
-		display: contents;
-	}
-
-	.value {
-		color: var(--text);
-	}
-
-	h3 {
+	h3,
+	summary {
 		margin: 0 0 -0.375rem;
 		font-size: var(--fs-sm);
 		font-weight: 600;
+	}
+
+	summary {
+		cursor: pointer;
+	}
+
+	details:not([open]) {
+		gap: 0;
+
+		summary {
+			margin: 0;
+		}
 	}
 </style>
