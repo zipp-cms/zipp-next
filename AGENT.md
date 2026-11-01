@@ -91,7 +91,8 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
     for the fields of plugins), `ItemActions`
     (duplicate, remove in every list), `EntryChip` and `AssetChip` (a
     chosen entry or file), `AddButton`, `UploadButton`, `SearchInput`,
-    `Segmented` (tabs and short choices), `entries/EntrySearch`,
+    `Segmented` (tabs and short choices), `Switch` (yes or no),
+    `CheckGroup` (some of a few choices), `entries/EntrySearch`,
     `entries/SiteBadges`,
     `assets/AssetPicker`;
   - text: `.muted`, `.note`, `.truncate`, `label.stacked`, `label.check`.

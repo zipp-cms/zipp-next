@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { FieldOf, Values } from '../core/schema';
 	import { valueOf } from '../core/schema';
+	import CheckGroup from 'zipp-ui/CheckGroup.svelte';
 
 	/** Some of the options, stored in the order of the options. */
 	let { field, values }: { field: FieldOf<'checkboxes'>; values: Values } =
@@ -17,29 +18,4 @@
 	}
 </script>
 
-<div class="options">
-	{#each options as o (o.value)}
-		<label>
-			<input
-				type="checkbox"
-				checked={picked.includes(o.value)}
-				onchange={e => toggle(o.value, e.currentTarget.checked)}
-			/>
-			{o.label}
-		</label>
-	{/each}
-</div>
-
-<style lang="scss">
-	.options {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem 1.25rem;
-	}
-
-	label {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-	}
-</style>
+<CheckGroup {options} {picked} ontoggle={toggle} label={field.label} />

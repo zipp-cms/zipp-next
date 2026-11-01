@@ -1,5 +1,6 @@
 <script lang="ts">
 	import DateTime from './DateTime.svelte';
+	import Switch from 'zipp-ui/Switch.svelte';
 	import { dateState } from '../api';
 	import { time } from '../../core/format';
 	import { setupPath } from '../../core/paths';
@@ -66,13 +67,8 @@
 		<!-- read only for a role that may only look -->
 		<div class="card">
 			<fieldset class="inline" disabled={!may.edit}>
-				<label class="switch">
-					<input
-						type="checkbox"
-						bind:checked={ed.published}
-						disabled={!may.publish}
-					/>
-					<span>
+				<Switch bind:checked={ed.published} disabled={!may.publish}>
+					<span class="published">
 						{#if ed.changed.has('published')}<span
 								class="changed-dot"
 							></span>{/if}
@@ -80,7 +76,7 @@
 							s => s.handle === ed.site,
 						)?.name}
 					</span>
-				</label>
+				</Switch>
 				{#if ed.published && waiting}
 					<span class="note">
 						{waiting === 'pending'
@@ -269,15 +265,9 @@
 		}
 	}
 
-	.switch {
-		flex-direction: row;
-		align-items: center;
-		gap: 0.5rem;
-
-		> span:first-child {
-			font-size: var(--fs-md);
-			font-weight: 500;
-		}
+	.published {
+		font-size: var(--fs-md);
+		font-weight: 500;
 	}
 
 	// only disables, the card lays out what is in it

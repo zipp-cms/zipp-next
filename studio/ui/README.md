@@ -14,6 +14,11 @@ else: the components (`zipp-ui/Table.svelte`, …), `zipp-ui/sortable`
 `zipp-ui/vars.scss` (the breakpoints and mixins: `@include hover`,
 `max-tablet`, `focus-ring`).
 
+For the values of a field, beside the inputs of the page: `Segmented`
+(one of a few), `CheckGroup` (some of a few, chips that wrap),
+`Switch` (yes or no, its text on the right; `onchange` only when
+clicked), `DatePicker`, `SearchInput`.
+
 ## What the page gives them
 
 A module renders in the studio's page, the components lean on what the

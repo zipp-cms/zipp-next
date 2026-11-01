@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { FieldOf, Values } from '../core/schema';
+	import Switch from 'zipp-ui/Switch.svelte';
 
 	/** A field that is one input: text, email, boolean. */
 	let {
@@ -15,12 +16,13 @@
 
 {#if field.kind === 'boolean'}
 	<!-- writes only when clicked, so opening an entry changes nothing -->
-	<input
+	<Switch
 		id={path}
-		type="checkbox"
 		checked={!!values[field.handle]}
-		onchange={e => (values[field.handle] = e.currentTarget.checked)}
-	/>
+		onchange={on => (values[field.handle] = on)}
+	>
+		<span class="muted">{values[field.handle] ? 'Yes' : 'No'}</span>
+	</Switch>
 {:else if field.kind === 'text' && field.multiline}
 	<textarea
 		id={path}

@@ -18,6 +18,7 @@
 		"./AddButton.svelte": "./src/AddButton.svelte",
 		"./AddGroup.svelte": "./src/AddGroup.svelte",
 		"./Calendar.svelte": "./src/Calendar.svelte",
+		"./CheckGroup.svelte": "./src/CheckGroup.svelte",
 		"./Crumbs.svelte": "./src/Crumbs.svelte",
 		"./DatePicker.svelte": "./src/DatePicker.svelte",
 		"./DragHandle.svelte": "./src/DragHandle.svelte",
@@ -36,6 +37,7 @@
 		"./Segmented.svelte": "./src/Segmented.svelte",
 		"./SortLine.svelte": "./src/SortLine.svelte",
 		"./SplitHandle.svelte": "./src/SplitHandle.svelte",
+		"./Switch.svelte": "./src/Switch.svelte",
 		"./Table.svelte": "./src/Table.svelte",
 		"./UploadButton.svelte": "./src/UploadButton.svelte"
 	},
