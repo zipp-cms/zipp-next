@@ -15,7 +15,7 @@
 		title="Details: title, alt text, focal point"
 		onclick={() => openAsset(asset.id)}
 	>
-		<span class="thumb"><Thumb {asset} /></span>
+		<span class="thumb"><Thumb {asset} small /></span>
 		<span class="truncate">{asset.title || asset.filename}</span>
 	</button>
 	{@render actions()}
