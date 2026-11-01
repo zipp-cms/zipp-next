@@ -163,10 +163,9 @@ commit.
 - [x] A login dialog when the session expires, so unsaved work stays, 4b457a1
 - [ ] The link box of a link field clickable over its whole height, not
       only on its text (operator 2026-11-01)
-- [ ] zipp-forms for textrem's forms: a confirmation mail to the sender
-      and an optional captcha (Turnstile or reCAPTCHA), then contact and
-      Mappenabo move from the crelte server; orders (prices from the cms, a
-      mail with the order) as a route in the site's cms crate with
-      `state.mail`
+- textrem's forms (contact, Mappenabo, orders with prices from the cms)
+  stay in the site, not in zipp-forms: in the crelte server as today or
+  later as routes of its cms crate with `state.mail`, either is fine
+  (operator 2026-11-01)
 - [ ] Import mapping for Craft: fill a group from flat Craft fields, so a
       port can group fields that were flat in Craft (textrem, 2026-11-01)
