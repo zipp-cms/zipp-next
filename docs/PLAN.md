@@ -123,9 +123,9 @@ commit.
       layout (a note, a how-to), like Craft's tip; editors don't edit it
       (`Field::note`)
 - [x] Field width in the editor: 25 %, 50 %, 75 %, 100 % (`.width(50)`)
-- [ ] Settings (globals) without the big title above the fields
+- [x] Settings (globals) without the big title above the fields, 4b457a1
 - [ ] Tabs inside blocks?
-- [ ] Max level of a structure?
+- [x] Max level of a structure, 6317a46
 - [ ] Custom fields on assets (besides title, alt, focal point)?
 - [ ] Better support for video assets (player, poster, type filter)?
 - [ ] A field type per column of a table (today text, url, email)?
@@ -158,4 +158,8 @@ commit.
 - [ ] The studio in the user's language?
 - [ ] The Craft import out of the main binary (its own crate or command)?
 - [ ] A better page picker (the tree, search) for relations and links?
-- [x] A login dialog when the session expires, so unsaved work stays
+- [x] A login dialog when the session expires, so unsaved work stays, 4b457a1
+- [ ] The link box of a link field clickable over its whole height, not
+      only on its text (operator 2026-11-01)
+- [ ] Import mapping for Craft: fill a group from flat Craft fields, so a
+      port can group fields that were flat in Craft (textrem, 2026-11-01)
