@@ -6,6 +6,7 @@
 	import { openAsset } from '../core/flyout.svelte';
 	import type { Schema } from '../core/schema';
 	import Thumb from '../assets/Thumb.svelte';
+	import { altOf } from '../assets/api';
 	import { Search, highlight, searchBox, type Hit } from './search.svelte';
 
 	/**
@@ -122,6 +123,7 @@
 								{/if}
 							</span>
 						{:else}
+							{@const alt = altOf(hit.asset, site.current)}
 							<span class="thumb">
 								<Thumb asset={hit.asset} small />
 							</span>
@@ -131,13 +133,13 @@
 										hit.asset.title || hit.asset.filename,
 									)}
 								</span>
-								{#if hit.asset.title || hit.asset.alt}
+								{#if hit.asset.title || alt}
 									<span class="snippet note truncate">
 										{@render marked(
 											[
 												hit.asset.title &&
 													hit.asset.filename,
-												hit.asset.alt,
+												alt,
 											]
 												.filter(t => t)
 												.join(' · '),

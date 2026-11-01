@@ -310,3 +310,44 @@ fn parses_iso_dates() {
 	);
 	assert_eq!(parse_iso("yesterday"), None);
 }
+
+#[test]
+fn imports_the_alt_text_per_site() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let schema = Schema::new()
+		.site("de", "Deutsch", "de-CH")
+		.site("en", "English", "en");
+	let dir = std::env::temp_dir()
+		.join(format!("zipp-craft-{}", rand::random::<u32>()));
+	let volume = dir.join("volume");
+	fs::create_dir_all(&volume).unwrap();
+	fs::write(volume.join("a.txt"), "a").unwrap();
+	let export: Export = serde_json::from_value(json!({
+		"sites": [{ "handle": "deCH" }, { "handle": "en" }],
+		"assets": [
+			{ "id": 1, "volume": "default", "path": "a.txt", "title": null,
+				"alt": "Ein A", "alts": { "deCH": "Ein A", "en": "An A" },
+				"focalPoint": null },
+			// an export from before the alt text per site
+			{ "id": 2, "volume": "default", "path": "a.txt", "title": null,
+				"alt": "Noch ein A", "focalPoint": null },
+		],
+	}))
+	.unwrap();
+	let opts = Options {
+		sites: vec![("deCH".into(), "de".into()), ("en".into(), "en".into())],
+		volumes: HashMap::from([("default".into(), volume)]),
+	};
+
+	let files = dir.join("files");
+	let report = import(&conn, &schema, &files, &export, &opts).unwrap();
+	assert_eq!(report.assets, 2);
+	let alt = |id| assets::get_asset(&conn, id).unwrap().alt;
+	assert_eq!(
+		alt(1),
+		[("de".into(), "Ein A".into()), ("en".into(), "An A".into())].into()
+	);
+	assert_eq!(alt(2), [("de".into(), "Noch ein A".into())].into());
+	fs::remove_dir_all(dir).unwrap();
+}

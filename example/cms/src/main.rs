@@ -8,8 +8,8 @@ use zipp::axum::routing::get;
 use zipp::error::Result;
 use zipp::query::Query;
 use zipp::{
-	Access, AppState, Cms, Column, Condition, Field, LinkKind, Role, Schema,
-	Section, Transform,
+	Access, AppState, Cms, Column, Condition, Field, Format, LinkKind, Role,
+	Schema, Section, Transform,
 };
 use zipp_button_group::{ButtonGroup, button_group};
 use zipp_forms::{Form, FormField, Forms};
@@ -181,7 +181,14 @@ fn schema() -> Schema {
 			)
 			.width(50),
 		])
-		.transform(Transform::new("hero").width(1600).height(700).crop())
+		// big photos: WebP is a third smaller than a jpeg
+		.transform(
+			Transform::new("hero")
+				.width(1600)
+				.height(700)
+				.crop()
+				.format(Format::Webp),
+		)
 		.transform(Transform::new("small").width(600))
 		.transform(Transform::new("medium").width(1200))
 		.transform(Transform::new("thumb").width(160).height(120).crop())

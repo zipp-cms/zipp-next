@@ -7,6 +7,7 @@ impl Transform {
 			width: None,
 			height: None,
 			crop: false,
+			format: None,
 		}
 	}
 
@@ -23,6 +24,14 @@ impl Transform {
 	/// Fill width and height, cut around the focal point.
 	pub fn crop(mut self) -> Self {
 		self.crop = true;
+		self
+	}
+
+	/// Its images in this type, `Format::Webp` for smaller photos. Urls of
+	/// other types still work with another extension, see
+	/// [`Asset::format_url`](crate::assets::Asset::format_url).
+	pub fn format(mut self, format: Format) -> Self {
+		self.format = Some(format);
 		self
 	}
 }

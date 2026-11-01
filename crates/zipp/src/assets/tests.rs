@@ -58,11 +58,18 @@ fn stores_and_transforms_an_image() {
 		a.url(Some("small")),
 		format!("/assets/{}/small/test-image.png", a.id)
 	);
+	// another type is another extension, also without one
+	assert_eq!(a.format_filename(Format::Webp), "test-image.webp");
+	let plain = Asset {
+		filename: "scan".into(),
+		..a.clone()
+	};
+	assert_eq!(plain.format_filename(Format::Jpeg), "scan.jpg");
 
 	let t = Transform::new("sq").width(100).height(100).crop();
 	let out = dir.join("out.png");
-	generate(&a, &dir.join(a.id.to_string()).join(&a.filename), &t, &out)
-		.unwrap();
+	let original = dir.join(a.id.to_string()).join(&a.filename);
+	generate(&a, &original, &t, "image/png", &out).unwrap();
 	let img = image::open(&out).unwrap();
 	assert_eq!((img.width(), img.height()), (100, 100));
 
@@ -172,7 +179,8 @@ fn edits_change_the_image_not_the_file() {
 
 	let original = dir.join(a.id.to_string()).join(&a.filename);
 	let out = dir.join("edited");
-	generate(&a, &original, &Transform::new("_edited"), &out).unwrap();
+	let edited = Transform::new("_edited");
+	generate(&a, &original, &edited, a.output_mime(), &out).unwrap();
 	let img = image::load_from_memory(&fs::read(&out).unwrap())
 		.unwrap()
 		.to_rgba8();

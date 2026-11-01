@@ -195,7 +195,20 @@ set in the studio. GraphQL asks like Craft: `image { url(transform:
 alt }`. Only named transforms exist, so nobody can make the server
 render arbitrary sizes. `--public-url` makes the urls absolute for
 frontends on other domains. Like in Craft an asset has a title (GraphQL
-`title`, from the filename while it is empty) and an alt text.
+`title`, from the filename while it is empty) and an alt text per site
+(the studio edits the one of the site it shows; GraphQL gives the one
+of the site asked, else the primary site's).
+
+A transform can make another type, like Craft's transform format:
+`.format(Format::Webp)` (also `Jpeg` and `Png`). The type is in the
+url's extension, `/assets/5/hero/piano.webp`; the image's own name
+gives its own type, so `url(transform: "hero", format: "webp")` and
+`srcset(transforms: [...], format: "webp")` ask for any transform in
+another type. WebP is lossy (libwebp at quality 80), 15 to 35% smaller
+than the jpegs at 82 on photos; transparency stays, a jpeg of a
+transparent image gets white. No AVIF yet: rav1e takes seconds per
+image. There is no `Accept` negotiation either, the url says the type,
+so caches and CDNs need no `Vary`.
 
 In the studio assets are in folders (only there, urls don't change). An
 asset field can say where its uploads go and its picker opens,
@@ -215,7 +228,7 @@ so they are checked like a block's fields, take part in migrations
 (`makemigration --rename asset.credit=photographer` renames the key in
 every asset) and are edited in the asset panel; GraphQL has them on
 `Asset` (`image { url credit }`), `zipp types` writes `AssetFields`.
-Their values are the same in all sites (like the alt text), they have
+Their values are the same in all sites (unlike the alt text), they have
 no defaults and can't be indexed; their relations don't count as the
 usage of an asset or entry.
 

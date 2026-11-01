@@ -137,7 +137,8 @@ const MIGRATIONS: &[&str] = &[r#"
 		height INTEGER,
 		-- empty: a title from the filename
 		title TEXT NOT NULL DEFAULT '',
-		alt TEXT NOT NULL DEFAULT '',
+		-- the alt text per site handle, JSON
+		alt TEXT NOT NULL DEFAULT '{}',
 		-- 0 to 1 from the left and the top
 		focal_x REAL NOT NULL DEFAULT 0.5,
 		focal_y REAL NOT NULL DEFAULT 0.5,

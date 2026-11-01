@@ -11,7 +11,8 @@ export type Asset = {
 	height: number | null;
 	/** empty: the frontend gets one from the filename */
 	title: string;
-	alt: string;
+	/** per site handle, a site without has the primary site's */
+	alt: Record<string, string>;
 	focalX: number;
 	focalY: number;
 	createdAt: number;
@@ -109,6 +110,11 @@ export function assetUrl(a: Asset, thumb = false, original = false): string {
 	return a.version ? `${path}?v=${a.version}` : path;
 }
 
+/** The alt text of a site, else of another one, to show in a list. */
+export function altOf(a: Asset, site: string): string {
+	return a.alt[site] ?? Object.values(a.alt)[0] ?? '';
+}
+
 /** An entry that uses an asset, with the sites it does in. */
 export type AssetUsage = {
 	id: number;
@@ -157,7 +163,8 @@ export function updateAsset(
 	id: number,
 	data: {
 		title: string;
-		alt: string;
+		/** of all sites */
+		alt: Record<string, string>;
 		focalX: number;
 		focalY: number;
 		filename?: string;

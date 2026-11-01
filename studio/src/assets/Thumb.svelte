@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { assetUrl, isVideo, type Asset } from './api';
+	import { altOf, assetUrl, isVideo, type Asset } from './api';
 	import { duration } from '../core/format';
+	import { site } from '../core/router.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 
 	/**
@@ -23,7 +24,11 @@
 
 <div class="thumb">
 	{#if asset.kind === 'image'}
-		<img src={assetUrl(asset, true)} alt={asset.alt} loading="lazy" />
+		<img
+			src={assetUrl(asset, true)}
+			alt={altOf(asset, site.current)}
+			loading="lazy"
+		/>
 	{:else if isVideo(asset) && !small}
 		<!-- a frame just after the start, the server makes no posters;
 		only the start of the file loads -->

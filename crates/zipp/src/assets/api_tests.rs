@@ -10,7 +10,7 @@ use super::*;
 use crate::entries::save;
 use crate::entries::tests::input;
 use crate::schema::tests::site_with_roles;
-use crate::schema::{Field, Role};
+use crate::schema::{Field, Format, Role};
 use crate::testing::{Client, TestServer};
 
 fn png(w: u32, h: u32) -> Vec<u8> {
@@ -75,7 +75,7 @@ async fn uploads_changes_and_deletes() {
 		id: a.id,
 		change: AssetChange {
 			title: Some(" Hero ".into()),
-			alt: "A hero".into(),
+			alt: [("en".into(), "A hero".into())].into(),
 			focal_x: 2.0,
 			focal_y: 0.2,
 			filename: Some("hero.png".into()),
@@ -110,6 +110,89 @@ async fn uploads_changes_and_deletes() {
 }
 
 #[tokio::test]
+async fn transforms_in_other_formats() {
+	let webp = Transform::new("hero").width(10).format(Format::Webp);
+	let ts = TestServer::new(site_with_roles().transform(webp.clone()));
+	let editor = ts.user(Some("editor"));
+	// half transparent
+	let mut png = vec![];
+	image::RgbaImage::from_fn(20, 10, |x, _| {
+		image::Rgba([0, 0, 0, if x < 10 { 0 } else { 255 }])
+	})
+	.write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
+	.unwrap();
+	let a = upload(&editor, "logo.png", &png).await.unwrap();
+
+	// the transform's format by its url, the extension says which
+	let url = a.format_url(&webp, None);
+	assert_eq!(url, format!("/assets/{}/hero/logo.webp", a.id));
+	let req = Request::get(&url).body(Body::empty()).unwrap();
+	let resp = ts.anonymous().send(req).await;
+	assert_eq!(resp.status(), StatusCode::OK);
+	let h = resp.headers();
+	assert_eq!(h[header::CONTENT_TYPE], "image/webp");
+	assert_eq!(h[header::CACHE_CONTROL], "public, max-age=86400");
+	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+	let img = image::load_from_memory_with_format(&body, ImageFormat::WebP)
+		.unwrap()
+		.to_rgba8();
+	assert_eq!(img.dimensions(), (10, 5));
+	// transparent stays transparent
+	assert_eq!(img.get_pixel(0, 2)[3], 0);
+
+	// its own type with its own name, a jpeg on white
+	let (status, body) = get(&editor, &a.url(Some("hero"))).await;
+	assert_eq!(status, StatusCode::OK);
+	assert_eq!(image::guess_format(&body).unwrap(), ImageFormat::Png);
+	let jpg = a.format_url(&webp, Some(Format::Jpeg));
+	let (status, body) = get(&editor, &jpg).await;
+	assert_eq!(status, StatusCode::OK);
+	let img = image::load_from_memory(&body).unwrap().to_rgb8();
+	assert!(img.get_pixel(0, 2)[0] > 240);
+	assert!(img.get_pixel(9, 2)[0] < 15);
+
+	// other names and types are not there
+	for name in ["logo.gif", "other.webp", "logo.png.webp"] {
+		let url = format!("/assets/{}/hero/{name}", a.id);
+		assert_eq!(get(&editor, &url).await.0, StatusCode::NOT_FOUND, "{name}");
+	}
+}
+
+#[tokio::test]
+async fn alt_text_per_site() {
+	let ts = TestServer::new(site_with_roles());
+	let editor = ts.user(Some("editor"));
+	let a = upload(&editor, "a.png", &png(4, 4)).await.unwrap();
+	assert!(a.alt.is_empty());
+
+	let change = UpdateReq {
+		id: a.id,
+		change: AssetChange {
+			alt: [
+				("de".into(), "Ein Bild".into()),
+				("en".into(), " ".into()),
+				("xx".into(), "Gone".into()),
+			]
+			.into(),
+			..Default::default()
+		},
+	};
+	let saved = editor.call(&change).await.unwrap();
+	// empty ones and unknown sites are left out
+	assert_eq!(saved.alt, [("de".into(), "Ein Bild".into())].into());
+	assert_eq!(saved.alt_in("en", "de"), "Ein Bild");
+	assert_eq!(saved.alt_in("de", "de"), "Ein Bild");
+
+	// found by the alt text of any site, not by a site's handle
+	let found = |q: &str| {
+		let conn = ts.state.db.conn();
+		find(&conn, &[q.to_string()], 10).unwrap().len()
+	};
+	assert_eq!(found("bild"), 1);
+	assert_eq!(found("de"), 0);
+}
+
+#[tokio::test]
 async fn roles_and_assets() {
 	let ts = TestServer::new(site_with_roles());
 	let author = ts.user(Some("author"));
@@ -119,7 +202,7 @@ async fn roles_and_assets() {
 	let change = UpdateReq {
 		id: a.id,
 		change: AssetChange {
-			alt: "x".into(),
+			alt: [("en".into(), "x".into())].into(),
 			..Default::default()
 		},
 	};
@@ -369,7 +452,7 @@ async fn asset_fields_are_checked_and_saved() {
 	let change = |fields: Value| UpdateReq {
 		id: clip.id,
 		change: AssetChange {
-			alt: "A clip".into(),
+			alt: [("en".into(), "A clip".into())].into(),
 			fields: Some(fields),
 			..Default::default()
 		},

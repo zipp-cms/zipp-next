@@ -175,6 +175,8 @@ export type Transform = {
 	width: number | null;
 	height: number | null;
 	crop: boolean;
+	/** the type of its images, null keeps the image's */
+	format: 'jpeg' | 'png' | 'webp' | null;
 };
 
 export type NavGroup = {

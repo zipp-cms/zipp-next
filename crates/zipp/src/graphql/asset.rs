@@ -25,14 +25,21 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 	let plain = |name: &'static str, ty: TypeRef| {
 		GqlField::new(name, ty, move |ctx| {
 			FieldFuture::new(async move {
-				let a = asset_of(&ctx)?;
+				let parent =
+					ctx.parent_value.try_downcast_ref::<SiteAsset>()?;
+				let a = &parent.asset;
 				let v = match name {
 					"id" => GqlValue::from(a.id.to_string()),
 					"filename" => GqlValue::from(a.filename.clone()),
 					"kind" => GqlValue::from(a.kind.clone()),
 					"mimeType" => GqlValue::from(a.mime.clone()),
 					"size" => GqlValue::from(a.size),
-					"alt" => GqlValue::from(a.alt.clone()),
+					// the site's, else the primary site's
+					"alt" => {
+						let schema = ctx.data::<Arc<Schema>>()?;
+						let primary = &schema.primary_site().handle;
+						GqlValue::from(a.alt_in(&parent.site, primary))
+					}
 					"focalX" => GqlValue::from(a.focal_x),
 					"focalY" => GqlValue::from(a.focal_y),
 					// Craft's
@@ -52,6 +59,8 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 	let transform_arg =
 		|| InputValue::new("transform", TypeRef::named(TypeRef::STRING));
 	let width_arg = || InputValue::new("width", TypeRef::named(TypeRef::INT));
+	let format_arg =
+		|| InputValue::new("format", TypeRef::named(TypeRef::STRING));
 	let s = || TypeRef::named_nn(TypeRef::STRING);
 	let f = || TypeRef::named_nn(TypeRef::FLOAT);
 
@@ -81,16 +90,19 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 				FieldFuture::new(async move {
 					let a = asset_of(&ctx)?;
 					let t = transform_of(&ctx, a)?;
-					let url = asset_url(
-						&ctx,
-						a,
-						t.as_ref().map(|t| t.handle.as_str()),
-					)?;
+					let format = format_of(&ctx)?;
+					if format.is_some() && t.is_none() && a.kind == "image" {
+						return Err(GqlError::new(
+							"format needs a transform or a width",
+						));
+					}
+					let url = asset_url(&ctx, a, t.as_ref(), format)?;
 					Ok(Some(FieldValue::value(url)))
 				})
 			})
 			.argument(transform_arg())
-			.argument(width_arg()),
+			.argument(width_arg())
+			.argument(format_arg()),
 		)
 		.field(
 			GqlField::new("width", TypeRef::named(TypeRef::INT), |ctx| {
@@ -111,6 +123,7 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 				FieldFuture::new(async move {
 					let a = asset_of(&ctx)?;
 					let schema = ctx.data::<Arc<Schema>>()?;
+					let format = format_of(&ctx)?;
 					let mut parts = vec![];
 					for name in ctx.args.try_get("transforms")?.list()?.iter() {
 						let name = name.string()?;
@@ -125,7 +138,7 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 						};
 						parts.push(format!(
 							"{} {w}w",
-							asset_url(&ctx, a, Some(name))?
+							asset_url(&ctx, a, Some(t), format)?
 						));
 					}
 					Ok(Some(FieldValue::value(parts.join(", "))))
@@ -134,7 +147,8 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 			.argument(InputValue::new(
 				"transforms",
 				TypeRef::named_nn_list_nn(TypeRef::STRING),
-			)),
+			))
+			.argument(format_arg()),
 		)
 }
 
@@ -142,7 +156,7 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 pub(super) fn transform_of(
 	ctx: &ResolverContext,
 	a: &Asset,
-) -> async_graphql::Result<Option<crate::schema::Transform>> {
+) -> async_graphql::Result<Option<Transform>> {
 	let schema = ctx.data::<Arc<Schema>>()?;
 	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
 	let t = match (arg("transform"), arg("width")) {
@@ -168,17 +182,32 @@ pub(super) fn transform_of(
 	Ok((a.kind == "image").then(|| t.clone()))
 }
 
+/// The `format` argument: `webp`, `jpg` or `png`, `None` for the
+/// transform's.
+fn format_of(ctx: &ResolverContext) -> async_graphql::Result<Option<Format>> {
+	let Some(f) = ctx.args.get("format").filter(|v| !v.is_null()) else {
+		return Ok(None);
+	};
+	let f = f.string()?;
+	Format::parse(f)
+		.map(Some)
+		.ok_or_else(|| GqlError::new(format!("format {f}: webp, jpg or png")))
+}
+
+/// The url of the image or of a transform, in `format` or the
+/// transform's.
 pub(super) fn asset_url(
 	ctx: &ResolverContext,
 	a: &Asset,
-	transform: Option<&str>,
+	transform: Option<&Transform>,
+	format: Option<Format>,
 ) -> async_graphql::Result<String> {
 	let base = &ctx.data::<PublicUrl>()?.0;
-	Ok(format!(
-		"{}{}",
-		base.trim_end_matches('/'),
-		a.url(transform)
-	))
+	let path = match transform {
+		Some(t) => a.format_url(t, format),
+		None => a.url(None),
+	};
+	Ok(format!("{}{path}", base.trim_end_matches('/')))
 }
 
 pub(super) fn asset_size(

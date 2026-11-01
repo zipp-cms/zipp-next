@@ -28,6 +28,9 @@ tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6.6", features = ["cors", "fs", "limit", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# lossy WebP from libwebp (C, built by cc): image only encodes lossless
+# WebP, which is four times the size of a jpeg for photos
+webp = { version = "0.3", default-features = false }
 # deflate with the flate2 that image's png brings (miniz_oxide)
 zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
 

@@ -8,6 +8,7 @@
 //! - `/assets/<id>/<transform>/<filename>`: a named transform of the
 //!   schema, `_thumb` is the one of the studio
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::Cursor;
 use std::path::{Path as FsPath, PathBuf};
@@ -20,14 +21,16 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
-use image::{ImageFormat, ImageReader};
+use image::{
+	DynamicImage, ImageFormat, ImageReader, RgbImage, Rgba, RgbaImage,
+};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 use serde::{Deserialize, Serialize};
 
 use crate::AppState;
 use crate::db::now;
 use crate::error::{Error, Result};
-use crate::schema::Transform;
+use crate::schema::{Format, Transform};
 
 pub mod api;
 #[cfg(test)]
@@ -86,7 +89,8 @@ pub struct Asset {
 	pub folder_id: Option<i64>,
 	/// like Craft's asset title, empty for one from the filename
 	pub title: String,
-	pub alt: String,
+	/// per site handle, see [`Asset::alt_in`]
+	pub alt: BTreeMap<String, String>,
 	pub focal_x: f64,
 	pub focal_y: f64,
 	/// the values of the asset fields, see
@@ -99,14 +103,49 @@ pub struct Asset {
 impl Asset {
 	/// The path of the image or of a transform.
 	pub fn url(&self, transform: Option<&str>) -> String {
-		let path = match transform {
+		self.versioned(match transform {
 			Some(t) => format!("/assets/{}/{t}/{}", self.id, self.filename),
 			None => format!("/assets/{}/{}", self.id, self.filename),
+		})
+	}
+
+	/// The path of a transform in `format`, else in the transform's
+	/// format, else in the type of the image.
+	pub fn format_url(&self, t: &Transform, format: Option<Format>) -> String {
+		match format.or(t.format) {
+			Some(f) => self.versioned(format!(
+				"/assets/{}/{}/{}",
+				self.id,
+				t.handle,
+				self.format_filename(f)
+			)),
+			None => self.url(Some(&t.handle)),
+		}
+	}
+
+	/// The name of a transform in another type: the extension says it,
+	/// `piano.jpg` in WebP is `piano.webp`.
+	pub fn format_filename(&self, format: Format) -> String {
+		let stem = match self.filename.rsplit_once('.') {
+			Some((stem, _)) => stem,
+			None => &self.filename,
 		};
+		format!("{stem}.{}", format.extension())
+	}
+
+	fn versioned(&self, path: String) -> String {
 		match self.version.as_str() {
 			"" => path,
 			v => format!("{path}?v={v}"),
 		}
+	}
+
+	/// The alt text of a site, else the one of the primary site.
+	pub fn alt_in(&self, site: &str, primary: &str) -> &str {
+		self.alt
+			.get(site)
+			.or_else(|| self.alt.get(primary))
+			.map_or("", |a| a.as_str())
 	}
 
 	/// The size of the image after a transform.
@@ -155,7 +194,7 @@ fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 		edits,
 		uploaded_by: r.get(13)?,
 		folder_id: r.get(14)?,
-		alt: r.get(7)?,
+		alt: serde_json::from_str(&r.get::<_, String>(7)?).unwrap_or_default(),
 		focal_x,
 		focal_y,
 		created_at: r.get(10)?,

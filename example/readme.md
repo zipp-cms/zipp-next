@@ -43,7 +43,8 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Boolean, number, indexed fields | Events | *sold out*, price (CHF, two decimals) in the tickets; the website sorts by date and filters by city |
 | Date, date and time | Events → Date, Doors open | the date picker; a day or a day and time, the website sorts events by the date |
 | Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them; the picker shows the pages as their tree, search "team" for a match with its path |
-| Images and transforms | Assets | click an image to set the focal point; crops follow it |
+| Images and transforms | Assets | click an image to set the focal point; crops follow it; the hero transform is WebP (`.format(Format::Webp)`), the website's hero srcset too |
+| Alt text per site | Assets → an image → Alt text, switch the site | each site its own alt text, a site without has the primary site's |
 | Asset fields | Assets → an image → Credit, Licence | fields of every asset beside title and alt (`.asset_fields`); the website shows the credit under the images |
 | Videos | Assets → Videos · a page → Content → Video block | the library filters by type, a video plays in its panel and shows its first frame; the block takes only videos (`Field::videos`), a poster image and *loop* for a muted moving image |
 | Folders, file types, zips | Assets · Events → Tickets → Programm (PDF) · a folder's ⋯ → Download as zip · upload a zip | folders for the library, downloaded as a zip or unpacked from one; the event's program takes only PDFs and puts them into Events/Programs, its image picker opens in Events |

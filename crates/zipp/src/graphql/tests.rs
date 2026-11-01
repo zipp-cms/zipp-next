@@ -3,8 +3,8 @@ use serde_json::json;
 use super::*;
 use crate::entries::save;
 use crate::entries::tests::input;
-use crate::schema::Field;
 use crate::schema::tests::site;
+use crate::schema::{Field, Format, Transform};
 
 async fn run(gql: &GqlSchema, query: &str, published_only: bool) -> Value {
 	let req = async_graphql::Request::new(query).data(Viewer {
@@ -119,7 +119,8 @@ async fn loads_a_page_with_its_relations() {
 #[tokio::test]
 async fn assets_with_transforms() {
 	let db = Db::memory().unwrap();
-	let s = Arc::new(site());
+	let webp = Transform::new("webp").width(100).format(Format::Webp);
+	let s = Arc::new(site().transform(webp));
 	let gql = build(
 		s.clone(),
 		db.clone(),
@@ -147,6 +148,14 @@ async fn assets_with_transforms() {
 			None,
 		)
 		.unwrap();
+		// German only: English falls back to it
+		let alt = crate::assets::AssetChange {
+			alt: [("de".into(), "Ein Held".into())].into(),
+			focal_x: 0.5,
+			focal_y: 0.5,
+			..Default::default()
+		};
+		crate::assets::update(&conn, &dir, &s, a.id, alt).unwrap();
 	}
 
 	let data = run(
@@ -158,6 +167,11 @@ async fn assets_with_transforms() {
 			height(transform: "small")
 			sqHeight: height(transform: "square")
 			srcset(transforms: ["small", "square"])
+			webp: url(transform: "webp")
+			smallWebp: url(transform: "small", format: "webp")
+			w100: url(transform: "webp", format: "jpg")
+			webpSet: srcset(transforms: ["small"], format: "webp")
+			alt
 		} } } }"#,
 		true,
 	)
@@ -165,6 +179,18 @@ async fn assets_with_transforms() {
 	let img = &data["entry"]["image"][0];
 	assert_eq!(img["url"], "https://cms.test/assets/1/hero.png");
 	assert_eq!(img["small"], "https://cms.test/assets/1/small/hero.png");
+	// the transform's format, or the one asked for
+	assert_eq!(img["webp"], "https://cms.test/assets/1/webp/hero.webp");
+	assert_eq!(
+		img["smallWebp"],
+		"https://cms.test/assets/1/small/hero.webp"
+	);
+	assert_eq!(img["w100"], "https://cms.test/assets/1/webp/hero.jpg");
+	assert_eq!(
+		img["webpSet"],
+		"https://cms.test/assets/1/small/hero.webp 100w"
+	);
+	assert_eq!(img["alt"], "Ein Held");
 	assert_eq!(
 		(img["width"].clone(), img["height"].clone()),
 		(json!(100), json!(50))
@@ -175,6 +201,61 @@ async fn assets_with_transforms() {
 		"https://cms.test/assets/1/small/hero.png 100w, \
 		https://cms.test/assets/1/square/hero.png 50w"
 	);
+
+	// the alt text of the site, else the primary's
+	let alt = |site: &'static str| {
+		let gql = &gql;
+		async move {
+			let q = format!(
+				r#"{{ entry(uri: "events/jazz", site: "{site}") {{
+					... on event_Entry {{ image {{ alt }} }} }} }}"#
+			);
+			run(gql, &q, true).await["entry"]["image"][0]["alt"].clone()
+		}
+	};
+	assert_eq!(alt("en").await, "Ein Held");
+	{
+		let conn = db.conn();
+		let both = crate::assets::AssetChange {
+			alt: [
+				("de".into(), "Ein Held".into()),
+				("en".into(), " A hero ".into()),
+				("fr".into(), "Un héros".into()),
+			]
+			.into(),
+			focal_x: 0.5,
+			focal_y: 0.5,
+			..Default::default()
+		};
+		let a = crate::assets::update(&conn, &dir, &s, 1, both).unwrap();
+		// trimmed, of the sites there are
+		assert_eq!(
+			a.alt,
+			[
+				("de".to_string(), "Ein Held".to_string()),
+				("en".to_string(), "A hero".to_string())
+			]
+			.into()
+		);
+	}
+	assert_eq!(alt("en").await, "A hero");
+	assert_eq!(alt("de").await, "Ein Held");
+
+	// a format needs a transform, and one there is
+	for q in [
+		r#"{ entry(uri: "events/jazz") { ... on event_Entry {
+			image { url(format: "webp") } } } }"#,
+		r#"{ entry(uri: "events/jazz") { ... on event_Entry {
+			image { url(transform: "small", format: "gif") } } } }"#,
+	] {
+		let req = async_graphql::Request::new(q).data(Viewer {
+			published_only: true,
+			preview: None,
+			token: None,
+			indexing: true,
+		});
+		assert!(!gql.execute(req).await.errors.is_empty(), "{q}");
+	}
 	std::fs::remove_dir_all(dir).unwrap();
 }
 

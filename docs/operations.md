@@ -238,7 +238,8 @@ with the group's handle before them: a group `sale` with `price` and
 `heading` takes `contactHeading` (or `heading`). A Craft field fills one
 place only: a field of the entry type itself wins, and a Craft field
 that fits two places (or two that fit one) is left out and listed, so
-rename one of them. Assets come with their title, alt text and focal
+rename one of them. Assets come with their title, alt text (per
+site, `export.php` from before gives only the primary site's) and focal
 point; entries keep Craft's post date, structures their order. What
 the schema doesn't have is left out and listed; slugs are made zipp's
 (`teddy--co.` becomes `teddy-co`), so redirect such urls in the

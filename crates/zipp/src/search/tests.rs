@@ -156,8 +156,9 @@ fn finds_only_what_the_role_may_view() {
 		save(&conn, &s, None, entry, None).unwrap();
 	}
 	conn.execute(
-		"INSERT INTO assets (filename, kind, mime, size, created_at, alt)
-		VALUES ('beach.jpg', 'image', 'image/jpeg', 1, 0, 'Summer beach')",
+		r#"INSERT INTO assets (filename, kind, mime, size, created_at, alt)
+		VALUES ('beach.jpg', 'image', 'image/jpeg', 1, 0,
+			'{"en": "Summer beach"}')"#,
 		[],
 	)
 	.unwrap();

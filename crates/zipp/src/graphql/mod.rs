@@ -52,7 +52,7 @@ use crate::error::{Error, Result};
 use crate::field_type::{GraphqlType, Scalar as FieldScalar};
 use crate::query::Query;
 use crate::richtext::{self, Chunk};
-use crate::schema::{ASSET, FieldKind, Schema};
+use crate::schema::{ASSET, FieldKind, Format, Schema, Transform};
 
 #[cfg(test)]
 mod api_tests;

@@ -146,7 +146,8 @@ transparent parts is delivered as PNG) and the focal point the
 crops of the transforms keep in view. The uploaded file stays as it
 was: the edits are stored next to it, every transform starts from the
 edited image, Reset brings the original back. Next to it: title, alt
-text and the filename, size, dimensions (edited and uploaded), who
+text (of the site the studio shows, the primary site's as placeholder)
+and the filename, size, dimensions (edited and uploaded), who
 uploaded it and when, download the original, copy the url, replace the
 file (resets the edits) and the entries the file is used in. Save and
 Cancel are in the bar of the flyout, Cancel and Escape ask before

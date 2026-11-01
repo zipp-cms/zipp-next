@@ -26,8 +26,17 @@ function filled(v: Values): Values {
 	);
 }
 
+/** The alt texts without empty ones, as the server keeps them. */
+function filledAlt(alt: Record<string, string>): Record<string, string> {
+	return Object.fromEntries(
+		Object.entries(alt)
+			.map(([site, a]) => [site, a.trim()])
+			.filter(([, a]) => a),
+	);
+}
+
 /**
- * What the asset panel changes: title, alt text, filename, focal point
+ * What the asset panel changes: title, alt text (per site), filename, focal point
  * the image's edits, the asset fields and the folder, saved together;
  * the errors of the asset fields are in `fields`; whether there is
  * something to save, replacing the file, where the asset is used.
@@ -35,7 +44,8 @@ function filled(v: Values): Values {
 export class AssetForm extends Busy {
 	current = $state<Asset>() as Asset;
 	title = $state('');
-	alt = $state('');
+	/** per site handle */
+	alt = $state<Record<string, string>>({});
 	filename = $state('');
 	focal = $state({ x: 0.5, y: 0.5 });
 	edits = $state<Edits>({ ...NO_EDITS });
@@ -58,7 +68,7 @@ export class AssetForm extends Busy {
 	private reset(asset: Asset) {
 		this.current = asset;
 		this.title = asset.title;
-		this.alt = asset.alt;
+		this.alt = { ...asset.alt };
 		this.filename = asset.filename;
 		this.focal = { x: asset.focalX, y: asset.focalY };
 		this.edits = { ...NO_EDITS, ...(asset.edits ?? {}) };
@@ -70,7 +80,7 @@ export class AssetForm extends Busy {
 	private form() {
 		return JSON.stringify({
 			title: this.title,
-			alt: this.alt,
+			alt: filledAlt(this.alt),
 			filename: this.filename,
 			focal: this.focal,
 			edits: $state.snapshot(this.edits),
@@ -88,7 +98,7 @@ export class AssetForm extends Busy {
 		return this.run(async () => {
 			const saved = await updateAsset(id, {
 				title: this.title,
-				alt: this.alt,
+				alt: filledAlt(this.alt),
 				filename: this.filename,
 				focalX: this.focal.x,
 				focalY: this.focal.y,

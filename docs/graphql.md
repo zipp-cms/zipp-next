@@ -39,7 +39,10 @@ assets are strings (`ID`) like Craft's. Entries have
 `postDate`, `expiryDate`, `dateCreated`, `dateUpdated`, `language` and
 `localized`
 (the entry in the other sites), images `focalPoint`, `title` and
-`url(width: 800)` for the widths of `.image_widths([400, 800, 1600])`.
+`url(width: 800)` for the widths of `.image_widths([400, 800, 1600])`,
+`url(transform: "hero", format: "webp")` and `srcset(transforms: [...],
+format: "webp")` in another type (`webp`, `jpg`, `png`), and `alt` of
+the site asked, else of the primary site.
 Every asset has `kind` (`image` or `file`), `mimeType` (`video/mp4`
 for a video) and `size`, and the schema's asset fields
 (`image { url credit }`).

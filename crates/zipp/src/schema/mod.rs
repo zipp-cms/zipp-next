@@ -136,6 +136,50 @@ pub struct Transform {
 	pub width: Option<u32>,
 	pub height: Option<u32>,
 	pub crop: bool,
+	/// the type of its images, `None` keeps the one of the image
+	#[serde(default)]
+	pub format: Option<Format>,
+}
+
+/// A type a transform can make: its url ends in [`Format::extension`],
+/// like Craft's transform format.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Format {
+	Jpeg,
+	Png,
+	/// lossy, smaller than a jpeg of the same quality
+	Webp,
+}
+
+impl Format {
+	pub const ALL: [Format; 3] = [Format::Jpeg, Format::Png, Format::Webp];
+
+	pub fn extension(self) -> &'static str {
+		match self {
+			Format::Jpeg => "jpg",
+			Format::Png => "png",
+			Format::Webp => "webp",
+		}
+	}
+
+	pub fn mime(self) -> &'static str {
+		match self {
+			Format::Jpeg => "image/jpeg",
+			Format::Png => "image/png",
+			Format::Webp => "image/webp",
+		}
+	}
+
+	/// By an extension or a name: `jpg`, `jpeg`, `png`, `webp`.
+	pub fn parse(s: &str) -> Option<Format> {
+		match s.to_ascii_lowercase().as_str() {
+			"jpg" | "jpeg" => Some(Format::Jpeg),
+			"png" => Some(Format::Png),
+			"webp" => Some(Format::Webp),
+			_ => None,
+		}
+	}
 }
 
 /// A site has its own version of every entry: title, slug, uri, published

@@ -12,7 +12,7 @@
 	} from './api';
 	import { componentOf, type Schema } from '../core/schema';
 	import Fields from '../fields/Fields.svelte';
-	import { entryPath } from '../core/router.svelte';
+	import { entryPath, site } from '../core/router.svelte';
 	import { canAssets } from '../core/access';
 	import { AssetForm } from './assetForm.svelte';
 	import Flyout from 'zipp-ui/Flyout.svelte';
@@ -56,6 +56,18 @@
 	const current = $derived(form.current);
 	const assetFields = $derived(componentOf(schema, ASSET_FIELDS));
 	let copied = $state(false);
+	// the alt text of the site the studio edits
+	const altLabel = $derived.by(() => {
+		if (schema.sites.length < 2) return 'Alt text';
+		const name = schema.sites.find(s => s.handle === site.current)?.name;
+		return `Alt text (${name})`;
+	});
+	// a site without its own alt text has the primary site's
+	const altPlaceholder = $derived.by(() => {
+		const primary = schema.sites[0].handle;
+		const fallback = site.current !== primary && form.alt[primary];
+		return fallback || 'What the image shows';
+	});
 
 	/** Whether the changes may go: none, or the editor says so. */
 	const mayLeave = () => !form.dirty || confirm('Discard the changes?');
@@ -138,10 +150,10 @@
 					/>
 				</label>
 				<label class="stacked">
-					Alt text
+					{altLabel}
 					<input
-						bind:value={form.alt}
-						placeholder="What the image shows"
+						bind:value={form.alt[site.current]}
+						placeholder={altPlaceholder}
 						disabled={!canEdit}
 					/>
 				</label>

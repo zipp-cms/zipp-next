@@ -33,7 +33,8 @@
       postponed to 0.2 (operator 2026-11-01)
 - [x] Live preview: the website next to the editor with the draft, updated after
       every save (preview tokens, crelte's live preview mode keeps the scroll)
-- [ ] WebP/AVIF output for transforms, alt text per site
+- [x] WebP output for transforms (`.format`, `url(format:)`), alt text per site;
+      AVIF left out (rav1e takes seconds per image)
 - [x] Rich text field (TipTap): headings, lists, links, button rows, embedded blocks, html + chunks
 - [x] Field kinds as plugins: a crate with the Rust side and a studio
       package with its Svelte field

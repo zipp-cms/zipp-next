@@ -10,7 +10,7 @@ fragment Image on Asset {
 
 fragment Hero on Asset {
 	url(transform: "hero")
-	srcset(transforms: ["small", "hero"])
+	srcset(transforms: ["small", "hero"], format: "webp")
 	width(transform: "hero")
 	height(transform: "hero")
 	alt

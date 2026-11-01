@@ -44,7 +44,7 @@
 			{#snippet row(t)}
 				<td><code>{t.handle}</code></td>
 				<td>
-					{`${t.width ?? 'auto'} × ${t.height ?? 'auto'}${t.crop ? ', cropped around the focal point' : ''}`}
+					{`${t.width ?? 'auto'} × ${t.height ?? 'auto'}${t.crop ? ', cropped around the focal point' : ''}${t.format ? `, ${t.format}` : ''}`}
 				</td>
 			{/snippet}
 		</Table>

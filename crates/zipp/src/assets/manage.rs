@@ -1,6 +1,8 @@
 //! What editors do with assets: find, change, replace, delete them and
 //! see where they are used.
 
+use std::collections::BTreeMap;
+
 use serde_json::Value;
 
 use super::*;
@@ -87,7 +89,8 @@ pub fn find(
 		.map(|i| {
 			format!(
 				"(filename LIKE ?{i} ESCAPE '\\' OR title LIKE ?{i} ESCAPE '\\' \
-				OR alt LIKE ?{i} ESCAPE '\\')"
+				OR EXISTS (SELECT 1 FROM json_each(alt) \
+					WHERE value LIKE ?{i} ESCAPE '\\'))"
 			)
 		})
 		.collect();
@@ -120,7 +123,8 @@ fn escape_like(s: &str) -> String {
 pub struct AssetChange {
 	/// unchanged when missing
 	pub title: Option<String>,
-	pub alt: String,
+	/// per site handle, of all sites
+	pub alt: BTreeMap<String, String>,
 	pub focal_x: f64,
 	pub focal_y: f64,
 	/// a new name, unchanged when missing
@@ -167,6 +171,14 @@ pub fn update(
 		_ => old.filename.clone(),
 	};
 	let json = edits.as_ref().map(|e| serde_json::to_string(e).unwrap());
+	// of the sites there are, the empty ones fall back to the primary's
+	let alt: BTreeMap<&str, &str> = change
+		.alt
+		.iter()
+		.filter(|(site, _)| schema.get_site(site).is_some())
+		.map(|(site, a)| (site.as_str(), a.trim()))
+		.filter(|(_, a)| !a.is_empty())
+		.collect();
 
 	// the row first, the file moves before the commit: when it can't, the
 	// row stays as it was
@@ -177,7 +189,7 @@ pub fn update(
 		WHERE id = ?8",
 		params![
 			change.title.as_deref().map(str::trim),
-			change.alt,
+			serde_json::to_string(&alt).unwrap(),
 			fx,
 			fy,
 			filename,

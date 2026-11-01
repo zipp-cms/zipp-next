@@ -43,6 +43,7 @@ pub(super) async fn serve_original(
 			asset,
 			"_edited",
 			Transform::new("_edited"),
+			None,
 		)
 		.await;
 	}
@@ -70,39 +71,53 @@ pub(super) async fn serve_transform(
 ) -> Result<Response> {
 	let asset = get_asset(&state.db.conn(), id)?;
 	let t = transform_by_name(&state, &name).ok_or(Error::NotFound)?;
-	if asset.filename != filename || asset.kind != "image" {
+	if asset.kind != "image" {
 		return Err(Error::NotFound);
 	}
-	transformed(&state, asset, &name, t).await
+	// the image's name, or its name with the extension of another type
+	let format = match filename == asset.filename {
+		true => None,
+		false => Some(
+			Format::ALL
+				.into_iter()
+				.find(|f| asset.format_filename(*f) == filename)
+				.ok_or(Error::NotFound)?,
+		),
+	};
+	transformed(&state, asset, &name, t, format).await
 }
 
-/// A transform of an image, generated on the first request.
+/// A transform of an image, generated on the first request, in `format`
+/// or the type of the image.
 async fn transformed(
 	state: &AppState,
 	asset: Asset,
 	name: &str,
 	t: Transform,
+	format: Option<Format>,
 ) -> Result<Response> {
 	let id = asset.id;
 	let dir = asset_dir(&state.files, id);
 	let original = dir.join(&asset.filename);
-	let out = dir
-		.join(TRANSFORMS)
-		.join(format!("{name}-{}", asset.filename));
+	let (filename, mime) = match format {
+		Some(f) => (asset.format_filename(f), f.mime()),
+		None => (asset.filename.clone(), asset.output_mime()),
+	};
+	let out = dir.join(TRANSFORMS).join(format!("{name}-{filename}"));
 	if !out.exists() {
 		let _permit = GENERATING.acquire().await.unwrap();
 		// not made already while this one waited
 		if !out.exists() {
-			let (a, o) = (asset.clone(), out.clone());
+			let (a, o, m) = (asset.clone(), out.clone(), mime.to_string());
 			tokio::task::spawn_blocking(move || {
-				generate(&a, &original, &t, &o)
+				generate(&a, &original, &t, &m, &o)
 			})
 			.await??;
 		}
 	}
 
 	let data = fs::read(out)?;
-	Ok(file_response(asset.output_mime(), data))
+	Ok(file_response(mime, data))
 }
 
 /// Files are served from the studio's origin: nothing may run as a page

@@ -87,7 +87,11 @@ pub struct CraftAsset {
 	pub volume: String,
 	pub path: String,
 	pub title: Option<String>,
+	/// of the primary site
 	pub alt: Option<String>,
+	/// per Craft site, from exports that have it
+	#[serde(default, deserialize_with = "map_or_list")]
+	pub alts: BTreeMap<String, String>,
 	pub focal_point: Option<(f64, f64)>,
 }
 
@@ -156,7 +160,7 @@ pub fn import(
 	};
 
 	let tx = conn.unchecked_transaction()?;
-	im.assets(&tx, files, export, opts)?;
+	im.assets(&tx, files, export, opts, &sites)?;
 
 	// every element of a section with its entry type, in Craft's order
 	// section, entry type, the element in each zipp site
@@ -428,6 +432,7 @@ impl Importer<'_> {
 		files: &Path,
 		export: &Export,
 		opts: &Options,
+		sites: &HashMap<String, String>,
 	) -> Result<()> {
 		for a in &export.assets {
 			let Some(dir) = opts.volumes.get(&a.volume) else {
@@ -453,12 +458,24 @@ impl Importer<'_> {
 				}
 			};
 			let (fx, fy) = a.focal_point.unwrap_or((0.5, 0.5));
+			// per zipp site, an older export has only the primary's
+			let mut alt: BTreeMap<&str, &str> = a
+				.alts
+				.iter()
+				.filter_map(|(craft, alt)| {
+					Some((sites.get(craft)?.as_str(), alt.as_str()))
+				})
+				.collect();
+			if let (true, Some(primary)) = (alt.is_empty(), a.alt.as_deref()) {
+				alt.insert(&self.schema.primary_site().handle, primary);
+			}
+			alt.retain(|_, a| !a.trim().is_empty());
 			conn.execute(
 				"UPDATE assets SET title = ?1, alt = ?2, focal_x = ?3,
 				focal_y = ?4 WHERE id = ?5",
 				params![
 					a.title.as_deref().unwrap_or_default(),
-					a.alt.as_deref().unwrap_or_default(),
+					serde_json::to_string(&alt).unwrap(),
 					fx,
 					fy,
 					stored.id

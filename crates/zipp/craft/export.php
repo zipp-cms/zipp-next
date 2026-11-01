@@ -142,6 +142,14 @@ foreach ($sites as $site) {
 	}
 }
 
+// the alt text can be translated, per site
+$alts = [];
+foreach ($sites as $site) {
+	foreach (\craft\elements\Asset::find()->siteId($site->id)->status(null)->all() as $a) {
+		if ($a->alt) $alts[$a->id][$site->handle] = $a->alt;
+	}
+}
+
 foreach (\craft\elements\Asset::find()->status(null)->all() as $a) {
 	$focal = $a->getHasFocalPoint() ? $a->getFocalPoint() : null;
 	$out['assets'][] = [
@@ -150,6 +158,7 @@ foreach (\craft\elements\Asset::find()->status(null)->all() as $a) {
 		'path' => $a->getPath(),
 		'title' => $a->title,
 		'alt' => $a->alt,
+		'alts' => $alts[$a->id] ?? [],
 		'focalPoint' => $focal ? [$focal['x'], $focal['y']] : null,
 	];
 }

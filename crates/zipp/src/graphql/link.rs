@@ -30,7 +30,7 @@ pub(super) fn resolve_link(
 			let Some(a) = get_many(&db.conn(), &[id])?.pop() else {
 				return Ok(None);
 			};
-			(asset_url(ctx, &a, None)?, a.filename, true)
+			(asset_url(ctx, &a, None, None)?, a.filename, true)
 		}
 		"email" => (format!("mailto:{text}"), text, false),
 		"phone" => {

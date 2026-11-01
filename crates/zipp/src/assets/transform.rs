@@ -42,12 +42,13 @@ pub fn crop_rect(
 	(x.round() as u32, y.round() as u32, cw, ch)
 }
 
-/// Writes the transform of an image to `out`, made of the image with its
-/// edits.
+/// Writes the transform of an image to `out` as a `mime`, made of the
+/// image with its edits.
 pub(super) fn generate(
 	asset: &Asset,
 	original: &FsPath,
 	t: &Transform,
+	mime: &str,
 	out: &FsPath,
 ) -> Result<()> {
 	let internal = |e: &dyn std::fmt::Display| Error::Internal(e.to_string());
@@ -61,7 +62,7 @@ pub(super) fn generate(
 		Some(e) => e.apply(img),
 		None => img,
 	};
-	let format = ImageFormat::from_mime_type(asset.output_mime())
+	let format = ImageFormat::from_mime_type(mime)
 		.ok_or_else(|| internal(&"an image of an unknown type"))?;
 	let (w, h) = (img.width(), img.height());
 	let (out_w, out_h) = transform_size(w, h, t);
@@ -81,16 +82,48 @@ pub(super) fn generate(
 	// write next to it and rename, two requests may generate it at once
 	fs::create_dir_all(out.parent().unwrap()).map_err(|e| internal(&e))?;
 	let tmp = out.with_extension(format!("tmp{}", rand::random::<u32>()));
-	if format == ImageFormat::Jpeg {
-		let file = fs::File::create(&tmp).map_err(|e| internal(&e))?;
-		let encoder = JpegEncoder::new_with_quality(file, 82);
-		img.to_rgb8()
-			.write_with_encoder(encoder)
-			.map_err(|e| internal(&e))?;
-	} else {
-		img.save_with_format(&tmp, format)
-			.map_err(|e| internal(&e))?;
+	match format {
+		ImageFormat::Jpeg => {
+			let file = fs::File::create(&tmp).map_err(|e| internal(&e))?;
+			let encoder = JpegEncoder::new_with_quality(file, 82);
+			on_white(img)
+				.write_with_encoder(encoder)
+				.map_err(|e| internal(&e))?;
+		}
+		// image's own encoder is lossless only, too big for photos
+		ImageFormat::WebP => {
+			let data = if img.color().has_alpha() {
+				let px = img.to_rgba8();
+				webp::Encoder::from_rgba(&px, out_w, out_h)
+					.encode(WEBP_QUALITY)
+					.to_vec()
+			} else {
+				let px = img.to_rgb8();
+				webp::Encoder::from_rgb(&px, out_w, out_h)
+					.encode(WEBP_QUALITY)
+					.to_vec()
+			};
+			fs::write(&tmp, data).map_err(|e| internal(&e))?;
+		}
+		_ => img
+			.save_with_format(&tmp, format)
+			.map_err(|e| internal(&e))?,
 	}
 	fs::rename(&tmp, out).map_err(|e| internal(&e))?;
 	Ok(())
+}
+
+/// About as sharp as the jpegs at 82.
+const WEBP_QUALITY: f32 = 80.0;
+
+/// A jpeg has no transparency: what is transparent turns white, not
+/// black.
+fn on_white(img: DynamicImage) -> RgbImage {
+	if !img.color().has_alpha() {
+		return img.to_rgb8();
+	}
+	let (w, h) = (img.width(), img.height());
+	let mut white = RgbaImage::from_pixel(w, h, Rgba([255, 255, 255, 255]));
+	image::imageops::overlay(&mut white, &img.to_rgba8(), 0, 0);
+	DynamicImage::from(white).to_rgb8()
 }

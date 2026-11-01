@@ -624,11 +624,16 @@ fn image_data(page: &Page, a: &Asset, crop: bool) -> Value {
 		),
 		_ => (a.url(None), a.width.zip(a.height)),
 	};
+	let primary = &page.schema.primary_site().handle;
+	let alt = a.alt_in(&page.site.handle, primary);
 	json!({
 		"url": format!("{base}{url}"),
 		"width": size.map(|s| s.0),
 		"height": size.map(|s| s.1),
-		"alt": if a.alt.is_empty() { a.filename.clone() } else { a.alt.clone() },
+		"alt": match alt {
+			"" => a.filename.as_str(),
+			alt => alt,
+		},
 		"mimeType": a.mime,
 	})
 }
