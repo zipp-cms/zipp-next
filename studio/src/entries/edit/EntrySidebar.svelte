@@ -2,7 +2,7 @@
 	import DateTime from './DateTime.svelte';
 	import Switch from 'zipp-ui/Switch.svelte';
 	import { dateState } from '../api';
-	import { time } from '../../core/format';
+	import { shortTime } from '../../core/format';
 	import { setupPath } from '../../core/paths';
 	import SiteBadges from '../SiteBadges.svelte';
 	import BlockOutline from './BlockOutline.svelte';
@@ -64,39 +64,75 @@
 
 <aside>
 	{#if !global}
-		<!-- read only for a role that may only look -->
-		<div class="card">
-			<fieldset class="inline" disabled={!may.edit}>
-				<Switch bind:checked={ed.published} disabled={!may.publish}>
-					<span class="published">
-						{#if ed.changed.has('published')}<span
-								class="changed-dot"
-							></span>{/if}
-						Published in {schema.sites.find(
-							s => s.handle === ed.site,
-						)?.name}
-					</span>
-				</Switch>
-				{#if ed.published && waiting}
-					<span class="note">
-						{waiting === 'pending'
-							? `Not live yet, from ${time(ed.dates.postDate!)}`
-							: `Not live anymore, expired ${time(ed.dates.expiryDate!)}`}
-					</span>
-				{/if}
-			</fieldset>
-			<!-- the sites to switch to, also for who may only look -->
-			{#if multiSite && !isNew}
-				<div class="sites">
+		<!-- read only for a role that may only look; the status and the
+		dates that keep it off the website first, then what the entry is -->
+		<div class="card status">
+			<div class="part">
+				<fieldset class="inline" disabled={!may.edit}>
+					<Switch bind:checked={ed.published} disabled={!may.publish}>
+						<span class="published">
+							{#if ed.changed.has('published')}<span
+									class="changed-dot"
+								></span>{/if}
+							Published in {schema.sites.find(
+								s => s.handle === ed.site,
+							)?.name}
+						</span>
+					</Switch>
+				</fieldset>
+				<!-- the sites to switch to, also for who may only look -->
+				{#if multiSite && !isNew}
 					<SiteBadges
 						{schema}
 						published={ed.perSite}
 						onselect={setSite}
 					/>
-				</div>
+				{/if}
+				{#if ed.published && waiting}
+					<span class="note waiting">
+						{waiting === 'pending'
+							? `Not live yet, from ${shortTime(ed.dates.postDate!)}`
+							: `Not live anymore, expired ${shortTime(ed.dates.expiryDate!)}`}
+					</span>
+				{/if}
+			</div>
+
+			<!-- in every site, like Craft's -->
+			{#if !single}
+				<fieldset class="part" disabled={!may.edit}>
+					<label>
+						<span>
+							{#if ed.changed.has('postDate')}<span
+									class="changed-dot"
+								></span>{/if}Post date
+						</span>
+						<DateTime
+							label="Post date"
+							placeholder="When published"
+							value={ed.dates.postDate}
+							onchange={v => (ed.dates.postDate = v)}
+						/>
+					</label>
+					<label>
+						<span>
+							{#if ed.changed.has('expiryDate')}<span
+									class="changed-dot"
+								></span>{/if}Expiry date
+						</span>
+						<DateTime
+							label="Expiry date"
+							placeholder="Never"
+							value={ed.dates.expiryDate}
+							onchange={v => (ed.dates.expiryDate = v)}
+						/>
+						{#if ed.errors.expiryDate}<span class="error">
+								{ed.errors.expiryDate}
+							</span>{/if}
+					</label>
+				</fieldset>
 			{/if}
 
-			<fieldset class="inline" disabled={!may.edit}>
+			<fieldset class="part" disabled={!may.edit}>
 				<label>
 					<span>
 						{#if ed.changed.has('type')}<span
@@ -140,6 +176,7 @@
 						</select>
 					</label>
 				{/if}
+				<!-- the url is under View and in the live preview -->
 				{#if !single}
 					<label>
 						<span>
@@ -151,40 +188,8 @@
 							placeholder="from the title"
 							bind:value={ed.slug}
 						/>
-						{#if ed.uri !== null}<span class="note uri">
-								/{ed.uri}
-							</span>{/if}
 						{#if ed.errors.slug}<span class="error">
 								{ed.errors.slug}
-							</span>{/if}
-					</label>
-
-					<!-- in every site, like Craft's -->
-					<label>
-						<span>
-							{#if ed.changed.has('postDate')}<span
-									class="changed-dot"
-								></span>{/if}Post date
-						</span>
-						<DateTime
-							label="Post date"
-							value={ed.dates.postDate}
-							onchange={v => (ed.dates.postDate = v)}
-						/>
-					</label>
-					<label>
-						<span>
-							{#if ed.changed.has('expiryDate')}<span
-									class="changed-dot"
-								></span>{/if}Expiry date
-						</span>
-						<DateTime
-							label="Expiry date"
-							value={ed.dates.expiryDate}
-							onchange={v => (ed.dates.expiryDate = v)}
-						/>
-						{#if ed.errors.expiryDate}<span class="error">
-								{ed.errors.expiryDate}
 							</span>{/if}
 					</label>
 				{/if}
@@ -254,6 +259,23 @@
 		padding: 0.75rem;
 	}
 
+	// the status card in parts with a line between them
+	.status {
+		gap: 0;
+		padding: 0;
+	}
+
+	.part {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 0.75rem;
+
+		& + .part {
+			border-top: 1px solid var(--line);
+		}
+	}
+
 	label {
 		display: flex;
 		flex-direction: column;
@@ -270,21 +292,17 @@
 		font-weight: 500;
 	}
 
+	.waiting {
+		color: var(--warn);
+	}
+
 	// only disables, the card lays out what is in it
 	.inline {
 		display: contents;
 	}
 
-	.sites {
-		margin-top: -0.375rem;
-	}
-
 	.value {
 		color: var(--text);
-	}
-
-	.uri {
-		word-break: break-all;
 	}
 
 	h3 {

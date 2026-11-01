@@ -14,6 +14,14 @@ export function time(ms: number): string {
 	return new Date(ms).toLocaleString();
 }
 
+/** A date and time without seconds, like the date picker shows them. */
+export function shortTime(ms: number): string {
+	return new Date(ms).toLocaleString(undefined, {
+		dateStyle: 'medium',
+		timeStyle: 'short',
+	});
+}
+
 /** A date like the browser writes it. */
 export function date(ms: number): string {
 	return new Date(ms).toLocaleDateString();

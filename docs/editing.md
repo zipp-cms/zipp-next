@@ -34,9 +34,11 @@ What a site's frontend needs for it (and for the AI page):
 
 The editor has the content on the left and a sidebar like Craft's on the
 right: published in the current site with the status in every site (a
-badge switches to that site), slug, post and expiry date (lists show
-Pending and Expired), type and parent, copying the content
-from another site, and the revisions. A global (a single without a page)
+badge switches to that site), post and expiry date (a day and its time
+in one box, the x empties it; lists show Pending and Expired), type,
+parent and slug, copying the content from another site, and the
+revisions. The url isn't repeated there, View and the live preview open
+it. A global (a single without a page)
 has no title and only the copying and revisions there.
 
 ## Users

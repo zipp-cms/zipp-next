@@ -50,7 +50,8 @@
 	}
 </script>
 
-<span class="date-picker" class:with-time={time}>
+<!-- one box like an input: the day, its time, the x that empties it -->
+<span class="date-picker" class:with-time={time} class:disabled>
 	<Popover bind:open width="18rem" label="Pick a day">
 		{#snippet trigger({ toggle, open })}
 			<button
@@ -62,8 +63,8 @@
 				{disabled}
 				onclick={toggle}
 			>
+				<Icon name="calendar" size={15} />
 				<span class:placeholder={!shown}>{shown || placeholder}</span>
-				<Icon name="calendar" size={16} />
 			</button>
 		{/snippet}
 		{#key open}
@@ -102,14 +103,26 @@
 			{/if}
 		</div>
 	</Popover>
-	{#if time}
+	<!-- a time only for a day, no empty grey box next to None -->
+	{#if time && day}
 		<input
 			type="time"
 			aria-label="{label}: time"
 			value={clock}
-			disabled={disabled || !day}
+			{disabled}
 			onchange={e => set(day, e.currentTarget.value)}
 		/>
+	{/if}
+	{#if value && !disabled}
+		<button
+			type="button"
+			class="icon clear"
+			aria-label="{label}: clear"
+			title="Clear"
+			onclick={() => set('', '')}
+		>
+			<Icon name="close" size={14} />
+		</button>
 	{/if}
 </span>
 
@@ -117,13 +130,32 @@
 	@use '../vars' as *;
 
 	.date-picker {
-		display: inline-flex;
-		gap: 0.5rem;
+		display: flex;
+		align-items: center;
 		width: 100%;
 		max-width: 14rem;
+		border: 1px solid var(--border-strong);
+		border-radius: var(--radius);
+		background: var(--input);
 
 		&.with-time {
 			max-width: 22.5rem;
+		}
+
+		&:focus-within {
+			border-color: var(--accent);
+		}
+
+		@include hover {
+			&:hover:not(.disabled, :has(.field:disabled)) {
+				border-color: var(--accent);
+			}
+		}
+
+		// also in a disabled fieldset, read only
+		&.disabled,
+		&:has(.field:disabled) {
+			background: var(--surface-2);
 		}
 
 		:global(.popover) {
@@ -132,14 +164,15 @@
 		}
 	}
 
-	// looks like an input, opens the calendar
+	// the day, opens the calendar
 	.field {
-		justify-content: space-between;
+		justify-content: flex-start;
+		gap: 0.5rem;
 		width: 100%;
 		padding: 0.4375rem 0.625rem;
-		border: 1px solid var(--border-strong);
+		border: none;
 		border-radius: var(--radius);
-		background: var(--input);
+		background: none;
 		color: var(--text);
 		font-size: var(--fs-base);
 		font-weight: 400;
@@ -150,30 +183,55 @@
 
 		@include hover {
 			&:hover:not(:disabled) {
-				border-color: var(--accent);
-				background: var(--input);
+				background: none;
 			}
 		}
 
 		&:focus-visible {
-			@include focus-ring(-1px);
+			@include focus-ring(-2px);
+		}
+
+		&:disabled {
+			opacity: 1;
+			color: var(--text-2);
 		}
 
 		// one line, a narrow column cuts it
-		span:first-child {
+		span {
 			overflow: hidden;
 			text-overflow: ellipsis;
 			white-space: nowrap;
 		}
 
 		.placeholder {
-			color: var(--subtle);
+			color: var(--muted);
 		}
 	}
 
+	// in the box after a hairline, as light as the day
 	input[type='time'] {
-		width: 8rem;
 		flex-shrink: 0;
+		width: auto;
+		padding: 0.25rem 0.375rem;
+		border: none;
+		border-left: 1px solid var(--line);
+		border-radius: 0;
+		background: none;
+		font-variant-numeric: tabular-nums;
+
+		// the box shows the focus
+		&:focus {
+			outline: none;
+		}
+	}
+
+	.clear {
+		flex-shrink: 0;
+		margin-right: 0.25rem;
+
+		&:disabled {
+			display: none;
+		}
 	}
 
 	.foot {
