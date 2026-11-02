@@ -50,7 +50,14 @@
 				/>
 			</td>
 			<td class="text" class:done={r.done}>{r.text}</td>
-			<td><a href={r.page}>{r.context}</a></td>
+			<td>
+				<!-- only a path of the studio becomes a link, like the server checks -->
+				{#if r.page.startsWith('/admin/')}
+					<a href={r.page}>{r.context}</a>
+				{:else}
+					{r.context}
+				{/if}
+			</td>
 			<td>{r.user ?? '–'}</td>
 			<td class="muted">{time(r.createdAt)}</td>
 		{/snippet}

@@ -120,6 +120,9 @@ pub struct AppState {
 	/// the svgs of the schema's Lucide icons, see [`studio::schema_icons`]
 	#[from_ref(skip)]
 	pub icons: Arc<std::collections::BTreeMap<String, String>>,
+	/// the wrong passwords of logins, see [`auth::Throttle`]
+	#[from_ref(skip)]
+	pub logins: Arc<auth::Throttle>,
 	hooks: Arc<Vec<Hook>>,
 }
 
@@ -171,6 +174,7 @@ impl AppState {
 			ai: None,
 			mail: Default::default(),
 			public_url: Default::default(),
+			logins: Default::default(),
 			hooks: Default::default(),
 		}
 	}

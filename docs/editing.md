@@ -9,7 +9,9 @@ a draft of the entry (one per entry, all sites), the website keeps the
 live content until it is published. Publishing checks every site and
 writes them in one transaction and keeps a revision; an old revision
 can be restored into the draft. A preview token shows the draft on the
-website: crelte passes `?token=` on to GraphQL.
+website: crelte passes `?token=` on to GraphQL. The database keeps only
+the hash of a token (and of a session), a token ends after a day or
+with the user who made it.
 
 *Live preview* in the bar of an entry with a page puts the website next
 to the editor, like Craft's: the page with the draft, as wide as a
@@ -117,7 +119,8 @@ where it is: "Request a change" in the bar of every Setup page takes a
 text ("I need a subtitle field") with the page it was written on. Admins
 see the requests under Setup → Requests, the open ones first, and tick
 them done; with mails set up (`serve --smtp-url`) each admin gets a mail
-of a new one. The api: `POST /change-requests` for everyone, `GET` and
+of a new one. The api: `POST /change-requests` for everyone (`page` is a
+path of the studio, `/admin/...`, anything else is refused), `GET` and
 `PUT /change-requests/{id}` (`done`) for admins.
 
 Admins see each field's handle next to its label, like Craft's "show
@@ -193,7 +196,8 @@ Sonnet, GPT Sol or Gemini over OpenRouter, through soe-llms) sees and
 changes what an editor can: entries of every section, new entries,
 images, the texts of the code. Entries change as drafts, the website on
 the right shows every draft with a token of the whole site
-(`POST /api/preview`), an editor publishes. The model knows the page on
+(`POST /api/preview`; the drafts of the sections the user sees, the
+others live), an editor publishes. The model knows the page on
 the right and its content; it stays there when the change shows on it
 and opens another page when not. A site tells the studio its page with
 a small bridge (`example/crelte/svelte/src/components/PreviewBridge.svelte`,

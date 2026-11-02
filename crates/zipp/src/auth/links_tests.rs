@@ -3,7 +3,9 @@ use super::links::LinkKind;
 use super::*;
 use crate::schema::tests::site_with_roles;
 use crate::testing::{Client, TestServer};
-use crate::users::api::{CreateReq, GetReq, LoginAsLinkReq, PasswordLinkReq};
+use crate::users::api::{
+	CreateReq, GetReq, LoginAsLinkReq, PasswordLinkReq, UpdateReq,
+};
 
 /// The token of the link in a mail.
 fn token_in(text: &str) -> String {
@@ -91,6 +93,79 @@ async fn a_forgotten_password_comes_by_mail() {
 		password: "password2".into(),
 	};
 	anon.call(&login).await.unwrap();
+}
+
+#[tokio::test]
+async fn forgot_tells_nothing_without_a_public_url() {
+	let ts = TestServer::new(site_with_roles()).public_url("");
+	add_user(&ts.state.db.conn(), "a@x.ch", "password1", None).unwrap();
+	let anon = ts.anonymous();
+
+	// known or not, the same error
+	let forgot = |email: &str| ForgotReq {
+		email: email.into(),
+	};
+	let known = anon.call(&forgot("a@x.ch")).await.unwrap_err();
+	let unknown = anon.call(&forgot("no@x.ch")).await.unwrap_err();
+	assert!(matches!(&known, Error::Request(m) if m.contains("public-url")));
+	assert_eq!(known, unknown);
+	assert!(mails(&ts).await.is_empty());
+}
+
+#[tokio::test]
+async fn links_end_with_a_new_password_or_email() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	add_user(&ts.state.db.conn(), "a@x.ch", "password1", None).unwrap();
+	let id = ts
+		.state
+		.db
+		.conn()
+		.query_row("SELECT id FROM users WHERE email = 'a@x.ch'", [], |r| {
+			r.get(0)
+		})
+		.unwrap();
+	let link = async || {
+		let req = PasswordLinkReq { id, send: false };
+		token_in(&admin.call(&req).await.unwrap().url)
+	};
+	let gone = async |token: &str| {
+		let req = LinkReq {
+			token: token.into(),
+		};
+		ts.anonymous().call(&req).await.unwrap_err()
+	};
+
+	// a new password
+	let token = link().await;
+	add_user(&ts.state.db.conn(), "a@x.ch", "password2", None).unwrap();
+	assert!(matches!(gone(&token).await, Error::Request(_)));
+
+	// a new email
+	let token = link().await;
+	let change = UpdateReq {
+		id,
+		email: "b@x.ch".into(),
+		name: String::new(),
+		role: None,
+		language: String::new(),
+		password: None,
+		current_password: None,
+	};
+	admin.call(&change).await.unwrap();
+	assert!(matches!(gone(&token).await, Error::Request(_)));
+
+	// an invite once the user has a password
+	ts.state.db.conn()
+		.execute(
+			"INSERT INTO user_links (token, user_id, kind, created_at, expires_at)
+			VALUES ('inv', ?1, 'invite', 0, ?2)",
+			rusqlite::params![id, now() + 100_000],
+		)
+		.unwrap();
+	assert!(matches!(gone("inv").await, Error::Request(_)));
+	let err = ts.anonymous().call(&set("inv", "password3", None)).await;
+	assert!(matches!(err.unwrap_err(), Error::Request(_)));
 }
 
 #[tokio::test]

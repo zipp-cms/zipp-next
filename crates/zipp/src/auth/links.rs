@@ -9,7 +9,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
 use super::Session;
-use crate::db::{now, random_token};
+use crate::db::{now, random_token, token_hash};
 use crate::error::{Error, Result};
 use crate::mail::Mail;
 
@@ -106,13 +106,29 @@ pub fn get_link(conn: &Connection, token: &str) -> Result<Link> {
 	let gone = || Error::Request("This link is used or expired".into());
 	let (user_id, kind, created_by, created_at, expires_at) =
 		row.ok_or_else(gone)?;
+	let kind = LinkKind::parse(&kind).ok_or_else(gone)?;
+	// an invite is for a user without a password
+	if kind == LinkKind::Invite && !invited(conn, user_id)? {
+		return Err(gone());
+	}
 	Ok(Link {
 		user_id,
-		kind: LinkKind::parse(&kind).ok_or_else(gone)?,
+		kind,
 		created_by,
 		created_at,
 		expires_at,
 	})
+}
+
+/// Ends the invite and reset links of a user: after a new password or
+/// email a link sent before doesn't set one anymore.
+pub fn end_password_links(conn: &Connection, user_id: i64) -> Result<()> {
+	conn.execute(
+		"DELETE FROM user_links WHERE user_id = ?1
+		AND kind IN ('invite', 'reset')",
+		[user_id],
+	)?;
+	Ok(())
 }
 
 /// The link of a token if it is of one of the kinds, used up.
@@ -156,9 +172,15 @@ pub fn login_as_session(
 	};
 	conn.execute(
 		"INSERT INTO sessions
-		(token, user_id, created_at, expires_at, impersonated_by)
+		(hash, user_id, created_at, expires_at, impersonated_by)
 		VALUES (?1, ?2, ?3, ?4, ?5)",
-		params![session.token, user_id, now(), session.expires_at, by],
+		params![
+			token_hash(&session.token),
+			user_id,
+			now(),
+			session.expires_at,
+			by
+		],
 	)?;
 	Ok(session)
 }

@@ -43,8 +43,8 @@ export function createUser(user: {
 }
 
 /**
- * The account: `password` a new one, which needs `currentPassword` for
- * oneself; the own role stays.
+ * The account: `password` a new one; a new password or email of oneself
+ * needs `currentPassword`, the own role stays.
  */
 export function updateUser(
 	id: number,

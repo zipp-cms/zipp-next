@@ -31,8 +31,13 @@ SQLite database, default `zipp.db`):
 
 A login lasts 30 days; the studio renews it when it opens and less than
 10 days are left, so who uses it stays logged in. Logging out ends the
-session, a new password (`user`) ends all of the user's. After 10 wrong
-passwords an email waits 15 minutes.
+session, a new password (`user`) ends all of the user's. The database
+keeps only a hash of each session's token. After 10 wrong passwords of
+an email from one address, that address waits 15 minutes for it (others
+can't lock a user out); an address waits after 50 wrong passwords of
+any emails, an email after 100 from any addresses. The address is the
+peer's, or behind a proxy on the same machine or a private network the
+last one in `X-Forwarded-For` (a proxy elsewhere counts as one address).
 
 When a session ends while the studio is open, the page stays and a
 dialog asks for the password again; the draft that couldn't be saved
@@ -46,8 +51,9 @@ Admins manage the users in the studio (Users): a page per user with
 name, email, role (and what it may do, from the code), a new password
 and the sessions, which "Log out everywhere" ends. Every user opens
 their own account from the user menu: name, email and password, not the
-role; a new password of one's own needs the current one and logs out
-the other browsers. zipp sends no mails, an admin tells a new user the
+role; a new password or email of one's own needs the current password,
+a new password logs out the other browsers, a new email is mailed to
+the old address (with `--smtp-url`). zipp sends no mails, an admin tells a new user the
 password.
 
 ## serve

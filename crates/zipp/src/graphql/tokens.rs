@@ -4,10 +4,9 @@
 
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 
 use crate::content::FieldError;
-use crate::db::{now, random_token};
+use crate::db::{now, random_token, token_hash};
 use crate::error::{Error, Result};
 use crate::schema::Schema;
 
@@ -79,14 +78,6 @@ fn token_row(r: &rusqlite::Row) -> rusqlite::Result<GraphqlToken> {
 	})
 }
 
-/// Only the hash is kept: a copy of the database gives no access.
-fn hash(token: &str) -> String {
-	Sha256::digest(token.as_bytes())
-		.iter()
-		.map(|b| format!("{b:02x}"))
-		.collect()
-}
-
 /// All tokens, by name.
 pub fn list(conn: &Connection) -> Result<Vec<GraphqlToken>> {
 	let mut stmt = conn.prepare(&format!("{TOKEN} ORDER BY name, id"))?;
@@ -143,7 +134,7 @@ pub fn create(
 		VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
 		params![
 			name.trim(),
-			hash(&token),
+			token_hash(&token),
 			json(&scope.sections),
 			json(&scope.sites),
 			scope.previews,
@@ -165,7 +156,9 @@ pub fn delete(conn: &Connection, id: i64) -> Result<()> {
 /// The scope of a token that hasn't expired, and it was used now.
 pub fn scope_of(conn: &Connection, token: &str) -> Result<Option<Scope>> {
 	let sql = format!("{TOKEN} WHERE hash = ?1");
-	let Some(t) = conn.query_row(&sql, [hash(token)], token_row).optional()?
+	let Some(t) = conn
+		.query_row(&sql, [token_hash(token)], token_row)
+		.optional()?
 	else {
 		return Ok(None);
 	};

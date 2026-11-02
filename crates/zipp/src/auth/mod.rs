@@ -2,9 +2,8 @@
 //! it with its extractor: [`Authed`] any user, [`Admin`], [`EntryAccess`]
 //! and [`AssetAccess`] a level of a role, [`AiAccess`] the AI chat.
 
-use std::collections::BTreeMap;
 use std::marker::PhantomData;
-use std::sync::{Mutex, OnceLock, PoisonError};
+use std::sync::OnceLock;
 
 use axum::extract::{FromRef, FromRequestParts, RawPathParams};
 use axum::http::HeaderMap;
@@ -12,7 +11,7 @@ use axum::http::request::Parts;
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::AppState;
-use crate::db::{Db, now, random_token};
+use crate::db::{Db, now, random_token, token_hash};
 use crate::error::{Error, Result};
 use crate::schema::{Access, Role, Schema};
 
@@ -25,8 +24,10 @@ mod links_tests;
 mod routes;
 #[cfg(test)]
 mod tests;
+mod throttle;
 
 pub use routes::routes;
+pub use throttle::{ClientAddr, Throttle};
 
 /// bcrypt's work, small in tests so they stay fast.
 const COST: u32 = if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST };
@@ -34,13 +35,6 @@ const COST: u32 = if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST };
 const SESSION_DURATION_MS: i64 = 1000 * 60 * 60 * 24 * 30;
 /// A session with less left is renewed when the studio opens.
 const RENEW_BELOW_MS: i64 = 1000 * 60 * 60 * 24 * 10;
-/// Wrong passwords of an email before it has to wait.
-const MAX_FAILS: u32 = 10;
-const FAIL_WINDOW_MS: i64 = 1000 * 60 * 15;
-
-/// Failed logins per email: count and the time of the first one.
-static FAILS: Mutex<BTreeMap<String, (u32, i64)>> = Mutex::new(BTreeMap::new());
-
 /// A hash to verify against for unknown emails, so they take as long.
 static DUMMY_HASH: OnceLock<String> = OnceLock::new();
 
@@ -271,7 +265,7 @@ pub(crate) fn token_of(headers: &HeaderMap) -> Result<Option<&str>> {
 	}
 }
 
-/// A session of the `sessions` table.
+/// A session of the `sessions` table, which keeps the hash of the token.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Session {
 	pub token: String,
@@ -285,15 +279,15 @@ pub struct Session {
 fn get_session(conn: &Connection, token: &str) -> Result<Option<Session>> {
 	Ok(conn
 		.query_row(
-			"SELECT token, user_id, expires_at, impersonated_by FROM sessions
-			WHERE token = ?1",
-			[token],
+			"SELECT user_id, expires_at, impersonated_by FROM sessions
+			WHERE hash = ?1",
+			[token_hash(token)],
 			|r| {
 				Ok(Session {
-					token: r.get(0)?,
-					user_id: r.get(1)?,
-					expires_at: r.get(2)?,
-					impersonated_by: r.get(3)?,
+					token: token.into(),
+					user_id: r.get(0)?,
+					expires_at: r.get(1)?,
+					impersonated_by: r.get(2)?,
 				})
 			},
 		)
@@ -306,13 +300,16 @@ pub fn renew_session(conn: &Connection, token: &str) -> Result<Session> {
 	let mut s = get_session(conn, token)?
 		.filter(|s| s.expires_at > now())
 		.ok_or(Error::InvalidSessionToken)?;
-	// logging in as someone ends when it ends
+	// logging in as someone ends when it ends, a short session too
 	if s.expires_at - now() < RENEW_BELOW_MS && s.impersonated_by.is_none() {
-		s.expires_at = now() + SESSION_DURATION_MS;
-		conn.execute(
-			"UPDATE sessions SET expires_at = ?1 WHERE token = ?2",
-			params![s.expires_at, token],
+		let expires_at = now() + SESSION_DURATION_MS;
+		let n = conn.execute(
+			"UPDATE sessions SET expires_at = ?1 WHERE hash = ?2 AND renews",
+			params![expires_at, token_hash(token)],
 		)?;
+		if n > 0 {
+			s.expires_at = expires_at;
+		}
 	}
 	Ok(s)
 }
@@ -353,9 +350,19 @@ pub fn add_user(
 
 /// The user of a login, after the password was checked; bcrypt takes a
 /// while: not with the database locked, not on the async workers, and as
-/// long for unknown emails.
-pub async fn login(db: &Db, email: &str, password: &str) -> Result<i64> {
-	if !may_try(email) {
+/// long for unknown emails. `address` is who tries, see [`Throttle`].
+pub async fn login(
+	db: &Db,
+	throttle: &Throttle,
+	address: &str,
+	email: &str,
+	password: &str,
+) -> Result<i64> {
+	if email.len() > throttle::MAX_EMAIL_LEN {
+		return Err(Error::LoginIncorrect);
+	}
+	let lower = email.to_lowercase();
+	if !throttle.attempt(address, &lower, now()) {
 		return Err(Error::Request(
 			"Too many wrong passwords, try again in 15 minutes".into(),
 		));
@@ -377,9 +384,9 @@ pub async fn login(db: &Db, email: &str, password: &str) -> Result<i64> {
 	});
 	let ok = verify(password, hash).await?;
 	if !ok || !known {
-		failed(email);
 		return Err(Error::LoginIncorrect);
 	}
+	throttle.succeeded(address, &lower);
 	Ok(user_id)
 }
 
@@ -397,15 +404,48 @@ pub fn new_session(conn: &Connection, user_id: i64) -> Result<Session> {
 		impersonated_by: None,
 	};
 	conn.execute(
-		"INSERT INTO sessions (token, user_id, created_at, expires_at)
+		"INSERT INTO sessions (hash, user_id, created_at, expires_at)
 		VALUES (?1, ?2, ?3, ?4)",
-		params![session.token, user_id, now(), session.expires_at],
+		params![
+			token_hash(&session.token),
+			user_id,
+			now(),
+			session.expires_at
+		],
+	)?;
+	Ok(session)
+}
+
+/// A session of a user for a tool that acts as them, like the coding
+/// agent of a run: it isn't a login and ends after `ms`, never renewed,
+/// so it doesn't outlive what it is for.
+pub fn short_session(
+	conn: &Connection,
+	user_id: i64,
+	ms: i64,
+) -> Result<Session> {
+	conn.execute("DELETE FROM sessions WHERE expires_at < ?1", [now()])?;
+	let session = Session {
+		token: random_token(),
+		user_id,
+		expires_at: now() + ms,
+		impersonated_by: None,
+	};
+	conn.execute(
+		"INSERT INTO sessions (hash, user_id, created_at, expires_at, renews)
+		VALUES (?1, ?2, ?3, ?4, 0)",
+		params![
+			token_hash(&session.token),
+			user_id,
+			now(),
+			session.expires_at
+		],
 	)?;
 	Ok(session)
 }
 
 pub fn end_session(conn: &Connection, token: &str) -> Result<()> {
-	conn.execute("DELETE FROM sessions WHERE token = ?1", [token])?;
+	conn.execute("DELETE FROM sessions WHERE hash = ?1", [token_hash(token)])?;
 	Ok(())
 }
 
@@ -416,8 +456,8 @@ pub fn end_sessions(
 	keep: Option<&str>,
 ) -> Result<()> {
 	conn.execute(
-		"DELETE FROM sessions WHERE user_id = ?1 AND token IS NOT ?2",
-		params![user_id, keep],
+		"DELETE FROM sessions WHERE user_id = ?1 AND hash IS NOT ?2",
+		params![user_id, keep.map(token_hash)],
 	)?;
 	Ok(())
 }
@@ -454,7 +494,8 @@ pub async fn password_matches(
 	verify(password, hash).await
 }
 
-/// A new password: the user is logged out everywhere, except in `keep`.
+/// A new password: the user is logged out everywhere, except in `keep`,
+/// and links that set one end.
 pub fn set_password_hash(
 	conn: &Connection,
 	user_id: i64,
@@ -465,19 +506,6 @@ pub fn set_password_hash(
 		"UPDATE users SET password_hash = ?1 WHERE id = ?2",
 		params![hash, user_id],
 	)?;
+	links::end_password_links(conn, user_id)?;
 	end_sessions(conn, user_id, keep)
-}
-
-/// Whether the email may try again, see [`MAX_FAILS`].
-fn may_try(email: &str) -> bool {
-	let mut fails = FAILS.lock().unwrap_or_else(PoisonError::into_inner);
-	fails.retain(|_, (_, first)| *first + FAIL_WINDOW_MS > now());
-	let email = email.to_lowercase();
-	fails.get(&email).is_none_or(|(n, _)| *n < MAX_FAILS)
-}
-
-/// A wrong password, the email in any case counts as one.
-fn failed(email: &str) {
-	let mut fails = FAILS.lock().unwrap_or_else(PoisonError::into_inner);
-	fails.entry(email.to_lowercase()).or_insert((0, now())).0 += 1;
 }

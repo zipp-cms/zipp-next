@@ -375,7 +375,7 @@ async fn graphql(
 			(false, None) => return Err(Error::MissingEndpointToken),
 		};
 		let preview = match &p.token {
-			Some(t) if scope.previews => preview(&conn, t)?,
+			Some(t) if scope.previews => preview(&conn, &state.schema, t)?,
 			_ => None,
 		};
 		(!editor, preview, scope)

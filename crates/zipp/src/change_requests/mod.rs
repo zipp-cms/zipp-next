@@ -67,6 +67,12 @@ pub fn create(
 	context: &str,
 	text: &str,
 ) -> Result<ChangeRequest> {
+	if !studio_path(page) {
+		return Err(Error::Invalid(vec![FieldError {
+			path: "page".into(),
+			message: "Not a page of the studio".into(),
+		}]));
+	}
 	if text.trim().is_empty() {
 		return Err(Error::Invalid(vec![FieldError {
 			path: "text".into(),
@@ -80,6 +86,16 @@ pub fn create(
 	)?;
 	let sql = format!("{REQUEST} WHERE r.id = ?1");
 	Ok(conn.query_row(&sql, [conn.last_insert_rowid()], request_row)?)
+}
+
+/// Whether `page` is a path of the studio. Admins open it as a link and
+/// the mail appends it to the studio's url, so anything else (a
+/// `javascript:` url, `@other.host`) could lead them elsewhere.
+fn studio_path(page: &str) -> bool {
+	page.starts_with("/admin/")
+		&& page.len() <= 500
+		&& !page.chars().any(|c| c.is_whitespace() || c.is_control())
+		&& !page.contains('\\')
 }
 
 pub fn set_done(conn: &Connection, id: i64, done: bool) -> Result<()> {

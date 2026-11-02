@@ -186,6 +186,16 @@ pub fn set_role(conn: &Connection, id: i64, role: Option<&str>) -> Result<()> {
 	}
 }
 
+/// The mail to the old address after a user changed their email: who
+/// took over a session can't do it unseen.
+pub fn email_mail(old: &str, new: &str) -> crate::mail::Mail {
+	let text = format!(
+		"The email of your account was changed to {new}.\n\n\
+		If that wasn't you, tell an admin of the site right away."
+	);
+	crate::mail::Mail::new(old, "Your email was changed", &text)
+}
+
 pub fn delete(conn: &Connection, id: i64) -> Result<()> {
 	conn.execute("DELETE FROM sessions WHERE user_id = ?1", [id])?;
 	match conn.execute("DELETE FROM users WHERE id = ?1", [id])? {

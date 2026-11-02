@@ -2,10 +2,11 @@ use super::api::*;
 use super::*;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::auth::{AiAccess, Edit, EntryAccess, Publish, View};
+use crate::entries::viewable_refs;
 
 async fn get_route(
 	State(state): State<AppState>,
-	_access: EntryAccess<View>,
+	access: EntryAccess<View>,
 	Req(req): Req<GetReq>,
 ) -> ApiResult<GetReq> {
 	let conn = state.db.conn();
@@ -13,10 +14,11 @@ async fn get_route(
 	let site = req
 		.site
 		.unwrap_or_else(|| state.schema.primary_site().handle.clone());
-	let relations = match &draft {
+	let mut relations = match &draft {
 		Some(d) => draft_refs(&conn, &state.schema, d, &site)?,
 		None => Default::default(),
 	};
+	viewable_refs(&access.auth, &state.schema, &mut relations);
 	Ok(Json(DraftResp { draft, relations }))
 }
 
@@ -79,25 +81,31 @@ async fn restore_route(
 	Req(req): Req<RestoreReq>,
 ) -> ApiResult<RestoreReq> {
 	let user = Some(access.auth.user_id);
-	Ok(Json(restore(&state.db.conn(), req.id, req.rev, user)?))
+	Ok(Json(restore(
+		&state.db.conn(),
+		req.id,
+		req.rev,
+		req.base,
+		user,
+	)?))
 }
 
 async fn preview_route(
 	State(state): State<AppState>,
-	_access: EntryAccess<View>,
+	access: EntryAccess<View>,
 	Req(req): Req<PreviewReq>,
 ) -> ApiResult<PreviewReq> {
-	let token = create_token(&state.db.conn(), req.id)?;
+	let token = create_token(&state.db.conn(), req.id, access.auth.user_id)?;
 	Ok(Json(TokenResp { token }))
 }
 
-/// Every draft of every section: the AI page's.
+/// Every draft of the sections the user sees: the AI page's.
 async fn site_preview_route(
 	State(state): State<AppState>,
-	_access: AiAccess,
+	AiAccess(auth): AiAccess,
 	Req(_): Req<SitePreviewReq>,
 ) -> ApiResult<SitePreviewReq> {
-	let token = create_site_token(&state.db.conn())?;
+	let token = create_site_token(&state.db.conn(), auth.user_id)?;
 	Ok(Json(TokenResp { token }))
 }
 

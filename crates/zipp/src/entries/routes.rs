@@ -3,22 +3,42 @@ use super::*;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::auth::{Delete, EntryAccess, Publish, View};
 
+/// Only the related entries the role sees: the chips of the others would
+/// show their titles and pages.
+pub(crate) fn viewable_refs(
+	auth: &Authed,
+	schema: &Schema,
+	refs: &mut BTreeMap<i64, EntryRef>,
+) {
+	refs.retain(|_, r| auth.can(schema, &r.section, Access::View));
+}
+
 async fn list_route(
 	State(state): State<AppState>,
 	auth: Authed,
 	Req(ListReq(params)): Req<ListReq>,
 ) -> ApiResult<ListReq> {
 	let conn = state.db.conn();
-	let q = Query::parse(&state.schema, &params).map_err(Error::Request)?;
+	let mut q = Query::parse(&state.schema, &params).map_err(Error::Request)?;
 	if let Some(section) = &q.section {
 		auth.check(&state.schema, section, Access::View)?;
 	}
+	// a search over all sections only finds what the role sees, also in
+	// the total, or a search would tell whether a hidden entry matches
+	if !auth.admin() {
+		let sections = state.schema.sections.iter();
+		q.sections = Some(
+			sections
+				.filter(|s| auth.can(&state.schema, &s.handle, Access::View))
+				.map(|s| s.handle.clone())
+				.collect(),
+		);
+	}
 
-	let (mut entries, total) = list(&conn, &q)?;
-	// a search over all sections only finds what the role sees
-	entries.retain(|e| auth.can(&state.schema, &e.section, Access::View));
+	let (entries, total) = list(&conn, &q)?;
 	let ids: Vec<i64> = entries.iter().map(|e| e.id).collect();
-	let relations = refs(&conn, &ids, &q.site, q.published_only)?;
+	let mut relations = refs(&conn, &ids, &q.site, q.published_only)?;
+	viewable_refs(&auth, &state.schema, &mut relations);
 	let published = published_per_site(&conn, &ids)?;
 	let drafts = with_drafts(&conn, &ids)?;
 
@@ -59,7 +79,7 @@ async fn choices_route(
 
 async fn get_route(
 	State(state): State<AppState>,
-	_access: EntryAccess<View>,
+	access: EntryAccess<View>,
 	Req(req): Req<GetReq>,
 ) -> ApiResult<GetReq> {
 	let conn = state.db.conn();
@@ -68,7 +88,8 @@ async fn get_route(
 		.unwrap_or_else(|| state.schema.primary_site().handle.clone());
 
 	let entry = get_entry(&conn, req.id, &site)?;
-	let relations = refs(&conn, &[req.id], &site, false)?;
+	let mut relations = refs(&conn, &[req.id], &site, false)?;
+	viewable_refs(&access.auth, &state.schema, &mut relations);
 
 	Ok(Json(EntryResp { entry, relations }))
 }

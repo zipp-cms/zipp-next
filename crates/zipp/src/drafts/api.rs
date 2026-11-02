@@ -73,6 +73,9 @@ request!(RevisionReq, GET "/entries/{id}/revisions/{rev}" => Doc);
 pub struct RestoreReq {
 	pub id: i64,
 	pub rev: i64,
+	/// the `updatedAt` of the draft the editor has, `None` without one
+	#[serde(default)]
+	pub base: Option<i64>,
 }
 
 request!(RestoreReq, POST "/entries/{id}/revisions/{rev}/restore" => Draft);

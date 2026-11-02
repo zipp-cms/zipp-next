@@ -188,7 +188,7 @@ async fn chat(
 		{
 			Ok(messages) => ChatEvent::Done { messages },
 			Err(e) => ChatEvent::Error {
-				message: e.to_string(),
+				message: e.public().to_string(),
 			},
 		};
 		let _ = send(done).await;
@@ -220,7 +220,7 @@ where
 		>,
 {
 	let view = req.view.as_deref().filter(|v| v.len() < 2000);
-	let view = describe_view(state, view);
+	let view = describe_view(state, auth, view);
 	let mut messages = req.messages;
 	let start = messages.len();
 	let asked = messages
@@ -302,7 +302,7 @@ where
 					}
 					v.to_string()
 				}
-				Err(e) => format!("error: {e}"),
+				Err(e) => format!("error: {}", e.public()),
 			};
 			messages.push(Message::ToolOutput { id, output });
 		}

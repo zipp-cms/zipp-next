@@ -6,7 +6,7 @@ use std::time::Duration;
 use serde::Deserialize;
 use zipp::AppState;
 use zipp::api::{ApiResult, ApiRouter, Req};
-use zipp::auth::{Admin, end_session, new_session};
+use zipp::auth::{Admin, end_session, short_session};
 use zipp::axum::extract::{Path, Query, State};
 use zipp::axum::response::IntoResponse;
 use zipp::axum::response::sse::{Event, KeepAlive, Sse};
@@ -16,6 +16,9 @@ use zipp::db::random_token;
 use zipp::error::{Error, Result};
 
 use crate::api::*;
+
+/// How long the session of a run lasts at most.
+const RUN_SESSION_MS: i64 = 1000 * 60 * 60 * 2;
 use crate::{agent, finish, run_file, session_file, system_prompt};
 
 async fn start(
@@ -30,8 +33,12 @@ async fn start(
 	let io = |e: std::io::Error| Error::Internal(e.to_string());
 	fs::create_dir_all(&agent.runs).map_err(io)?;
 
-	// the agent acts as the user, with a session of its own
-	let token = new_session(&state.db.conn(), auth.user_id)?.token;
+	// the agent acts as the user, with a session of its own that ends
+	// with the run, or after RUN_SESSION_MS when a restart of the cms lost
+	// the run's end
+	let conn = state.db.conn();
+	let token = short_session(&conn, auth.user_id, RUN_SESSION_MS)?.token;
+	drop(conn);
 
 	let id = random_token();
 	let out = fs::File::create(run_file(&agent, &id, "jsonl")?).map_err(io)?;

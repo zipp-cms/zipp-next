@@ -2,10 +2,14 @@ use axum::extract::State;
 use axum::{Json, Router};
 
 use super::api::*;
-use super::{check, check_role, create, delete, get, list, set_role, update};
+use super::{
+	check, check_role, create, delete, email_mail, get, list, set_role, update,
+};
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
-use crate::auth::links::{LinkKind, create_link, link_mail, link_url};
+use crate::auth::links::{
+	LinkKind, create_link, end_password_links, link_mail, link_url,
+};
 use crate::auth::{
 	Admin, Authed, end_sessions, hash_password, password_matches,
 	set_password_hash,
@@ -74,9 +78,11 @@ async fn update_route(
 		&req.language,
 		password,
 	)?;
-	// a new password of oneself needs the current one, a session alone
-	// could be someone else at an open laptop
-	if own && password.is_some() {
+	// a new password or email of oneself needs the current password, a
+	// session alone could be someone else at an open laptop (with the
+	// email they'd reset the password)
+	let new_email = !req.email.trim().eq_ignore_ascii_case(&current.user.email);
+	if own && (password.is_some() || new_email) {
 		let given = req.current_password.as_deref().unwrap_or_default();
 		if !password_matches(&state.db, req.id, given).await? {
 			errors.push(FieldError {
@@ -93,20 +99,35 @@ async fn update_route(
 		Some(p) => Some(hash_password(p.into()).await?),
 		None => None,
 	};
-	let conn = state.db.conn();
-	// all of it or nothing
-	let tx = conn.unchecked_transaction()?;
-	update(&tx, req.id, &req.email, &req.name, &req.language)?;
-	if !own {
-		set_role(&tx, req.id, req.role.as_deref())?;
+	let account = {
+		let conn = state.db.conn();
+		// all of it or nothing
+		let tx = conn.unchecked_transaction()?;
+		update(&tx, req.id, &req.email, &req.name, &req.language)?;
+		// a link sent to the old address sets no password anymore
+		if new_email {
+			end_password_links(&tx, req.id)?;
+		}
+		if !own {
+			set_role(&tx, req.id, req.role.as_deref())?;
+		}
+		if let Some(hash) = hash {
+			// the own session stays when the others end
+			let keep = own.then_some(auth.token.as_str());
+			set_password_hash(&tx, req.id, &hash, keep)?;
+		}
+		tx.commit()?;
+		get(&conn, req.id)?
+	};
+
+	// the old address hears of it, a mail that fails is only logged
+	if new_email && state.mail.configured() {
+		let mail = email_mail(&current.user.email, &account.user.email);
+		if let Err(e) = state.mail.send(mail).await {
+			tracing::warn!("the mail of a new email: {e}");
+		}
 	}
-	if let Some(hash) = hash {
-		// the own session stays when the others end
-		let keep = own.then_some(auth.token.as_str());
-		set_password_hash(&tx, req.id, &hash, keep)?;
-	}
-	tx.commit()?;
-	Ok(Json(get(&conn, req.id)?))
+	Ok(Json(account))
 }
 
 async fn delete_route(

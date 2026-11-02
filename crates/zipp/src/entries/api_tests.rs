@@ -324,6 +324,26 @@ async fn roles_on_entries() {
 }
 
 #[tokio::test]
+async fn lists_tell_nothing_of_hidden_sections() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	let author = ts.user(Some("author"));
+	let home = admin.call(&params(&[("section", "home")])).await.unwrap();
+	let home = &home.entries[0];
+	let id = home.id.to_string();
+
+	// the author doesn't see the home page: not by its id, nor in a
+	// search, and the total doesn't count it either
+	for p in [("ids", id.as_str()), ("search", home.title.as_str())] {
+		let found = author.call(&params(&[p])).await.unwrap();
+		assert!(found.entries.is_empty(), "{p:?}");
+		assert_eq!(found.total, 0, "{p:?}");
+		let found = admin.call(&params(&[p])).await.unwrap();
+		assert_eq!(found.total, 1, "{p:?}");
+	}
+}
+
+#[tokio::test]
 async fn choices_for_a_picker() {
 	let ts = TestServer::new(site_with_roles());
 	let admin = ts.admin();

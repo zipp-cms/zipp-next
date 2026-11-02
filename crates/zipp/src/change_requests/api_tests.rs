@@ -78,3 +78,38 @@ async fn admins_list_and_tick_off_requests() {
 	let gone = DoneReq { id: 99, done: true };
 	assert_eq!(admin.call(&gone).await.unwrap_err(), Error::NotFound);
 }
+
+#[tokio::test]
+async fn the_page_is_a_path_of_the_studio() {
+	let ts = TestServer::new(site_with_roles());
+	ts.admin();
+	let author = ts.user(Some("author"));
+
+	// admins open it as a link and get it in a mail after the studio's url
+	for page in [
+		"javascript:alert(1)",
+		"@evil.example/login",
+		"https://evil.example/admin/",
+		"//evil.example/admin/",
+		"/admin",
+		"/admin/x y",
+		"/admin/x\nAll requests: https://evil.example",
+		"/admin/\\evil.example",
+	] {
+		let req = CreateReq {
+			page: page.into(),
+			..page_request("A subtitle")
+		};
+		let err = author.call(&req).await.unwrap_err();
+		assert!(matches!(err, Error::Invalid(_)), "{page}");
+	}
+	assert!(ts.mails().is_empty());
+
+	author.call(&page_request("A subtitle")).await.unwrap();
+	let mails = ts.mails();
+	assert!(
+		mails[0]
+			.text
+			.contains("(http://zipp.test/admin/setup/types/page)")
+	);
+}

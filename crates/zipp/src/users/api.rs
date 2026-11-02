@@ -50,7 +50,7 @@ pub struct UpdateReq {
 	pub language: String,
 	/// a new one, the user is logged out everywhere else
 	pub password: Option<String>,
-	/// with a new password of oneself
+	/// with a new password or email of oneself
 	pub current_password: Option<String>,
 }
 

@@ -1,1 +1,0 @@
-import{aC as t,b8 as e,k as u,b9 as c,w as a}from"./index-CPNw9lHo.js";function l(n){t===null&&e(),c&&t.l!==null?s(t).m.push(n):u(()=>{const o=a(n);if(typeof o=="function")return o})}function i(n){t===null&&e(),l(()=>()=>a(n))}function s(n){var o=n.l;return o.u??(o.u={a:[],b:[],m:[]})}export{l as a,i as o};

@@ -9,8 +9,8 @@
 //!
 //! A preview token shows the draft of one entry on the website: crelte
 //! passes `?token=` on to GraphQL, which then answers with the draft. A
-//! token of the whole site shows every draft, also of entries that only
-//! a draft publishes.
+//! token of the whole site shows every draft of the sections its user
+//! sees, also of entries that only a draft publishes.
 
 use std::collections::BTreeMap;
 
@@ -182,6 +182,26 @@ fn store_draft(
 	Ok(())
 }
 
+/// Whether the draft is still the one the editor's change is based on
+/// (`base`, its `updatedAt`, `None` without a draft): someone else's
+/// changes since, or a publish or discard, are a conflict.
+pub(super) fn check_base(
+	current: Option<&Draft>,
+	base: Option<i64>,
+	user_id: Option<i64>,
+) -> Result<()> {
+	match (current, base) {
+		(Some(d), _) if Some(d.updated_at) != base && d.user_id != user_id => {
+			let who = d.user.clone().unwrap_or_else(|| "someone".into());
+			Err(Error::Conflict(format!("{who} changed this entry")))
+		}
+		(None, Some(_)) => Err(Error::Conflict(
+			"the draft was published or discarded".into(),
+		)),
+		_ => Ok(()),
+	}
+}
+
 /// Changes one site of the draft, it starts as a copy of the live entry.
 /// Shared fields go to the other sites of the draft too. Nothing is
 /// validated here, a draft may be half done.
@@ -225,18 +245,7 @@ pub fn put_draft(
 			))
 		})?;
 
-	match (&current, base) {
-		(Some(d), _) if Some(d.updated_at) != base && d.user_id != user_id => {
-			let who = d.user.clone().unwrap_or_else(|| "someone".into());
-			return Err(Error::Conflict(format!("{who} changed this entry")));
-		}
-		(None, Some(_)) => {
-			return Err(Error::Conflict(
-				"the draft was published or discarded".into(),
-			));
-		}
-		_ => {}
-	}
+	check_base(current.as_ref(), base, user_id)?;
 
 	let mut doc = match current {
 		Some(d) => d.doc,

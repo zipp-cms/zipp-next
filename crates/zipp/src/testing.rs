@@ -99,6 +99,13 @@ impl TestServer {
 		self
 	}
 
+	/// The cms' url, like `serve --public-url`; empty is none.
+	pub fn public_url(mut self, url: &str) -> Self {
+		self.state.public_url = Arc::new(url.into());
+		self.app = server::app(self.state.clone(), self.routes.clone());
+		self
+	}
+
 	/// Someone without a session.
 	pub fn anonymous(&self) -> Client {
 		Client {

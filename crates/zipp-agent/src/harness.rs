@@ -67,13 +67,15 @@ impl Harness for ClaudeCode {
 		session: Option<&str>,
 	) -> Command {
 		let mut cmd = Command::new(&self.command);
-		cmd.args(["-p", message])
+		cmd.arg("-p")
 			.args(["--output-format", "stream-json", "--verbose"])
 			.arg("--dangerously-skip-permissions")
 			.args(["--append-system-prompt", system]);
 		if let Some(s) = session {
 			cmd.args(["--resume", s]);
 		}
+		// a message that starts with `-` is no option
+		cmd.arg("--").arg(message);
 		cmd
 	}
 
@@ -190,5 +192,17 @@ mod tests {
 		assert_eq!(c.events(end, dir), [ChatEvent::Error("no".into())]);
 		assert_eq!(c.session(end).as_deref(), Some("s1"));
 		assert!(c.events("not json", dir).is_empty());
+	}
+
+	#[test]
+	fn the_message_comes_after_the_options() {
+		let c = ClaudeCode {
+			command: "claude".into(),
+		};
+		let cmd = c.command("--resume x", "system", Some("s1"));
+		let args: Vec<_> =
+			cmd.get_args().map(|a| a.to_str().unwrap()).collect();
+		assert_eq!(args[args.len() - 2..], ["--", "--resume x"]);
+		assert!(args.contains(&"s1"));
 	}
 }

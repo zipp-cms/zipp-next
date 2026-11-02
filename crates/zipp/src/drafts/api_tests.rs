@@ -68,8 +68,24 @@ async fn drafts_until_published() {
 	let first = revs.last().unwrap().id;
 	let doc = editor.call(&RevisionReq { id, rev: first }).await.unwrap();
 	assert_eq!(doc["de"].title, "Start");
-	let restored = editor.call(&RestoreReq { id, rev: first }).await.unwrap();
+	let restore = |base| RestoreReq {
+		id,
+		rev: first,
+		base,
+	};
+	let restored = editor.call(&restore(None)).await.unwrap();
 	assert_eq!(restored.doc["de"].title, "Start");
+
+	// not over someone else's draft they haven't seen
+	let other = ts.user(Some("editor"));
+	let theirs = put(id, "page", "Theirs", Some(restored.updated_at));
+	let theirs = other.call(&theirs).await.unwrap();
+	let err = editor.call(&restore(None)).await;
+	assert!(matches!(err.unwrap_err(), Error::Conflict(_)));
+	editor
+		.call(&restore(Some(theirs.updated_at)))
+		.await
+		.unwrap();
 
 	editor.call(&DiscardReq { id }).await.unwrap();
 	assert!(
@@ -171,7 +187,11 @@ async fn roles_on_drafts() {
 			.unwrap_err(),
 		author.call(&DiscardReq { id: page }).await.unwrap_err(),
 		author
-			.call(&RestoreReq { id: page, rev: 1 })
+			.call(&RestoreReq {
+				id: page,
+				rev: 1,
+				base: None,
+			})
 			.await
 			.unwrap_err(),
 		// every draft is the AI chat's
@@ -217,4 +237,54 @@ async fn a_draft_knows_the_entries_only_it_links_to() {
 		.await
 		.unwrap();
 	assert_eq!(got.relations[&page.id].title, "About");
+}
+
+#[tokio::test]
+async fn related_entries_of_hidden_sections_don_t_show() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	let author = ts.user(Some("author"));
+	let list = crate::entries::api::ListReq(
+		[("section".to_string(), "home".to_string())].into(),
+	);
+	let home = admin.call(&list).await.unwrap().entries[0].id;
+
+	// an event of the author links to the home page they don't see
+	let mut live = input("events", "event", "Jazz", json!({ "page": [home] }));
+	live.published = false;
+	let event = author.call(&CreateReq(live)).await.unwrap().id;
+	let req = PutReq {
+		id: event,
+		site: "de".into(),
+		base: None,
+		content: content("event", "Jazz", json!({ "page": [home] })),
+	};
+	author.call(&req).await.unwrap();
+
+	let get = GetReq {
+		id: event,
+		site: None,
+	};
+	assert!(author.call(&get).await.unwrap().relations.is_empty());
+	assert!(
+		admin
+			.call(&get)
+			.await
+			.unwrap()
+			.relations
+			.contains_key(&home)
+	);
+	let entry = GetEntry {
+		id: event,
+		site: None,
+	};
+	assert!(author.call(&entry).await.unwrap().relations.is_empty());
+	assert!(
+		admin
+			.call(&entry)
+			.await
+			.unwrap()
+			.relations
+			.contains_key(&home)
+	);
 }

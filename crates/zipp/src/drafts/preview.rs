@@ -1,24 +1,32 @@
 use super::*;
+use crate::db::token_hash;
+use crate::schema::Access;
 
-pub fn create_token(conn: &Connection, id: i64) -> Result<String> {
+/// A token of `user_id` that shows the draft of an entry.
+pub fn create_token(
+	conn: &Connection,
+	id: i64,
+	user_id: i64,
+) -> Result<String> {
 	get_entry_exists(conn, id)?;
-	insert_token(conn, Some(id))
+	insert_token(conn, Some(id), user_id)
 }
 
-/// A token that shows every draft.
-pub fn create_site_token(conn: &Connection) -> Result<String> {
-	insert_token(conn, None)
+/// A token that shows every draft `user_id` may see.
+pub fn create_site_token(conn: &Connection, user_id: i64) -> Result<String> {
+	insert_token(conn, None, user_id)
 }
 
-pub(super) fn insert_token(
+fn insert_token(
 	conn: &Connection,
 	id: Option<i64>,
+	user_id: i64,
 ) -> Result<String> {
 	let token = crate::db::random_token();
 	conn.execute(
-		"INSERT INTO preview_tokens (token, entry_id, expires_at)
-		VALUES (?1, ?2, ?3)",
-		params![token, id, now() + TOKEN_DURATION_MS],
+		"INSERT INTO preview_tokens (hash, entry_id, user_id, expires_at)
+		VALUES (?1, ?2, ?3, ?4)",
+		params![token_hash(&token), id, user_id, now() + TOKEN_DURATION_MS],
 	)?;
 	conn.execute("DELETE FROM preview_tokens WHERE expires_at < ?1", [now()])?;
 	Ok(token)
@@ -34,24 +42,45 @@ pub(super) fn get_entry_exists(conn: &Connection, id: i64) -> Result<()> {
 pub enum Preview {
 	/// one entry and its draft, the live content if there is none
 	Entry(i64, Doc),
-	/// every draft
-	All,
+	/// every draft of these sections, the ones its user may view (now,
+	/// not when the token was made); the others show live
+	All(Vec<String>),
 }
 
 /// What a valid token shows.
-pub fn preview(conn: &Connection, token: &str) -> Result<Option<Preview>> {
-	let id: Option<Option<i64>> = conn
+pub fn preview(
+	conn: &Connection,
+	schema: &Schema,
+	token: &str,
+) -> Result<Option<Preview>> {
+	let found: Option<(Option<i64>, Option<String>)> = conn
 		.query_row(
-			"SELECT entry_id FROM preview_tokens
-			WHERE token = ?1 AND expires_at > ?2",
-			params![token, now()],
-			|r| r.get(0),
+			"SELECT p.entry_id, u.role FROM preview_tokens p
+			JOIN users u ON u.id = p.user_id
+			WHERE p.hash = ?1 AND p.expires_at > ?2",
+			params![token_hash(token), now()],
+			|r| Ok((r.get(0)?, r.get(1)?)),
 		)
 		.optional()?;
-	let id = match id {
+	let id = match found {
 		None => return Ok(None),
-		Some(None) => return Ok(Some(Preview::All)),
-		Some(Some(id)) => id,
+		Some((None, role)) => {
+			let role = role.as_deref().map(|r| schema.get_role(r));
+			let sections = schema
+				.sections
+				.iter()
+				.filter(|s| match role {
+					// an admin
+					None => true,
+					Some(role) => role
+						.and_then(|r| r.sections.get(&s.handle))
+						.is_some_and(|a| *a >= Access::View),
+				})
+				.map(|s| s.handle.clone())
+				.collect();
+			return Ok(Some(Preview::All(sections)));
+		}
+		Some((Some(id), _)) => id,
 	};
 	let (doc, _) = draft_or_live(conn, id)?;
 	Ok(Some(Preview::Entry(id, doc)))

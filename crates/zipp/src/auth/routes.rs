@@ -10,8 +10,8 @@ use super::links::{
 	take_link,
 };
 use super::{
-	Session, end_session, hash_password, login, new_session, renew_session,
-	role_of, set_password_hash, token_of,
+	ClientAddr, Session, end_session, hash_password, login, new_session,
+	renew_session, role_of, set_password_hash, token_of,
 };
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
@@ -22,9 +22,17 @@ use crate::users::{password_error, user};
 
 async fn login_route(
 	State(state): State<AppState>,
+	ClientAddr(address): ClientAddr,
 	Req(req): Req<LoginReq>,
 ) -> ApiResult<LoginReq> {
-	let user_id = login(&state.db, &req.email, &req.password).await?;
+	let user_id = login(
+		&state.db,
+		&state.logins,
+		&address,
+		&req.email,
+		&req.password,
+	)
+	.await?;
 	let conn = state.db.conn();
 	let session = new_session(&conn, user_id)?;
 	Ok(Json(authenticated(&conn, session)?))
@@ -81,6 +89,8 @@ async fn forgot_route(
 			"This site sends no mails: ask an admin for a new password".into(),
 		));
 	}
+	// before the lookup, so the answer is the same for every email
+	link_url(&state.public_url, LinkKind::Reset, "")?;
 	let conn = state.db.conn();
 	let user: Option<(i64, String)> = conn
 		.query_row(

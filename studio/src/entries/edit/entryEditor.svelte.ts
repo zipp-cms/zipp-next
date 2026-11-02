@@ -534,7 +534,11 @@ export class EntryEditor {
 		if (!confirm(question)) return;
 		this.cancelSave();
 		return this.action.run(async () => {
-			await restoreRevision(this.id!, rev.id);
+			await restoreRevision(
+				this.id!,
+				rev.id,
+				this.draft?.updatedAt ?? null,
+			);
 			this.viewing = null;
 			await this.load();
 		});

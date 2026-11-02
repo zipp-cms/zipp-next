@@ -119,6 +119,20 @@ async fn users_change_their_own_account() {
 	let err = editor.call(&change).await.unwrap_err();
 	assert_eq!(paths(err), ["currentPassword"]);
 
+	// so does a new email, and the old address gets a mail
+	let mut email = unchanged(&changed);
+	email.email = "eddie@x.ch".into();
+	let err = editor.call(&email).await.unwrap_err();
+	assert_eq!(paths(err), ["currentPassword"]);
+	email.current_password = Some("password".into());
+	editor.call(&email).await.unwrap();
+	let mails = ts.mails();
+	assert_eq!(mails.len(), 1);
+	assert_eq!(mails[0].to, me.email);
+	assert!(mails[0].text.contains("eddie@x.ch"));
+	let me = editor.call(&SessionReq {}).await.unwrap().user;
+	change.email = me.email.clone();
+
 	// with it the other sessions end, this one stays
 	let elsewhere = login(&ts, &me.email, "password").await;
 	change.current_password = Some("password".into());

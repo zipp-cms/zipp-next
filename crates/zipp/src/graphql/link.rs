@@ -139,7 +139,7 @@ pub(super) fn entry_url(
 	// links of a preview stay in it; a preview of the whole site is crelte's
 	// live preview, which keeps the scroll position on reloads
 	let mut url = format!("{url}?token={token}");
-	if matches!(viewer.preview, Some(Preview::All)) {
+	if matches!(viewer.preview, Some(Preview::All(_))) {
 		url += "&x-craft-live-preview=1";
 	}
 	Ok(url)

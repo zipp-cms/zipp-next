@@ -133,13 +133,16 @@ pub fn get_revision(conn: &Connection, id: i64, revision: i64) -> Result<Doc> {
 }
 
 /// Puts an old revision into the draft. Sites that the revision doesn't
-/// know yet keep their live content.
+/// know yet keep their live content. `base` like [`put_draft`]'s: the
+/// draft of someone else isn't replaced unseen.
 pub fn restore(
 	conn: &Connection,
 	id: i64,
 	revision: i64,
+	base: Option<i64>,
 	user_id: Option<i64>,
 ) -> Result<Draft> {
+	check_base(get_draft(conn, id)?.as_ref(), base, user_id)?;
 	let doc: String = conn.query_row(
 		"SELECT doc FROM revisions WHERE id = ?1 AND entry_id = ?2",
 		params![revision, id],

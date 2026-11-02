@@ -249,7 +249,7 @@ pub(super) fn query(
 	q.published_only = viewer.published_only;
 	match &viewer.preview {
 		Some(Preview::Entry(id, _)) => q.preview_id = Some(*id),
-		Some(Preview::All) => q.preview_all = true,
+		Some(Preview::All(sections)) => q.preview_sections = sections.clone(),
 		None => {}
 	}
 	// a frontend gets nothing of an offline site, counts neither
@@ -306,9 +306,11 @@ pub(super) fn load(
 				}
 			}
 		}
-		Some(Preview::All) => {
+		Some(Preview::All(sections)) => {
 			let conn = db.conn();
-			for e in entries.iter_mut() {
+			let shown =
+				entries.iter_mut().filter(|e| sections.contains(&e.section));
+			for e in shown {
 				let draft = get_draft(&conn, e.id)?;
 				if let Some(sd) =
 					draft.as_ref().and_then(|d| d.doc.get(&e.site))

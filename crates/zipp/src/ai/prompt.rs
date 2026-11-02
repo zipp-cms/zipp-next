@@ -60,8 +60,13 @@ pub(super) fn date(ms: i64) -> String {
 }
 
 /// What the editor sees, from the url of the preview: the site and entry
-/// of the page, for the system prompt.
-pub(super) fn describe_view(state: &AppState, url: Option<&str>) -> String {
+/// of the page, for the system prompt. Only an entry the user may view:
+/// the url comes from the studio, any user can send any.
+pub(super) fn describe_view(
+	state: &AppState,
+	auth: &Authed,
+	url: Option<&str>,
+) -> String {
 	let Some(url) = url else {
 		return "The preview shows no page yet.".into();
 	};
@@ -94,7 +99,9 @@ pub(super) fn describe_view(state: &AppState, url: Option<&str>) -> String {
 		.optional()
 		.ok()
 		.flatten();
-	let Some((id, section, title)) = entry else {
+	let Some((id, section, title)) = entry.filter(|(_, section, _)| {
+		auth.can(&state.schema, section, Access::View)
+	}) else {
 		return format!("The editor sees the page {url} in site {site}.");
 	};
 	// what is on the page, as the preview shows it

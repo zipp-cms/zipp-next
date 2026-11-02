@@ -40,8 +40,14 @@ pub(super) struct ServeArgs {
 	pub(super) backup_keep: usize,
 	/// A token frontends send to GraphQL as `Authorization: Bearer` that
 	/// reads everything; admins make tokens that read some sections and
-	/// sites in the studio, like Craft's schemas
-	#[arg(long, env = "ZIPP_GRAPHQL_TOKEN", hide_env_values = true)]
+	/// sites in the studio, like Craft's schemas. Never empty: an empty
+	/// `Bearer` would match it
+	#[arg(
+		long,
+		env = "ZIPP_GRAPHQL_TOKEN",
+		hide_env_values = true,
+		value_parser = clap::builder::NonEmptyStringValueParser::new()
+	)]
 	pub(super) graphql_token: Option<String>,
 	/// Development: GraphQL is open without a token when there is no
 	/// `--graphql-token`
@@ -405,4 +411,18 @@ fn graphql_files(path: &Path, out: &mut Vec<PathBuf>) -> io::Result<()> {
 		}
 	}
 	Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn refuses_an_empty_graphql_token() {
+		let serve = |token: &str| {
+			Opts::try_parse_from(["zipp", "serve", "--graphql-token", token])
+		};
+		assert!(serve("").is_err());
+		assert!(serve("secret").is_ok());
+	}
 }

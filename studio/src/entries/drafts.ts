@@ -74,8 +74,15 @@ export function getRevisions(id: number): Promise<Revision[]> {
 	return request('GET', `/entries/${id}/revisions`);
 }
 
-export function restoreRevision(id: number, rev: number): Promise<Draft> {
-	return request('POST', `/entries/${id}/revisions/${rev}/restore`);
+/** `base` like `putDraft`'s: the draft this editor has, its `updatedAt`. */
+export function restoreRevision(
+	id: number,
+	rev: number,
+	base: number | null,
+): Promise<Draft> {
+	return request('POST', `/entries/${id}/revisions/${rev}/restore`, {
+		base,
+	});
 }
 
 /** A link that shows the draft on the website for a day. */

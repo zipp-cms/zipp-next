@@ -5,12 +5,14 @@ use serde_json::{Value, json};
 use super::api::*;
 use super::tokens::Scope;
 use crate::drafts::SiteDoc;
-use crate::drafts::api::{PreviewReq, PutReq};
+use crate::drafts::api::{PreviewReq, PutReq, SitePreviewReq};
 use crate::entries::api::CreateReq;
 use crate::entries::tests::input;
 use crate::error::Error;
 use crate::schema::tests::site_with_roles;
+use crate::schema::{Access, Role};
 use crate::testing::{Client, TestServer};
+use crate::users::api::DeleteReq;
 
 const TITLES: &str =
 	r#"{"query": "{ entries(section: \"events\") { title } }"}"#;
@@ -122,6 +124,69 @@ async fn preview_tokens_show_the_draft() {
 	let frontend = new_token(&admin, Scope::ALL, None).await;
 	let (_, body) = graphql(&anon, &path, TITLES, Some(&frontend)).await;
 	assert_eq!(titles(&body), ["Jazz am Abend"]);
+}
+
+#[tokio::test]
+async fn site_previews_show_the_drafts_the_user_sees() {
+	// a role with the AI chat that sees only events
+	let schema = site_with_roles().role(
+		Role::new("writer", "Writer")
+			.section("events", Access::Edit)
+			.ai(),
+	);
+	let ts = TestServer::new(schema);
+	let admin = ts.admin();
+	let writer = ts.user(Some("writer"));
+	let draft = async |section, ty, title: &str| {
+		let live = input(section, ty, title, json!({}));
+		let id = admin.call(&CreateReq(live)).await.unwrap().id;
+		let put = PutReq {
+			id,
+			site: "de".into(),
+			base: None,
+			content: SiteDoc {
+				ty: ty.into(),
+				dates: Default::default(),
+				title: format!("{title} draft"),
+				slug: title.to_lowercase(),
+				published: true,
+				fields: json!({}),
+			},
+		};
+		admin.call(&put).await.unwrap();
+	};
+	draft("events", "event", "Jazz").await;
+	draft("pages", "page", "About").await;
+
+	const PAGES: &str =
+		r#"{"query": "{ entries(section: \"pages\") { title } }"}"#;
+	let anon = ts.anonymous();
+	let token = writer.call(&SitePreviewReq {}).await.unwrap().token;
+	let path = format!("/api/graphql?token={token}");
+	let (_, body) = graphql(&anon, &path, TITLES, ENV).await;
+	assert_eq!(titles(&body), ["Jazz draft"]);
+	// the pages it doesn't see stay live
+	let (_, body) = graphql(&anon, &path, PAGES, ENV).await;
+	assert_eq!(titles(&body), ["About"]);
+
+	// an admin's shows every draft
+	let token = admin.call(&SitePreviewReq {}).await.unwrap().token;
+	let admin_path = format!("/api/graphql?token={token}");
+	let (_, body) = graphql(&anon, &admin_path, PAGES, ENV).await;
+	assert_eq!(titles(&body), ["About draft"]);
+
+	// the tokens of a deleted user end with them
+	let id = ts
+		.state
+		.db
+		.conn()
+		.query_row("SELECT id FROM users WHERE role = 'writer'", [], |r| {
+			r.get(0)
+		})
+		.unwrap();
+	admin.call(&DeleteReq { id }).await.unwrap();
+	let (_, body) = graphql(&anon, &path, TITLES, ENV).await;
+	assert_eq!(titles(&body), ["Jazz"]);
 }
 
 /// A token of the studio with a scope, made by an admin.

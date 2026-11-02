@@ -111,9 +111,12 @@ const MIGRATIONS: &[&str] = &[r#"
 
 	-- short lived tokens that show the draft of an entry on the website
 	CREATE TABLE preview_tokens (
-		token TEXT PRIMARY KEY,
-		-- NULL: every draft, like the AI chat of the studio shows them
+		-- sha256 of the token as hex
+		hash TEXT PRIMARY KEY,
+		-- NULL: every draft the user may see, like the AI chat shows them
 		entry_id INTEGER REFERENCES entries(id) ON DELETE CASCADE,
+		-- who made it, the drafts of the whole site are the ones they see
+		user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 		expires_at INTEGER NOT NULL
 	);
 
@@ -182,11 +185,14 @@ const MIGRATIONS: &[&str] = &[r#"
 	);
 
 	CREATE TABLE sessions (
-		token TEXT PRIMARY KEY,
+		-- sha256 of the token as hex, the browser has the token
+		hash TEXT PRIMARY KEY,
 		user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 		created_at INTEGER NOT NULL,
 		-- using the studio pushes it back
 		expires_at INTEGER NOT NULL,
+		-- 0: it ends when it ends, see auth::short_session
+		renews INTEGER NOT NULL DEFAULT 1,
 		-- an admin who logged in as the user, see auth/links.rs
 		impersonated_by INTEGER REFERENCES users(id) ON DELETE CASCADE
 	);
@@ -298,6 +304,16 @@ pub fn random_token() -> String {
 	use rand::Rng;
 	let n: u128 = rand::rng().random();
 	format!("{n:032x}")
+}
+
+/// The sha256 of a token as hex. Tables keep only that: a copy of the
+/// database (a backup) gives no access.
+pub fn token_hash(token: &str) -> String {
+	use sha2::{Digest, Sha256};
+	Sha256::digest(token.as_bytes())
+		.iter()
+		.map(|b| format!("{b:02x}"))
+		.collect()
 }
 
 /// Milliseconds as `2026-10-28T08:00:00+00:00`.

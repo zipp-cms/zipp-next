@@ -53,8 +53,9 @@ pub struct Query {
 	pub published_only: bool,
 	/// shown even if not published, the entry of a preview token
 	pub preview_id: Option<i64>,
-	/// every draft is shown, see [`Preview::All`](crate::drafts::Preview)
-	pub preview_all: bool,
+	/// the sections whose drafts are shown, see
+	/// [`Preview::All`](crate::drafts::Preview)
+	pub preview_sections: Vec<String>,
 	/// only entries with a page
 	pub with_uri: bool,
 	/// no entries at all, an offline site for a frontend
@@ -124,7 +125,7 @@ impl Query {
 			offset: 0,
 			published_only: false,
 			preview_id: None,
-			preview_all: false,
+			preview_sections: vec![],
 			with_uri: false,
 			nothing: false,
 		};
@@ -424,11 +425,19 @@ impl Query {
 		if self.with_uri {
 			cond("s.uri IS NOT NULL".into(), vec![]);
 		}
-		if self.published_only && self.preview_all {
-			// published as the draft has it, or live without a draft
-			let sql = "COALESCE((SELECT json_extract(d.doc, '$.' || s.site || '.published') \
-				FROM drafts d WHERE d.entry_id = e.id), s.published) = 1";
-			cond(sql.into(), vec![]);
+		if self.published_only && !self.preview_sections.is_empty() {
+			// published as the draft has it, or live without a draft; the
+			// other sections live
+			let sections = &self.preview_sections;
+			let sql = format!(
+				"CASE WHEN e.section IN ({}) THEN \
+				COALESCE((SELECT json_extract(d.doc, '$.' || s.site || '.published') \
+				FROM drafts d WHERE d.entry_id = e.id), s.published) = 1 \
+				ELSE s.published = 1 AND {LIVE_DATES} END",
+				marks(sections.len())
+			);
+			let values = sections.iter().map(|s| Value::Text(s.clone()));
+			cond(sql, values.collect());
 		} else if self.published_only {
 			// live: published, after its post date and before it expires;
 			// the entry of a preview anyway

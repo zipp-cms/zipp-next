@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use super::*;
 
 pub(super) async fn serve(
@@ -93,6 +95,8 @@ pub(super) async fn serve(
 		.await
 		.map_err(|e| e.to_string())?;
 	info!("listening on {listen}");
+	// the peer's address for the login throttle, see auth::ClientAddr
+	let app = app.into_make_service_with_connect_info::<SocketAddr>();
 	axum::serve(listener, app).await.map_err(|e| e.to_string())
 }
 

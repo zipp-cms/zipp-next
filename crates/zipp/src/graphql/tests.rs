@@ -413,8 +413,10 @@ async fn preview_shows_the_draft() {
 		};
 		crate::drafts::put_draft(&conn, &s, e.id, "de", sd, None, None)
 			.unwrap();
-		let token = crate::drafts::create_token(&conn, e.id).unwrap();
-		crate::drafts::preview(&conn, &token).unwrap()
+		let admin =
+			crate::users::create(&conn, "a@test.ch", "", "", None, "").unwrap();
+		let token = crate::drafts::create_token(&conn, e.id, admin).unwrap();
+		crate::drafts::preview(&conn, &s, &token).unwrap()
 	};
 
 	let req = async_graphql::Request::new(
@@ -489,8 +491,10 @@ async fn site_preview_shows_every_draft() {
 			None,
 		)
 		.unwrap();
-		let token = crate::drafts::create_site_token(&conn).unwrap();
-		crate::drafts::preview(&conn, &token).unwrap()
+		let admin =
+			crate::users::create(&conn, "a@test.ch", "", "", None, "").unwrap();
+		let token = crate::drafts::create_site_token(&conn, admin).unwrap();
+		crate::drafts::preview(&conn, &s, &token).unwrap()
 	};
 
 	let titles = |preview| {
@@ -552,7 +556,7 @@ async fn urls_of_a_preview_keep_the_token() {
 	};
 	assert_eq!(url(None, None).await, "https://x.ch/team");
 	assert_eq!(
-		url(Some(Preview::All), Some("t")).await,
+		url(Some(Preview::All(vec![])), Some("t")).await,
 		"https://x.ch/team?token=t&x-craft-live-preview=1"
 	);
 }

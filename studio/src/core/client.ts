@@ -56,18 +56,29 @@ export function onSessionLost(f: () => void) {
 
 const TOKEN = 'zipp-token';
 
+/**
+ * The token of this tab, from the storage when it loads. Requests send
+ * this one, not the storage's: a login as someone else in another tab
+ * changes the storage, the saves of this tab stay this user's. A reload
+ * takes what the storage has.
+ */
+let current = localStorage.getItem(TOKEN) ?? sessionStorage.getItem(TOKEN);
+let remembered = localStorage.getItem(TOKEN) !== null;
+
 /** The token of the session, kept in this browser or only this tab. */
 export function token(): string | null {
-	return localStorage.getItem(TOKEN) ?? sessionStorage.getItem(TOKEN);
+	return current;
 }
 
 /** Whether the token is kept in this browser, not only in this tab. */
 export function tokenRemembered(): boolean {
-	return localStorage.getItem(TOKEN) !== null;
+	return remembered;
 }
 
 /** `remember`: in this browser, else it ends with the tab. */
 export function setToken(t: string | null, remember = true) {
+	current = t;
+	remembered = t !== null && remember;
 	localStorage.removeItem(TOKEN);
 	sessionStorage.removeItem(TOKEN);
 	if (t) (remember ? localStorage : sessionStorage).setItem(TOKEN, t);

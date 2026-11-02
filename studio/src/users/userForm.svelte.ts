@@ -46,6 +46,16 @@ export class UserForm extends Busy {
 		return this.account?.id === session.user?.id;
 	}
 
+	/**
+	 * Whether saving needs the current password: a new password or email
+	 * of one's own, a session alone could be someone at an open laptop.
+	 */
+	get needsCurrent(): boolean {
+		const email = this.email.trim().toLowerCase();
+		const newEmail = email !== this.account?.email.toLowerCase();
+		return this.own && (this.password !== '' || newEmail);
+	}
+
 	get changed(): boolean {
 		return this.snapshot() !== this.initial || this.password !== '';
 	}
@@ -90,7 +100,7 @@ export class UserForm extends Busy {
 					);
 				return created;
 			}
-			const current = this.own && password ? this.currentPassword : null;
+			const current = this.needsCurrent ? this.currentPassword : null;
 			return updateUser(this.account.id, {
 				name,
 				email,

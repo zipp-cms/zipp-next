@@ -58,17 +58,25 @@ struct ErrorResponse {
 	pub error: Error,
 }
 
-impl IntoResponse for Error {
-	fn into_response(self) -> Response {
-		let status = self.status_code();
-		// what failed inside is for the log, not for whoever asked
-		let this = match self {
+impl Error {
+	/// The error as whoever asked sees it: what failed inside is logged,
+	/// for them it is only an internal error (paths, SQL, the system's
+	/// texts stay out of answers and the AI's prompts).
+	pub fn public(self) -> Self {
+		match self {
 			Self::Internal(msg) => {
 				tracing::error!("{msg}");
 				Self::Internal("see the log".into())
 			}
 			e => e,
-		};
+		}
+	}
+}
+
+impl IntoResponse for Error {
+	fn into_response(self) -> Response {
+		let status = self.status_code();
+		let this = self.public();
 		(
 			status,
 			Json(ErrorResponse {

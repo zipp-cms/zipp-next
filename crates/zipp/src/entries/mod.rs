@@ -35,6 +35,7 @@ mod structure;
 pub(crate) mod tests;
 
 pub use routes::routes;
+pub(crate) use routes::viewable_refs;
 pub use save::check;
 pub(crate) use save::check_relations;
 pub use save::reindex;

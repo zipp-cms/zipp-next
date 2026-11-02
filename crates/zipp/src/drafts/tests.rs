@@ -228,8 +228,13 @@ fn restores_a_revision_into_the_draft() {
 	publish(&conn, &s, e.id, None).unwrap();
 
 	let first = revisions(&conn, e.id).unwrap().pop().unwrap();
-	let d = restore(&conn, e.id, first.id, None).unwrap();
+	let d = restore(&conn, e.id, first.id, None, None).unwrap();
 	assert_eq!(d.doc["de"].title, "One");
+}
+
+/// An admin, the maker of preview tokens.
+fn admin(conn: &Connection) -> i64 {
+	crate::users::create(conn, "admin@test.ch", "", "", None, "").unwrap()
 }
 
 fn entry_doc(p: Option<Preview>) -> Doc {
@@ -252,11 +257,16 @@ fn tokens_show_the_draft() {
 		None,
 	)
 	.unwrap();
-	let token = create_token(&conn, e.id).unwrap();
+	let token = create_token(&conn, e.id, admin(&conn)).unwrap();
 	assert_eq!(
-		entry_doc(preview(&conn, &token).unwrap())["de"].title,
+		entry_doc(preview(&conn, &s, &token).unwrap())["de"].title,
 		"Live"
 	);
+	// only its hash is kept
+	let stored: String = conn
+		.query_row("SELECT hash FROM preview_tokens", [], |r| r.get(0))
+		.unwrap();
+	assert_eq!(stored, crate::db::token_hash(&token));
 
 	put_draft(
 		&conn,
@@ -269,10 +279,10 @@ fn tokens_show_the_draft() {
 	)
 	.unwrap();
 	assert_eq!(
-		entry_doc(preview(&conn, &token).unwrap())["de"].title,
+		entry_doc(preview(&conn, &s, &token).unwrap())["de"].title,
 		"Draft"
 	);
-	assert!(preview(&conn, "nope").unwrap().is_none());
+	assert!(preview(&conn, &s, "nope").unwrap().is_none());
 }
 
 /// The live preview keeps its token while the editor types: each save
@@ -290,9 +300,9 @@ fn a_token_follows_the_draft() {
 		None,
 	)
 	.unwrap();
-	let token = create_token(&conn, e.id).unwrap();
+	let token = create_token(&conn, e.id, admin(&conn)).unwrap();
 	let title = || {
-		entry_doc(preview(&conn, &token).unwrap())["de"]
+		entry_doc(preview(&conn, &s, &token).unwrap())["de"]
 			.title
 			.clone()
 	};

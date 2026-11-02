@@ -45,7 +45,7 @@ previews; without it they show what is live), an optional expiry. The
 token shows once when it is made, zipp keeps only its hash; the list
 shows when each was used last, a token is revoked there. The token of
 `serve --graphql-token` (`ZIPP_GRAPHQL_TOKEN`) reads everything, like
-before.
+before; an empty one is refused at the start.
 
 A token reads only its sections and sites: `entries`, `entry`,
 `entryCount`, `globalSet`, `translations`, relations and links leave out

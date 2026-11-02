@@ -28,8 +28,20 @@ export type Authenticated = {
 	user: User;
 };
 
-/** The admin's token while they are logged in as someone else. */
+/**
+ * The admin's token while they are logged in as someone else, kept where
+ * their token was: a login only for this tab leaves nothing behind.
+ */
 const BEFORE = 'zipp-token-before';
+
+function stashed(): string | null {
+	return localStorage.getItem(BEFORE) ?? sessionStorage.getItem(BEFORE);
+}
+
+function unstash() {
+	localStorage.removeItem(BEFORE);
+	sessionStorage.removeItem(BEFORE);
+}
 
 /**
  * Who is logged in: the session's token, when it ends and its user. The
@@ -97,9 +109,13 @@ export class Session {
 			'POST',
 			`/auth/links/${link}/login-as`,
 		);
+		// the user's token goes where the admin's was, without one (a
+		// private window) only into this tab
 		const own = token();
-		if (own && !this.impersonatedBy) localStorage.setItem(BEFORE, own);
-		this.use(auth);
+		const remember = own !== null && tokenRemembered();
+		if (own && !this.impersonatedBy)
+			(remember ? localStorage : sessionStorage).setItem(BEFORE, own);
+		this.use(auth, remember);
 	}
 
 	/**
@@ -141,11 +157,11 @@ export class Session {
 	/** Back to the own session of before, if there was one; whether. */
 	async endLoginAs(): Promise<boolean> {
 		await request('POST', '/auth/logout').catch(() => {});
-		const before = localStorage.getItem(BEFORE);
-		localStorage.removeItem(BEFORE);
+		const before = stashed();
+		const remember = localStorage.getItem(BEFORE) !== null;
 		this.invalidate();
 		if (!before) return false;
-		setToken(before);
+		setToken(before, remember);
 		await this.init();
 		return this.loggedIn;
 	}
@@ -155,7 +171,10 @@ export class Session {
 		this.invalidate();
 	}
 
-	/** The session is gone: everything of it, also the stored token. */
+	/**
+	 * The session is gone: everything of it, also the stored token and an
+	 * admin's of before.
+	 */
 	invalidate() {
 		this.token = null;
 		this.expiresAt = null;
@@ -163,6 +182,7 @@ export class Session {
 		this.impersonatedBy = null;
 		this.expired = false;
 		setToken(null);
+		unstash();
 	}
 
 	private set(auth: Authenticated) {

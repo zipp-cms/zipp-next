@@ -109,6 +109,21 @@
 
 <svelte:window {onkeydown} />
 
+{#snippet currentPassword()}
+	<label class="stacked">
+		{t('users.currentPassword')}
+		<input
+			type="password"
+			autocomplete="current-password"
+			bind:value={form.currentPassword}
+			required
+		/>
+		{#if form.fields.currentPassword}
+			<span class="error">{form.fields.currentPassword}</span>
+		{/if}
+	</label>
+{/snippet}
+
 <PageTop {crumbs}>
 	{#snippet state()}
 		{#if form.account}
@@ -159,6 +174,10 @@
 					<span class="error">{form.fields.email}</span>
 				{/if}
 			</label>
+			<!-- a new email alone asks for it here, with a password below -->
+			{#if form.needsCurrent && !form.password}
+				{@render currentPassword()}
+			{/if}
 			<!-- not a select: the role's is the only one in the form -->
 			<div class="language">
 				<span>{t('users.language')}</span>
@@ -215,19 +234,8 @@
 					{t('users.sendInvite')}
 				</label>
 			{/if}
-			{#if form.own && form.password}
-				<label class="stacked">
-					{t('users.currentPassword')}
-					<input
-						type="password"
-						autocomplete="current-password"
-						bind:value={form.currentPassword}
-						required
-					/>
-					{#if form.fields.currentPassword}
-						<span class="error">{form.fields.currentPassword}</span>
-					{/if}
-				</label>
+			{#if form.needsCurrent && form.password}
+				{@render currentPassword()}
 			{/if}
 		</div>
 	</form>
