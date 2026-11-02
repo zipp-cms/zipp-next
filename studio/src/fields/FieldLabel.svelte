@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Component, Field, Schema } from '../core/schema';
 	import { isAdmin } from '../core/access';
+	import { fieldPath } from '../core/paths';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { markdownInline } from '../core/markdown';
 	import { t } from '../i18n/index.svelte';
@@ -49,9 +50,7 @@
 	{#if isAdmin(schema)}
 		<a
 			class="handle-code"
-			href="/admin/setup/{component.entry
-				? 'types'
-				: 'blocks'}/{component.handle}#field-{field.handle}"
+			href={fieldPath(component, field.handle)}
 			title={t('fields.inSetup')}
 		>
 			{field.handle}

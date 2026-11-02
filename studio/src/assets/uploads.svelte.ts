@@ -1,6 +1,12 @@
 import { upload } from '../core/client';
 import { t } from '../i18n/index.svelte';
-import { createFolder, listFolders, type Asset, type Unzipped } from './api';
+import {
+	childFolder,
+	createFolder,
+	listFolders,
+	type Asset,
+	type Unzipped,
+} from './api';
 
 /** What an asset tile carries when it is dragged: the asset ids. */
 export const ASSETS_DRAG = 'application/x-zipp-assets';
@@ -237,12 +243,6 @@ async function makeFolders(
 	if (!paths.length) return ids;
 
 	let { folders } = await listFolders();
-	const find = (parent: number | null, name: string) =>
-		folders.find(
-			f =>
-				f.parentId === parent &&
-				f.name.toLowerCase() === name.toLowerCase(),
-		);
 	for (const path of paths) {
 		// the server trims names, a name with spaces around is the same
 		const parts = path.split('/').map(n => n.trim());
@@ -251,7 +251,7 @@ async function makeFolders(
 			if (ids.has(here)) continue;
 			const parent = ids.get(parts.slice(0, i - 1).join('/')) ?? null;
 			const name = parts[i - 1];
-			let f = find(parent, name);
+			let f = childFolder(folders, parent, name);
 			if (!f) {
 				try {
 					f = await createFolder(parent, name);
@@ -259,7 +259,7 @@ async function makeFolders(
 				} catch (e) {
 					// another upload made it meanwhile
 					folders = (await listFolders()).folders;
-					f = find(parent, name);
+					f = childFolder(folders, parent, name);
 					if (!f) throw e;
 				}
 			}

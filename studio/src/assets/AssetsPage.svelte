@@ -31,7 +31,7 @@
 		assetUsage,
 		deleteAsset,
 		moveAssets,
-		updateAsset,
+		renameAsset,
 		type Asset,
 		type Folder,
 	} from './api';
@@ -137,18 +137,8 @@
 		current = a;
 	}
 
-	/** Only the name, the rest as it is. */
 	async function rename(a: Asset, filename: string): Promise<boolean> {
-		const saved = await action.run(() =>
-			updateAsset(a.id, {
-				title: a.title,
-				alt: a.alt,
-				focalX: a.focalX,
-				focalY: a.focalY,
-				filename,
-				edits: a.edits,
-			}),
-		);
+		const saved = await action.run(() => renameAsset(a, filename));
 		if (saved)
 			lib.assets = lib.assets.map(x => (x.id === a.id ? saved : x));
 		return !!saved;

@@ -318,15 +318,13 @@ fn schema() -> Schema {
 		.entry(
 			"header",
 			"Header",
-			// a menu with a second level, to pages or anywhere
-			[
-				Field::navigation(
-					"navigation",
-					[LinkKind::Entry, LinkKind::Url],
-				)
-				.translatable()
-				.label("Main navigation"),
-			],
+			// a menu with a second level, to pages, anywhere or a file
+			[Field::navigation(
+				"navigation",
+				[LinkKind::Entry, LinkKind::Url, LinkKind::Asset],
+			)
+			.translatable()
+			.label("Main navigation")],
 		)
 		.entry(
 			"footer",

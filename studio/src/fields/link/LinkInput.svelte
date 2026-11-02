@@ -3,11 +3,10 @@
 	import type { Link, LinkKind, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
 	import Menu from 'zipp-ui/Menu.svelte';
-	import { chosenAssets } from '../../assets/chosen.svelte';
 	import LinkAdd from './LinkAdd.svelte';
 	import LinkEditor from './LinkEditor.svelte';
 	import LinkRow from './LinkRow.svelte';
-	import { hasTarget, linkSummary, opensInNewTab } from './link';
+	import { hasTarget, opensInNewTab } from './link';
 	import { t } from '../../i18n/index.svelte';
 
 	/**
@@ -49,21 +48,6 @@
 	let editing = $state(false);
 	const filled = $derived(hasTarget(link));
 	const newTab = $derived(opensInNewTab(schema, link, externalInNewTab));
-	const asset = chosenAssets(() =>
-		link.type === 'asset' && typeof link.value === 'number'
-			? [link.value]
-			: [],
-	);
-	const summary = $derived(
-		linkSummary(
-			schema,
-			link,
-			refs,
-			typeof link.value === 'number'
-				? asset.get(link.value)?.filename
-				: undefined,
-		),
-	);
 
 	// what holds the link goes too, like a button of a rich text
 	const removeItem = $derived(
@@ -102,9 +86,10 @@
 	<div class="link-input" class:editing>
 		<div class="row">
 			<LinkRow
+				{schema}
+				{refs}
 				{link}
-				{summary}
-				{newTab}
+				{externalInNewTab}
 				{handle}
 				{editing}
 				onedit={() => (editing = !editing)}

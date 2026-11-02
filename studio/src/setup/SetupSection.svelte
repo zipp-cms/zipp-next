@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { accessText, uriOf, visibleRoles } from './setup';
-	import { depth } from '../entries/tree';
+	import { accessText, gqlType, uriOf, visibleRoles } from './setup';
+	import { componentPath, entryPath, sectionPath } from '../core/paths';
+	import { depths } from '../entries/tree';
 	import SiteBadges from '../entries/SiteBadges.svelte';
 	import { entryUrl, navGroups, type Schema } from '../core/schema';
 	import type { EntryList } from '../entries/api';
@@ -58,6 +59,7 @@
 
 	// the first entries in the primary site, see Setup's loadProps
 	const { entries, published, drafts, total } = $derived(list);
+	const entryDepths = $derived(depths(entries));
 
 	const KINDS = {
 		single: 'setup.single',
@@ -129,12 +131,12 @@
 						'URI',
 						'GraphQL',
 					]}
-					href={ty => `/admin/setup/types/${ty.handle}`}
+					href={componentPath}
 				>
 					{#snippet row(ty)}
 						{@const uri = uriOf(section, ty.handle)}
 						<td>
-							<a href="/admin/setup/types/{ty.handle}">
+							<a href={componentPath(ty)}>
 								{ty.name}
 							</a>
 						</td>
@@ -147,7 +149,7 @@
 									: uri || t('setup.home')}
 							</code>
 						</td>
-						<td><code>{ty.handle}_Entry</code></td>
+						<td><code>{gqlType(ty)}</code></td>
 					{/snippet}
 				</Table>
 			</div>
@@ -230,9 +232,9 @@
 				<span class="muted">{total}</span>
 			</h2>
 			<ul class="plain">
-				{#each entries as e (e.id)}
-					<li style:padding-left="{depth(entries, e) * 0.75}rem">
-						<a href="/admin/entries/{handle}/{e.id}">{e.title}</a>
+				{#each entries as e, i (e.id)}
+					<li style:padding-left="{entryDepths[i] * 0.75}rem">
+						<a href={entryPath(handle, e.id)}>{e.title}</a>
 						{#if drafts.includes(e.id)}
 							<span
 								class="badge changes"
@@ -251,7 +253,7 @@
 				</p>
 			{/if}
 			<p class="muted">
-				<a href="/admin/entries/{handle}">{t('setup.openInContent')}</a>
+				<a href={sectionPath(handle)}>{t('setup.openInContent')}</a>
 			</p>
 		</aside>
 	</div>

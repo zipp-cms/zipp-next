@@ -356,3 +356,16 @@ export function sectionOf(schema: Schema, handle: string): Section | undefined {
 export function sectionName(schema: Schema, handle: string): string {
 	return sectionOf(schema, handle)?.name ?? handle;
 }
+
+/** Whether the entries of a section have pages: a uri, or one of a type. */
+export function hasPages(s: Section): boolean {
+	return s.uri !== null || Object.keys(s.type_uris ?? {}).length > 0;
+}
+
+export function siteOf(schema: Schema, handle: string): Site | undefined {
+	return schema.sites.find(s => s.handle === handle);
+}
+
+export function siteName(schema: Schema, handle: string): string {
+	return siteOf(schema, handle)?.name ?? handle;
+}

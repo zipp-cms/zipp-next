@@ -4,7 +4,6 @@
 	import { isAdmin } from '../core/access';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import {
-		componentHref,
 		fieldUsage,
 		holders,
 		sectionsByGroup,
@@ -12,6 +11,7 @@
 		visibleEntryTypes,
 		visibleSections,
 	} from './setup';
+	import { componentPath, fieldPath, setupPath } from '../core/paths';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -76,14 +76,14 @@
 					.filter(s => p.sections.includes(s.handle))
 					.map(s => ({
 						text: s.name,
-						href: `/admin/setup/sections/${s.handle}`,
+						href: setupPath('sections', s.handle),
 					})),
 			},
 			{
 				name: t('setup.typesAndBlocks'),
 				links: comps.map(c => ({
 					text: c.name,
-					href: componentHref(c),
+					href: componentPath(c),
 				})),
 			},
 			{
@@ -91,9 +91,7 @@
 				links: p.fields.map(f => {
 					const [c, field] = f.split('.');
 					const comp = componentOf(schema, c);
-					const href = comp
-						? `${componentHref(comp)}#field-${field}`
-						: undefined;
+					const href = comp ? fieldPath(comp, field) : undefined;
 					return { text: f, href };
 				}),
 			},
@@ -118,15 +116,12 @@
 		<ul class="plain tree">
 			{#each held as h (h.field.handle)}
 				<li>
-					<a
-						class="field"
-						href="{componentHref(c)}#field-{h.field.handle}"
-					>
+					<a class="field" href={fieldPath(c, h.field.handle)}>
 						<code>{h.field.handle}</code>
 					</a>
 					{#each h.parts as p, i (p.handle)}
 						{i ? ', ' : ''}
-						<a href={componentHref(p)}>{p.name}</a>
+						<a href={componentPath(p)}>{p.name}</a>
 					{/each}
 					{#each h.parts.filter(p => !seen.includes(p.handle)) as p (p.handle)}
 						{#if holders(schema, p).length}
@@ -159,7 +154,7 @@
 				{#each g.sections as s (s.handle)}
 					<div class="section">
 						<div class="head">
-							<a href="/admin/setup/sections/{s.handle}">
+							<a href={setupPath('sections', s.handle)}>
 								<strong>{s.name}</strong>
 							</a>
 							<span class="muted">
@@ -173,7 +168,7 @@
 								{@const c = componentOf(schema, type)}
 								<li>
 									{#if c}
-										<a class="type" href={componentHref(c)}>
+										<a class="type" href={componentPath(c)}>
 											<SchemaIcon
 												icon={c.icon}
 												size={14}
@@ -206,7 +201,7 @@
 				<p>
 					{#each unused as b, i (b.handle)}
 						{i ? ', ' : ''}
-						<a href={componentHref(b)}>{b.name}</a>
+						<a href={componentPath(b)}>{b.name}</a>
 					{/each}
 				</p>
 			</div>

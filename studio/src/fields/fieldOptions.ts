@@ -1,6 +1,12 @@
-import type { Component, Field, Schema } from '../core/schema';
+import {
+	componentOf,
+	type Component,
+	type Field,
+	type Schema,
+} from '../core/schema';
 import { describeCondition } from './conditions';
 import { linkName } from './link/link';
+import { componentPath } from '../core/paths';
 import { t } from '../i18n/index.svelte';
 
 /**
@@ -19,9 +25,11 @@ const or = (v: number | null, none = '–') => (v === null ? none : String(v));
 /** Links to the entry types or blocks of a list of handles. */
 function components(schema: Schema, handles: string[]) {
 	return handles.map(h => {
-		const c = schema.components.find(c => c.handle === h);
-		const tab = c?.entry === false ? 'blocks' : 'types';
-		return { text: c?.name ?? h, href: `/admin/setup/${tab}/${h}` };
+		const c = componentOf(schema, h);
+		return {
+			text: c?.name ?? h,
+			href: componentPath(c ?? { handle: h, entry: true }),
+		};
 	});
 }
 

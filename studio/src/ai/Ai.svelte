@@ -8,7 +8,8 @@
 	import { Chat } from './chat.svelte';
 	import { markdown } from '../core/markdown';
 	import { SitePreview } from '../entries/preview.svelte';
-	import { entryPath, site } from '../core/router.svelte';
+	import { site } from '../core/router.svelte';
+	import { entryPath } from '../core/paths';
 	import { sitePreviewToken } from '../entries/drafts';
 	import Preview from '../entries/Preview.svelte';
 	import { t } from '../i18n/index.svelte';

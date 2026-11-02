@@ -1,11 +1,16 @@
-import type { Schema } from './schema';
+import { sectionName, type Component, type Schema } from './schema';
 import { visibleNav } from './access';
 
-/** The paths of the studio's pages, besides `entryPath` of the router. */
+/** The paths of the studio's pages. */
 
 /** The list of a section. */
 export function sectionPath(section: string): string {
 	return '/admin/entries/' + section;
+}
+
+/** An entry in the studio, `new` for the form of a new one. */
+export function entryPath(section: string, id: number | 'new'): string {
+	return `${sectionPath(section)}/${id}`;
 }
 
 /** An entry type, a block or a section in Setup. */
@@ -14,6 +19,19 @@ export function setupPath(
 	handle: string,
 ): string {
 	return `/admin/setup/${tab}/${handle}`;
+}
+
+/** An entry type or block in Setup. */
+export function componentPath(c: Pick<Component, 'handle' | 'entry'>): string {
+	return setupPath(c.entry ? 'types' : 'blocks', c.handle);
+}
+
+/** A field of an entry type or block in Setup, opened. */
+export function fieldPath(
+	c: Pick<Component, 'handle' | 'entry'>,
+	handle: string,
+): string {
+	return `${componentPath(c)}#field-${handle}`;
 }
 
 /** The page of a section or a doc. */
@@ -29,8 +47,7 @@ export function sectionCrumbs(
 	section: string,
 ): { label: string; href?: string }[] {
 	const group = visibleNav(schema).find(g => g.sections.includes(section));
-	const name =
-		schema.sections.find(s => s.handle === section)?.name ?? section;
+	const name = sectionName(schema, section);
 	const out: { label: string; href?: string }[] = [];
 	if (group && group.sections[0] !== section) {
 		// the first of a group may be a doc

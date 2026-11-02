@@ -183,6 +183,18 @@ export function updateAsset(
 	return request('PUT', '/assets/' + id, data);
 }
 
+/** Only the name of an asset, the rest as it is. */
+export function renameAsset(a: Asset, filename: string): Promise<Asset> {
+	return updateAsset(a.id, {
+		title: a.title,
+		alt: a.alt,
+		focalX: a.focalX,
+		focalY: a.focalY,
+		filename,
+		edits: a.edits,
+	});
+}
+
 export function deleteAsset(id: number): Promise<void> {
 	return request('DELETE', '/assets/' + id);
 }
@@ -250,29 +262,52 @@ export function folderByPath(
 	let parent: number | null = null;
 	let found: Folder | undefined;
 	for (const name of (path ?? '').split('/').filter(n => n.trim())) {
-		found = folders.find(
-			f =>
-				f.parentId === parent &&
-				f.name.toLowerCase() === name.trim().toLowerCase(),
-		);
+		found = childFolder(folders, parent, name);
 		if (!found) return undefined;
 		parent = found.id;
 	}
 	return found;
 }
 
-/** The folders in the order of the tree, with their depth and path. */
-export function folderRows(
+/**
+ * The folder of a name in `parent` (null: the top); the server trims
+ * names and compares them without case.
+ */
+export function childFolder(
 	folders: Folder[],
-): { folder: Folder; depth: number; path: string }[] {
-	const rows: { folder: Folder; depth: number; path: string }[] = [];
-	const add = (parent: number | null, depth: number, path: string) => {
+	parent: number | null,
+	name: string,
+): Folder | undefined {
+	const want = name.trim().toLowerCase();
+	return folders.find(
+		f => f.parentId === parent && f.name.toLowerCase() === want,
+	);
+}
+
+export type FolderRow = {
+	folder: Folder;
+	depth: number;
+	/** the names from the top, `Photos / Events` */
+	path: string;
+	/** the ids of the folders above it, the top first */
+	parents: number[];
+};
+
+/** The folders in the order of the tree, with where each is. */
+export function folderRows(folders: Folder[]): FolderRow[] {
+	const rows: FolderRow[] = [];
+	const add = (parent: number | null, parents: number[], path: string) => {
 		for (const f of folders.filter(f => f.parentId === parent)) {
 			const here = path ? `${path} / ${f.name}` : f.name;
-			rows.push({ folder: f, depth, path: here });
-			add(f.id, depth + 1, here);
+			rows.push({
+				folder: f,
+				depth: parents.length,
+				path: here,
+				parents,
+			});
+			add(f.id, [...parents, f.id], here);
 		}
 	};
-	add(null, 0, '');
+	add(null, [], '');
 	return rows;
 }

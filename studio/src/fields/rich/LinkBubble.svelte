@@ -7,7 +7,7 @@
 	import { openAsset, openEntry } from '../../core/flyout.svelte';
 	import LinkEditor from '../link/LinkEditor.svelte';
 	import LinkRow from '../link/LinkRow.svelte';
-	import { BUTTON_LINKS, linkSummary, opensInNewTab } from '../link/link';
+	import { BUTTON_LINKS, opensInNewTab } from '../link/link';
 	import { setLink } from './editor';
 	import { t } from '../../i18n/index.svelte';
 
@@ -153,9 +153,9 @@
 			/>
 		{:else}
 			<LinkRow
+				{schema}
+				{refs}
 				link={shown}
-				summary={linkSummary(schema, shown, refs)}
-				newTab={opensInNewTab(schema, shown, true)}
 				onedit={edit}
 				menu={[
 					{ label: t('common.edit'), icon: 'edit', onclick: edit },

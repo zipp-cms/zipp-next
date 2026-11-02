@@ -13,6 +13,7 @@ import { describeField } from '../fields/fieldKind';
 import { session } from '../core/session.svelte';
 import { t } from '../i18n/index.svelte';
 import { ASSET_FIELDS } from '../assets/api';
+import { fieldPath, setupPath } from '../core/paths';
 
 /** What Setup shows of the schema: only what the role may see. */
 
@@ -61,7 +62,7 @@ export function usedIn(
 		.filter(s => s.types.includes(c.handle))
 		.map(s => ({
 			text: t('setup.sectionName', { name: s.name }),
-			href: `/admin/setup/sections/${s.handle}`,
+			href: setupPath('sections', s.handle),
 		}));
 	for (const other of schema.components) {
 		for (const f of other.fields) {
@@ -71,7 +72,7 @@ export function usedIn(
 			if (uses)
 				out.push({
 					text: `${other.handle}.${f.handle}`,
-					href: `${componentHref(other)}#field-${f.handle}`,
+					href: fieldPath(other, f.handle),
 				});
 		}
 	}
@@ -125,11 +126,6 @@ export function holders(
 				.filter(p => p !== undefined),
 		}))
 		.filter(h => h.parts.length);
-}
-
-/** The href of an entry type or block in Setup. */
-export function componentHref(c: Pick<Component, 'handle' | 'entry'>) {
-	return `/admin/setup/${c.entry ? 'types' : 'blocks'}/${c.handle}`;
 }
 
 /** The sections of each nav group, the ones of no group at the end. */

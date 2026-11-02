@@ -1,6 +1,7 @@
 import { request } from '../core/client';
 import type { Schema, Section } from '../core/schema';
 import type { EntryRef } from './api';
+import { ancestors } from './tree';
 
 /**
  * What the entry picker shows: the sections of the types, a structure as
@@ -42,15 +43,10 @@ export function groupChoices(
 	const byId = new Map(entries.map(e => [e.id, e]));
 	const parents = new Set(entries.map(e => e.parentId));
 
-	const pathOf = (e: Choice) => {
-		const path: string[] = [];
-		let up = e.parentId === null ? undefined : byId.get(e.parentId);
-		while (up && path.length < 100) {
-			path.unshift(up.title);
-			up = up.parentId === null ? undefined : byId.get(up.parentId);
-		}
-		return path;
-	};
+	const pathOf = (e: Choice) =>
+		ancestors(byId, e)
+			.map(a => a.title)
+			.reverse();
 
 	return schema.sections
 		.map(section => {
@@ -101,11 +97,8 @@ export function initiallyClosed(groups: Group[], chosen: number[]) {
 		// the parents of a chosen one stay open
 		const byId = new Map(g.rows.map(r => [r.e.id, r.e]));
 		for (const id of chosen) {
-			let p = byId.get(id)?.parentId ?? null;
-			while (p !== null && !open.has(p)) {
-				open.add(p);
-				p = byId.get(p)?.parentId ?? null;
-			}
+			const e = byId.get(id);
+			if (e) for (const a of ancestors(byId, e)) open.add(a.id);
 		}
 	}
 	for (const id of open) closed.delete(id);

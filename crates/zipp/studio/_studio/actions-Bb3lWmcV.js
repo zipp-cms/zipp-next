@@ -1,1 +1,0 @@
-import{z as c,w as o,at as i,U as d,au as u}from"./index-CLU3_19R.js";function k(e,n,a){c(()=>{var r=o(()=>n(e,a==null?void 0:a())||{});if(a&&(r!=null&&r.update)){var s=!1,t={};i(()=>{var f=a();d(f),s&&u(t,f)&&(t=f,r.update(f))}),s=!0}if(r!=null&&r.destroy)return()=>r.destroy()})}export{k as a};

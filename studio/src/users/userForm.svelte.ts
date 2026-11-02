@@ -1,6 +1,7 @@
 import { Busy } from '../core/busy.svelte';
 import { session } from '../core/session.svelte';
-import { locale, t } from '../i18n/index.svelte';
+import { time } from '../core/format';
+import { t } from '../i18n/index.svelte';
 import {
 	createUser,
 	deleteUser,
@@ -143,7 +144,7 @@ export class UserForm extends Busy {
 		const link = await this.run(() => passwordLink(id, send));
 		if (!link) return;
 		const invite = link.kind === 'invite';
-		const until = new Date(link.expiresAt).toLocaleString(locale());
+		const until = time(link.expiresAt);
 		if (send) {
 			const key = invite ? 'users.inviteSent' : 'users.resetSent';
 			this.linkNote = t(key, { email: this.account!.email, until });

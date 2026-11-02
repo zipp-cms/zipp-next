@@ -3,6 +3,7 @@
 	import { accessOf } from '../core/access';
 	import { accessText, visibleSections } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
+	import { setupPath } from '../core/paths';
 	import { t } from '../i18n/index.svelte';
 
 	/** The sections the role sees, with how many entries each has. */
@@ -31,18 +32,18 @@
 			t('setup.entries'),
 			t('setup.youMay'),
 		]}
-		href={s => `/admin/setup/sections/${s.handle}`}
+		href={s => setupPath('sections', s.handle)}
 	>
 		{#snippet row(s)}
 			<td>
-				<a href="/admin/setup/sections/{s.handle}">{s.name}</a>
+				<a href={setupPath('sections', s.handle)}>{s.name}</a>
 			</td>
 			<td><code>{s.handle}</code></td>
 			<td>{s.kind}</td>
 			<td>
 				{#each s.types as type, i (type)}
 					{i ? ', ' : ''}
-					<a href="/admin/setup/types/{type}">{type}</a>
+					<a href={setupPath('types', type)}>{type}</a>
 				{/each}
 			</td>
 			<td>

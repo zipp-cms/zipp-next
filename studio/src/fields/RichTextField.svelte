@@ -2,7 +2,7 @@
 	import type { Editor } from '@tiptap/core';
 	import { onDestroy, onMount } from 'svelte';
 	import type { FieldOf, Schema, Values } from '../core/schema';
-	import { valueOf } from '../core/schema';
+	import { siteOf, valueOf } from '../core/schema';
 	import type { Refs } from '../entries/api';
 	import { editedSite } from '../core/editing';
 	import { Last } from '../core/synced.svelte';
@@ -48,9 +48,7 @@
 	const last = new Last();
 	// for the spell check of the browser
 	const edited = editedSite();
-	const language = $derived(
-		schema.sites.find(s => s.handle === edited)?.language ?? '',
-	);
+	const language = $derived(siteOf(schema, edited)?.language ?? '');
 
 	// moving buttons and blocks: the nodes of the text are the rows
 	const sort = new Sortable({

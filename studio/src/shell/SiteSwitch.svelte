@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Schema } from '../core/schema';
+	import { siteOf, type Schema } from '../core/schema';
 	import { setSite, site } from '../core/router.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { t } from '../i18n/index.svelte';
@@ -7,7 +7,7 @@
 	/** The site the studio edits, and where it runs; the box opens a choice. */
 	let { schema }: { schema: Schema } = $props();
 
-	const current = $derived(schema.sites.find(s => s.handle === site.current));
+	const current = $derived(siteOf(schema, site.current));
 	const offline = (handle: string) => schema.offline.includes(handle);
 </script>
 

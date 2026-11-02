@@ -55,8 +55,7 @@
 		top?: number;
 	} = $props();
 
-	const parentOf = (id: number) =>
-		folders.find(f => f.id === id)?.parentId ?? null;
+	const all = $derived(folderRows(folders));
 
 	// the folders around the current one open, also when the folders
 	// come after the tree (the picker loads them) or another one opens
@@ -65,33 +64,16 @@
 	$effect(() => {
 		const id = current;
 		if (id === null || id === openedFor) return;
-		if (!folders.some(f => f.id === id)) return;
+		const row = all.find(r => r.folder.id === id);
+		if (!row) return;
 		openedFor = id;
-		untrack(() => {
-			const ids = new Set(open);
-			const seen = new Set<number>();
-			for (let at = parentOf(id); at !== null && !seen.has(at);) {
-				seen.add(at);
-				ids.add(at);
-				at = parentOf(at);
-			}
-			open = ids;
-		});
+		untrack(() => (open = new Set([...open, ...row.parents])));
 	});
 
 	const hasChildren = (id: number) => folders.some(f => f.parentId === id);
 
 	/** The rows whose parents are all open. */
-	const rows = $derived(
-		folderRows(folders).filter(r => {
-			let at = r.folder.parentId;
-			while (at !== null) {
-				if (!open.has(at)) return false;
-				at = parentOf(at);
-			}
-			return true;
-		}),
-	);
+	const rows = $derived(all.filter(r => r.parents.every(p => open.has(p))));
 
 	function toggle(id: number) {
 		const next = new Set(open);

@@ -5,7 +5,7 @@
 	import LinkAdd from './LinkAdd.svelte';
 	import LinkEditor from './LinkEditor.svelte';
 	import LinkRow from './LinkRow.svelte';
-	import { hasTarget, linkSummary, opensInNewTab } from './link';
+	import { hasTarget, opensInNewTab } from './link';
 	import type { Link, LinkKind, NavItem, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
 	import { t } from '../../i18n/index.svelte';
@@ -135,7 +135,6 @@
 <div class="items" bind:this={list}>
 	{#each rows as row, i (row.path.join('.'))}
 		{@const link = linkOf(row.item)}
-		{@const newTab = opensInNewTab(schema, link, true)}
 		<div
 			data-sort
 			class="row"
@@ -144,9 +143,9 @@
 		>
 			<div class="item" class:editing={editing === i}>
 				<LinkRow
+					{schema}
+					{refs}
 					{link}
-					summary={linkSummary(schema, link, refs)}
-					{newTab}
 					editing={editing === i}
 					onedit={() => (editing = editing === i ? null : i)}
 					menu={[
@@ -180,7 +179,7 @@
 						{link}
 						{to}
 						labels
-						{newTab}
+						newTab={opensInNewTab(schema, link, true)}
 						onchange={l => setLink(i, l)}
 						ondone={() => (editing = null)}
 					/>

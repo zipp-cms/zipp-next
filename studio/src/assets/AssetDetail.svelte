@@ -10,9 +10,10 @@
 		type Asset,
 		type Folder,
 	} from './api';
-	import { componentOf, type Schema } from '../core/schema';
+	import { componentOf, siteName, type Schema } from '../core/schema';
 	import Fields from '../fields/Fields.svelte';
-	import { entryPath, site } from '../core/router.svelte';
+	import { site } from '../core/router.svelte';
+	import { entryPath } from '../core/paths';
 	import { canAssets } from '../core/access';
 	import { AssetForm } from './assetForm.svelte';
 	import Flyout from 'zipp-ui/Flyout.svelte';
@@ -61,8 +62,7 @@
 	// the alt text of the site the studio edits
 	const altLabel = $derived.by(() => {
 		if (schema.sites.length < 2) return t('assets.altText');
-		const name = schema.sites.find(s => s.handle === site.current)?.name;
-		return t('assets.altTextOf', { site: name ?? '' });
+		return t('assets.altTextOf', { site: siteName(schema, site.current) });
 	});
 	// a site without its own alt text has the primary site's
 	const altPlaceholder = $derived.by(() => {

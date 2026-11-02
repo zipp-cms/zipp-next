@@ -1,5 +1,5 @@
 <script module lang="ts">
-	import type { Schema as SchemaT } from '../core/schema';
+	import { sectionOf, type Schema as SchemaT } from '../core/schema';
 	import { listEntries } from '../entries/api';
 	import { isAdmin } from '../core/access';
 	import { listRequests } from './api';
@@ -31,9 +31,7 @@
 		if (tab === 'sections' && !props.handle)
 			return { counts: await entryCounts(props.schema) };
 		if (tab !== 'sections' || !props.handle) return {};
-		const section = props.schema.sections.find(
-			s => s.handle === props.handle,
-		);
+		const section = sectionOf(props.schema, props.handle);
 		if (!section)
 			throw new Error(
 				t('setup.noSectionThere', { handle: props.handle }),
@@ -54,7 +52,7 @@
 	import type { ChangeRequest } from './api';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import { SETUP_TABS } from '../shell/nav';
-	import { componentOf, sectionOf } from '../core/schema';
+	import { componentOf } from '../core/schema';
 	import { current } from '../core/router.svelte';
 	import ComponentPage from './ComponentPage.svelte';
 	import ComponentsTab from './ComponentsTab.svelte';

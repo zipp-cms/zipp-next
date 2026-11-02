@@ -5,7 +5,7 @@
 	import { shortTime } from '../../core/format';
 	import { setupPath } from '../../core/paths';
 	import SiteBadges from '../SiteBadges.svelte';
-	import { componentName } from '../../core/schema';
+	import { componentName, siteName } from '../../core/schema';
 	import type { Component, Schema, Section } from '../../core/schema';
 	import { setSite } from '../../core/router.svelte';
 	import type { EntryEditor, May } from './entryEditor.svelte';
@@ -52,9 +52,7 @@ discarding or restoring: what is typed then would be lost -->
 							class="changed-dot"
 						></span>{/if}
 					{t('entries.publishedIn', {
-						site:
-							schema.sites.find(s => s.handle === ed.site)
-								?.name ?? '',
+						site: siteName(schema, ed.site),
 					})}
 				</span>
 			</Switch>

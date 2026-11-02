@@ -3,6 +3,7 @@
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import { gqlType, usedIn, visibleEntryTypes } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
+	import { componentPath } from '../core/paths';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -29,11 +30,11 @@
 			t('setup.usedIn'),
 			'GraphQL',
 		]}
-		href={c => `/admin/setup/${tab}/${c.handle}`}
+		href={componentPath}
 	>
 		{#snippet row(c)}
 			<td>
-				<a class="name" href="/admin/setup/{tab}/{c.handle}">
+				<a class="name" href={componentPath(c)}>
 					<SchemaIcon icon={c.icon} size={14} />
 					{c.name}
 				</a>

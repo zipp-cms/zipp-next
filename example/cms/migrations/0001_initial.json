@@ -1428,7 +1428,8 @@
             "kind": "navigation",
             "to": [
               "entry",
-              "url"
+              "url",
+              "asset"
             ],
             "depth": 2
           }
@@ -3352,7 +3353,8 @@
             "kind": "navigation",
             "to": [
               "entry",
-              "url"
+              "url",
+              "asset"
             ],
             "depth": 2
           }

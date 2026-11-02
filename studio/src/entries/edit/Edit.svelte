@@ -15,12 +15,22 @@
 
 <script lang="ts">
 	import { onDestroy, untrack } from 'svelte';
-	import { entryUrl, type Schema } from '../../core/schema';
-	import { entryPath, go } from '../../core/router.svelte';
+	import {
+		entryUrl,
+		hasPages,
+		siteName,
+		type Schema,
+	} from '../../core/schema';
+	import { go } from '../../core/router.svelte';
 	import Fields from '../../fields/Fields.svelte';
 	import { pathShown, tabShown } from '../../fields/conditions';
 	import { can, isAdmin } from '../../core/access';
-	import { sectionCrumbs, sectionPath, setupPath } from '../../core/paths';
+	import {
+		entryPath,
+		sectionCrumbs,
+		sectionPath,
+		setupPath,
+	} from '../../core/paths';
 	import { EntryEditor } from './entryEditor.svelte';
 	import { setEditing } from '../../core/editing';
 	import { flyout } from '../../core/flyout.svelte';
@@ -83,9 +93,7 @@
 	const card = $derived(!!(comp?.card || shownTab?.card));
 	// a global: a single without a page, its title is the section's name
 	const global = $derived(
-		single &&
-			secDef?.uri === null &&
-			!Object.keys(secDef?.type_uris ?? {}).length,
+		single && secDef !== undefined && !hasPages(secDef),
 	);
 	// what the role may do here, the server checks it too
 	const canEdit = $derived(can(schema, ed.sec, 'edit'));
@@ -163,8 +171,9 @@
 	}
 
 	function copyFrom(other: string) {
-		const name = schema.sites.find(s => s.handle === other)?.name;
-		if (confirm(t('entries.confirmCopy', { site: name ?? other })))
+		if (
+			confirm(t('entries.confirmCopy', { site: siteName(schema, other) }))
+		)
 			ed.copyFrom(other);
 	}
 

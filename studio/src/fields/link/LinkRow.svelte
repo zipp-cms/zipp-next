@@ -1,9 +1,11 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { Link } from '../../core/schema';
+	import type { Link, Schema } from '../../core/schema';
+	import type { Refs } from '../../entries/api';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
-	import { LINK_ICONS } from './link';
+	import { chosenAssets } from '../../assets/chosen.svelte';
+	import { LINK_ICONS, linkSummary, opensInNewTab } from './link';
 	import { t } from '../../i18n/index.svelte';
 
 	/**
@@ -14,17 +16,20 @@
 	 * nearest positioned parent (`position: relative`).
 	 */
 	let {
+		schema,
+		refs,
 		link,
-		summary,
-		newTab,
+		externalInNewTab = true,
 		handle,
 		onedit,
 		editing = false,
 		menu = [],
 	}: {
+		schema: Schema;
+		refs: Refs;
 		link: Link;
-		summary: { title: string; sub: string; mono: boolean };
-		newTab: boolean;
+		/** external links open in a new tab, unless it's set */
+		externalInNewTab?: boolean;
 		/** the DragHandle, on the left */
 		handle?: Snippet;
 		/** a click on the link edits it */
@@ -33,6 +38,24 @@
 		editing?: boolean;
 		menu?: MenuItem[];
 	} = $props();
+
+	const newTab = $derived(opensInNewTab(schema, link, externalInNewTab));
+	// a linked file shows its filename
+	const asset = chosenAssets(() =>
+		link.type === 'asset' && typeof link.value === 'number'
+			? [link.value]
+			: [],
+	);
+	const summary = $derived(
+		linkSummary(
+			schema,
+			link,
+			refs,
+			link.type === 'asset' && typeof link.value === 'number'
+				? asset.get(link.value)?.filename
+				: undefined,
+		),
+	);
 </script>
 
 {#snippet content()}

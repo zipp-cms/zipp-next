@@ -12,18 +12,11 @@ import {
 } from './api';
 import { Busy } from '../core/busy.svelte';
 import type { Values } from '../core/schema';
+import { clean } from '../core/values';
 
 /** The values without empty ones, as the server keeps them. */
 function filled(v: Values): Values {
-	return Object.fromEntries(
-		Object.entries(v).filter(
-			([, x]) =>
-				x !== null &&
-				x !== undefined &&
-				x !== '' &&
-				!(Array.isArray(x) && !x.length),
-		),
-	);
+	return (clean(v) ?? {}) as Values;
 }
 
 /** The alt texts without empty ones, as the server keeps them. */

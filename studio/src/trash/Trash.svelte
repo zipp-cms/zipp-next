@@ -13,7 +13,7 @@
 	import Table from 'zipp-ui/Table.svelte';
 	import { sectionName, type Schema } from '../core/schema';
 	import { Busy } from '../core/busy.svelte';
-	import { entryPath } from '../core/router.svelte';
+	import { entryPath } from '../core/paths';
 	import { fileSize, time } from '../core/format';
 	import { t } from '../i18n/index.svelte';
 	import {

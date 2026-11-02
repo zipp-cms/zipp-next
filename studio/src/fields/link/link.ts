@@ -1,5 +1,5 @@
 import type { Link, LinkKind, Schema } from '../../core/schema';
-import { sectionOf } from '../../core/schema';
+import { hasPages, sectionOf } from '../../core/schema';
 import type { Refs } from '../../entries/api';
 import { t, type Key } from '../../i18n/index.svelte';
 
@@ -90,9 +90,7 @@ export const BUTTON_LINKS: LinkKind[] = ['entry', 'url', 'email', 'phone'];
 
 /** The entry types with a page, only they can be linked to. */
 export function linkableTypes(schema: Schema): string[] {
-	return schema.sections
-		.filter(s => s.uri !== null || Object.keys(s.type_uris ?? {}).length)
-		.flatMap(s => s.types);
+	return schema.sections.filter(hasPages).flatMap(s => s.types);
 }
 
 /** Like the website: external urls and files open in a new tab. */

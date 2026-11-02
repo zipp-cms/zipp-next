@@ -69,11 +69,6 @@ class Current {
 
 export const current = new Current();
 
-/** The path of an entry in the studio. */
-export function entryPath(section: string, id: number) {
-	return `${BASE}/entries/${section}/${id}`;
-}
-
 /** Opens a page of the studio. */
 export function go(path: string, replace = false) {
 	router.open(path, {}, { history: replace ? 'replace' : 'push' });

@@ -1,41 +1,5 @@
-import type { Block, Values } from '../../core/schema';
-
-function isBlocks(v: unknown): v is Block[] {
-	return (
-		Array.isArray(v) &&
-		v.every(b => b && typeof b === 'object' && 'fields' in b)
-	);
-}
-
-function isObject(v: unknown): v is Values {
-	return !!v && typeof v === 'object' && !Array.isArray(v) && !('type' in v);
-}
-
-/**
- * A value as publishing keeps it: empty texts, lists and groups are
- * dropped, so `{}` in a draft is the same as nothing live.
- */
-export function clean(v: unknown): unknown {
-	if (v === undefined || v === null || v === '') return null;
-	if (!Array.isArray(v)) return cleanValue(v);
-	if (!v.length) return null;
-	// blocks: their fields like the entry's, also in a draft from before
-	if (isBlocks(v))
-		return v.map(b => ({ ...b, fields: clean(b.fields) ?? {} }));
-	return v;
-}
-
-function cleanValue(v: unknown): unknown {
-	if (isObject(v)) {
-		const out: Values = {};
-		for (const [k, x] of Object.entries(v)) {
-			const c = clean(x);
-			if (c !== null) out[k] = c;
-		}
-		return Object.keys(out).length ? out : null;
-	}
-	return v;
-}
+import type { Values } from '../../core/schema';
+import { clean, isBlocks, isObject } from '../../core/values';
 
 /**
  * The paths of the fields that differ, like the error paths: `intro`,

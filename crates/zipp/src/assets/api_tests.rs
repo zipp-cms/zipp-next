@@ -539,6 +539,36 @@ async fn asset_fields_are_checked_and_saved() {
 }
 
 #[tokio::test]
+async fn empty_asset_fields_in_a_group_may_be_left_out() {
+	let schema = site_with_roles().asset_fields([Field::group_of(
+		"source",
+		[Field::text("credit"), Field::text("link")],
+	)]);
+	let ts = TestServer::new(schema);
+	let editor = ts.user(Some("editor"));
+	let clip = upload(&editor, "clip.mp4", b"video").await.unwrap();
+	let change = |fields: Value| UpdateReq {
+		id: clip.id,
+		change: AssetChange {
+			fields: Some(fields),
+			..Default::default()
+		},
+	};
+
+	// the studio sends the values without the empty ones, also inside
+	// a group: the same as the empty values
+	let empty = json!({ "source": { "credit": "", "link": "" } });
+	let saved = editor.call(&change(empty)).await.unwrap();
+	assert_eq!(saved.fields, json!({}));
+	let saved = editor.call(&change(json!({}))).await.unwrap();
+	assert_eq!(saved.fields, json!({}));
+
+	let half = json!({ "source": { "credit": "Anna" } });
+	let saved = editor.call(&change(half.clone())).await.unwrap();
+	assert_eq!(saved.fields, half);
+}
+
+#[tokio::test]
 async fn a_file_named_like_the_transforms() {
 	let ts = TestServer::new(site_with_roles());
 	let editor = ts.user(Some("editor"));

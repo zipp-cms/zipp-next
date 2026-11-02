@@ -4,6 +4,7 @@ import {
 	componentOf,
 	defaults,
 	sameKind,
+	sectionOf,
 	type Schema,
 	type Values,
 } from '../../core/schema';
@@ -31,9 +32,10 @@ import {
 	type SiteDoc,
 } from '../drafts';
 import { site } from '../../core/router.svelte';
-import { changedPaths, clean } from './diff';
+import { changedPaths } from './diff';
+import { clean } from '../../core/values';
 import { slugify } from '../../core/format';
-import { depth } from '../tree';
+import { depths } from '../tree';
 import { t } from '../../i18n/index.svelte';
 
 /** What the role may do with the entry; the server checks it too. */
@@ -177,7 +179,7 @@ export class EntryEditor {
 			await ed.load();
 			return ed;
 		}
-		const sec = schema.sections.find(s => s.handle === section);
+		const sec = sectionOf(schema, ed.sec);
 		ed.ty = sec?.types[0] ?? '';
 		ed.fields = defaults(schema, ed.ty);
 		ed.lastSaved = ed.snapshot();
@@ -257,13 +259,10 @@ export class EntryEditor {
 			site: this.site,
 			order: 'structure',
 		});
-		const max = this.schema.sections.find(
-			s => s.handle === this.sec,
-		)?.max_level;
+		const max = sectionOf(this.schema, this.sec)?.max_level;
+		const d = depths(r.entries);
 		// a child of the top (depth 0) is on level 2
-		this.parents = r.entries.filter(
-			e => !max || depth(r.entries, e) + 2 <= max,
-		);
+		this.parents = r.entries.filter((_, i) => !max || d[i] + 2 <= max);
 	}
 
 	/**

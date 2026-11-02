@@ -1,27 +1,34 @@
 import type { Entry } from './api';
 
 /**
- * The tree of a structure, from its entries in tree order: how deep an
- * entry is, what is below it. Moving is zipp-ui's sortable.
+ * The tree of a structure, from its entries in tree order: how deep each
+ * entry is, what is above it. Moving is zipp-ui's sortable.
  */
 
 type Node = Pick<Entry, 'id' | 'parentId'>;
 
-/** How deep an entry is, from the parents in the list. */
-export function depth(list: Node[], e: Node): number {
-	const byId = new Map(list.map(n => [n.id, n]));
-	let d = 0;
-	for (let p = e.parentId; p !== null && d < 100; d++) {
-		p = byId.get(p)?.parentId ?? null;
-	}
-	return d;
+/** How deep each entry of a list in tree order is, the top is 0. */
+export function depths(list: Node[]): number[] {
+	// a parent comes before its children, an entry without its parent in
+	// the list is at the top
+	const known = new Map<number, number>();
+	return list.map(e => {
+		const up = e.parentId === null ? undefined : known.get(e.parentId);
+		const d = up === undefined ? 0 : up + 1;
+		known.set(e.id, d);
+		return d;
+	});
 }
 
-/** Whether `e` is somewhere below `ancestor`. */
-export function isBelow(list: Node[], e: Node, ancestor: Node): boolean {
-	const byId = new Map(list.map(n => [n.id, n]));
-	for (let p = e.parentId; p !== null; p = byId.get(p)?.parentId ?? null) {
-		if (p === ancestor.id) return true;
+/** The parents of an entry in `byId`, the nearest first. */
+export function ancestors<N extends Node>(byId: Map<number, N>, e: Node): N[] {
+	const out: N[] = [];
+	// a loop in broken data ends at 100
+	for (let p = e.parentId; p !== null && out.length < 100;) {
+		const up = byId.get(p);
+		if (!up) break;
+		out.push(up);
+		p = up.parentId;
 	}
-	return false;
+	return out;
 }

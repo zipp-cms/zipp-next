@@ -1,7 +1,8 @@
 <script module lang="ts">
-	import type { Schema as SchemaT } from '../core/schema';
+	import { sectionOf, type Schema as SchemaT } from '../core/schema';
 	import { listEntries as list, type EntryList } from './api';
-	import { entryPath, go, site, type LoadProps } from '../core/router.svelte';
+	import { go, site, type LoadProps } from '../core/router.svelte';
+	import { entryPath } from '../core/paths';
 	import { t } from '../i18n/index.svelte';
 
 	/** The entries of the section; a single opens its entry. */
@@ -9,7 +10,7 @@
 		props: { schema: SchemaT; section: string },
 		lp: LoadProps,
 	) {
-		const sec = props.schema.sections.find(s => s.handle === props.section);
+		const sec = sectionOf(props.schema, props.section);
 		if (!sec)
 			throw new Error(t('entries.noSection', { section: props.section }));
 		const first = await list(
@@ -51,11 +52,11 @@
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { date, time } from '../core/format';
-	import { depth, isBelow } from './tree';
+	import { ancestors, depths as depthsOf } from './tree';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
 	import { Sortable, placeIn } from 'zipp-ui/sortable';
-	import { componentName, componentOf, sectionOf } from '../core/schema';
+	import { componentName, componentOf } from '../core/schema';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 
 	let {
@@ -119,7 +120,7 @@
 	// moving in a structure: dragging up and down, left and right for the
 	// level; a move changes the website at once
 	let rows = $state<HTMLElement>();
-	const depths = $derived(entries.map(e => depth(entries, e)));
+	const depths = $derived(depthsOf(entries));
 	const sort = new Sortable({
 		container: () => rows,
 		depths: () => depths,
@@ -168,7 +169,10 @@
 
 	async function remove(e: Entry) {
 		// the entries below it go with it
-		const below = entries.filter(c => isBelow(entries, c, e)).length;
+		const byId = new Map(entries.map(c => [c.id, c]));
+		const below = entries.filter(c =>
+			ancestors(byId, c).some(a => a.id === e.id),
+		).length;
 		const question = below
 			? t('entries.confirmTrashBelow', { title: e.title, n: below })
 			: t('entries.confirmTrash', { title: e.title });
@@ -187,7 +191,7 @@
 		{#if sec.kind !== 'single' && can(schema, section, 'edit')}
 			<button
 				class="primary"
-				onclick={() => go(`/admin/entries/${section}/new`)}
+				onclick={() => go(entryPath(section, 'new'))}
 			>
 				<Icon name="add" />
 				{t('entries.new')}
@@ -217,8 +221,7 @@
 			<span></span>
 		</div>
 	{/if}
-	{#each entries as e (e.id)}
-		{@const i = entries.indexOf(e)}
+	{#each entries as e, i (e.id)}
 		<div
 			class="row"
 			class:types
@@ -227,10 +230,7 @@
 			class:sort-dragging={sort.moving(i)}
 			role="listitem"
 		>
-			<span
-				class="name"
-				style:padding-left="{depth(entries, e) * 1.3125}rem"
-			>
+			<span class="name" style:padding-left="{depths[i] * 1.3125}rem">
 				{#if canMove}
 					<DragHandle
 						sortable={sort}

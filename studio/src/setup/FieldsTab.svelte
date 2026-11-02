@@ -3,7 +3,8 @@
 	import { componentOf } from '../core/schema';
 	import SearchInput from 'zipp-ui/SearchInput.svelte';
 	import Table from 'zipp-ui/Table.svelte';
-	import { componentHref, fieldUsage, heldBy, type FieldUse } from './setup';
+	import { fieldUsage, heldBy, type FieldUse } from './setup';
+	import { componentPath, fieldPath } from '../core/paths';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -66,13 +67,13 @@
 			<td>
 				{#each held(u) as c, i (c.handle)}
 					{i ? ', ' : ''}
-					<a href={componentHref(c)}>{c.name}</a>
+					<a href={componentPath(c)}>{c.name}</a>
 				{/each}
 			</td>
 			<td>
 				{#each u.places as p, i (p.component.handle)}
 					{i ? ', ' : ''}
-					<a href="{componentHref(p.component)}#field-{u.handle}">
+					<a href={fieldPath(p.component, u.handle)}>
 						{p.component.name}
 					</a>
 				{/each}

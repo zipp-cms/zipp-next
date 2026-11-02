@@ -65,7 +65,8 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   components without an area and the icons, a package that plugins use
   too), `core/` (`client.ts` sends requests and reads
   streams, `schema.ts` the schema's types and lookups, `router` the
-  pages, the path and the site, `access`, `format`, `list`, `busy`, `flyout`,
+  pages, the path and the site, `paths` the paths of the pages, `values`
+  field values (`clean`), `access`, `format`, `list`, `busy`, `flyout`,
   `synced`), `shell/`
   (the app with its pages, the sidebar). An area imports from `zipp-ui`,
   `core/` and other areas' `api.ts` and components; `core/` imports no
@@ -128,7 +129,8 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   (`@include max-tablet`, `max-desktop`, ...); `:hover` only inside
   `@include hover { ... }`, so touch screens get no sticky hover and
   what shows on hover is always there without a pointer.
-- Lookups by handle: `core/schema.ts`; lists of a field: `core/list.ts`;
+- Lookups by handle: `core/schema.ts` (`sectionOf`, `siteOf`, ...); paths of
+  pages: `core/paths.ts`; lists of a field: `core/list.ts`;
   links: `fields/link.ts`; dates and sizes: `core/format.ts`.
 - A field never writes its value when it mounts (opening an entry must
   not make a draft); new fields go into `fields/registry.ts`.
