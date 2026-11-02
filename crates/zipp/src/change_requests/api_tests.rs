@@ -1,6 +1,6 @@
 use super::api::*;
 use crate::error::Error;
-use crate::schema::tests::site_with_roles;
+use crate::fixtures::site_with_roles;
 use crate::testing::TestServer;
 
 fn page_request(text: &str) -> CreateReq {

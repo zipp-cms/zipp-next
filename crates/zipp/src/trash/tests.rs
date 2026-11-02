@@ -2,10 +2,11 @@ use serde_json::json;
 
 use super::*;
 use crate::db::Db;
-use crate::entries::tests::{input, site_with_levels};
+use crate::entries::tests::site_with_levels;
 use crate::entries::{get_entry, move_entry, save};
+use crate::fixtures::site;
 use crate::query::Query;
-use crate::schema::tests::site;
+use crate::testing::input;
 
 fn admin() -> Authed {
 	Authed {
@@ -175,9 +176,8 @@ fn old_ones_are_deleted() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();
 	let s = site();
-	let dir = format!("zipp-trash-{}-{}", std::process::id(), now());
-	let files = std::env::temp_dir().join(dir);
-	std::fs::create_dir_all(&files).unwrap();
+	let tmp = tempfile::tempdir().unwrap();
+	let files = tmp.path();
 	let e = save(
 		&conn,
 		&s,
@@ -186,23 +186,22 @@ fn old_ones_are_deleted() {
 		None,
 	)
 	.unwrap();
-	let a = crate::assets::store(&conn, &files, "a.txt", b"a", None).unwrap();
+	let a = crate::assets::store(&conn, files, "a.txt", b"a", None).unwrap();
 	trash_entry(&conn, &s, e.id, None).unwrap();
 	trash_asset(&conn, a.id, None).unwrap();
 
 	// a day: they stay
-	purge_old(&conn, &files).unwrap();
+	purge_old(&conn, files).unwrap();
 	assert_eq!(list(&conn, &s, &admin()).unwrap().entries.len(), 1);
 	let old = now() - (KEEP_DAYS + 1) * DAY_MS;
 	conn.execute("UPDATE entries SET deleted_at = ?1", [old])
 		.unwrap();
 	conn.execute("UPDATE assets SET deleted_at = ?1", [old])
 		.unwrap();
-	purge_old(&conn, &files).unwrap();
+	purge_old(&conn, files).unwrap();
 	let trash = list(&conn, &s, &admin()).unwrap();
 	assert!(trash.entries.is_empty() && trash.assets.is_empty());
-	assert!(!crate::assets::asset_dir(&files, a.id).exists());
-	std::fs::remove_dir_all(&files).unwrap();
+	assert!(!crate::assets::asset_dir(files, a.id).exists());
 }
 
 #[test]
@@ -210,7 +209,8 @@ fn a_child_trashed_on_its_own_outlives_its_parent() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();
 	let s = site();
-	let files = std::env::temp_dir().join("zipp-trash-none");
+	let tmp = tempfile::tempdir().unwrap();
+	let files = tmp.path();
 	let page = |title: &str, parent: Option<i64>| {
 		let mut p = input("pages", "page", title, json!({}));
 		p.parent_id = parent;
@@ -240,7 +240,7 @@ fn a_child_trashed_on_its_own_outlives_its_parent() {
 		params![old, news],
 	)
 	.unwrap();
-	purge_old(&conn, &files).unwrap();
+	purge_old(&conn, files).unwrap();
 	let trash = list(&conn, &s, &admin()).unwrap();
 	assert_eq!(trash.entries.len(), 1);
 	assert_eq!(trash.entries[0].id, jobs);

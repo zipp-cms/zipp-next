@@ -3,9 +3,9 @@ use serde_json::json;
 use super::*;
 use crate::db::Db;
 use crate::entries::save;
-use crate::entries::tests::input;
+use crate::fixtures::site;
 use crate::schema::Field;
-use crate::schema::tests::site;
+use crate::testing::input;
 
 fn site_doc(ty: &str, title: &str, fields: Value) -> SiteDoc {
 	SiteDoc {

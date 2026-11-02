@@ -2,7 +2,7 @@ use axum::body::Body;
 use axum::http::{Request, header};
 
 use crate::error::Error;
-use crate::schema::tests::site_with_roles;
+use crate::fixtures::site_with_roles;
 use crate::testing::{Client, TestServer};
 
 async fn chat(client: &Client) -> Result<(), Error> {

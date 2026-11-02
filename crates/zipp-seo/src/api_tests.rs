@@ -2,30 +2,16 @@
 
 use std::sync::Arc;
 
+use crate::api::DefaultsReq;
+use crate::{Seo, SeoDefaults, seo_field};
 use serde_json::{Value, json};
 use zipp::db::Db;
 use zipp::drafts::{SiteDoc, put_draft};
-use zipp::entries::{EntryInput, save};
+use zipp::entries::save;
 use zipp::error::Error;
 use zipp::graphql::{SiteUrls, build, ext};
-use zipp::testing::TestServer;
+use zipp::testing::{TestServer, input};
 use zipp::{Field, Schema, Section};
-use zipp_seo::api::DefaultsReq;
-use zipp_seo::{Seo, SeoDefaults, seo_field};
-
-fn input(section: &str, ty: &str, title: &str, fields: Value) -> EntryInput {
-	EntryInput {
-		dates: Default::default(),
-		section: section.into(),
-		ty: ty.into(),
-		site: None,
-		title: title.into(),
-		slug: String::new(),
-		published: true,
-		parent_id: None,
-		fields,
-	}
-}
 
 /// The site as its crate builds it, before [`Cms`](zipp::Cms) finishes it.
 fn schema() -> Schema {

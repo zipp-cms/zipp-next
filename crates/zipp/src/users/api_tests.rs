@@ -1,8 +1,8 @@
 use super::api::*;
-use crate::auth::api::{LoginReq, SessionReq};
+use crate::auth::api::SessionReq;
 use crate::error::Error;
-use crate::schema::tests::site_with_roles;
-use crate::testing::{Client, TestServer};
+use crate::fixtures::site_with_roles;
+use crate::testing::TestServer;
 
 fn new_user(email: &str, role: Option<&str>) -> CreateReq {
 	CreateReq {
@@ -27,18 +27,6 @@ fn unchanged(a: &super::Account) -> UpdateReq {
 	}
 }
 
-/// A client logged in with an email and password.
-async fn login(ts: &TestServer, email: &str, password: &str) -> Client {
-	let login = LoginReq {
-		email: email.into(),
-		password: password.into(),
-	};
-	let mut client = ts.anonymous();
-	client.token =
-		Some(ts.anonymous().call(&login).await.unwrap().session.token);
-	client
-}
-
 fn paths(err: Error) -> Vec<String> {
 	match err {
 		Error::Invalid(fields) => fields.into_iter().map(|f| f.path).collect(),
@@ -61,7 +49,7 @@ async fn admins_manage_users() {
 	assert!(users.iter().any(|u| u.user.email == "new@x.ch"));
 
 	// the new user logs in: the time and a session show
-	let new_user = login(&ts, "new@x.ch", "password1").await;
+	let new_user = ts.login("new@x.ch", "password1").await;
 	let id = created.user.id;
 	let account = admin.call(&GetReq { id }).await.unwrap();
 	assert!(account.last_login_at.is_some());
@@ -81,7 +69,7 @@ async fn admins_manage_users() {
 	admin.call(&change).await.unwrap();
 	let err = new_user.call(&SessionReq {}).await.unwrap_err();
 	assert_eq!(err, Error::InvalidSessionToken);
-	let again = login(&ts, "anna@x.ch", "password2").await;
+	let again = ts.login("anna@x.ch", "password2").await;
 
 	// logged out everywhere, then deleted
 	admin.call(&EndSessionsReq { id }).await.unwrap();
@@ -134,7 +122,7 @@ async fn users_change_their_own_account() {
 	change.email = me.email.clone();
 
 	// with it the other sessions end, this one stays
-	let elsewhere = login(&ts, &me.email, "password").await;
+	let elsewhere = ts.login(&me.email, "password").await;
 	change.current_password = Some("password".into());
 	editor.call(&change).await.unwrap();
 	editor.call(&SessionReq {}).await.unwrap();
@@ -142,7 +130,7 @@ async fn users_change_their_own_account() {
 	assert_eq!(err, Error::InvalidSessionToken);
 
 	// logging out everywhere else keeps this session too
-	let elsewhere = login(&ts, &me.email, "password2").await;
+	let elsewhere = ts.login(&me.email, "password2").await;
 	editor.call(&EndSessionsReq { id: me.id }).await.unwrap();
 	editor.call(&SessionReq {}).await.unwrap();
 	assert!(elsewhere.call(&SessionReq {}).await.is_err());

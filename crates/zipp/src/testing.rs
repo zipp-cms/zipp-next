@@ -9,7 +9,6 @@
 //! assert_eq!(err, Error::Forbidden);
 //! ```
 
-use std::fs;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
@@ -22,15 +21,15 @@ use axum::response::Response;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
+use tempfile::TempDir;
 use tower::ServiceExt;
 
 use crate::api::{Request, has_query, path_of};
 use crate::db::Db;
+use crate::entries::EntryInput;
 use crate::error::{Error, Result};
 use crate::schema::Schema;
 use crate::{AppState, graphql, migrate, server};
-
-static SERVERS: AtomicU32 = AtomicU32::new(0);
 
 pub struct TestServer {
 	pub state: AppState,
@@ -38,6 +37,8 @@ pub struct TestServer {
 	/// the site's, see [`TestServer::routes`]
 	routes: Router<AppState>,
 	users: AtomicU32,
+	/// the asset files, deleted with the server
+	_files: TempDir,
 }
 
 impl TestServer {
@@ -48,10 +49,7 @@ impl TestServer {
 		let db = Db::memory().unwrap();
 		migrate::apply::create_singles(&db.conn(), &schema).unwrap();
 
-		let n = SERVERS.fetch_add(1, Ordering::Relaxed);
-		let files = std::env::temp_dir()
-			.join(format!("zipp-test-{}-{n}", std::process::id()));
-		fs::create_dir_all(&files).unwrap();
+		let files = tempfile::tempdir().unwrap();
 
 		let schema = Arc::new(schema);
 		let gql = graphql::build(
@@ -65,13 +63,14 @@ impl TestServer {
 			graphql_token: Some(Arc::new("test-token".into())),
 			mail: crate::mail::Mailer::memory(),
 			public_url: Arc::new("http://zipp.test".into()),
-			..AppState::new(db, schema, gql, files)
+			..AppState::new(db, schema, gql, files.path().into())
 		};
 		Self {
 			app: app(&state, Router::new()),
 			routes: Router::new(),
 			state,
 			users: AtomicU32::new(0),
+			_files: files,
 		}
 	}
 
@@ -126,6 +125,39 @@ impl TestServer {
 		}
 	}
 
+	/// Someone with a session token, e.g. of a login.
+	pub fn with_token(&self, token: &str) -> Client {
+		Client {
+			app: self.app.clone(),
+			token: Some(token.into()),
+		}
+	}
+
+	/// Someone logged in with an email and password, like the studio.
+	pub async fn login(&self, email: &str, password: &str) -> Client {
+		let login = crate::auth::api::LoginReq {
+			email: email.into(),
+			password: password.into(),
+		};
+		let auth = self.anonymous().call(&login).await.unwrap();
+		self.with_token(&auth.session.token)
+	}
+
+	/// A query of a frontend with its token, like crelte sends it; the
+	/// whole answer with `data` and `errors`.
+	pub async fn graphql(&self, query: &str, variables: Value) -> Value {
+		let body =
+			serde_json::json!({ "query": query, "variables": variables });
+		let req = http::Request::post("/api/graphql")
+			.header(header::CONTENT_TYPE, "application/json")
+			.header(header::AUTHORIZATION, "Bearer test-token")
+			.body(Body::from(body.to_string()))
+			.unwrap();
+		let resp = self.anonymous().send(req).await;
+		let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+		serde_json::from_slice(&body).unwrap()
+	}
+
 	/// A logged in user with a role, `None` is an admin. The password is
 	/// `password`.
 	pub fn user(&self, role: Option<&str>) -> Client {
@@ -170,12 +202,6 @@ impl TestServer {
 		let out = f.await;
 		self.state.db.conn().trace_v2(stmt, None);
 		(out, COUNT.load(Ordering::Relaxed))
-	}
-}
-
-impl Drop for TestServer {
-	fn drop(&mut self) {
-		let _ = fs::remove_dir_all(&self.state.files);
 	}
 }
 
@@ -294,6 +320,20 @@ impl Client {
 		Err(resp.error)
 	}
 
+	/// A GET of any path, like a file or a page.
+	pub async fn get(&self, path: &str) -> Response {
+		let req = http::Request::get(path).body(Body::empty()).unwrap();
+		self.send(req).await
+	}
+
+	/// The body of a response.
+	pub async fn bytes(resp: Response) -> Vec<u8> {
+		to_bytes(resp.into_body(), usize::MAX)
+			.await
+			.unwrap()
+			.to_vec()
+	}
+
 	/// Any request, with the session of the client.
 	pub async fn send(&self, mut req: http::Request<Body>) -> Response {
 		if let Some(token) = &self.token {
@@ -301,5 +341,25 @@ impl Client {
 				.insert("session-token", token.parse().unwrap());
 		}
 		self.app.clone().oneshot(req).await.unwrap()
+	}
+}
+
+/// A published entry of the first site, for `CreateReq` or `save`.
+pub fn input(
+	section: &str,
+	ty: &str,
+	title: &str,
+	fields: Value,
+) -> EntryInput {
+	EntryInput {
+		dates: Default::default(),
+		section: section.into(),
+		ty: ty.into(),
+		site: None,
+		title: title.into(),
+		slug: String::new(),
+		published: true,
+		parent_id: None,
+		fields,
 	}
 }

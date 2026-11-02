@@ -1,4 +1,5 @@
 use super::*;
+use crate::fixtures::png;
 use std::io::Cursor;
 
 #[test]
@@ -43,14 +44,11 @@ fn crops_around_the_focal_point() {
 #[test]
 fn stores_and_transforms_an_image() {
 	let db = crate::db::Db::memory().unwrap();
-	let dir = std::env::temp_dir()
-		.join(format!("zipp-test-{}", rand::random::<u32>()));
-	let mut png = vec![];
-	image::RgbImage::new(300, 200)
-		.write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
-		.unwrap();
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
+	let png = png(300, 200);
 
-	let a = store(&db.conn(), &dir, "test image.png", &png, None).unwrap();
+	let a = store(&db.conn(), dir, "test image.png", &png, None).unwrap();
 	assert_eq!(
 		(a.kind.as_str(), a.width, a.height),
 		("image", Some(300), Some(200))
@@ -74,12 +72,11 @@ fn stores_and_transforms_an_image() {
 	let img = image::open(&out).unwrap();
 	assert_eq!((img.width(), img.height()), (100, 100));
 
-	let f = store(&db.conn(), &dir, "notes.txt", b"hello", None).unwrap();
+	let f = store(&db.conn(), dir, "notes.txt", b"hello", None).unwrap();
 	assert_eq!((f.kind.as_str(), f.mime.as_str()), ("file", "text/plain"));
 	// html is no type of ours, whatever the upload says
-	let f = store(&db.conn(), &dir, "x.html", b"<script>", None).unwrap();
+	let f = store(&db.conn(), dir, "x.html", b"<script>", None).unwrap();
 	assert_eq!(f.mime, "application/octet-stream");
-	fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]
@@ -157,13 +154,13 @@ fn edits_change_the_image_not_the_file() {
 	assert!(bad.check().is_err());
 
 	let db = crate::db::Db::memory().unwrap();
-	let dir = std::env::temp_dir()
-		.join(format!("zipp-test-{}", rand::random::<u32>()));
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
 	let mut jpg = vec![];
 	image::RgbImage::from_pixel(300, 200, image::Rgb([200, 30, 30]))
 		.write_to(&mut Cursor::new(&mut jpg), ImageFormat::Jpeg)
 		.unwrap();
-	let a = store(&db.conn(), &dir, "red.jpg", &jpg, None).unwrap();
+	let a = store(&db.conn(), dir, "red.jpg", &jpg, None).unwrap();
 	let conn = db.conn();
 	conn.execute(
 		"UPDATE assets SET edits = ?1 WHERE id = ?2",
@@ -193,20 +190,19 @@ fn edits_change_the_image_not_the_file() {
 	assert!(img.get_pixel(200, 200)[0] > 150);
 	// the uploaded file is untouched
 	assert_eq!(image::open(&original).unwrap().width(), 300);
-	fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]
 fn edits_stay_within_the_pixel_limit() {
 	let db = crate::db::Db::memory().unwrap();
-	let dir = std::env::temp_dir()
-		.join(format!("zipp-test-{}", rand::random::<u32>()));
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
 	let mut png = vec![];
 	image::GrayImage::new(1, 40_000)
 		.write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
 		.unwrap();
 	let conn = db.conn();
-	let a = store(&conn, &dir, "line.png", &png, None).unwrap();
+	let a = store(&conn, dir, "line.png", &png, None).unwrap();
 
 	// 10000 wide keeps the ratio at 400 million high: capped, but the
 	// resize would still go through 10000x40000
@@ -235,7 +231,7 @@ fn edits_stay_within_the_pixel_limit() {
 		..Default::default()
 	};
 	let schema = crate::schema::Schema::new();
-	let err = update(&conn, &dir, &schema, a.id, change).unwrap_err();
+	let err = update(&conn, dir, &schema, a.id, change).unwrap_err();
 	assert!(err.to_string().contains("40 megapixels"), "{err}");
 
 	// edits that got in anyway fail their transform, nothing is decoded
@@ -252,23 +248,19 @@ fn edits_stay_within_the_pixel_limit() {
 	let err = generate(&a, &original, &t, "image/png", &out).unwrap_err();
 	assert!(matches!(err, Error::Internal(_)), "{err}");
 	assert!(!out.exists());
-	fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]
 fn knows_where_assets_are_used() {
 	use crate::entries::save;
-	use crate::entries::tests::input;
+	use crate::testing::input;
 	let db = crate::db::Db::memory().unwrap();
-	let s = crate::schema::tests::site();
-	let dir = std::env::temp_dir()
-		.join(format!("zipp-test-{}", rand::random::<u32>()));
-	let mut png = vec![];
-	image::RgbImage::new(20, 10)
-		.write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
-		.unwrap();
+	let s = crate::fixtures::site();
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
+	let png = png(20, 10);
 	let conn = db.conn();
-	let a = store(&conn, &dir, "hero.png", &png, None).unwrap();
+	let a = store(&conn, dir, "hero.png", &png, None).unwrap();
 	let fields = serde_json::json!({ "image": [a.id] });
 	let e = save(
 		&conn,
@@ -301,7 +293,6 @@ fn knows_where_assets_are_used() {
 	conn.execute("DELETE FROM asset_relations", []).unwrap();
 	index_usage(&conn, &s).unwrap();
 	assert!(!used(&conn).is_empty());
-	fs::remove_dir_all(dir).unwrap();
 }
 
 /// A zip of these files, a name ending in `/` is a folder.
@@ -334,8 +325,8 @@ fn unzip_top(
 #[test]
 fn unzips_within_limits() {
 	let db = crate::db::Db::memory().unwrap();
-	let dir = std::env::temp_dir()
-		.join(format!("zipp-test-{}", rand::random::<u32>()));
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
 	let conn = db.conn();
 	let zip = zip_of(&[("a.txt", b"hello"), ("b.txt", b"world!")]);
 	let limits = Limits {
@@ -346,7 +337,7 @@ fn unzips_within_limits() {
 		file: 6,
 	};
 	let refused = |zip: &[u8], limits: Limits| {
-		let err = unzip_top(&conn, &dir, zip, &limits).unwrap_err();
+		let err = unzip_top(&conn, dir, zip, &limits).unwrap_err();
 		assert!(matches!(err, Error::Request(_)), "{err:?}");
 	};
 	refused(&zip, Limits { files: 1, ..limits });
@@ -360,13 +351,12 @@ fn unzips_within_limits() {
 	let deep = zip_of(&[("x/y/z/a.txt", b"a")]);
 	refused(&deep, limits);
 	let fine = zip_of(&[("x/", b""), ("X/y/a.txt", b"a")]);
-	let done = unzip_top(&conn, &dir, &fine, &limits).unwrap();
+	let done = unzip_top(&conn, dir, &fine, &limits).unwrap();
 	assert_eq!(done.assets.len(), 1);
 	assert_eq!(folders_of(&conn), ["x", "y"]);
 
-	let done = unzip_top(&conn, &dir, &zip, &limits).unwrap();
+	let done = unzip_top(&conn, dir, &zip, &limits).unwrap();
 	assert_eq!(done.assets.len(), 2);
-	fs::remove_dir_all(dir).unwrap();
 }
 
 fn folders_of(conn: &Connection) -> Vec<String> {
@@ -389,8 +379,8 @@ fn folder_names_are_no_paths() {
 #[test]
 fn a_zip_that_holds_more_than_it_says_stores_nothing() {
 	let db = crate::db::Db::memory().unwrap();
-	let dir = std::env::temp_dir()
-		.join(format!("zipp-test-{}", rand::random::<u32>()));
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
 	let mut zip = zip_of(&[("a.txt", b"fine"), ("b.txt", b"0123456789")]);
 	// b.txt says it is 2 bytes, in its header and the directory
 	for (sig, at) in [([0x50, 0x4b, 3, 4], 22), ([0x50, 0x4b, 1, 2], 24)] {
@@ -405,14 +395,13 @@ fn a_zip_that_holds_more_than_it_says_stores_nothing() {
 	}
 
 	let conn = db.conn();
-	let err = unzip_top(&conn, &dir, &zip, &Limits::default());
+	let err = unzip_top(&conn, dir, &zip, &Limits::default());
 	let larger = matches!(&err, Err(Error::Request(m)) if m.contains("larger"));
 	assert!(larger, "{err:?}");
 	let n: i64 = conn
 		.query_row("SELECT COUNT(*) FROM assets", [], |r| r.get(0))
 		.unwrap();
 	assert_eq!(n, 0);
-	let left = fs::read_dir(&dir).map(|d| d.count()).unwrap_or(0);
+	let left = fs::read_dir(dir).map(|d| d.count()).unwrap_or(0);
 	assert_eq!(left, 0);
-	let _ = fs::remove_dir_all(dir);
 }

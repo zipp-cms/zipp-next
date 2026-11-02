@@ -1,8 +1,8 @@
 use serde_json::json;
 
 use super::*;
+use crate::fixtures::site;
 use crate::schema::Section;
-use crate::schema::tests::site;
 
 fn page_fields() -> Value {
 	json!({
@@ -289,7 +289,7 @@ fn dates_are_days_of_the_calendar() {
 	// a byte in the middle of a character must not panic
 	assert!(!valid_date("202ä-1-14", false));
 
-	let s = crate::schema::tests::site().block(
+	let s = crate::fixtures::site().block(
 		"d",
 		"D",
 		[Field::date("day"), Field::date("at").time()],

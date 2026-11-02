@@ -3,9 +3,9 @@ use serde_json::json;
 use super::*;
 use crate::db::Db;
 use crate::entries::save;
-use crate::entries::tests::input;
+use crate::fixtures::site_with_roles;
 use crate::schema::Role;
-use crate::schema::tests::site_with_roles;
+use crate::testing::input;
 
 fn user(role: Option<&str>) -> Authed {
 	Authed {

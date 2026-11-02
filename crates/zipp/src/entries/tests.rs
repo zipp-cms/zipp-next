@@ -2,27 +2,9 @@ use serde_json::json;
 
 use super::*;
 use crate::db::{DAY_MS as DAY, Db};
+use crate::fixtures::site;
 use crate::schema::Field;
-use crate::schema::tests::site;
-
-pub fn input(
-	section: &str,
-	ty: &str,
-	title: &str,
-	fields: Value,
-) -> EntryInput {
-	EntryInput {
-		dates: Default::default(),
-		section: section.into(),
-		ty: ty.into(),
-		site: None,
-		title: title.into(),
-		slug: String::new(),
-		published: true,
-		parent_id: None,
-		fields,
-	}
-}
+use crate::testing::input;
 
 fn query(params: &[(&str, &str)]) -> Query {
 	let params: Vec<_> = params

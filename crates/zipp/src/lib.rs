@@ -17,6 +17,8 @@ pub mod db;
 pub mod drafts;
 pub mod entries;
 pub mod error;
+#[cfg(test)]
+mod fixtures;
 pub mod graphql;
 pub mod mail;
 pub mod migrate;

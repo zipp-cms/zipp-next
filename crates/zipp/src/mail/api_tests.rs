@@ -1,7 +1,7 @@
 use super::api::*;
 use super::*;
 use crate::error::Error;
-use crate::schema::tests::site_with_roles;
+use crate::fixtures::site_with_roles;
 use crate::testing::TestServer;
 
 #[tokio::test]

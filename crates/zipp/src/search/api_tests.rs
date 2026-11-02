@@ -2,10 +2,10 @@ use serde_json::json;
 
 use super::api::*;
 use crate::entries::api::{CreateReq, DeleteReq};
-use crate::entries::tests::input;
 use crate::error::Error;
-use crate::schema::tests::site_with_roles;
+use crate::fixtures::site_with_roles;
 use crate::testing::TestServer;
+use crate::testing::input;
 
 #[tokio::test]
 async fn finds_what_each_role_may_view() {

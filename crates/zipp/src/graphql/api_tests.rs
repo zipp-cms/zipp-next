@@ -7,10 +7,10 @@ use super::tokens::Scope;
 use crate::drafts::SiteDoc;
 use crate::drafts::api::{PreviewReq, PutReq, SitePreviewReq};
 use crate::entries::api::CreateReq;
-use crate::entries::tests::input;
 use crate::error::Error;
-use crate::schema::tests::site_with_roles;
+use crate::fixtures::site_with_roles;
 use crate::schema::{Access, Role};
+use crate::testing::input;
 use crate::testing::{Client, TestServer};
 use crate::users::api::DeleteReq;
 
@@ -342,14 +342,12 @@ async fn unknown_and_expired_tokens_are_out() {
 async fn graphiql_for_admins() {
 	let ts = TestServer::new(site_with_roles());
 	// the page is the same for all, its queries send the session
-	let req = Request::get("/api/graphql").body(Body::empty()).unwrap();
-	let resp = ts.anonymous().send(req).await;
+	let resp = ts.anonymous().get("/api/graphql").await;
 	assert_eq!(resp.status(), StatusCode::OK);
 	// bundled with the studio, under its policy: no scripts of others
 	let csp = resp.headers()[header::CONTENT_SECURITY_POLICY].to_str();
 	assert!(csp.unwrap().contains("script-src 'self';"));
-	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
-	let html = String::from_utf8(body.to_vec()).unwrap();
+	let html = String::from_utf8(Client::bytes(resp).await).unwrap();
 	assert!(html.contains("GraphiQL"));
 	assert!(html.contains("/_studio/graphiql-"));
 	assert!(!html.contains("unpkg"));
@@ -357,9 +355,8 @@ async fn graphiql_for_admins() {
 
 	// in development it says so, GraphQL is open
 	let ts_dev = TestServer::new(site_with_roles()).dev();
-	let req = Request::get("/api/graphql").body(Body::empty()).unwrap();
-	let resp = ts_dev.anonymous().send(req).await;
-	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+	let resp = ts_dev.anonymous().get("/api/graphql").await;
+	let body = Client::bytes(resp).await;
 	assert!(String::from_utf8_lossy(&body).contains("<body data-dev>"));
 
 	// its introspection, as deep as GraphiQL's, runs with the session

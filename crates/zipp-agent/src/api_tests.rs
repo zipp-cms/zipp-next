@@ -1,10 +1,10 @@
 //! The agent's api in a site, through zipp's test server.
 
+use crate::Agent;
+use crate::api::{ForgetReq, StartReq};
 use zipp::error::Error;
 use zipp::testing::TestServer;
 use zipp::{Access, Role, Schema, Section};
-use zipp_agent::Agent;
-use zipp_agent::api::{ForgetReq, StartReq};
 
 fn schema() -> Schema {
 	Schema::new()

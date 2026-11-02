@@ -3,9 +3,9 @@ use serde_json::json;
 use super::SiteDoc;
 use super::api::*;
 use crate::entries::api::{CreateReq, GetReq as GetEntry};
-use crate::entries::tests::input;
 use crate::error::Error;
-use crate::schema::tests::site_with_roles;
+use crate::fixtures::site_with_roles;
+use crate::testing::input;
 use crate::testing::{Client, TestServer};
 
 fn content(ty: &str, title: &str, fields: serde_json::Value) -> SiteDoc {

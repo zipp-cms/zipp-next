@@ -26,8 +26,11 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
 - Tests are small and offline: unit tests of an area's functions in its
   `tests.rs` (database tests use `Db::memory()`), and every request of
   the api in its `api_tests.rs` through `testing::TestServer`, with each
-  role that may and may not (`Error::Forbidden`). Tests run on the real
-  SQL, no mocks.
+  role that may and may not (`Error::Forbidden`). A bigger part of an
+  area can have its own (`migrate/apply_tests.rs`,
+  `assets/archive_tests.rs`). The test site and what several areas'
+  tests share are in `fixtures.rs`, files in `tempfile::tempdir()`.
+  Tests run on the real SQL, no mocks.
 - Permissions are in a handler's signature: `Admin`, `EntryAccess<Publish>`,
   `AssetAccess<Edit>`, `AiAccess`; `Authed::check` only where the section
   comes with the request (creating, lists).

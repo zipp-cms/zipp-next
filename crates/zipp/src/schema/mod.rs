@@ -32,7 +32,7 @@ mod field;
 pub mod field_type;
 pub mod role;
 #[cfg(test)]
-pub(crate) mod tests;
+mod tests;
 
 pub use condition::Condition;
 pub use field::Choice;

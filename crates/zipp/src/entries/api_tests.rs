@@ -3,11 +3,11 @@ use std::sync::{Arc, Mutex};
 use serde_json::json;
 
 use super::api::*;
-use super::tests::input;
 use crate::error::Error;
-use crate::schema::tests::site_with_roles;
+use crate::fixtures::site_with_roles;
 use crate::schema::{Condition, Field};
 use crate::testing::TestServer;
+use crate::testing::input;
 use crate::{Change, ChangeKind};
 
 fn params(p: &[(&str, &str)]) -> ListReq {

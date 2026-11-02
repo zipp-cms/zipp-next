@@ -2,19 +2,24 @@ use serde_json::json;
 
 use super::*;
 use crate::entries::save;
-use crate::entries::tests::input;
-use crate::schema::tests::site;
+use crate::fixtures::{png, site};
 use crate::schema::{Field, Format, Transform};
+use crate::testing::input;
 
-async fn run(gql: &GqlSchema, query: &str, published_only: bool) -> Value {
-	let req = async_graphql::Request::new(query).data(Viewer {
+/// What a frontend sees, or with drafts like the studio.
+fn viewer(published_only: bool) -> Viewer {
+	Viewer {
 		published_only,
 		preview: None,
 		token: None,
 		indexing: true,
 		scope: Scope::ALL,
 		loaded: Default::default(),
-	});
+	}
+}
+
+async fn run(gql: &GqlSchema, query: &str, published_only: bool) -> Value {
+	let req = async_graphql::Request::new(query).data(viewer(published_only));
 	let resp = gql.execute(req).await;
 	assert!(resp.errors.is_empty(), "{:?}", resp.errors);
 	resp.data.into_json().unwrap()
@@ -130,17 +135,14 @@ async fn assets_with_transforms() {
 		SiteUrls::new(),
 	)
 	.unwrap();
-	let dir = std::env::temp_dir()
-		.join(format!("zipp-gql-{}", rand::random::<u32>()));
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
 
-	let mut png = vec![];
-	image::RgbImage::new(400, 200)
-		.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
-		.unwrap();
+	let png = png(400, 200);
 	{
 		let conn = db.conn();
 		let a =
-			crate::assets::store(&conn, &dir, "hero.png", &png, None).unwrap();
+			crate::assets::store(&conn, dir, "hero.png", &png, None).unwrap();
 		let fields = json!({ "city": "Bern", "image": [a.id] });
 		save(
 			&conn,
@@ -157,7 +159,7 @@ async fn assets_with_transforms() {
 			focal_y: 0.5,
 			..Default::default()
 		};
-		crate::assets::update(&conn, &dir, &s, a.id, alt).unwrap();
+		crate::assets::update(&conn, dir, &s, a.id, alt).unwrap();
 	}
 
 	let data = run(
@@ -235,7 +237,7 @@ async fn assets_with_transforms() {
 			focal_y: 0.5,
 			..Default::default()
 		};
-		let a = crate::assets::update(&conn, &dir, &s, 1, both).unwrap();
+		let a = crate::assets::update(&conn, dir, &s, 1, both).unwrap();
 		// trimmed, of the sites there are
 		assert_eq!(
 			a.alt,
@@ -256,17 +258,9 @@ async fn assets_with_transforms() {
 		r#"{ entry(uri: "events/jazz") { ... on event_Entry {
 			image { url(transform: "small", format: "gif") } } } }"#,
 	] {
-		let req = async_graphql::Request::new(q).data(Viewer {
-			published_only: true,
-			preview: None,
-			token: None,
-			indexing: true,
-			scope: Scope::ALL,
-			loaded: Default::default(),
-		});
+		let req = async_graphql::Request::new(q).data(viewer(true));
 		assert!(!gql.execute(req).await.errors.is_empty(), "{q}");
 	}
-	std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[tokio::test]
@@ -286,19 +280,19 @@ async fn asset_fields_and_videos() {
 		SiteUrls::new(),
 	)
 	.unwrap();
-	let dir = std::env::temp_dir()
-		.join(format!("zipp-gql-{}", rand::random::<u32>()));
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
 	{
 		let conn = db.conn();
 		let a =
-			crate::assets::store(&conn, &dir, "clip.mp4", b"v", None).unwrap();
+			crate::assets::store(&conn, dir, "clip.mp4", b"v", None).unwrap();
 		let jazz = input("events", "event", "Jazz", json!({}));
 		let jazz = save(&conn, &s, None, jazz, None).unwrap();
 		let change = crate::assets::AssetChange {
 			fields: Some(json!({ "credit": "Anna", "event": [jazz.id] })),
 			..Default::default()
 		};
-		crate::assets::update(&conn, &dir, &s, a.id, change).unwrap();
+		crate::assets::update(&conn, dir, &s, a.id, change).unwrap();
 		let fields = json!({ "clip": [a.id] });
 		let e = input("events", "event", "Film", fields);
 		save(&conn, &s, None, e, None).unwrap();
@@ -324,7 +318,6 @@ async fn asset_fields_and_videos() {
 			"event": [{ "title": "Jazz", "site": "en" }],
 		})
 	);
-	std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[tokio::test]
@@ -374,14 +367,7 @@ async fn answers_crelte_like_craft() {
 	.variables(async_graphql::Variables::from_json(
 		json!({ "uri": "__home__", "siteId": 2 }),
 	))
-	.data(Viewer {
-		published_only: true,
-		preview: None,
-		token: None,
-		indexing: true,
-		scope: Scope::ALL,
-		loaded: Default::default(),
-	});
+	.data(viewer(true));
 	let resp = gql.execute(req).await;
 	assert!(resp.errors.is_empty(), "{:?}", resp.errors);
 	let data = resp.data.into_json().unwrap();
@@ -423,12 +409,8 @@ async fn preview_shows_the_draft() {
 		r#"{ entry(uri: "live") { title ... on page_Entry { intro } } }"#,
 	)
 	.data(Viewer {
-		published_only: true,
 		preview: doc,
-		token: None,
-		indexing: true,
-		scope: Scope::ALL,
-		loaded: Default::default(),
+		..viewer(true)
 	});
 	let data = gql.execute(req).await.data.into_json().unwrap();
 	assert_eq!(data["entry"], json!({ "title": "Draft", "intro": "new" }));
@@ -502,12 +484,8 @@ async fn site_preview_shows_every_draft() {
 			r#"{ entries(section: "pages", order: "title") { title } }"#,
 		)
 		.data(Viewer {
-			published_only: true,
 			preview,
-			token: None,
-			indexing: true,
-			scope: Scope::ALL,
-			loaded: Default::default(),
+			..viewer(true)
 		});
 		let gql = gql.clone();
 		async move { gql.execute(req).await.data.into_json().unwrap() }
@@ -541,12 +519,9 @@ async fn urls_of_a_preview_keep_the_token() {
 		let req =
 			async_graphql::Request::new(r#"{ entry(uri: "team") { url } }"#)
 				.data(Viewer {
-					published_only: true,
 					preview,
 					token: token.map(Into::into),
-					indexing: true,
-					scope: Scope::ALL,
-					loaded: Default::default(),
+					..viewer(true)
 				});
 		let gql = gql.clone();
 		async move {
@@ -878,12 +853,8 @@ async fn offline_sites_only_for_previews() {
 	)
 	.unwrap();
 	let preview = |p| Viewer {
-		published_only: true,
 		preview: Some(p),
-		token: None,
-		indexing: true,
-		scope: Scope::ALL,
-		loaded: Default::default(),
+		..viewer(true)
 	};
 	let ask = async |v: Viewer| {
 		let resp = gql.execute(async_graphql::Request::new(q).data(v)).await;
@@ -1118,19 +1089,13 @@ async fn craft_arguments_and_fields() {
 		("en".to_string(), "https://x.ch/en".to_string()),
 	]);
 	let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
-	let dir =
-		std::env::temp_dir().join(format!("zipp-craft-{}", std::process::id()));
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
 	let (a, b, c) = {
 		let conn = db.conn();
-		let mut png = vec![];
-		image::RgbImage::new(1600, 900)
-			.write_to(
-				&mut std::io::Cursor::new(&mut png),
-				image::ImageFormat::Png,
-			)
-			.unwrap();
+		let png = png(1600, 900);
 		let img =
-			crate::assets::store(&conn, &dir, "piano-night.png", &png, None)
+			crate::assets::store(&conn, dir, "piano-night.png", &png, None)
 				.unwrap();
 		let a = save(
 			&conn,
@@ -1198,10 +1163,9 @@ async fn craft_arguments_and_fields() {
 	let req = async_graphql::Request::new(format!(
 		r#"{{ entry(id: [{a}]) {{ ... on event_Entry {{ image {{ url(width: 500) }} }} }} }}"#
 	))
-	.data(Viewer { published_only: true, preview: None, token: None, indexing: true, scope: Scope::ALL, loaded: Default::default() });
+	.data(viewer(true));
 	let resp = gql.execute(req).await;
 	assert!(resp.errors[0].message.contains("width 500 is not allowed"));
-	std::fs::remove_dir_all(dir).ok();
 }
 
 #[tokio::test]
@@ -1366,16 +1330,13 @@ async fn localized_lists_the_live_versions_a_viewer_may_see() {
 		r#"{{ entry(id: {id}) {{ localized {{
 			siteId siteHandle language title uri url }} }} }}"#
 	);
-	let viewer = |published_only, preview, sites: Option<Vec<&str>>| Viewer {
-		published_only,
+	let seen = |published_only, preview, sites: Option<Vec<&str>>| Viewer {
 		preview,
-		token: None,
-		indexing: true,
 		scope: Scope {
 			sites: sites.map(|l| l.into_iter().map(Into::into).collect()),
 			..Scope::ALL
 		},
-		loaded: Default::default(),
+		..viewer(published_only)
 	};
 	let sites = async |v: Viewer| {
 		let req = async_graphql::Request::new(q.clone()).data(v);
@@ -1404,21 +1365,21 @@ async fn localized_lists_the_live_versions_a_viewer_may_see() {
 
 	// a token of German and French reads no English
 	assert_eq!(
-		sites(viewer(true, None, Some(vec!["de", "fr"]))).await,
+		sites(seen(true, None, Some(vec!["de", "fr"]))).await,
 		Vec::<String>::new()
 	);
 	// admins see every version
-	assert_eq!(sites(viewer(false, None, None)).await, ["en", "fr", "it"]);
+	assert_eq!(sites(seen(false, None, None)).await, ["en", "fr", "it"]);
 	// the preview of the entry shows it in every site, offline ones too
 	let preview = Preview::Entry(id, Default::default());
 	assert_eq!(
-		sites(viewer(true, Some(preview), None)).await,
+		sites(seen(true, Some(preview), None)).await,
 		["en", "fr", "it"]
 	);
 	// but not the sites out of the token's scope
 	let preview = Preview::Entry(id, Default::default());
 	assert_eq!(
-		sites(viewer(true, Some(preview), Some(vec!["de", "en"]))).await,
+		sites(seen(true, Some(preview), Some(vec!["de", "en"]))).await,
 		["en"]
 	);
 }
@@ -1445,14 +1406,7 @@ async fn a_request_loads_a_limited_number_of_entries() {
 	// aliases repeat it past the budget: an error, not a stall
 	let many: String = (0..100).map(|i| format!("a{i}: {one}\n")).collect();
 	let req =
-		async_graphql::Request::new(format!("{{ {many} }}")).data(Viewer {
-			published_only: true,
-			preview: None,
-			token: None,
-			indexing: true,
-			scope: Scope::ALL,
-			loaded: Default::default(),
-		});
+		async_graphql::Request::new(format!("{{ {many} }}")).data(viewer(true));
 	let resp = gql.execute(req).await;
 	assert!(
 		resp.errors

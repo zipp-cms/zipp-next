@@ -1,14 +1,13 @@
-use axum::body::Body;
-use axum::http::{Request, StatusCode};
+use axum::http::StatusCode;
 use serde_json::json;
 
 use super::api::*;
 use crate::assets::Asset;
 use crate::assets::api::{DeleteReq as DeleteAsset, ListReq as ListAssets};
 use crate::entries::api::{CreateReq, DeleteReq, GetReq};
-use crate::entries::tests::input;
 use crate::error::Error;
-use crate::schema::tests::site_with_roles;
+use crate::fixtures::site_with_roles;
+use crate::testing::input;
 use crate::testing::{Client, TestServer};
 
 #[tokio::test]
@@ -39,8 +38,7 @@ async fn who_may_delete_restores() {
 }
 
 async fn file(client: &Client, path: &str) -> StatusCode {
-	let req = Request::get(path).body(Body::empty()).unwrap();
-	client.send(req).await.status()
+	client.get(path).await.status()
 }
 
 #[tokio::test]

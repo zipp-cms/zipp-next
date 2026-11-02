@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use super::*;
+use crate::fixtures::site_with_roles;
 use crate::graphql::SiteUrls;
-use crate::schema::tests::site_with_roles;
 use crate::testing::TestServer;
 
 #[test]

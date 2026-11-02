@@ -1,9 +1,8 @@
-use axum::body::Body;
-use axum::http::{Request, StatusCode, header};
+use axum::http::{StatusCode, header};
 
 use super::api::*;
 use crate::error::Error;
-use crate::schema::tests::site_with_roles;
+use crate::fixtures::site_with_roles;
 use crate::schema::{Condition, Field, Section};
 use crate::testing::TestServer;
 
@@ -42,12 +41,11 @@ async fn the_schema_for_the_user() {
 #[tokio::test]
 async fn serves_the_studio() {
 	let ts = TestServer::new(site_with_roles());
-	let get = |path: &str| Request::get(path).body(Body::empty()).unwrap();
 	let anon = ts.anonymous();
 
 	// every page of the studio is its index.html, scripts only of the
 	// cms, nobody else frames it
-	let resp = anon.send(get("/admin/entries/pages")).await;
+	let resp = anon.get("/admin/entries/pages").await;
 	assert_eq!(resp.status(), StatusCode::OK);
 	let csp = resp.headers()[header::CONTENT_SECURITY_POLICY].to_str();
 	let csp = csp.unwrap();
@@ -59,11 +57,11 @@ async fn serves_the_studio() {
 	assert!(csp.contains("frame-src 'self';"), "{csp}");
 	assert!(csp.ends_with("frame-ancestors 'self'"), "{csp}");
 
-	let resp = anon.send(get("/")).await;
+	let resp = anon.get("/").await;
 	assert_eq!(resp.status(), StatusCode::SEE_OTHER);
-	let resp = anon.send(get("/nothing")).await;
+	let resp = anon.get("/nothing").await;
 	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
-	let resp = anon.send(get("/_fields/nothing.js")).await;
+	let resp = anon.get("/_fields/nothing.js").await;
 	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
@@ -158,8 +156,7 @@ async fn the_studio_frames_the_sites_and_its_ancestors_frame_it() {
 		std::sync::Arc::new(vec!["https://dash.example.com".into()]);
 	// builds the app again with the state
 	let ts = ts.dev();
-	let req = Request::get("/admin").body(Body::empty()).unwrap();
-	let resp = ts.anonymous().send(req).await;
+	let resp = ts.anonymous().get("/admin").await;
 	let csp = resp.headers()[header::CONTENT_SECURITY_POLICY].to_str();
 	let csp = csp.unwrap();
 	// a relative url is the cms itself

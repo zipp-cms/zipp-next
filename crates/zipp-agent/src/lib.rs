@@ -31,8 +31,12 @@ use zipp::error::{Error, Result};
 use zipp::{AppState, Plugin, PluginStudio};
 
 pub mod api;
+#[cfg(test)]
+mod api_tests;
 mod harness;
 mod routes;
+#[cfg(test)]
+mod tests;
 
 pub use harness::{ChatEvent, ClaudeCode, Harness};
 

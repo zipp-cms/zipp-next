@@ -1,6 +1,6 @@
 use super::throttle::{FAIL_WINDOW_MS, MAX_FAILS};
 use super::*;
-use crate::schema::tests::site;
+use crate::fixtures::site;
 
 #[test]
 fn roles_allow_levels() {

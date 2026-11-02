@@ -33,6 +33,8 @@ use serde::{Deserialize, Serialize};
 use zipp::{Choice, Field, FieldKind, Schema, Section};
 
 pub mod api;
+#[cfg(test)]
+mod api_tests;
 mod graphql;
 mod plugin;
 mod resolve;

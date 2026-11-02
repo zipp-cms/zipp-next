@@ -1,8 +1,8 @@
 use super::api::*;
 use super::links::LinkKind;
 use super::*;
-use crate::schema::tests::site_with_roles;
-use crate::testing::{Client, TestServer};
+use crate::fixtures::site_with_roles;
+use crate::testing::TestServer;
 use crate::users::api::{
 	CreateReq, GetReq, LoginAsLinkReq, PasswordLinkReq, UpdateReq,
 };
@@ -11,12 +11,6 @@ use crate::users::api::{
 fn token_in(text: &str) -> String {
 	let start = text.find("/admin/password/").unwrap() + 16;
 	text[start..].split_whitespace().next().unwrap().to_string()
-}
-
-fn with_token(ts: &TestServer, auth: &Authenticated) -> Client {
-	let mut c = ts.anonymous();
-	c.token = Some(auth.session.token.clone());
-	c
 }
 
 fn set(token: &str, password: &str, name: Option<&str>) -> SetPasswordReq {
@@ -38,11 +32,7 @@ async fn a_forgotten_password_comes_by_mail() {
 	let ts = TestServer::new(site_with_roles());
 	add_user(&ts.state.db.conn(), "a@x.ch", "password1", None).unwrap();
 	let anon = ts.anonymous();
-	let login = LoginReq {
-		email: "a@x.ch".into(),
-		password: "password1".into(),
-	};
-	let old = with_token(&ts, &anon.call(&login).await.unwrap());
+	let old = ts.login("a@x.ch", "password1").await;
 
 	// the same answer for an unknown email, no mail
 	anon.call(&ForgotReq {
@@ -88,11 +78,7 @@ async fn a_forgotten_password_comes_by_mail() {
 		.unwrap_err();
 	assert!(matches!(err, Error::Request(_)));
 	assert!(old.call(&SessionReq {}).await.is_err());
-	let login = LoginReq {
-		email: "a@x.ch".into(),
-		password: "password2".into(),
-	};
-	anon.call(&login).await.unwrap();
+	ts.login("a@x.ch", "password2").await;
 }
 
 #[tokio::test]
@@ -211,7 +197,7 @@ async fn an_invited_user_sets_a_password() {
 	assert!(!admin.call(&get).await.unwrap().invited);
 
 	// only admins make links
-	let editor = with_token(&ts, &auth);
+	let editor = ts.with_token(&auth.session.token);
 	assert_eq!(editor.call(&req).await.unwrap_err(), Error::Forbidden);
 }
 
@@ -233,7 +219,11 @@ async fn admins_log_in_as_a_user() {
 	// a short session that isn't renewed
 	let left = auth.session.expires_at - now();
 	assert!(left <= links::LOGIN_AS_MS, "{left}");
-	let again = with_token(&ts, &auth).call(&SessionReq {}).await.unwrap();
+	let again = ts
+		.with_token(&auth.session.token)
+		.call(&SessionReq {})
+		.await
+		.unwrap();
 	assert_eq!(again.session.expires_at, auth.session.expires_at);
 	// once
 	assert!(ts.anonymous().call(&req).await.is_err());

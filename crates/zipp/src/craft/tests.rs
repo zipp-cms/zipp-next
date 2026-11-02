@@ -128,9 +128,10 @@ fn imports_a_site() {
 		sites: vec![],
 		volumes: HashMap::new(),
 	};
-	let files = std::env::temp_dir();
+	let files = tempfile::tempdir().unwrap();
 
-	let report = import(&conn, &schema, &files, &export(), &opts).unwrap();
+	let report =
+		import(&conn, &schema, files.path(), &export(), &opts).unwrap();
 	assert_eq!(report.entries, 3);
 	assert!(report.skipped.iter().any(|s| s.contains("section news")));
 	assert!(report.skipped.iter().any(|s| s.contains("volume default")));
@@ -205,7 +206,7 @@ fn imports_a_site() {
 	);
 
 	// only into an empty database
-	assert!(import(&conn, &schema, &files, &export(), &opts).is_err());
+	assert!(import(&conn, &schema, files.path(), &export(), &opts).is_err());
 }
 
 #[test]
@@ -268,8 +269,8 @@ fn fills_groups_from_flat_fields() {
 		volumes: HashMap::new(),
 	};
 
-	let report =
-		import(&conn, &schema, &std::env::temp_dir(), &export, &opts).unwrap();
+	let files = tempfile::tempdir().unwrap();
+	let report = import(&conn, &schema, files.path(), &export, &opts).unwrap();
 	assert_eq!(report.entries, 1);
 	// a Craft field for two places or two for one fill nothing
 	assert_eq!(
@@ -318,8 +319,8 @@ fn imports_the_alt_text_per_site() {
 	let schema = Schema::new()
 		.site("de", "Deutsch", "de-CH")
 		.site("en", "English", "en");
-	let dir = std::env::temp_dir()
-		.join(format!("zipp-craft-{}", rand::random::<u32>()));
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
 	let volume = dir.join("volume");
 	fs::create_dir_all(&volume).unwrap();
 	fs::write(volume.join("a.txt"), "a").unwrap();
@@ -357,5 +358,4 @@ fn imports_the_alt_text_per_site() {
 		[("de".into(), "Ein A".into()), ("en".into(), "An A".into())].into()
 	);
 	assert_eq!(alt(2), [("de".into(), "Noch ein A".into())].into());
-	fs::remove_dir_all(dir).unwrap();
 }

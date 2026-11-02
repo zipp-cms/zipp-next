@@ -184,8 +184,8 @@ fn pascal(handle: &str) -> String {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::fixtures::site;
 	use crate::schema::Field;
-	use crate::schema::tests::site;
 
 	#[test]
 	fn generates_types() {

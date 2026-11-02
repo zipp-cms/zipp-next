@@ -2,29 +2,17 @@
 //! studio uses it.
 
 use serde_json::{Value, json};
-use zipp::axum::body::{Body, to_bytes};
-use zipp::axum::http::{Request, header};
 use zipp::drafts::SiteDoc;
 use zipp::drafts::api::{PublishReq, PutReq};
 use zipp::entries::EntryInput;
 use zipp::entries::api::{CreateReq, UpdateReq};
 use zipp::error::Error;
-use zipp::testing::{Client, TestServer};
+use zipp::testing::{Client, TestServer, input};
 
 use super::*;
 
 fn create(section: &str, ty: &str, title: &str, fields: Value) -> CreateReq {
-	CreateReq(EntryInput {
-		dates: Default::default(),
-		section: section.into(),
-		ty: ty.into(),
-		site: None,
-		title: title.into(),
-		slug: String::new(),
-		published: true,
-		parent_id: None,
-		fields,
-	})
+	CreateReq(input(section, ty, title, fields))
 }
 
 fn event(title: &str, date: &str) -> CreateReq {
@@ -77,10 +65,8 @@ async fn upcoming_events_as_json() {
 	admin.call(&event("Gestern", "2000-01-01")).await.unwrap();
 	admin.call(&event("Bald", "2099-01-01")).await.unwrap();
 
-	let req = Request::get("/events.json").body(Body::empty()).unwrap();
-	let resp = ts.anonymous().send(req).await;
-	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
-	let events: Value = serde_json::from_slice(&body).unwrap();
+	let resp = ts.anonymous().get("/events.json").await;
+	let events: Value = Client::json(resp).await.unwrap();
 	assert_eq!(events[0]["title"], "Bald");
 	assert_eq!(events.as_array().unwrap().len(), 1);
 }
@@ -109,7 +95,7 @@ async fn the_news_page_filters_by_category() {
 	let query =
 		include_str!("../../crelte/svelte/src/queries/articles.graphql");
 	let vars = json!({ "categories": concerts.id.to_string(), "siteId": 1 });
-	let data = graphql(&ts, query, vars).await;
+	let data = ts.graphql(query, vars).await;
 
 	let titles = |list: &str| -> Vec<&str> {
 		let list = data["data"][list].as_array();
@@ -133,23 +119,10 @@ async fn tickets_are_a_group_of_the_event() {
 
 	// the query of the events block, the group is the block eventTickets
 	let query = include_str!("../../crelte/svelte/src/queries/events.graphql");
-	let data = graphql(&ts, query, json!({ "siteId": 1 })).await;
+	let data = ts.graphql(query, json!({ "siteId": 1 })).await;
 	let events = &data["data"]["events"];
 	assert_eq!(events[0]["tickets"], json!({ "soldOut": true }), "{data}");
 	assert_eq!(events[1]["tickets"], Value::Null);
-}
-
-/// A query of the website, with its token like crelte sends it.
-async fn graphql(ts: &TestServer, query: &str, variables: Value) -> Value {
-	let body = json!({ "query": query, "variables": variables });
-	let req = Request::post("/api/graphql")
-		.header(header::CONTENT_TYPE, "application/json")
-		.header(header::AUTHORIZATION, "Bearer test-token")
-		.body(Body::from(body.to_string()))
-		.unwrap();
-	let resp = ts.anonymous().send(req).await;
-	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
-	serde_json::from_slice(&body).unwrap()
 }
 
 /// A small png, 4 x 2.
@@ -188,7 +161,7 @@ async fn pages_load_in_a_few_statements() {
 		id: about.id,
 		input: EntryInput {
 			fields: json!({ "content": content, "hero": image(0) }),
-			..create("pages", "page", "About", json!({})).0
+			..input("pages", "page", "About", json!({}))
 		},
 	};
 	admin.call(&update).await.unwrap();
@@ -215,7 +188,7 @@ async fn pages_load_in_a_few_statements() {
 	let count = |query: &'static str, vars: Value| {
 		let ts = &ts;
 		async move {
-			let (data, n) = ts.statements(graphql(ts, query, vars)).await;
+			let (data, n) = ts.statements(ts.graphql(query, vars)).await;
 			assert!(data["errors"].is_null(), "{data}");
 			(data["data"].clone(), n)
 		}

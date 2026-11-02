@@ -171,8 +171,12 @@ assert_eq!(err, Error::Forbidden);
 ```
 
 `ts.routes(...)` adds the site's routes, `ts.dev()` development mode,
-`client.send(...)` any request and `client.upload(...)` files;
-`ts.mails()` are the mails sent, a test server keeps them. The
+`ts.login(email, password)` logs in like the studio, `ts.graphql(query,
+variables)` asks like a frontend with its token; `client.get(path)`
+fetches a page or a file, `client.send(...)` any request and
+`client.upload(...)` files; `testing::input(section, type, title,
+fields)` is an entry to create; `ts.mails()` are the mails sent, a test
+server keeps them. The
 example (`example/cms/src/tests.rs`) and the plugins test themselves this
 way.
 

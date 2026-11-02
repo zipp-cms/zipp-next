@@ -7,8 +7,8 @@ use axum::http::{Request, header};
 use super::api::*;
 use super::throttle::MAX_FAILS;
 use super::*;
-use crate::schema::tests::site;
-use crate::testing::{Client, TestServer};
+use crate::fixtures::site;
+use crate::testing::TestServer;
 
 use crate::db::DAY_MS as DAY;
 
@@ -17,13 +17,6 @@ fn login(email: &str, password: &str) -> LoginReq {
 		email: email.into(),
 		password: password.into(),
 	}
-}
-
-/// A client with the token of a login.
-fn with_token(ts: &TestServer, auth: &Authenticated) -> Client {
-	let mut c = ts.anonymous();
-	c.token = Some(auth.session.token.clone());
-	c
 }
 
 #[tokio::test]
@@ -50,7 +43,7 @@ async fn logs_in_and_out() {
 	let left = auth.session.expires_at - now();
 	assert!(left > 29 * DAY && left <= 30 * DAY, "{left}");
 
-	let user = with_token(&ts, &auth);
+	let user = ts.with_token(&auth.session.token);
 	assert_eq!(user.call(&SessionReq {}).await.unwrap(), auth);
 
 	// the database keeps only the hash of the token
@@ -81,7 +74,7 @@ async fn using_the_studio_renews_the_session() {
 		.call(&login("r@x.ch", "password1"))
 		.await
 		.unwrap();
-	let user = with_token(&ts, &auth);
+	let user = ts.with_token(&auth.session.token);
 	let set_left = |left: i64| {
 		ts.state
 			.db
@@ -117,8 +110,7 @@ async fn short_sessions_aren_t_renewed() {
 	add_user(&ts.state.db.conn(), "s@x.ch", "password1", None).unwrap();
 	let id = crate::users::list(&ts.state.db.conn()).unwrap()[0].user.id;
 	let short = short_session(&ts.state.db.conn(), id, DAY).unwrap();
-	let mut user = ts.anonymous();
-	user.token = Some(short.token.clone());
+	let user = ts.with_token(&short.token);
 
 	// it works, but the studio opening doesn't push it back
 	let s = user.call(&SessionReq {}).await.unwrap().session;
@@ -139,7 +131,10 @@ async fn a_new_password_ends_every_session() {
 
 	add_user(&ts.state.db.conn(), "p@x.ch", "password2", None).unwrap();
 	for auth in [first, second] {
-		let err = with_token(&ts, &auth).call(&SessionReq {}).await;
+		let err = ts
+			.with_token(&auth.session.token)
+			.call(&SessionReq {})
+			.await;
 		assert_eq!(err.unwrap_err(), Error::InvalidSessionToken);
 	}
 }

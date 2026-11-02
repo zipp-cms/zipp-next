@@ -35,6 +35,8 @@ pub mod api;
 #[cfg(test)]
 mod api_tests;
 mod archive;
+#[cfg(test)]
+mod archive_tests;
 mod edits;
 mod folders;
 mod manage;

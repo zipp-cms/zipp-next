@@ -1,7 +1,7 @@
 use serde_json::json;
 
 use super::*;
-use crate::schema::tests::site;
+use crate::fixtures::site;
 use crate::schema::{Column, LinkKind};
 
 fn apply_all(old: &Schema, ops: &[Op]) -> Schema {
