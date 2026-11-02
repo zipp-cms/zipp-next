@@ -121,7 +121,7 @@ async fn loads_a_page_with_its_relations() {
 async fn assets_with_transforms() {
 	let db = Db::memory().unwrap();
 	let webp = Transform::new("webp").width(100).format(Format::Webp);
-	let s = Arc::new(site().transform(webp));
+	let s = Arc::new(site().transform(webp).image_widths([200]));
 	let gql = build(
 		s.clone(),
 		db.clone(),
@@ -172,6 +172,7 @@ async fn assets_with_transforms() {
 			smallWebp: url(transform: "small", format: "webp")
 			w100: url(transform: "webp", format: "jpg")
 			webpSet: srcset(transforms: ["small"], format: "webp")
+			widthSet: srcset(transforms: ["small", "w200"])
 			alt
 		} } } }"#,
 		true,
@@ -190,6 +191,11 @@ async fn assets_with_transforms() {
 	assert_eq!(
 		img["webpSet"],
 		"https://cms.test/assets/1/small/hero.webp 100w"
+	);
+	assert_eq!(
+		img["widthSet"],
+		"https://cms.test/assets/1/small/hero.png 100w, \
+		https://cms.test/assets/1/w200/hero.png 200w"
 	);
 	assert_eq!(img["alt"], "Ein Held");
 	assert_eq!(
@@ -333,7 +339,7 @@ async fn answers_crelte_like_craft() {
 		ops: crate::migrate::diff(&Schema::new(), &s, &[]).unwrap(),
 		schema: (*s).clone(),
 	};
-	crate::apply::apply_migrations(&db.conn(), &[first]).unwrap();
+	crate::apply::apply_migrations(&db.conn(), &[first], &s).unwrap();
 
 	let data = run(
 		&gql,

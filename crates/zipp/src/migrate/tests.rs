@@ -65,8 +65,8 @@ fn diff_with_renames() {
 		[
 			"  rename component text to paragraph",
 			"  rename field page.intro to lead",
-			"  change field page.body (content is dropped if the kind changed)",
-			"  change field event.city (content is dropped if the kind changed)",
+			"  change field page.body (content starts over if the kind changed)",
+			"  change field event.city (content starts over if the kind changed)",
 			"! remove field button.label, its content is deleted",
 		]
 	);
@@ -192,7 +192,7 @@ fn diff_sites_and_sections() {
 			"! remove site en, its content is deleted",
 			"! remove section pages, its entries are deleted",
 			"  change section events (entries of types it no longer has \
-			 are deleted)",
+			 are deleted, their children move up)",
 		]
 	);
 	assert!(

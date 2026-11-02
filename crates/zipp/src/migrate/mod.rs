@@ -55,7 +55,8 @@ pub enum Op {
 		from: String,
 		to: String,
 	},
-	/// A new kind or new settings. Values are dropped if the kind changed,
+	/// A new kind or new settings. Values start over with the default if
+	/// the kind changed (a group of another component too),
 	/// a field that is no longer translatable gets the value of the
 	/// primary site everywhere.
 	ChangeField {

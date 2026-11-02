@@ -204,3 +204,44 @@ fn old_ones_are_deleted() {
 	assert!(!crate::assets::asset_dir(&files, a.id).exists());
 	std::fs::remove_dir_all(&files).unwrap();
 }
+
+#[test]
+fn a_child_trashed_on_its_own_outlives_its_parent() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	let files = std::env::temp_dir().join("zipp-trash-none");
+	let page = |title: &str, parent: Option<i64>| {
+		let mut p = input("pages", "page", title, json!({}));
+		p.parent_id = parent;
+		save(&conn, &s, None, p, None).unwrap().id
+	};
+	let about = page("About", None);
+	let team = page("Team", Some(about));
+	let news = page("News", None);
+	let jobs = page("Jobs", Some(news));
+
+	// first the child, then its parent; purging the parent leaves it
+	trash_entry(&conn, &s, team, None).unwrap();
+	std::thread::sleep(std::time::Duration::from_millis(2));
+	trash_entry(&conn, &s, about, None).unwrap();
+	purge_entry(&conn, about).unwrap();
+	let trash = list(&conn, &s, &admin()).unwrap();
+	assert_eq!(trash.entries.len(), 1);
+	restore_entry(&conn, &s, team).unwrap();
+	assert_eq!(get_entry(&conn, team, "de").unwrap().parent_id, None);
+
+	// and when the parent's time is up first
+	trash_entry(&conn, &s, jobs, None).unwrap();
+	trash_entry(&conn, &s, news, None).unwrap();
+	let old = now() - (KEEP_DAYS + 1) * DAY_MS;
+	conn.execute(
+		"UPDATE entries SET deleted_at = ?1 WHERE id = ?2",
+		params![old, news],
+	)
+	.unwrap();
+	purge_old(&conn, &files).unwrap();
+	let trash = list(&conn, &s, &admin()).unwrap();
+	assert_eq!(trash.entries.len(), 1);
+	assert_eq!(trash.entries[0].id, jobs);
+}

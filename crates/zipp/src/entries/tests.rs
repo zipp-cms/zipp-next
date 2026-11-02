@@ -396,3 +396,128 @@ fn live_between_post_and_expiry_date() {
 	assert_eq!(went.len(), 1);
 	assert_eq!(went[0].1, "events");
 }
+
+#[test]
+fn links_to_trashed_or_missing_entries_are_left_out() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let mut s = site();
+	let page = s.get_mut("page").unwrap();
+	page.fields
+		.push(Field::navigation("menu", [LinkKind::Entry, LinkKind::Url]));
+	page.fields.push(Field::table(
+		"rows",
+		[
+			crate::schema::Column::text("name"),
+			crate::schema::Column::link("link", [LinkKind::Entry]),
+		],
+	));
+	let new = |title: &str, section: &str, ty: &str, fields: Value| {
+		save(&conn, &s, None, input(section, ty, title, fields), None)
+			.unwrap()
+			.id
+	};
+	let gone = new("Gone", "pages", "page", json!({}));
+	let kept = new("Kept", "pages", "page", json!({}));
+	let to = |id: i64| json!({ "type": "entry", "value": id });
+
+	let event_fields = json!({ "page": [gone], "ticket": to(gone) });
+	let event = new("E", "events", "event", event_fields.clone());
+	let mut button = to(gone);
+	button["label"] = "Go".into();
+	let page_fields = json!({
+		"story": { "type": "doc", "content": [
+			{ "type": "paragraph", "content": [{ "type": "text", "text": "see",
+				"marks": [{ "type": "link", "attrs": { "link": to(gone) } }] }] },
+			{ "type": "button", "attrs": { "link": button } },
+		] },
+		"menu": [{ "type": "entry", "value": gone, "label": "G", "children": [
+			{ "type": "entry", "value": kept, "label": "K" },
+		] }],
+		"rows": [{ "name": "a", "link": to(gone) }],
+		"body": [{ "type": "button", "fields": { "label": "Go", "link": [gone] } }],
+	});
+	let p = new("P", "pages", "page", page_fields.clone());
+
+	// the target goes to the trash, saving what links to it still works
+	crate::trash::trash_entry(&conn, &s, gone, None).unwrap();
+	let e = input("events", "event", "E", event_fields);
+	let e = save(&conn, &s, Some(event), e, None).unwrap();
+	assert!(e.fields.get("page").is_none());
+	assert!(e.fields.get("ticket").is_none());
+
+	let p = save(
+		&conn,
+		&s,
+		Some(p),
+		input("pages", "page", "P", page_fields),
+		None,
+	)
+	.unwrap();
+	let story = &p.fields["story"]["content"];
+	assert_eq!(story.as_array().unwrap().len(), 1);
+	assert_eq!(
+		story[0]["content"][0],
+		json!({ "type": "text", "text": "see" })
+	);
+	assert_eq!(
+		p.fields["menu"],
+		json!([{ "type": "entry", "value": kept, "label": "K" }])
+	);
+	assert_eq!(p.fields["rows"], json!([{ "name": "a" }]));
+	assert!(p.fields["body"][0]["fields"].get("link").is_none());
+
+	// an entry that never was likewise
+	let missing = new("M", "events", "event", json!({ "page": [999] }));
+	assert!(
+		get_entry(&conn, missing, "de")
+			.unwrap()
+			.fields
+			.get("page")
+			.is_none()
+	);
+}
+
+#[test]
+fn a_title_without_letters_needs_a_slug() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+
+	// "—" would take the uri of the home page, "!!!" the one of events
+	for (section, ty, title) in
+		[("pages", "page", "—"), ("events", "event", "!!!")]
+	{
+		let Err(Error::Invalid(errs)) =
+			save(&conn, &s, None, input(section, ty, title, json!({})), None)
+		else {
+			panic!("should fail");
+		};
+		assert_eq!(
+			(errs[0].path.as_str(), errs[0].message.as_str()),
+			("slug", "is required")
+		);
+		let mut with_slug = input(section, ty, title, json!({}));
+		with_slug.slug = "dash".into();
+		save(&conn, &s, None, with_slug, None).unwrap();
+	}
+}
+
+#[test]
+fn search_finds_signs_as_they_are() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	for title in ["100% sure", "1000 sure", "a_b", "axb"] {
+		save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", title, json!({})),
+			None,
+		)
+		.unwrap();
+	}
+	assert_eq!(titles(&conn, &[("search", "0%")]), ["100% sure"]);
+	assert_eq!(titles(&conn, &[("search", "a_")]), ["a_b"]);
+}

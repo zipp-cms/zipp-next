@@ -74,7 +74,8 @@ language switch (`localized { siteId siteHandle language title uri url
 }`): only where it is live and the request may read it, like any query
 of that site (published, no offline site for frontends, the sites of
 the token; a preview shows its entry in every site). Images have
-`focalPoint`, `title` and `url(width: 800)` for the widths of `.image_widths([400, 800, 1600])`,
+`focalPoint`, `title` and `url(width: 800)` for the widths of `.image_widths([400, 800, 1600])`
+(`w800` in `srcset(transforms: ["w400", "w800"])`),
 `url(transform: "hero", format: "webp")` and `srcset(transforms: [...],
 format: "webp")` in another type (`webp`, `jpg`, `png`), and `alt` of
 the site asked, else of the primary site.

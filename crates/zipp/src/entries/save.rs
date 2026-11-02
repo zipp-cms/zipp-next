@@ -83,6 +83,11 @@ pub fn check(
 		"" => slugify(&title),
 		s => slugify(s),
 	};
+	// a title of only signs makes none, the uri would be the parent's (or
+	// the home page's)
+	if slug.is_empty() && !title.is_empty() {
+		errors.push(field_error("slug", "is required"));
+	}
 
 	// the uri in every site, a new entry starts with this slug everywhere
 	let mut uris = HashMap::new();
@@ -116,7 +121,7 @@ pub fn check(
 		uris.insert(s.handle.clone(), uri);
 	}
 
-	let fields = match validate(schema, comp, &input.fields) {
+	let mut fields = match validate(schema, comp, &input.fields) {
 		Ok(f) => f,
 		Err(e) => {
 			errors.extend(e);
@@ -124,7 +129,7 @@ pub fn check(
 		}
 	};
 	if errors.is_empty() {
-		errors.extend(check_relations(conn, schema, &input.ty, &fields)?);
+		errors.extend(check_relations(conn, schema, &input.ty, &mut fields)?);
 	}
 	if let Dates {
 		post_date: Some(post),
@@ -288,16 +293,49 @@ pub(super) fn field_error(path: &str, message: &str) -> FieldError {
 	}
 }
 
-/// Relations must point to existing entries of the allowed types, asset
-/// fields to existing assets (images if they only take images, files
-/// with the allowed extensions).
+/// Relations must point to entries of the allowed types, asset fields to
+/// assets (images if they only take images, files with the allowed
+/// extensions). Those to entries and assets in the trash or deleted are
+/// taken out of `fields` (see [`drop_links`]), the website leaves them
+/// out already and they mustn't block saving what links to them.
 pub(crate) fn check_relations(
 	conn: &Connection,
 	schema: &Schema,
 	ty: &str,
-	fields: &Value,
+	fields: &mut Value,
 ) -> Result<Vec<FieldError>> {
 	let comp = schema.get(ty).unwrap();
+	let mut gone = vec![];
+	for rel in relations(schema, comp, fields) {
+		let (kind, table) = match rel.target {
+			Target::Entries(_) => (LinkKind::Entry, "entries"),
+			Target::Assets { .. } => (LinkKind::Asset, "assets"),
+		};
+		for id in rel.ids {
+			let found: bool = conn.query_row(
+				&format!(
+					"SELECT COUNT(*) FROM {table}
+					WHERE id = ?1 AND deleted_at IS NULL"
+				),
+				[id],
+				|r| r.get(0),
+			)?;
+			if !found {
+				gone.push((kind, id));
+			}
+		}
+	}
+	if !gone.is_empty() {
+		drop_links(schema, comp, fields, &|kind, id| {
+			gone.contains(&(kind, id))
+		});
+		// what is left empty goes, a required field says so
+		*fields = match validate(schema, comp, fields) {
+			Ok(f) => f,
+			Err(e) => return Ok(e),
+		};
+	}
+
 	let mut errors = vec![];
 
 	for rel in relations(schema, comp, fields) {

@@ -93,34 +93,51 @@ fn copy_files(
 	fs::create_dir(to)?;
 	for e in fs::read_dir(from)? {
 		let e = e?;
-		let name = e.file_name();
-		if name.to_string_lossy().starts_with('.') {
+		if e.file_name().to_string_lossy().starts_with('.') {
 			continue;
 		}
-		let (src, dst) = (e.path(), to.join(&name));
-		let last = last.map(|l| l.join(&name));
-		let meta = e.metadata()?;
-		if meta.is_dir() {
-			copy_files(&src, &dst, last.as_deref(), written)?;
-			continue;
+		match copy_entry(&e, to, last, written) {
+			// deleted or renamed while the backup runs, the database of
+			// the backup is from before
+			Err(err) if err.kind() == io::ErrorKind::NotFound => {
+				let path = e.path();
+				tracing::warn!("backup: {} is gone, left out", path.display());
+			}
+			r => r?,
 		}
-
-		let modified = meta.modified()?;
-		if let Some(l) = last
-			&& same_file(&l, meta.len(), modified)
-			&& fs::hard_link(&l, &dst).is_ok()
-		{
-			written.linked += 1;
-			continue;
-		}
-		fs::copy(&src, &dst)?;
-		// the time of the original, so the next backup can compare
-		fs::File::options()
-			.write(true)
-			.open(&dst)?
-			.set_modified(modified)?;
-		written.copied += 1;
 	}
+	Ok(())
+}
+
+fn copy_entry(
+	e: &fs::DirEntry,
+	to: &Path,
+	last: Option<&Path>,
+	written: &mut Written,
+) -> io::Result<()> {
+	let name = e.file_name();
+	let (src, dst) = (e.path(), to.join(&name));
+	let last = last.map(|l| l.join(&name));
+	let meta = e.metadata()?;
+	if meta.is_dir() {
+		return copy_files(&src, &dst, last.as_deref(), written);
+	}
+
+	let modified = meta.modified()?;
+	if let Some(l) = last
+		&& same_file(&l, meta.len(), modified)
+		&& fs::hard_link(&l, &dst).is_ok()
+	{
+		written.linked += 1;
+		return Ok(());
+	}
+	fs::copy(&src, &dst)?;
+	// the time of the original, so the next backup can compare
+	fs::File::options()
+		.write(true)
+		.open(&dst)?
+		.set_modified(modified)?;
+	written.copied += 1;
 	Ok(())
 }
 

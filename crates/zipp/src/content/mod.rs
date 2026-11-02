@@ -17,6 +17,7 @@ mod validate;
 
 pub use relations::RelationRef;
 pub use relations::Target;
+pub use relations::drop_links;
 pub use relations::relations;
 pub(crate) use validate::check_default;
 pub(crate) use validate::check_link;

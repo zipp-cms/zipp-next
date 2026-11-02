@@ -127,18 +127,19 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 					let mut parts = vec![];
 					for name in ctx.args.try_get("transforms")?.list()?.iter() {
 						let name = name.string()?;
+						// named or `w800`, like the transform of url
 						let t =
-							schema.get_transform(name).ok_or_else(|| {
+							schema.transform_named(name).ok_or_else(|| {
 								GqlError::new(format!(
 									"unknown transform {name}"
 								))
 							})?;
-						let Some((w, _)) = a.size_after(t) else {
+						let Some((w, _)) = a.size_after(&t) else {
 							return Ok(None);
 						};
 						parts.push(format!(
 							"{} {w}w",
-							asset_url(&ctx, a, Some(t), format)?
+							asset_url(&ctx, a, Some(&t), format)?
 						));
 					}
 					Ok(Some(FieldValue::value(parts.join(", "))))

@@ -61,14 +61,19 @@ pub fn diff(
 		push(Op::RemoveComponent { component }, &mut cur);
 	}
 
+	// new components first, a field added to another one may be a group
+	// of them and start with their defaults
 	for comp in &new.components {
-		let Some(old_comp) = cur.get(&comp.handle).cloned() else {
+		if cur.get(&comp.handle).is_none() {
 			let op = Op::AddComponent {
 				component: comp.clone(),
 			};
 			push(op, &mut cur);
-			continue;
-		};
+		}
+	}
+
+	for comp in &new.components {
+		let old_comp = cur.get(&comp.handle).cloned().unwrap();
 		let component = comp.handle.clone();
 
 		for f in &old_comp.fields {

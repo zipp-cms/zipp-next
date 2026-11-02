@@ -315,13 +315,13 @@ pub(super) fn import_craft(
 	let files = assets::files_dir(files).map_err(|e| e.to_string())?;
 	let db = Db::open(db_path).map_err(|e| e.to_string())?;
 	let migrations = migrations.load()?;
-	apply::apply_migrations(&db.conn(), &migrations)
-		.map_err(|e| e.to_string())?;
 	if !migrate::unmigrated(&migrations, schema)?.is_empty() {
 		return Err("The schema changed since the last migration, run \
 			`makemigration` first"
 			.into());
 	}
+	apply::apply_migrations(&db.conn(), &migrations, schema)
+		.map_err(|e| e.to_string())?;
 
 	let report = craft::import(&db.conn(), schema, &files, &export, &opts)
 		.map_err(|e| e.to_string())?;

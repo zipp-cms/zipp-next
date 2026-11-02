@@ -87,7 +87,8 @@ it works while the server runs; never copy the `.db` of a running
 server, its last changes are in the `-wal` file. Files that didn't
 change since the last backup are hard links to it: each backup is a
 whole copy to restore from, but an asset library takes its space once.
-Image transforms are left out, they are made again. `--keep 14`
+Image transforms are left out, they are made again, and so is a file
+deleted while the backup runs (logged). `--keep 14`
 removes all but the last 14.
 
 `serve --backup-dir /backups` does it itself: at the start when the
@@ -190,7 +191,11 @@ ops. Renames are hints (`--rename event.city=town`), otherwise a rename
 is a remove and an add, and the tool says which content is lost. `serve`
 applies new migrations to all content and refuses to start when the
 code changed without one. Labels, names, `required` and the field order
-change freely.
+change freely. Deleted entries leave their children to their parent (or
+the top), drafts and revisions of a type that goes take their entry's
+type, a field of another kind (also a group of another component)
+starts over with its default, and content that doesn't parse stops the
+migration instead of being emptied; it runs in one transaction.
 
 ## Check before a deploy
 

@@ -2,11 +2,14 @@
 //! fields change the JSON of every row, ops on sites and sections add or
 //! delete rows. Afterwards the entries of new singles are created and all
 //! indexes and uris are rebuilt.
+//!
+//! Deleting an entry here takes its children to its parent, they may be of
+//! a type that stays.
 
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
 use serde_json::Value;
 
-use crate::content::defaults;
+use crate::content::{convert, defaults};
 use crate::db::{marks, now};
 use crate::drafts::Doc;
 use crate::entries::{refresh_uris, reindex};
@@ -17,9 +20,14 @@ use crate::schema::{ASSET, Schema, SectionKind};
 /// Applies the migrations that didn't run yet and returns their names.
 /// All of them and the rebuild of the indexes are one transaction: when
 /// anything fails nothing is recorded, the next start tries again.
+/// `code` is the schema of the code, the same as the last migration's
+/// (see [`unmigrated`](crate::migrate::unmigrated)): the singles and the
+/// indexes are made with it, a migration file has no field types of
+/// plugins and their relations would go.
 pub fn apply_migrations(
 	conn: &Connection,
 	migrations: &[Migration],
+	code: &Schema,
 ) -> Result<Vec<String>> {
 	let mut applied = vec![];
 	let mut schema = Schema::new();
@@ -50,8 +58,8 @@ pub fn apply_migrations(
 	}
 
 	if !applied.is_empty() {
-		create_singles(&tx, &schema)?;
-		rebuild(&tx, &schema)?;
+		create_singles(&tx, code)?;
+		rebuild(&tx, code)?;
 	}
 	tx.commit()?;
 
@@ -111,13 +119,20 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 			let marks = marks(section.types.len());
 			let mut values = vec![section.handle.clone()];
 			values.extend(section.types.iter().cloned());
-			conn.execute(
-				&format!(
-					"DELETE FROM entries WHERE section = ? \
-					AND type NOT IN ({marks})"
-				),
-				rusqlite::params_from_iter(values),
-			)?;
+			let mut stmt = conn.prepare(&format!(
+				"SELECT id FROM entries WHERE section = ? \
+				AND type NOT IN ({marks})"
+			))?;
+			let gone = stmt
+				.query_map(rusqlite::params_from_iter(values), |r| r.get(0))?
+				.collect::<rusqlite::Result<Vec<i64>>>()?;
+			for id in gone {
+				delete_entry(conn, id)?;
+			}
+			// drafts and revisions of the entries that stay
+			retype_docs(conn, schema, |s, ty| {
+				s != section.handle || section.types.iter().any(|t| t == ty)
+			})?;
 		}
 		_ => {
 			change_content(conn, schema, op)?;
@@ -129,6 +144,9 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 					op.apply_entry(schema, &mut sd.ty, &mut sd.fields);
 				}
 			})?;
+			if let Op::RemoveComponent { component } = op {
+				retype_docs(conn, schema, |_, ty| ty != component)?;
+			}
 			if let Op::ChangeField { component, field } = op {
 				let was = schema
 					.get(component)
@@ -157,11 +175,10 @@ fn change_content(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 		.collect::<rusqlite::Result<Vec<(i64, String, String, String)>>>()?;
 
 	for (id, site, mut ty, fields) in rows {
-		let mut fields: Value = serde_json::from_str(&fields)
-			.map_err(|e| Error::Internal(e.to_string()))?;
+		let mut fields: Value = parse(&fields)?;
 		let old_ty = ty.clone();
 		if !op.apply_entry(schema, &mut ty, &mut fields) {
-			conn.execute("DELETE FROM entries WHERE id = ?1", [id])?;
+			delete_entry(conn, id)?;
 			continue;
 		}
 
@@ -193,8 +210,7 @@ fn change_assets(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 		.collect::<rusqlite::Result<Vec<(i64, String)>>>()?;
 
 	for (id, fields) in rows {
-		let mut fields: Value =
-			serde_json::from_str(&fields).unwrap_or_default();
+		let mut fields: Value = parse(&fields)?;
 		let mut ty = ASSET.to_string();
 		if !op.apply_entry(schema, &mut ty, &mut fields) {
 			fields = Value::Object(Default::default());
@@ -205,6 +221,90 @@ fn change_assets(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 		)?;
 	}
 
+	Ok(())
+}
+
+/// Content as stored. What doesn't parse fails the migration instead of
+/// being emptied, nothing is lost and it can be fixed by hand.
+fn parse<T: serde::de::DeserializeOwned>(json: &str) -> Result<T> {
+	serde_json::from_str(json)
+		.map_err(|e| Error::Internal(format!("stored content: {e}")))
+}
+
+/// Deletes an entry. Its children move to its parent (or the top) at the
+/// end of their new siblings, they may be of a type that stays.
+fn delete_entry(conn: &Connection, id: i64) -> Result<()> {
+	// gone already with the row of another site
+	let Some((section, parent)) = conn
+		.query_row(
+			"SELECT section, parent_id FROM entries WHERE id = ?1",
+			[id],
+			|r| Ok((r.get::<_, String>(0)?, r.get::<_, Option<i64>>(1)?)),
+		)
+		.optional()?
+	else {
+		return Ok(());
+	};
+	let end: i64 = conn.query_row(
+		"SELECT IFNULL(MAX(position) + 1, 0) FROM entries
+		WHERE section = ?1 AND parent_id IS ?2",
+		params![section, parent],
+		|r| r.get(0),
+	)?;
+	conn.execute(
+		"UPDATE entries SET parent_id = ?1, position = position + ?2
+		WHERE parent_id = ?3",
+		params![parent, end, id],
+	)?;
+	conn.execute("DELETE FROM entries WHERE id = ?1", [id])?;
+	Ok(())
+}
+
+/// Drafts and revisions whose type `keep(section, type)` refuses get the
+/// type of the entry, with the fields that fit it (see [`convert`]), so
+/// they can still be published and restored.
+fn retype_docs(
+	conn: &Connection,
+	schema: &Schema,
+	keep: impl Fn(&str, &str) -> bool,
+) -> Result<()> {
+	for table in ["drafts", "revisions"] {
+		let key = if table == "drafts" { "entry_id" } else { "id" };
+		let mut stmt = conn.prepare(&format!(
+			"SELECT d.{key}, d.doc, e.section, e.type FROM {table} d
+			JOIN entries e ON e.id = d.entry_id"
+		))?;
+		let rows = stmt
+			.query_map([], |r| {
+				Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+			})?
+			.collect::<rusqlite::Result<Vec<(i64, String, String, String)>>>(
+			)?;
+		drop(stmt);
+
+		for (id, doc, section, live) in rows {
+			let mut doc: Doc = parse(&doc)?;
+			let mut changed = false;
+			// an empty type is the entry's
+			for sd in doc.values_mut() {
+				if sd.ty.is_empty() || keep(&section, &sd.ty) {
+					continue;
+				}
+				sd.fields = match (schema.get(&sd.ty), schema.get(&live)) {
+					(Some(from), Some(to)) => convert(from, to, &sd.fields),
+					_ => Value::Object(Default::default()),
+				};
+				sd.ty = live.clone();
+				changed = true;
+			}
+			if changed {
+				conn.execute(
+					&format!("UPDATE {table} SET doc = ?1 WHERE {key} = ?2"),
+					params![serde_json::to_string(&doc).unwrap(), id],
+				)?;
+			}
+		}
+	}
 	Ok(())
 }
 
@@ -224,7 +324,7 @@ fn change_docs(
 		drop(stmt);
 
 		for (id, doc) in rows {
-			let mut doc: Doc = serde_json::from_str(&doc).unwrap_or_default();
+			let mut doc: Doc = parse(&doc)?;
 			f(&mut doc);
 			conn.execute(
 				&format!("UPDATE {table} SET doc = ?1 WHERE {key} = ?2"),
@@ -254,7 +354,7 @@ fn share_primary(
 		.collect::<rusqlite::Result<Vec<(i64, String)>>>()?;
 
 	for (id, fields) in rows {
-		let fields: Value = serde_json::from_str(&fields).unwrap_or_default();
+		let fields: Value = parse(&fields)?;
 		let value = fields.get(field).cloned().unwrap_or(Value::Null);
 		conn.execute(
 			"UPDATE entry_sites SET fields = CASE WHEN ?1 = 'null'
@@ -325,7 +425,7 @@ fn rebuild(conn: &Connection, schema: &Schema) -> Result<()> {
 		.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
 		.collect::<rusqlite::Result<Vec<(i64, String, String, String)>>>()?;
 	for (id, site, ty, fields) in rows {
-		let fields = serde_json::from_str(&fields).unwrap_or_default();
+		let fields = parse(&fields)?;
 		reindex(conn, schema, id, &site, &ty, &fields)?;
 	}
 
@@ -348,6 +448,15 @@ mod tests {
 	use crate::schema::Field;
 	use crate::schema::tests::site;
 
+	/// Applies with the last schema as the code's.
+	fn apply(
+		conn: &Connection,
+		migrations: &[Migration],
+	) -> Result<Vec<String>> {
+		let code = &migrations.last().unwrap().schema;
+		apply_migrations(conn, migrations, code)
+	}
+
 	fn migration(
 		name: &str,
 		old: &Schema,
@@ -368,10 +477,10 @@ mod tests {
 		let s = site();
 		let first = migration("0001", &Schema::new(), &s, &[]);
 		assert_eq!(
-			apply_migrations(&conn, std::slice::from_ref(&first)).unwrap(),
+			apply(&conn, std::slice::from_ref(&first)).unwrap(),
 			["0001"]
 		);
-		assert!(apply_migrations(&conn, &[first]).unwrap().is_empty());
+		assert!(apply(&conn, &[first]).unwrap().is_empty());
 
 		let params = vec![("uri".to_string(), String::new())];
 		let (home, _) =
@@ -386,7 +495,7 @@ mod tests {
 		let conn = db.conn();
 		let s = site();
 		let first = migration("0001", &Schema::new(), &s, &[]);
-		apply_migrations(&conn, std::slice::from_ref(&first)).unwrap();
+		apply(&conn, std::slice::from_ref(&first)).unwrap();
 
 		let fields = json!({ "city": "Bern", "price": 10 });
 		let e =
@@ -410,7 +519,7 @@ mod tests {
 		let renames = [Rename::parse("event.city=town").unwrap()];
 		let second = migration("0002", &s, &s2, &renames);
 		let migrations = [first, second];
-		assert_eq!(apply_migrations(&conn, &migrations).unwrap(), ["0002"]);
+		assert_eq!(apply(&conn, &migrations).unwrap(), ["0002"]);
 
 		let entry = get_entry(&conn, e.id, "en").unwrap();
 		assert_eq!(entry.fields["town"], "Bern");
@@ -433,7 +542,7 @@ mod tests {
 		let s = site()
 			.asset_fields([Field::text("credit"), Field::text("licence")]);
 		let first = migration("0001", &Schema::new(), &s, &[]);
-		apply_migrations(&conn, std::slice::from_ref(&first)).unwrap();
+		apply(&conn, std::slice::from_ref(&first)).unwrap();
 		let a =
 			crate::assets::store(&conn, &dir, "a.pdf", b"%PDF", None).unwrap();
 		let change = crate::assets::AssetChange {
@@ -448,12 +557,12 @@ mod tests {
 		let renames = [Rename::parse("asset.credit=photographer").unwrap()];
 		let second = migration("0002", &s, &s2, &renames);
 		let migrations = [first, second];
-		apply_migrations(&conn, &migrations).unwrap();
+		apply(&conn, &migrations).unwrap();
 		assert_eq!(fields(), json!({ "photographer": "Anna" }));
 
 		// without asset fields the values go
 		let third = migration("0003", &s2, &site(), &[]);
-		apply_migrations(
+		apply(
 			&conn,
 			&[migrations[0].clone(), migrations[1].clone(), third],
 		)
@@ -468,7 +577,7 @@ mod tests {
 		let conn = db.conn();
 		let s = site();
 		let first = migration("0001", &Schema::new(), &s, &[]);
-		apply_migrations(&conn, std::slice::from_ref(&first)).unwrap();
+		apply(&conn, std::slice::from_ref(&first)).unwrap();
 		let e = save(
 			&conn,
 			&s,
@@ -487,7 +596,7 @@ mod tests {
 			c.fields.push(Field::text("cta"));
 		}
 		let second = migration("0002", &s, &s2, &[]);
-		apply_migrations(&conn, &[first, second]).unwrap();
+		apply(&conn, &[first, second]).unwrap();
 
 		let event = get_entry(&conn, e.id, "en").unwrap();
 		assert_eq!(event.fields["teasers"], true);
@@ -518,7 +627,7 @@ mod tests {
 		let conn = db.conn();
 		let s = site();
 		let first = migration("0001", &Schema::new(), &s, &[]);
-		apply_migrations(&conn, std::slice::from_ref(&first)).unwrap();
+		apply(&conn, std::slice::from_ref(&first)).unwrap();
 
 		let mut page =
 			input("pages", "page", "Hallo", json!({ "intro": "Hoi" }));
@@ -542,11 +651,8 @@ mod tests {
 		en.site = Some("en".into());
 		save(&conn, &s, Some(p.id), en, None).unwrap();
 
-		apply_migrations(
-			&conn,
-			&[first.clone(), migration("0002", &s, &s2, &[])],
-		)
-		.unwrap();
+		apply(&conn, &[first.clone(), migration("0002", &s, &s2, &[])])
+			.unwrap();
 		let fr = get_entry(&conn, p.id, "fr").unwrap();
 		assert_eq!(fr.title, "Hallo");
 		let en = get_entry(&conn, p.id, "en").unwrap();
@@ -559,8 +665,263 @@ mod tests {
 		s3.sections.remove(2);
 		s3.components.retain(|c| c.handle != "event");
 		let m3 = migration("0003", &s2, &s3, &[]);
-		apply_migrations(&conn, &[first, migration("0002", &s, &s2, &[]), m3])
-			.unwrap();
+		apply(&conn, &[first, migration("0002", &s, &s2, &[]), m3]).unwrap();
 		assert!(get_entry(&conn, e.id, "de").is_err());
+	}
+
+	#[test]
+	fn removed_types_leave_their_children() {
+		// event leaves pages: once only from the section, once for good
+		let mut s = site();
+		s.sections[1].types.push("event".into());
+		let mut only_pages = s.clone();
+		only_pages.sections[1].types = vec!["page".into()];
+		let mut no_events = only_pages.clone();
+		no_events.sections.remove(2);
+		no_events.components.retain(|c| c.handle != "event");
+
+		for s2 in [only_pages, no_events] {
+			let db = Db::memory().unwrap();
+			let conn = db.conn();
+			let first = migration("0001", &Schema::new(), &s, &[]);
+			apply(&conn, std::slice::from_ref(&first)).unwrap();
+			let party = save(
+				&conn,
+				&s,
+				None,
+				input("pages", "event", "Party", json!({})),
+				None,
+			)
+			.unwrap();
+			let mut kid = input("pages", "page", "Kid", json!({}));
+			kid.parent_id = Some(party.id);
+			let kid = save(&conn, &s, None, kid, None).unwrap();
+			assert_eq!(kid.uri.as_deref(), Some("party/kid"));
+
+			let second = migration("0002", &s, &s2, &[]);
+			assert!(second.ops[0].describe().contains("children"));
+			apply(&conn, &[first, second]).unwrap();
+			assert!(get_entry(&conn, party.id, "de").is_err());
+			let kid = get_entry(&conn, kid.id, "de").unwrap();
+			assert_eq!(kid.parent_id, None);
+			assert_eq!(kid.uri.as_deref(), Some("kid"));
+		}
+	}
+
+	/// A field type whose value is a list of pages.
+	struct Pages;
+
+	impl crate::FieldType for Pages {
+		fn name(&self) -> &'static str {
+			"pages"
+		}
+
+		fn validate(
+			&self,
+			_options: &Value,
+			value: &Value,
+		) -> std::result::Result<Value, String> {
+			Ok(value.clone())
+		}
+
+		fn graphql(&self) -> crate::GraphqlType {
+			crate::GraphqlType::Scalar(crate::Scalar::String)
+		}
+
+		fn relations(
+			&self,
+			_options: &Value,
+			value: &Value,
+		) -> Vec<crate::FieldRelation> {
+			let ids = value.as_array().into_iter().flatten();
+			let ids = ids.filter_map(Value::as_i64).collect();
+			let pages = crate::Target::Entries(vec!["page".into()]);
+			vec![crate::FieldRelation::new(pages, ids)]
+		}
+
+		fn studio(&self) -> crate::StudioModule {
+			crate::StudioModule::new("")
+		}
+	}
+
+	#[test]
+	fn plugin_relations_stay_after_migrations() {
+		let db = Db::memory().unwrap();
+		let conn = db.conn();
+		let mut s = site().field_type(Pages);
+		let event = s.get_mut("event").unwrap();
+		event
+			.fields
+			.push(Field::custom("more", "pages", Value::Null));
+		// a migration file knows no field types
+		let from_file = |mut m: Migration| {
+			let json = serde_json::to_value(&m.schema).unwrap();
+			m.schema = serde_json::from_value(json).unwrap();
+			m
+		};
+		let first = from_file(migration("0001", &Schema::new(), &s, &[]));
+		apply_migrations(&conn, std::slice::from_ref(&first), &s).unwrap();
+		let fields = json!({ "more": [1] });
+		let e =
+			save(&conn, &s, None, input("events", "event", "E", fields), None)
+				.unwrap();
+
+		let mut s2 = s.clone();
+		s2.get_mut("event").unwrap().fields.push(Field::text("cta"));
+		let second = from_file(migration("0002", &s, &s2, &[]));
+		apply_migrations(&conn, &[first, second], &s2).unwrap();
+		let n: i64 = conn
+			.query_row(
+				"SELECT COUNT(*) FROM entry_relations
+				WHERE entry_id = ?1 AND path = 'more' AND target_id = 1",
+				[e.id],
+				|r| r.get(0),
+			)
+			.unwrap();
+		assert_eq!(n, 2);
+	}
+
+	#[test]
+	fn drafts_of_removed_types_take_the_entry_type() {
+		// a talk is an event with a speaker, it leaves events: once only
+		// from the section, once for good
+		let mut s = site().entry(
+			"talk",
+			"Talk",
+			[Field::text("city").indexed(), Field::text("speaker")],
+		);
+		s.sections[2].types.push("talk".into());
+		let mut only_events = s.clone();
+		only_events.sections[2].types = vec!["event".into()];
+		let mut no_talks = only_events.clone();
+		no_talks.components.retain(|c| c.handle != "talk");
+
+		for s2 in [only_events, no_talks] {
+			let db = Db::memory().unwrap();
+			let conn = db.conn();
+			let first = migration("0001", &Schema::new(), &s, &[]);
+			apply(&conn, std::slice::from_ref(&first)).unwrap();
+			let e = save(
+				&conn,
+				&s,
+				None,
+				input("events", "event", "E", json!({})),
+				None,
+			)
+			.unwrap();
+			let sd = crate::drafts::SiteDoc {
+				ty: "talk".into(),
+				dates: Default::default(),
+				title: "E".into(),
+				slug: "e".into(),
+				published: true,
+				fields: json!({ "city": "Bern", "speaker": "Anna" }),
+			};
+			crate::drafts::put_draft(&conn, &s, e.id, "de", sd, None, None)
+				.unwrap();
+
+			apply(&conn, &[first, migration("0002", &s, &s2, &[])]).unwrap();
+			let draft = crate::drafts::get_draft(&conn, e.id).unwrap().unwrap();
+			assert_eq!(draft.doc["de"].ty, "event");
+			assert_eq!(draft.doc["de"].fields, json!({ "city": "Bern" }));
+			crate::drafts::publish(&conn, &s2, e.id, None).unwrap();
+			let e = get_entry(&conn, e.id, "de").unwrap();
+			assert_eq!(e.fields["city"], "Bern");
+		}
+	}
+
+	#[test]
+	fn a_new_group_brings_its_defaults() {
+		let db = Db::memory().unwrap();
+		let conn = db.conn();
+		let s = site();
+		let first = migration("0001", &Schema::new(), &s, &[]);
+		apply(&conn, std::slice::from_ref(&first)).unwrap();
+
+		// the group's component comes after the page in the schema
+		let mut s2 = s.clone().block(
+			"hero",
+			"Hero",
+			[Field::boolean("big").default(true)],
+		);
+		let page = s2.get_mut("page").unwrap();
+		page.fields.push(Field::group("hero", "hero"));
+		apply(&conn, &[first, migration("0002", &s, &s2, &[])]).unwrap();
+
+		let home = get_entry(&conn, 1, "de").unwrap();
+		assert_eq!(home.fields["hero"], json!({ "big": true }));
+	}
+
+	#[test]
+	fn a_group_of_another_component_starts_over() {
+		let db = Db::memory().unwrap();
+		let conn = db.conn();
+		let s = site();
+		let first = migration("0001", &Schema::new(), &s, &[]);
+		apply(&conn, std::slice::from_ref(&first)).unwrap();
+		let mut home = input("home", "page", "Home", json!({}));
+		home.fields = json!({ "seo": { "title": "Hoi" } });
+		save(&conn, &s, Some(1), home, None).unwrap();
+
+		// seo is now a group of meta, which has no title
+		let mut s2 = s.clone().block(
+			"meta",
+			"Meta",
+			[
+				Field::text("keywords"),
+				Field::boolean("index").default(true),
+			],
+		);
+		s2.get_mut("page").unwrap().fields[2] = Field::group("seo", "meta");
+		apply(&conn, &[first, migration("0002", &s, &s2, &[])]).unwrap();
+
+		let home = get_entry(&conn, 1, "de").unwrap();
+		assert_eq!(home.fields["seo"], json!({ "index": true }));
+		let mut again = input("home", "page", "Home", home.fields);
+		again.slug = "home".into();
+		save(&conn, &s2, Some(1), again, None).unwrap();
+	}
+
+	#[test]
+	fn unparsable_content_fails_the_migration() {
+		let db = Db::memory().unwrap();
+		let conn = db.conn();
+		let s = site();
+		let first = migration("0001", &Schema::new(), &s, &[]);
+		apply(&conn, std::slice::from_ref(&first)).unwrap();
+		let e = save(
+			&conn,
+			&s,
+			None,
+			input("events", "event", "E", json!({ "city": "Bern" })),
+			None,
+		)
+		.unwrap();
+		let sd = crate::drafts::SiteDoc {
+			ty: "event".into(),
+			dates: Default::default(),
+			title: "E".into(),
+			slug: "e".into(),
+			published: true,
+			fields: json!({ "city": "Bern" }),
+		};
+		crate::drafts::put_draft(&conn, &s, e.id, "de", sd, None, None)
+			.unwrap();
+		conn.execute("UPDATE drafts SET doc = '{\"de\": '", [])
+			.unwrap();
+
+		let mut s2 = s.clone();
+		s2.get_mut("event").unwrap().fields[0].handle = "town".into();
+		let renames = [Rename::parse("event.city=town").unwrap()];
+		let second = migration("0002", &s, &s2, &renames);
+		assert!(apply(&conn, &[first, second]).is_err());
+		let e = get_entry(&conn, e.id, "de").unwrap();
+		assert_eq!(e.fields["city"], "Bern");
+		let done: i64 = conn
+			.query_row("SELECT COUNT(*) FROM schema_migrations", [], |r| {
+				r.get(0)
+			})
+			.unwrap();
+		assert_eq!(done, 1);
 	}
 }

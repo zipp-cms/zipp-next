@@ -76,11 +76,13 @@ still English.
 
 Like Craft's, deleting an entry (in a structure with the entries below
 it) or an asset moves it to the trash: it is gone for the studio, the
-website and GraphQL, relations to it are left out, its uris are free.
+website and GraphQL, relations to it are left out (saving what links to
+it drops the link, like one to an entry that is gone), its uris are free.
 The Trash page (for who may delete something, a role sees what it may
 delete) restores it, with its children and at the end of its
 siblings; a restored entry whose uri was taken meanwhile gets `-2` on
-its slug. "Delete for good" and "Empty trash" delete it, anything older
+its slug. "Delete for good" and "Empty trash" delete it (a child trashed
+on its own before stays, on the top), anything older
 than 30 days (`trash::KEEP_DAYS`) goes on its own. The api is the same:
 `DELETE /entries/{id}` trashes, `/trash` lists, restores and purges.
 

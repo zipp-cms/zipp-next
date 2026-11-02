@@ -38,17 +38,17 @@ pub(super) async fn serve(
 	let db = Db::open(db_path).map_err(|e| e.to_string())?;
 
 	let migrations = migrations.load()?;
-	let applied = apply::apply_migrations(&db.conn(), &migrations)
-		.map_err(|e| e.to_string())?;
-	for name in applied {
-		info!("applied migration {name}");
-	}
-	assets::index_usage(&db.conn(), &schema).map_err(|e| e.to_string())?;
 	if !migrate::unmigrated(&migrations, &schema)?.is_empty() {
 		return Err("The schema changed since the last migration, run \
 			`makemigration` first"
 			.into());
 	}
+	let applied = apply::apply_migrations(&db.conn(), &migrations, &schema)
+		.map_err(|e| e.to_string())?;
+	for name in applied {
+		info!("applied migration {name}");
+	}
+	assets::index_usage(&db.conn(), &schema).map_err(|e| e.to_string())?;
 
 	let schema = Arc::new(schema);
 	let ai = match key_file {

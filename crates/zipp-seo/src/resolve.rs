@@ -778,7 +778,7 @@ fn json_ld(
 			"inLanguage": page.site.language,
 			"isPartOf": { "@id": website_id },
 			"primaryImageOfPage": image_object(page, image),
-			"datePublished": iso(e.entry.created_at),
+			"datePublished": iso(e.entry.dates.post_date.unwrap_or(e.entry.created_at)),
 			"dateModified": iso(e.entry.updated_at),
 			"breadcrumb": if crumbs.is_empty() { Value::Null } else { json!({ "@id": format!("{url}#breadcrumb") }) },
 		})));

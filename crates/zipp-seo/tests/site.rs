@@ -105,6 +105,12 @@ async fn seo_like_the_craft_plugin() {
 		let mut en = input("events", "event", "Concert", fields);
 		en.site = Some("en".into());
 		save(&conn, &s, Some(e.id), en, None).unwrap();
+		// published later than it was written: 2026-11-01T08:00:00
+		conn.execute(
+			"UPDATE entries SET post_date = 1793520000000 WHERE id = ?1",
+			[e.id],
+		)
+		.unwrap();
 		// a page with its own SEO in the field
 		let seo = json!({ "seo": { "title": "Über uns", "robots": "noindex, follow" } });
 		save(&conn, &s, None, input("pages", "page", "About", seo), None)
@@ -153,7 +159,14 @@ async fn seo_like_the_craft_plugin() {
 	assert_eq!(graph[0]["@type"], "MedicalClinic");
 	assert_eq!(graph[0]["address"]["addressLocality"], "Thun");
 	assert_eq!(graph[0]["openingHoursSpecification"][0]["opens"], "08:00");
-	assert!(graph.iter().any(|g| g["@type"] == "WebPage"));
+	let page = graph.iter().find(|g| g["@type"] == "WebPage").unwrap();
+	assert!(
+		page["datePublished"]
+			.as_str()
+			.unwrap()
+			.starts_with("2026-11-01T08:00:00"),
+		"{page}"
+	);
 
 	// the field of the page: its type's `seo` resolves the whole SEO
 	let data = seo(

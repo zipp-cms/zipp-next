@@ -320,15 +320,26 @@ pub fn restore_asset(conn: &Connection, id: i64) -> Result<()> {
 }
 
 /// Deletes an entry of the trash for good, with the children that went
-/// with it.
+/// with it. A child trashed on its own before stays in the trash, on the
+/// top.
 pub fn purge_entry(conn: &Connection, id: i64) -> Result<()> {
-	let n = conn.execute(
-		"DELETE FROM entries WHERE id = ?1 AND deleted_at IS NOT NULL",
-		[id],
-	)?;
-	if n == 0 {
-		return Err(Error::NotFound);
+	let deleted_at: i64 = conn
+		.query_row(
+			"SELECT deleted_at FROM entries
+			WHERE id = ?1 AND deleted_at IS NOT NULL",
+			[id],
+			|r| r.get(0),
+		)
+		.optional()?
+		.ok_or(Error::NotFound)?;
+	for e in with_children(conn, id, Some(deleted_at))? {
+		conn.execute(
+			"UPDATE entries SET parent_id = NULL
+			WHERE parent_id = ?1 AND deleted_at IS NOT ?2",
+			params![e, deleted_at],
+		)?;
 	}
+	conn.execute("DELETE FROM entries WHERE id = ?1", [id])?;
 	Ok(())
 }
 
@@ -401,7 +412,14 @@ pub fn list(
 /// Deletes for good what is longer in the trash than [`KEEP_DAYS`].
 pub fn purge_old(conn: &Connection, files: &Path) -> Result<()> {
 	let before = now() - KEEP_DAYS * DAY_MS;
-	// the children go with their parent
+	// the children go with their parent, one trashed on its own later
+	// stays until its time
+	conn.execute(
+		"UPDATE entries SET parent_id = NULL
+		WHERE (deleted_at IS NULL OR deleted_at >= ?1)
+		AND parent_id IN (SELECT id FROM entries WHERE deleted_at < ?1)",
+		[before],
+	)?;
 	conn.execute("DELETE FROM entries WHERE deleted_at < ?1", [before])?;
 	let mut stmt =
 		conn.prepare("SELECT id FROM assets WHERE deleted_at < ?1")?;

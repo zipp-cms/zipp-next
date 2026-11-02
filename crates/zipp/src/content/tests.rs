@@ -286,6 +286,8 @@ fn dates_are_days_of_the_calendar() {
 	assert!(valid_date("2026-11-14T20:00", true));
 	assert!(!valid_date("2026-11-14T24:00", true));
 	assert!(!valid_date("2026-11-14", true));
+	// a byte in the middle of a character must not panic
+	assert!(!valid_date("202ä-1-14", false));
 
 	let s = crate::schema::tests::site().block(
 		"d",

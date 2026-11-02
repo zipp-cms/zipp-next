@@ -15,7 +15,7 @@
 
 use rusqlite::types::Value;
 
-use crate::db::marks;
+use crate::db::{escape_like, marks};
 use crate::entries::LIVE_DATES;
 use crate::schema::{IndexKind, Schema, SectionKind};
 
@@ -388,7 +388,8 @@ impl Query {
 			cond("e.parent_id = ?".into(), vec![Value::Integer(parent)]);
 		}
 		if let Some(search) = &self.search {
-			cond("s.title LIKE ?".into(), vec![format!("%{search}%").into()]);
+			let like = format!("%{}%", escape_like(search));
+			cond("s.title LIKE ? ESCAPE '\\'".into(), vec![like.into()]);
 		}
 		if let Some(id) = self.related {
 			let sql = "e.id IN (SELECT entry_id FROM entry_relations \

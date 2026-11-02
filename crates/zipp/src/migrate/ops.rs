@@ -154,22 +154,36 @@ impl Op {
 				let old = schema.get(component).and_then(|c| {
 					c.fields.iter().find(|f| f.handle == field.handle)
 				});
+				// a group of another component is another kind too, its
+				// keys are those of the other component
 				let same_kind =
 					old.is_some_and(|o| match (&o.kind, &field.kind) {
 						(
 							FieldKind::Custom { ty: a, .. },
 							FieldKind::Custom { ty: b, .. },
 						) => a == b,
+						(
+							FieldKind::Group { component: a },
+							FieldKind::Group { component: b },
+						) => a == b,
 						(a, b) => {
 							std::mem::discriminant(a)
 								== std::mem::discriminant(b)
 						}
 					});
+				// another kind starts over like a new field, with its default
 				if !same_kind {
+					let default = default_of(schema, field);
 					walk_mut(schema, comp, fields, &mut |c, obj| {
-						if &c.handle == component {
-							obj.remove(&field.handle);
+						if &c.handle != component {
+							return;
 						}
+						match &default {
+							Some(d) => {
+								obj.insert(field.handle.clone(), d.clone())
+							}
+							None => obj.remove(&field.handle),
+						};
 					});
 				}
 				// a column of a table likewise, its cells go
@@ -210,7 +224,7 @@ impl Op {
 				format!("  add component {}", component.handle)
 			}
 			Self::RemoveComponent { component } => format!(
-				"! remove component {component}, its entries and blocks are deleted"
+				"! remove component {component}, its entries and blocks are deleted (children of its entries move up)"
 			),
 			Self::RenameComponent { from, to } => {
 				format!("  rename component {from} to {to}")
@@ -227,7 +241,7 @@ impl Op {
 				to,
 			} => format!("  rename field {component}.{from} to {to}"),
 			Self::ChangeField { component, field } => format!(
-				"  change field {component}.{} (content is dropped if the kind changed)",
+				"  change field {component}.{} (content starts over if the kind changed)",
 				field.handle
 			),
 			Self::AddSite { site } => format!(
@@ -244,7 +258,7 @@ impl Op {
 				format!("! remove section {section}, its entries are deleted")
 			}
 			Self::ChangeSection { section } => format!(
-				"  change section {} (entries of types it no longer has are deleted)",
+				"  change section {} (entries of types it no longer has are deleted, their children move up)",
 				section.handle
 			),
 		}

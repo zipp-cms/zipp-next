@@ -108,7 +108,9 @@ pub(crate) fn validate_in(
 			"paragraph" => clean_inline(node, allowed, &mut err),
 			"heading" => {
 				let level = node["attrs"]["level"].as_u64().unwrap_or(0);
-				if !allowed.headings.contains(&(level as u8)) {
+				let ok = u8::try_from(level)
+					.is_ok_and(|l| allowed.headings.contains(&l));
+				if !ok {
 					err(format!(
 						"headings of level {level} aren't allowed here"
 					));
@@ -616,6 +618,8 @@ mod tests {
 		let s = site();
 		let doc = json!({ "type": "doc", "content": [
 			{ "type": "heading", "attrs": { "level": 1 }, "content": [{ "type": "text", "text": "H" }] },
+			// 258 is 2 as a byte
+			{ "type": "heading", "attrs": { "level": 258 }, "content": [{ "type": "text", "text": "H" }] },
 			{ "type": "embed", "attrs": { "type": "button", "fields": {} } },
 			{ "type": "image" },
 		] });
@@ -627,6 +631,7 @@ mod tests {
 			messages,
 			[
 				"headings of level 1 aren't allowed here",
+				"headings of level 258 aren't allowed here",
 				"block \"button\" isn't allowed here",
 				"image isn't allowed here",
 			]

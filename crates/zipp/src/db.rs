@@ -241,6 +241,16 @@ pub(crate) fn marks(n: usize) -> String {
 	vec!["?"; n].join(", ")
 }
 
+/// `%` and `_` in a search are themselves, with `LIKE ? ESCAPE '\'`.
+pub(crate) fn escape_like(s: &str) -> String {
+	s.chars()
+		.flat_map(|c| match c {
+			'\\' | '%' | '_' => vec!['\\', c],
+			c => vec![c],
+		})
+		.collect()
+}
+
 #[derive(Clone)]
 pub struct Db {
 	conn: Arc<Mutex<Connection>>,

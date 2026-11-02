@@ -99,6 +99,17 @@ fn finds_mistakes() {
 	let s = site().block("x", "X", [Field::blocks("b", ["page"])]);
 	assert_eq!(s.check().unwrap_err(), "x.b: page is not a block");
 
+	// groups in a circle
+	let s = site().block("ga", "A", [Field::group("b", "gb")]).block(
+		"gb",
+		"B",
+		[Field::group("a", "ga")],
+	);
+	assert_eq!(
+		s.check().unwrap_err(),
+		"ga.b: a group can't hold its own component"
+	);
+
 	let s = site().block("y", "Y", [Field::text("t").indexed()]);
 	assert!(s.check().unwrap_err().contains("only fields of entries"));
 

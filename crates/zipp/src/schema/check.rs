@@ -399,11 +399,12 @@ impl Schema {
 			t.check(options)?;
 		}
 		if let FieldKind::Group { component } = &field.kind {
-			if component == &comp.handle {
-				return Err("a group can't hold its own component".into());
-			}
 			if self.get(component).is_none() {
 				return Err(format!("unknown component {component}"));
+			}
+			// its defaults would never end
+			if self.group_holds(component, &comp.handle) {
+				return Err("a group can't hold its own component".into());
 			}
 		}
 		// the asset fields only live on assets
@@ -463,6 +464,28 @@ impl Schema {
 		}
 
 		Ok(())
+	}
+
+	/// Whether the group of `component` holds `target`, also through the
+	/// groups inside it.
+	fn group_holds(&self, component: &str, target: &str) -> bool {
+		let mut todo = vec![component];
+		let mut seen = vec![];
+		while let Some(c) = todo.pop() {
+			if c == target {
+				return true;
+			}
+			if seen.contains(&c) {
+				continue;
+			}
+			seen.push(c);
+			for f in self.get(c).into_iter().flat_map(|c| &c.fields) {
+				if let FieldKind::Group { component } = &f.kind {
+					todo.push(component);
+				}
+			}
+		}
+		false
 	}
 }
 

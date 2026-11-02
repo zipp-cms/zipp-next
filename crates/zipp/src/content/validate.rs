@@ -409,7 +409,8 @@ pub(crate) fn valid_date(s: &str, time: bool) -> bool {
 			.then(|| p.parse().ok())?
 	};
 	let len = if time { 16 } else { 10 };
-	if s.len() != len || &s[4..5] != "-" || &s[7..8] != "-" {
+	// only ASCII, slicing other text at a byte could cut a character
+	if !s.is_ascii() || s.len() != len || &s[4..5] != "-" || &s[7..8] != "-" {
 		return false;
 	}
 	let (Some(y), Some(m), Some(d)) = (num(0..4), num(5..7), num(8..10)) else {

@@ -7,6 +7,7 @@ use serde_json::Value;
 
 use super::*;
 use crate::content::validate;
+use crate::db::escape_like;
 use crate::entries::check_relations;
 use crate::schema::{ASSET, Schema};
 
@@ -105,16 +106,6 @@ pub fn find(
 		.query_map(rusqlite::params_from_iter(values), from_row)?
 		.collect::<rusqlite::Result<_>>()?;
 	Ok(assets)
-}
-
-/// `%` and `_` in a search are themselves.
-fn escape_like(s: &str) -> String {
-	s.chars()
-		.flat_map(|c| match c {
-			'\\' | '%' | '_' => vec!['\\', c],
-			c => vec![c],
-		})
-		.collect()
 }
 
 /// What an editor changes of an asset.
@@ -227,8 +218,8 @@ fn check_fields(
 	let Some(comp) = schema.get(ASSET) else {
 		return Ok(Value::Object(Default::default()));
 	};
-	let fields = validate(schema, comp, fields).map_err(Error::Invalid)?;
-	let errors = check_relations(conn, schema, ASSET, &fields)?;
+	let mut fields = validate(schema, comp, fields).map_err(Error::Invalid)?;
+	let errors = check_relations(conn, schema, ASSET, &mut fields)?;
 	if !errors.is_empty() {
 		return Err(Error::Invalid(errors));
 	}

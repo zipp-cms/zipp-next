@@ -13,15 +13,15 @@ use serde_json::Value;
 
 use crate::auth::Authed;
 use crate::content::{
-	FieldError, Target, convert, index_values, relations, share, validate,
-	with_defaults,
+	FieldError, Target, convert, drop_links, index_values, relations, share,
+	validate, with_defaults,
 };
 use crate::db::{marks, now};
 use crate::drafts::record_revision;
 use crate::error::{Error, Result};
 use crate::query::Query;
 use crate::schema::Access;
-use crate::schema::{Schema, Section, SectionKind};
+use crate::schema::{LinkKind, Schema, Section, SectionKind};
 use crate::{AppState, ChangeKind};
 
 pub mod api;

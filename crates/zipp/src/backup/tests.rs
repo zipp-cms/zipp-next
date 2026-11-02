@@ -102,3 +102,19 @@ fn prune_keeps_the_last_ones() {
 	backup(&db_path, &files, &to, NOW + 4 * DAY).unwrap();
 	assert!(!to.join(".2026-11-09T08-00-00.partial").exists());
 }
+
+#[test]
+fn a_file_gone_during_the_backup_is_left_out() {
+	let root = tempfile::tempdir().unwrap();
+	let (_db, db_path, files) = site(root.path());
+	let to = root.path().join("backups");
+	// listed but gone when it is copied, like an asset deleted meanwhile
+	fs::create_dir_all(files.join("2")).unwrap();
+	std::os::unix::fs::symlink(files.join("2/gone.jpg"), files.join("2/a.jpg"))
+		.unwrap();
+
+	let w = backup(&db_path, &files, &to, NOW).unwrap();
+	assert_eq!(w.copied, 1);
+	assert!(w.dir.join("files/1/photo.jpg").exists());
+	assert!(!w.dir.join("files/2/a.jpg").exists());
+}
