@@ -9,7 +9,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
 use super::Session;
-use crate::db::{DAY_MS, HOUR_MS, now, random_token};
+use crate::db::{DAY_MS, HOUR_MS, MINUTE_MS, now, random_token};
 use crate::error::{Error, Result};
 use crate::mail::Mail;
 
@@ -91,6 +91,46 @@ pub fn create_link(
 	Ok((token, expires_at))
 }
 
+/// A new link of a user, see [`create_link`], with its full url: the url
+/// and when it ends.
+pub fn new_link(
+	conn: &Connection,
+	public_url: &str,
+	user_id: i64,
+	kind: Kind,
+	created_by: Option<i64>,
+) -> Result<(String, i64)> {
+	// without the url of the cms there is no link to make
+	link_url(public_url, kind, "")?;
+	let (token, expires_at) = create_link(conn, user_id, kind, created_by)?;
+	Ok((link_url(public_url, kind, &token)?, expires_at))
+}
+
+/// The answer to a link that doesn't work (anymore).
+pub fn gone() -> Error {
+	Error::Request("This link is used or expired".into())
+}
+
+/// A reset mail at most every few minutes, the form sends no flood.
+const FORGOT_EVERY_MS: i64 = 2 * MINUTE_MS;
+
+/// The user of an email who may get a reset link: none asked for one in
+/// the last minutes. Its id and email.
+pub fn reset_target(
+	conn: &Connection,
+	email: &str,
+) -> Result<Option<(i64, String)>> {
+	Ok(conn
+		.query_row(
+			"SELECT id, email FROM users WHERE email = ?1 AND NOT EXISTS (
+				SELECT 1 FROM user_links WHERE user_id = users.id
+				AND kind = 'reset' AND created_at > ?2)",
+			params![email.trim(), now() - FORGOT_EVERY_MS],
+			|r| Ok((r.get(0)?, r.get(1)?)),
+		)
+		.optional()?)
+}
+
 /// The link of a token while it works.
 pub fn get_link(conn: &Connection, token: &str) -> Result<Link> {
 	let row: Option<(i64, String, Option<i64>, i64, i64)> = conn
@@ -101,7 +141,6 @@ pub fn get_link(conn: &Connection, token: &str) -> Result<Link> {
 			|r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
 		)
 		.optional()?;
-	let gone = || Error::Request("This link is used or expired".into());
 	let (user_id, kind, created_by, created_at, expires_at) =
 		row.ok_or_else(gone)?;
 	let kind = Kind::parse(&kind).ok_or_else(gone)?;
@@ -137,7 +176,7 @@ pub fn take_link(
 ) -> Result<Link> {
 	let link = get_link(conn, token)?;
 	if !kinds.contains(&link.kind) {
-		return Err(Error::Request("This link is used or expired".into()));
+		return Err(gone());
 	}
 	conn.execute("DELETE FROM user_links WHERE token = ?1", [token])?;
 	Ok(link)

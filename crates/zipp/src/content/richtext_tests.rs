@@ -129,6 +129,10 @@ fn splits_into_chunks() {
 		Chunk::Html("<p><a href=\"/d\"><strong>d</strong></a></p>".into())
 	);
 
+	// the labels of buttons only for search, no blocks
+	assert_eq!(plain_text(&doc, true), "a <b>\nX\nX\nd");
+	assert_eq!(plain_text(&doc, false), "a <b>\nd");
+
 	// text between them: two rows
 	let other = json!({ "type": "doc", "content": [
 		{ "type": "button", "attrs": { "link": link } },
@@ -194,7 +198,7 @@ fn styles_are_classes() {
 		<h2>H</h2>";
 	assert_eq!(html(&doc, &mut resolver), out);
 	assert_eq!(chunks(&doc, &mut resolver), [Chunk::Html(out.into())]);
-	assert_eq!(plain_text(&doc), "Big news\nH");
+	assert_eq!(plain_text(&doc, true), "Big news\nH");
 }
 
 #[test]

@@ -40,13 +40,15 @@ pub(super) fn entries_args(field: GqlField, schema: &Schema) -> GqlField {
 		.argument(InputValue::new("where", TypeRef::named_nn_list("Where")))
 }
 
+/// The arguments of the entry queries, a relation field of the same name
+/// isn't one.
+pub(super) const TAKEN: &[&str] = &[
+	"site", "siteId", "section", "type", "uri", "slug", "id", "ids", "parent",
+	"related", "search", "order", "orderBy", "limit", "offset", "where",
+];
+
 /// The relation fields of entry types, unless an argument has the name.
 fn relation_args(schema: &Schema) -> std::collections::BTreeSet<String> {
-	const TAKEN: &[&str] = &[
-		"site", "siteId", "section", "type", "uri", "slug", "id", "ids",
-		"parent", "related", "search", "order", "orderBy", "limit", "offset",
-		"where", "handle",
-	];
 	schema
 		.components
 		.iter()

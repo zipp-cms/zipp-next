@@ -237,3 +237,21 @@ async fn admins_log_in_as_a_user() {
 	let req = LoginAsLinkReq { id: me.id };
 	assert_eq!(editor.call(&req).await.unwrap_err(), Error::Forbidden);
 }
+
+#[test]
+fn new_links_need_the_url_of_the_cms() {
+	let db = crate::db::Db::memory().unwrap();
+	let conn = db.conn();
+	add_user(&conn, "a@x.ch", "password1", None).unwrap();
+	let id = conn.last_insert_rowid();
+	let kind = links::Kind::Reset;
+	assert!(links::new_link(&conn, "", id, kind, None).is_err());
+	assert!(links::reset_target(&conn, " a@x.ch ").unwrap().is_some());
+
+	let (url, _) =
+		links::new_link(&conn, "https://cms.ch", id, kind, None).unwrap();
+	let token = url.strip_prefix("https://cms.ch/admin/password/").unwrap();
+	assert_eq!(links::get_link(&conn, token).unwrap().kind, kind);
+	// one reset every few minutes
+	assert_eq!(links::reset_target(&conn, "a@x.ch").unwrap(), None);
+}

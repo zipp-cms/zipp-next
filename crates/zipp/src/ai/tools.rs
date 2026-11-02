@@ -154,6 +154,20 @@ impl Ctx<'_> {
 		let section = crate::entries::section_of(self.conn, id)?;
 		self.auth.check(self.schema, &section, access)
 	}
+
+	/// Changes what the editor sees of an entry in a site as its draft.
+	fn edit_draft(
+		&self,
+		id: i64,
+		site: &str,
+		change: impl FnOnce(&mut SiteDoc) -> Result<()>,
+	) -> Result<Draft> {
+		let base = get_draft(self.conn, id)?.map(|d| d.updated_at);
+		let (mut content, _) = current(self.conn, id, site)?;
+		change(&mut content)?;
+		let user = Some(self.user_id);
+		put_draft(self.conn, self.schema, id, site, content, base, user)
+	}
 }
 
 /// Runs one tool, returns its result for the model and what the studio
@@ -236,34 +250,32 @@ fn tool_get_entry(t: &Ctx, input: &Value) -> ToolResult {
 fn tool_update_entry(t: &Ctx, input: &Value) -> ToolResult {
 	let state = t.state;
 	let conn = t.conn;
-	let schema = t.schema;
 	let site = t.site.clone();
-	let user_id = t.user_id;
 
 	let id = input["id"].as_i64().unwrap_or_default();
 	t.need(id, Access::Edit)?;
 	let entry = get_entry(conn, id, &site)?;
-	let base = get_draft(conn, id)?.map(|d| d.updated_at);
-	let (mut content, _) = current(conn, id, &site)?;
-	if let Some(t) = input["title"].as_str() {
-		content.title = t.into();
-	}
-	if let Some(t) = input["slug"].as_str() {
-		content.slug = t.into();
-	}
-	if let Some(p) = input["published"].as_bool() {
-		content.published = p;
-	}
-	if let Some(Value::Object(changes)) = input.get("fields") {
-		let Some(fields) = content.fields.as_object_mut() else {
-			return Err(Error::Request("the entry has no fields".into()));
-		};
-		for (k, v) in changes {
-			fields.insert(k.clone(), v.clone());
+	let draft = t.edit_draft(id, &site, |content| {
+		if let Some(t) = input["title"].as_str() {
+			content.title = t.into();
 		}
-	}
-	let title = content.title.clone();
-	put_draft(conn, schema, id, &site, content, base, Some(user_id))?;
+		if let Some(t) = input["slug"].as_str() {
+			content.slug = t.into();
+		}
+		if let Some(p) = input["published"].as_bool() {
+			content.published = p;
+		}
+		if let Some(Value::Object(changes)) = input.get("fields") {
+			let Some(fields) = content.fields.as_object_mut() else {
+				return Err(Error::Request("the entry has no fields".into()));
+			};
+			for (k, v) in changes {
+				fields.insert(k.clone(), v.clone());
+			}
+		}
+		Ok(())
+	})?;
+	let title = &draft.doc[&site].title;
 
 	let action = Action {
 		text: format!("Changed {title} ({site})"),
@@ -281,7 +293,6 @@ fn tool_create_entry(t: &Ctx, input: &Value) -> ToolResult {
 	let conn = t.conn;
 	let schema = t.schema;
 	let site = t.site.clone();
-	let user_id = t.user_id;
 
 	let req = |k: &str| input[k].as_str().unwrap_or_default().to_string();
 	t.auth.check(schema, &req("section"), Access::Edit)?;
@@ -306,18 +317,10 @@ fn tool_create_entry(t: &Ctx, input: &Value) -> ToolResult {
 	// like a new entry of the studio
 	state.changed(entry.id, &entry.section, crate::ChangeKind::Saved);
 	for s in &schema.sites {
-		let base = get_draft(conn, entry.id)?.map(|d| d.updated_at);
-		let (mut content, _) = current(conn, entry.id, &s.handle)?;
-		content.published = true;
-		put_draft(
-			conn,
-			schema,
-			entry.id,
-			&s.handle,
-			content,
-			base,
-			Some(user_id),
-		)?;
+		t.edit_draft(entry.id, &s.handle, |content| {
+			content.published = true;
+			Ok(())
+		})?;
 	}
 	let action = Action {
 		text: format!("Created {} ({})", entry.title, entry.section),

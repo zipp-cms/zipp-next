@@ -105,7 +105,10 @@ it matches (`FieldKind`, `ChangeKind`, `Target`, `Error`, …) are
 `#[non_exhaustive]`: zipp can add to them without breaking a plugin.
 Names of plugins and field types are unique, `check` says so.
 
-`Schema::plugin_of::<T>()` finds a plugin's settings. `crates/zipp-seo`
+`Schema::plugin_of::<T>()` finds a plugin's settings. What editors set
+for a plugin lives in a single: `entries::single_fields(conn, schema,
+section, site)` reads its published fields, `Query::published(schema,
+&[("type", "event")])` lists what is live. `crates/zipp-seo`
 is the first plugin: SEO like the Craft plugin meierlabs-seo, see
 [SEO](seo.md).
 

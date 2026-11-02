@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::AppState;
-use crate::content::{FieldError, convert, share};
+use crate::content::{FieldError, follow};
 use crate::db::{DAY_MS, marks, now};
 use crate::entries::{Dates, Entry, EntryInput, check, get_entry, write};
 use crate::error::{Error, Result};
@@ -276,18 +276,7 @@ pub fn put_draft(
 		let drafted = current.as_ref().and_then(|d| d.doc.values().next());
 		content.ty = drafted.map_or(entry.ty.clone(), |sd| sd.ty.clone());
 	}
-	let section = schema.get_section(&entry.section).ok_or_else(|| {
-		Error::Internal(format!("{} is no section", entry.section))
-	})?;
-	let comp = schema
-		.entry_type(&content.ty)
-		.filter(|_| section.types.contains(&content.ty))
-		.ok_or_else(|| {
-			Error::Request(format!(
-				"no type {} in section {}",
-				content.ty, entry.section
-			))
-		})?;
+	let (_, comp) = schema.section_type(&entry.section, &content.ty)?;
 
 	check_base(current.as_ref(), base, user_id)?;
 
@@ -296,13 +285,8 @@ pub fn put_draft(
 		None => live_doc(conn, id)?,
 	};
 	for (_, sd) in doc.iter_mut().filter(|(s, _)| s.as_str() != site) {
-		if sd.ty != content.ty {
-			if let Some(from) = schema.entry_type(&sd.ty) {
-				sd.fields = convert(from, comp, &sd.fields);
-			}
-			sd.ty = content.ty.clone();
-		}
-		sd.fields = share(comp, &content.fields, &sd.fields);
+		sd.fields = follow(schema, &sd.ty, comp, &content.fields, &sd.fields);
+		sd.ty = content.ty.clone();
 		sd.dates = content.dates;
 	}
 	doc.insert(site.into(), content);

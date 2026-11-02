@@ -161,6 +161,15 @@ pub fn update(
 	}
 }
 
+/// The name a user gave when setting their password.
+pub fn set_name(conn: &Connection, id: i64, name: &str) -> Result<()> {
+	conn.execute(
+		"UPDATE users SET name = ?1 WHERE id = ?2",
+		params![name.trim(), id],
+	)?;
+	Ok(())
+}
+
 /// A role of the schema, `None` is an admin.
 pub fn check_role(schema: &Schema, role: Option<&str>) -> Result<()> {
 	match role {

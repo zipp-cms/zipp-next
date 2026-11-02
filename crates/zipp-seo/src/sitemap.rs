@@ -13,12 +13,14 @@ use zipp::axum::routing::get;
 
 use zipp::db::iso;
 use zipp::entries::query::Query;
-use zipp::entries::{Entry, list};
+use zipp::entries::{Entry, list, single_fields};
 use zipp::error::{Error, Result};
 use zipp::schema::{Schema, Site};
 use zipp::{AppState, origin};
 
-use crate::resolve::{Globals, globals, in_sitemap, section_in_sitemap};
+use crate::resolve::{
+	Globals, alternates, in_sitemap, load_globals, section_in_sitemap,
+};
 use crate::{SEO_SETTINGS, Seo};
 
 /// Published entries of a site and how many there are in all, with
@@ -27,13 +29,12 @@ fn entries(
 	conn: &Connection,
 	schema: &Schema,
 	site: &str,
-	extra: &[(&str, String)],
+	extra: &[(&str, &str)],
 	(limit, offset, with_uri): (i64, i64, bool),
 ) -> Result<(Vec<Entry>, i64)> {
-	let mut params = vec![("site".to_string(), site.to_string())];
-	params.extend(extra.iter().map(|(k, v)| (k.to_string(), v.clone())));
-	let mut q = Query::parse(schema, &params).map_err(Error::Request)?;
-	q.published_only = true;
+	let mut params = vec![("site", site)];
+	params.extend(extra);
+	let mut q = Query::published(schema, &params).map_err(Error::Request)?;
 	q.with_uri = with_uri;
 	q.limit = limit;
 	q.offset = offset;
@@ -41,18 +42,14 @@ fn entries(
 }
 
 /// The global settings of a site as published.
-pub fn load_globals(
+pub fn published_globals(
 	conn: &Connection,
 	schema: &Schema,
 	site: &Site,
 ) -> Result<Globals> {
-	let fields = |s: &str| -> Result<serde_json::Value> {
-		let section = [("section", SEO_SETTINGS.to_string())];
-		let (e, _) = entries(conn, schema, s, &section, (1, 0, false))?;
-		Ok(e.into_iter().next().map(|e| e.fields).unwrap_or_default())
-	};
-	let primary = schema.primary_site().handle.clone();
-	Ok(globals(site, &fields(&site.handle)?, &fields(&primary)?))
+	load_globals(schema, site, |s| {
+		single_fields(conn, schema, SEO_SETTINGS, s)
+	})
 }
 
 /// The sites on the frontend's domain, all if none is.
@@ -154,14 +151,14 @@ async fn index(
 		<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
 	);
 	for site in sites_for(&state, &origin_) {
-		let globals = load_globals(&conn, &state.schema, site)?;
+		let globals = published_globals(&conn, &state.schema, site)?;
 		for section in sections(&state.schema, &globals) {
 			// the last changed one and how many there are
 			let (last, count) = entries(
 				&conn,
 				&state.schema,
 				&site.handle,
-				&[("section", section.into()), ("order", "-updated".into())],
+				&[("section", section), ("order", "-updated")],
 				(1, 0, true),
 			)?;
 			let pages = (count + size - 1) / size;
@@ -204,12 +201,12 @@ async fn page(
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	};
 	let conn = state.db.conn();
-	let globals = load_globals(&conn, schema, site)?;
+	let globals = published_globals(&conn, schema, site)?;
 	if p.page < 1 || !sections(schema, &globals).contains(&p.section.as_str()) {
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	}
 	let size = page_size(schema);
-	let section = [("section", p.section.clone()), ("order", "created".into())];
+	let section = [("section", p.section.as_str()), ("order", "created")];
 	let page = (size, (p.page - 1) * size, true);
 	let (found, _) = entries(&conn, schema, &site.handle, &section, page)?;
 	if found.is_empty() && p.page > 1 {
@@ -230,13 +227,8 @@ async fn page(
 	{
 		if !ids.is_empty() {
 			let all = (size, 0, true);
-			let (list, _) = entries(
-				&conn,
-				schema,
-				&s.handle,
-				&[("ids", ids.clone())],
-				all,
-			)?;
+			let (list, _) =
+				entries(&conn, schema, &s.handle, &[("ids", &ids)], all)?;
 			others.extend(list.into_iter().map(|e| (s, e)));
 		}
 	}
@@ -246,7 +238,6 @@ async fn page(
 		<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" \
 		xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n",
 	);
-	let primary = &schema.primary_site().handle;
 	for e in &found {
 		let Some(url) = zipp::page_url(
 			&state.site_urls,
@@ -260,26 +251,18 @@ async fn page(
 		}
 		out += &format!("\t<url>\n\t\t<loc>{}</loc>\n", escape(&url));
 		out += &format!("\t\t<lastmod>{}</lastmod>\n", iso(e.updated_at));
-		let mut alts = vec![];
-		for (s, other) in others.iter().filter(|(_, o)| o.id == e.id) {
-			let Some(u) = other.uri.as_deref().and_then(|uri| {
-				zipp::page_url(&state.site_urls, &s.handle, uri)
-			}) else {
-				continue;
-			};
-			alts.push((s.language.clone(), u.clone()));
-			if &s.handle == primary {
-				alts.push(("x-default".into(), u));
-			}
-		}
-		if alts.len() > 2 {
-			for (lang, href) in alts {
-				out += &format!(
-					"\t\t<xhtml:link rel=\"alternate\" hreflang=\"{}\" href=\"{}\"/>\n",
-					escape(&lang),
-					escape(&href)
-				);
-			}
+		let urls = others.iter().filter(|(_, o)| o.id == e.id).filter_map(
+			|(s, other)| {
+				let uri = other.uri.as_deref()?;
+				Some((*s, zipp::page_url(&state.site_urls, &s.handle, uri)?))
+			},
+		);
+		for (lang, href) in alternates(schema, urls) {
+			out += &format!(
+				"\t\t<xhtml:link rel=\"alternate\" hreflang=\"{}\" href=\"{}\"/>\n",
+				escape(&lang),
+				escape(&href)
+			);
 		}
 		out += "\t</url>\n";
 	}
@@ -306,7 +289,7 @@ async fn robots(
 			.copied()
 			.or(sites.first().copied())
 			.unwrap_or(primary);
-		let globals = load_globals(&state.db.conn(), &state.schema, site)?;
+		let globals = published_globals(&state.db.conn(), &state.schema, site)?;
 		match globals.robots_txt {
 			Some(custom) => lines.push(custom.trim().to_string()),
 			None => {

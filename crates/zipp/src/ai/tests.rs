@@ -56,3 +56,42 @@ fn internal_errors_stay_in_the_log() {
 	let e = Error::Request("unknown site fr".into());
 	assert_eq!(e.public().to_string(), "Request error: unknown site fr");
 }
+
+#[test]
+fn tools_change_drafts_only() {
+	let ts = TestServer::new(site_with_roles());
+	let conn = ts.state.db.conn();
+	crate::auth::add_user(&conn, "e@x.ch", "password1", Some("editor"))
+		.unwrap();
+	let user_id = conn.last_insert_rowid();
+	// the tools take the connection themselves
+	drop(conn);
+	let editor = Authed {
+		user_id,
+		role: Some("editor".into()),
+		token: String::new(),
+	};
+	let run = |name: &str, input: Value| {
+		run_tool(&ts.state, &editor, name, &input).unwrap()
+	};
+
+	let (out, action) = run(
+		"create_entry",
+		json!({ "section": "pages", "type": "page", "title": "Neu" }),
+	);
+	let id = out["id"].as_i64().unwrap();
+	assert_eq!(action.unwrap().text, "Created Neu (pages)");
+	let input =
+		json!({ "id": id, "title": "Neuer", "fields": { "intro": "Hi" } });
+	let (_, action) = run("update_entry", input);
+	assert_eq!(action.unwrap().text, "Changed Neuer (de)");
+
+	// live it stays off and old, the draft is published in every site
+	let conn = ts.state.db.conn();
+	let live = get_entry(&conn, id, "de").unwrap();
+	assert_eq!((live.title.as_str(), live.published), ("Neu", false));
+	let draft = get_draft(&conn, id).unwrap().unwrap();
+	assert!(draft.doc.values().all(|sd| sd.published));
+	assert_eq!(draft.doc["de"].title, "Neuer");
+	assert_eq!(draft.doc["de"].fields["intro"], "Hi");
+}

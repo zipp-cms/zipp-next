@@ -24,7 +24,6 @@ pub(crate) fn resolve_seo(
 	let schema = ext::schema(ctx)?;
 	let urls = ext::site_urls(ctx)?;
 	let db = ext::db(ctx)?;
-	let primary = schema.primary_site().handle.clone();
 	let site_def = schema
 		.get_site(site)
 		.ok_or_else(|| GqlError::new(format!("unknown site {site}")))?;
@@ -32,12 +31,10 @@ pub(crate) fn resolve_seo(
 	let one = |s: &str, params: [(&str, String); 1]| {
 		ext::entries(ctx, s, params).map(|l| l.into_iter().next())
 	};
-	let settings = |s: &str| -> zipp::async_graphql::Result<Value> {
+	let globals = seo::load_globals(schema, site_def, |s| {
 		let e = one(s, [("section", SEO_SETTINGS.into())])?;
-		Ok(e.map(|e| e.fields).unwrap_or_default())
-	};
-	let globals =
-		seo::globals(site_def, &settings(site)?, &settings(&primary)?);
+		Ok::<_, GqlError>(e.map(|e| e.fields).unwrap_or_default())
+	})?;
 	let url_of = |s: &str, e: &Entry| {
 		e.uri.as_deref().and_then(|u| zipp::page_url(urls, s, u))
 	};
@@ -45,22 +42,14 @@ pub(crate) fn resolve_seo(
 	let entry_page = match entry {
 		Some(e) => {
 			// the entry in every site, worth it with another language
-			let mut alternates = vec![];
+			let mut urls = vec![];
 			for s in &schema.sites {
-				let Some(other) = one(&s.handle, [("ids", e.id.to_string())])?
-				else {
-					continue;
-				};
-				if let Some(u) = url_of(&s.handle, &other) {
-					alternates.push((s.language.clone(), u.clone()));
-					if s.handle == primary {
-						alternates.push(("x-default".into(), u));
-					}
-				}
+				let other = one(&s.handle, [("ids", e.id.to_string())])?;
+				urls.extend(
+					other.and_then(|o| Some((s, url_of(&s.handle, &o)?))),
+				);
 			}
-			if alternates.len() <= 2 {
-				alternates.clear();
-			}
+			let alternates = seo::alternates(schema, urls);
 
 			// the home page, the parents in a structure, the entry
 			let mut breadcrumbs = vec![];

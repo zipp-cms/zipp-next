@@ -1,22 +1,56 @@
-use super::*;
+use serde::Serialize;
 
-/// A link like Craft's LinkData: `url label defaultLabel target`. `None`
-/// if it points to an entry that isn't there (or not published). The
-/// entries and assets are loaded before, see [`targets`].
+use super::*;
+use crate::content::link_kind;
+use crate::schema::LinkKind;
+
+/// A link like Craft's LinkData: `url label defaultLabel target`.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ResolvedLink {
+	#[serde(rename = "type")]
+	pub kind: LinkKind,
+	pub url: String,
+	pub label: Option<String>,
+	pub default_label: String,
+	pub target: Option<&'static str>,
+	pub download: bool,
+}
+
+/// An item of a navigation with the ones under it.
+#[derive(Debug, Clone, Serialize)]
+pub(super) struct NavItem {
+	#[serde(flatten)]
+	pub link: ResolvedLink,
+	pub children: Vec<NavItem>,
+}
+
+/// A link as the value of a GraphQL field.
+pub(super) fn link_value<T: Serialize>(
+	link: &T,
+) -> async_graphql::Result<FieldValue<'static>> {
+	Ok(FieldValue::value(async_graphql::to_value(link)?))
+}
+
+/// A link value resolved, `None` if it points to an entry that isn't
+/// there (or not published). The entries and assets are loaded before,
+/// see [`targets`].
 pub(super) fn resolve_link(
 	ctx: &ResolverContext,
 	link: &Value,
 	site: &str,
 	new_tab: bool,
 	targets: &Targets,
-) -> async_graphql::Result<Option<GqlValue>> {
+) -> async_graphql::Result<Option<ResolvedLink>> {
 	let value = &link["value"];
 	let text = value.as_str().unwrap_or_default().to_string();
 	let id = value.as_i64().unwrap_or_default();
-	let ty = link["type"].as_str().unwrap_or_default();
+	let Some(kind) = link_kind(link) else {
+		return Ok(None);
+	};
 
-	let (url, default_label, external) = match ty {
-		"entry" => {
+	let (url, default_label, external) = match kind {
+		LinkKind::Entry => {
 			let Some(e) = targets.entries.get(&id) else {
 				return Ok(None);
 			};
@@ -26,14 +60,14 @@ pub(super) fn resolve_link(
 			};
 			(url, e.title.clone(), false)
 		}
-		"asset" => {
+		LinkKind::Asset => {
 			let Some(a) = targets.assets.get(&id) else {
 				return Ok(None);
 			};
 			(asset_url(ctx, a, None, None)?, a.filename.clone(), true)
 		}
-		"email" => (format!("mailto:{text}"), text, false),
-		"phone" => {
+		LinkKind::Email => (format!("mailto:{text}"), text, false),
+		LinkKind::Phone => {
 			let digits: String = text
 				.chars()
 				.filter(|c| c.is_ascii_digit() || *c == '+')
@@ -41,8 +75,8 @@ pub(super) fn resolve_link(
 			(format!("tel:{digits}"), text, false)
 		}
 		// drafts aren't checked yet, what reaches a preview is
-		_ if !crate::content::safe_url(&text) => return Ok(None),
-		_ => {
+		LinkKind::Url if !crate::content::safe_url(&text) => return Ok(None),
+		LinkKind::Url => {
 			// our own sites aren't external
 			let urls = ctx.data::<SiteUrls>()?;
 			let own = urls
@@ -59,14 +93,17 @@ pub(super) fn resolve_link(
 		None => url,
 	};
 	let new_tab = link["newTab"].as_bool().unwrap_or(new_tab && external);
-	Ok(Some(GqlValue::from_json(serde_json::json!({
-		"type": ty,
-		"url": url,
-		"label": link["label"].as_str().filter(|l| !l.is_empty()),
-		"defaultLabel": default_label,
-		"target": if new_tab { Some("_blank") } else { None },
-		"download": link["download"].as_bool().unwrap_or(false),
-	}))?))
+	Ok(Some(ResolvedLink {
+		kind,
+		url,
+		label: link["label"]
+			.as_str()
+			.filter(|l| !l.is_empty())
+			.map(Into::into),
+		default_label,
+		target: new_tab.then_some("_blank"),
+		download: link["download"].as_bool().unwrap_or(false),
+	}))
 }
 
 /// The items of a navigation with the ones under them; items that link
@@ -76,20 +113,14 @@ pub(super) fn nav_items(
 	items: &Value,
 	site: &str,
 	targets: &Targets,
-) -> async_graphql::Result<Vec<GqlValue>> {
+) -> async_graphql::Result<Vec<NavItem>> {
 	let mut out = vec![];
 	for item in items.as_array().into_iter().flatten() {
-		let Some(GqlValue::Object(mut o)) =
-			resolve_link(ctx, item, site, true, targets)?
-		else {
+		let Some(link) = resolve_link(ctx, item, site, true, targets)? else {
 			continue;
 		};
 		let children = nav_items(ctx, &item["children"], site, targets)?;
-		o.insert(
-			async_graphql::Name::new("children"),
-			GqlValue::List(children),
-		);
-		out.push(GqlValue::Object(o));
+		out.push(NavItem { link, children });
 	}
 	Ok(out)
 }

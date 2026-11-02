@@ -16,6 +16,7 @@ use zipp::axum::routing::post;
 use zipp::client::ClientAddr;
 use zipp::content::valid_email;
 use zipp::db::{MINUTE_MS, now};
+use zipp::entries::single_fields;
 use zipp::mail::Mail;
 
 use crate::{FORM_SETTINGS, Form, FormFieldKind, Forms};
@@ -151,14 +152,9 @@ fn settings(
 	site: &str,
 	form: &str,
 ) -> Result<Settings, String> {
-	let params = [
-		("section".to_string(), FORM_SETTINGS.to_string()),
-		("site".to_string(), site.to_string()),
-	];
-	let q = zipp::entries::query::Query::parse(&state.schema, &params)?;
-	let found = zipp::entries::select(&state.db.conn(), &q)
+	let conn = state.db.conn();
+	let fields = single_fields(&conn, &state.schema, FORM_SETTINGS, site)
 		.map_err(|e| e.to_string())?;
-	let fields = found.first().map(|e| e.fields.clone()).unwrap_or_default();
 	let text = |key: &str| {
 		fields[format!("{form}{key}")]
 			.as_str()

@@ -26,7 +26,9 @@ use crate::assets;
 use crate::db::{now, parse_iso};
 use crate::entries::{self, EntryInput, next_position};
 use crate::error::{Error, Result};
-use crate::schema::{Component, Field, FieldKind, Schema, SectionKind};
+use crate::schema::{
+	Component, Field, FieldKind, LinkKind, Schema, SectionKind,
+};
 
 mod html;
 
@@ -719,20 +721,25 @@ impl Importer<'_> {
 	fn link(&self, v: &Value, new_tab: bool) -> Option<Value> {
 		let ty = v["type"].as_str()?;
 		let (kind, value) = match ty {
-			"entry" | "category" => {
-				("entry", Value::from(*self.entries.get(&v["id"].as_i64()?)?))
-			}
-			"asset" => {
-				("asset", Value::from(*self.assets.get(&v["id"].as_i64()?)?))
-			}
-			"url" => ("url", v["value"].clone()),
+			"entry" | "category" => (
+				LinkKind::Entry,
+				Value::from(*self.entries.get(&v["id"].as_i64()?)?),
+			),
+			"asset" => (
+				LinkKind::Asset,
+				Value::from(*self.assets.get(&v["id"].as_i64()?)?),
+			),
+			"url" => (LinkKind::Url, v["value"].clone()),
 			"email" => {
 				let e = v["value"].as_str()?;
-				("email", Value::from(e.trim_start_matches("mailto:")))
+				(
+					LinkKind::Email,
+					Value::from(e.trim_start_matches("mailto:")),
+				)
 			}
 			"tel" => {
 				let p = v["value"].as_str()?;
-				("phone", Value::from(p.trim_start_matches("tel:")))
+				(LinkKind::Phone, Value::from(p.trim_start_matches("tel:")))
 			}
 			_ => return None,
 		};
@@ -740,14 +747,21 @@ impl Importer<'_> {
 		if let Some(l) = v["label"].as_str().filter(|l| !l.is_empty()) {
 			link["label"] = Value::from(l);
 		}
-		// zipp opens external links in a new tab, Craft only with a target
-		let external = kind == "asset"
-			|| value.as_str().is_some_and(|u| u.starts_with("http"));
+		// zipp opens external links in a new tab, Craft only with a
+		// target. The import doesn't know the urls of the sites, and a url
+		// of their own isn't external (see graphql's links): where that
+		// would matter, the link says what Craft's does.
+		let http = value.as_str().is_some_and(|u| u.starts_with("http"));
+		let default = match kind {
+			LinkKind::Asset => Some(new_tab),
+			LinkKind::Url if http && new_tab => None,
+			_ => Some(false),
+		};
 		let blank = v["target"] == "_blank";
-		if blank != (new_tab && external) {
+		if default != Some(blank) {
 			link["newTab"] = Value::from(blank);
 		}
-		if kind == "asset" && v["download"] == true {
+		if kind == LinkKind::Asset && v["download"] == true {
 			link["download"] = Value::from(true);
 		}
 		Some(link)

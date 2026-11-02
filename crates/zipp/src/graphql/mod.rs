@@ -215,17 +215,8 @@ fn resolver<'a>(
 	targets: &'a Targets,
 ) -> impl FnMut(&Value) -> Option<(String, Option<String>)> + 'a {
 	move |link| {
-		let v = resolve_link(ctx, link, site, true, targets).ok()??;
-		let GqlValue::Object(o) = v else { return None };
-		let url = match o.get("url")? {
-			GqlValue::String(u) => u.clone(),
-			_ => return None,
-		};
-		let target = match o.get("target") {
-			Some(GqlValue::String(t)) => Some(t.clone()),
-			_ => None,
-		};
-		Some((url, target))
+		let l = resolve_link(ctx, link, site, true, targets).ok()??;
+		Some((l.url, l.target.map(Into::into)))
 	}
 }
 

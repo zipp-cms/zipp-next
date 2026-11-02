@@ -77,3 +77,35 @@ fn structure_order_uses_the_tree() {
 		"ORDER BY e.parent_id, e.position ASC, e.id ASC"
 	);
 }
+
+#[test]
+fn orders_by_our_names_and_crafts() {
+	let order = |q: &str| parse(q).map(|q| (q.order, q.desc));
+	let created = Ok((Order::Column("created_at"), false));
+	assert_eq!(order("order=created"), created);
+	assert_eq!(order("orderBy=dateCreated"), created);
+	assert_eq!(
+		order("orderBy=postDate DESC"),
+		Ok((Order::Column("post_date"), true))
+	);
+	assert!(order("order=-updated").unwrap().1);
+	assert!(order("orderBy=price").unwrap_err().contains("need a type"));
+
+	// without one the section's: a structure as its tree, a channel
+	// newest first
+	assert_eq!(order("section=pages"), Ok((Order::Structure, false)));
+	assert_eq!(
+		order("section=events"),
+		Ok((Order::Column("post_date"), true))
+	);
+	assert_eq!(order(""), Ok((Order::Column("updated_at"), true)));
+}
+
+#[test]
+fn published_queries_take_str_params() {
+	let q = Query::published(&site(), &[("site", "en"), ("type", "event")]);
+	let q = q.unwrap();
+	assert!(q.published_only);
+	assert_eq!((&*q.site, q.ty.as_deref()), ("en", Some("event")));
+	assert!(Query::published(&site(), &[("site", "fr")]).is_err());
+}

@@ -597,3 +597,13 @@ fn columns_and_styles() {
 		"x.r: style a exists twice"
 	);
 }
+
+#[test]
+fn entries_are_saved_as_a_type_of_their_section() {
+	let s = site();
+	let (section, comp) = s.section_type("events", "event").unwrap();
+	assert_eq!((&*section.handle, &*comp.handle), ("events", "event"));
+	let err = s.section_type("events", "page").unwrap_err();
+	assert!(err.to_string().ends_with("no type page in section events"));
+	assert!(s.section_type("nothing", "event").is_err());
+}

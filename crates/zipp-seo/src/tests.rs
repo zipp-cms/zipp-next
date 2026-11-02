@@ -9,21 +9,16 @@ use crate::{Seo, SeoDefaults};
 
 #[test]
 fn texts_for_descriptions() {
-	assert_eq!(
-		plain_text(&json!("<p>Hi</p><p>there <b>you</b></p>")),
-		"Hi there you"
-	);
+	let md = "# Hi\n\nthere **you**,\nMüller &amp; Söhne";
+	assert_eq!(text_of(&json!(md), true), "Hi there you, Müller & Söhne");
+	assert_eq!(text_of(&json!(" a\n b "), false), "a b");
+	let link = json!({ "type": "url", "value": "/x", "label": "no" });
 	let doc = json!({ "type": "doc", "content": [
 		{ "type": "paragraph", "content": [{ "type": "text", "text": "One" }] },
-		{ "type": "button", "content": [{ "type": "text", "text": "no" }] },
+		{ "type": "button", "attrs": { "link": link } },
 		{ "type": "paragraph", "content": [{ "type": "text", "text": "two" }] },
 	]});
-	assert_eq!(plain_text(&doc), "One two");
-	// entities decoded, no space after inline tags
-	assert_eq!(
-		plain_text(&json!("<p><em>Konzert</em>, Müller &amp; Söhne</p>")),
-		"Konzert, Müller & Söhne"
-	);
+	assert_eq!(text_of(&doc, false), "One two");
 
 	assert_eq!(truncate("short", 160), "short");
 	let long = "word ".repeat(50);
@@ -134,4 +129,22 @@ fn json_ld_cant_end_its_script() {
 	let s = script_json(&v);
 	assert!(!s.contains(['<', '>', '&']), "{s}");
 	assert_eq!(serde_json::from_str::<serde_json::Value>(&s).unwrap(), v);
+}
+
+#[test]
+fn alternates_need_another_language() {
+	let schema = Schema::new()
+		.site("de", "Deutsch", "de-CH")
+		.site("en", "English", "en");
+	let (de, en) = (&schema.sites[0], &schema.sites[1]);
+	let url = |s: &str| format!("https://zandi.ch/{s}");
+	assert!(alternates(&schema, [(de, url("de"))]).is_empty());
+	assert_eq!(
+		alternates(&schema, [(de, url("de")), (en, url("en"))]),
+		[
+			("de-CH".to_string(), url("de")),
+			("x-default".to_string(), url("de")),
+			("en".to_string(), url("en")),
+		]
+	);
 }

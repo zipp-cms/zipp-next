@@ -53,9 +53,14 @@ pub(super) fn rich_text_object() -> Object {
 							Chunk::Buttons(links) => {
 								let mut buttons = vec![];
 								for l in &links {
-									buttons.extend(resolve_link(
+									let link = resolve_link(
 										&ctx, l, &rt.site, true, &to,
-									)?);
+									)?;
+									if let Some(link) = link {
+										buttons.push(async_graphql::to_value(
+											link,
+										)?);
+									}
 								}
 								let mut o =
 									async_graphql::indexmap::IndexMap::new();

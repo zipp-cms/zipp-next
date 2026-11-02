@@ -2,12 +2,10 @@ use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::{Json, Router};
 
-use rusqlite::{OptionalExtension, params};
-
 use super::api::*;
 use super::links::{
-	self, create_link, get_link, link_mail, link_url, login_as_session,
-	take_link,
+	self, get_link, link_mail, link_url, login_as_session, new_link,
+	reset_target, take_link,
 };
 use super::{
 	Session, end_session, hash_password, login, new_session, renew_session,
@@ -17,9 +15,8 @@ use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::client::ClientAddr;
 use crate::content::FieldError;
-use crate::db::{MINUTE_MS, now};
 use crate::error::Error;
-use crate::users::{password_error, user};
+use crate::users::{password_error, set_name, user};
 
 async fn login_route(
 	State(state): State<AppState>,
@@ -78,9 +75,6 @@ async fn logout_route(
 	Ok(Json(()))
 }
 
-/// A reset mail at most every few minutes, the form sends no flood.
-const FORGOT_EVERY_MS: i64 = 2 * MINUTE_MS;
-
 async fn forgot_route(
 	State(state): State<AppState>,
 	Req(req): Req<ForgotReq>,
@@ -93,21 +87,12 @@ async fn forgot_route(
 	// before the lookup, so the answer is the same for every email
 	link_url(&state.public_url, links::Kind::Reset, "")?;
 	let conn = state.db.conn();
-	let user: Option<(i64, String)> = conn
-		.query_row(
-			"SELECT id, email FROM users WHERE email = ?1 AND NOT EXISTS (
-				SELECT 1 FROM user_links WHERE user_id = users.id
-				AND kind = 'reset' AND created_at > ?2)",
-			params![req.email.trim(), now() - FORGOT_EVERY_MS],
-			|r| Ok((r.get(0)?, r.get(1)?)),
-		)
-		.optional()?;
-	let Some((id, email)) = user else {
+	let Some((id, email)) = reset_target(&conn, &req.email)? else {
 		return Ok(Json(()));
 	};
-	let (token, _) = create_link(&conn, id, links::Kind::Reset, None)?;
+	let kind = links::Kind::Reset;
+	let (url, _) = new_link(&conn, &state.public_url, id, kind, None)?;
 	drop(conn);
-	let url = link_url(&state.public_url, links::Kind::Reset, &token)?;
 	let mail =
 		link_mail(&state.public_url, links::Kind::Reset, &email, &url, None);
 	// in the background: the answer takes as long for unknown emails
@@ -141,7 +126,7 @@ async fn set_password_route(
 	let kinds = [links::Kind::Invite, links::Kind::Reset];
 	let link = get_link(&state.db.conn(), &req.token)?;
 	if !kinds.contains(&link.kind) {
-		return Err(Error::Request("This link is used or expired".into()));
+		return Err(links::gone());
 	}
 	// a wrong password keeps the link
 	if let Some(message) = password_error(&req.password) {
@@ -154,10 +139,7 @@ async fn set_password_route(
 	// logged out everywhere else
 	set_password_hash(&tx, link.user_id, &hash, None)?;
 	if let Some(name) = req.name.filter(|n| !n.trim().is_empty()) {
-		tx.execute(
-			"UPDATE users SET name = ?1 WHERE id = ?2",
-			params![name.trim(), link.user_id],
-		)?;
+		set_name(&tx, link.user_id, &name)?;
 	}
 	let session = new_session(&tx, link.user_id)?;
 	tx.commit()?;

@@ -326,6 +326,22 @@ impl Schema {
 		self.sections.iter().find(|s| s.handle == handle)
 	}
 
+	/// A section and one of its entry types, an entry is saved as.
+	pub fn section_type(
+		&self,
+		section: &str,
+		ty: &str,
+	) -> crate::error::Result<(&Section, &Component)> {
+		self.get_section(section)
+			.filter(|s| s.types.iter().any(|t| t == ty))
+			.zip(self.entry_type(ty))
+			.ok_or_else(|| {
+				crate::error::Error::Request(format!(
+					"no type {ty} in section {section}"
+				))
+			})
+	}
+
 	pub fn get_site(&self, handle: &str) -> Option<&Site> {
 		self.sites.iter().find(|s| s.handle == handle)
 	}

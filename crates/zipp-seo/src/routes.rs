@@ -12,7 +12,7 @@ use zipp::error::Error;
 
 use crate::api::DefaultsReq;
 use crate::resolve::{EntryPage, Page, defaults_for_entry};
-use crate::sitemap::load_globals;
+use crate::sitemap::published_globals;
 
 async fn defaults_route(
 	State(state): State<AppState>,
@@ -29,7 +29,7 @@ async fn defaults_route(
 	if let (doc, true) = draft_or_live(&conn, id)? {
 		entry.show_draft(&doc);
 	}
-	let globals = load_globals(&conn, schema, site_def)?;
+	let globals = published_globals(&conn, schema, site_def)?;
 
 	let url = entry
 		.uri

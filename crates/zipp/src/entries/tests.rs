@@ -550,3 +550,40 @@ fn searches_literally_and_caps_id_lists() {
 		assert!(err.contains("more than 1000"), "{err}");
 	}
 }
+
+#[test]
+fn singles_give_their_published_fields() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	crate::migrate::apply::create_singles(&conn, &s).unwrap();
+	assert_eq!(single_fields(&conn, &s, "home", "en").unwrap(), json!({}));
+
+	let home = get_entry(&conn, 1, "en").unwrap();
+	let mut i = input("home", "page", "Home", json!({ "intro": "Hi" }));
+	i.site = Some("en".into());
+	save(&conn, &s, Some(home.id), i, None).unwrap();
+	let fields = single_fields(&conn, &s, "home", "en").unwrap();
+	assert_eq!(fields["intro"], "Hi");
+
+	// not published: nothing
+	conn.execute("UPDATE entry_sites SET published = 0", [])
+		.unwrap();
+	let fields = single_fields(&conn, &s, "home", "en").unwrap();
+	assert_eq!(fields, Value::Null);
+}
+
+#[test]
+fn choices_are_in_the_order_of_their_section() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	for title in ["A", "B"] {
+		let i = input("pages", "page", title, json!({}));
+		save(&conn, &s, None, i, None).unwrap();
+	}
+	let all = choices(&conn, &s, &["pages"], "de").unwrap();
+	let titles: Vec<&str> = all.iter().map(|c| c.title.as_str()).collect();
+	assert_eq!(titles, ["A", "B"]);
+	assert!(choices(&conn, &s, &["pages"], "fr").is_err());
+}

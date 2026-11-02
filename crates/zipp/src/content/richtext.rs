@@ -491,16 +491,18 @@ fn escape(s: &str) -> String {
 }
 
 /// The text of a document without formatting, a line per paragraph and
-/// the labels of buttons; blocks are left out (they are components).
-pub fn plain_text(doc: &Value) -> String {
+/// the labels of buttons if `buttons` (search finds them, a description
+/// doesn't say them); blocks are left out (they are components).
+pub fn plain_text(doc: &Value, buttons: bool) -> String {
 	let mut out = String::new();
-	collect_text(doc, &mut out);
+	collect_text(doc, buttons, &mut out);
 	out.trim().to_string()
 }
 
-fn collect_text(node: &Value, out: &mut String) {
+fn collect_text(node: &Value, buttons: bool, out: &mut String) {
 	match node["type"].as_str() {
 		Some("embed") => return,
+		Some("button") if !buttons => return,
 		Some("text") => out.push_str(node["text"].as_str().unwrap_or("")),
 		Some("hardBreak") => out.push(' '),
 		Some("button") => {
@@ -514,7 +516,7 @@ fn collect_text(node: &Value, out: &mut String) {
 		return;
 	};
 	for child in children {
-		collect_text(child, out);
+		collect_text(child, buttons, out);
 	}
 	// words of two paragraphs stay apart
 	if !out.ends_with('\n') {

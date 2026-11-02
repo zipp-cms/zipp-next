@@ -93,11 +93,7 @@ pub fn diff(
 					component: component.clone(),
 					field: f.clone(),
 				},
-				Some(o)
-					if o.kind != f.kind
-						|| o.indexed != f.indexed
-						|| o.translatable != f.translatable =>
-				{
+				Some(o) if migrated_field(o) != migrated_field(f) => {
 					Op::ChangeField {
 						component: component.clone(),
 						field: f.clone(),
@@ -139,15 +135,7 @@ pub fn diff(
 			None => Op::AddSection {
 				section: section.clone(),
 			},
-			Some(o)
-				if o.kind != section.kind
-					|| o.types != section.types
-					|| o.uri != section.uri
-					|| o.type_uris != section.type_uris
-					|| o.site_uris != section.site_uris
-					|| o.uri_if != section.uri_if
-					|| o.max_level != section.max_level =>
-			{
+			Some(o) if migrated_section(o) != migrated_section(section) => {
 				Op::ChangeSection {
 					section: section.clone(),
 				}
@@ -166,4 +154,28 @@ fn without_notes(schema: &Schema) -> Schema {
 		c.fields.retain(|f| f.kind.has_value());
 	}
 	schema
+}
+
+/// A field as migrations compare it: without what only the studio shows
+/// or checks, so a new property makes a migration unless it is left out
+/// here.
+fn migrated_field(f: &Field) -> Field {
+	Field {
+		label: String::new(),
+		required: false,
+		instructions: None,
+		default: None,
+		width: 0,
+		when: None,
+		inline: None,
+		..f.clone()
+	}
+}
+
+/// A section as migrations compare it, see [`migrated_field`].
+fn migrated_section(s: &Section) -> Section {
+	Section {
+		name: String::new(),
+		..s.clone()
+	}
 }

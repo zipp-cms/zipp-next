@@ -111,6 +111,14 @@ fn shares_fields_that_are_not_translatable() {
 	let en = json!({ "intro": "Hello" });
 	let out = share(s.get("page").unwrap(), &de, &en);
 	assert_eq!(out, json!({ "intro": "Hello" }));
+
+	// a page saved as an event: the other site's page fields go first
+	let event = s.get("event").unwrap();
+	let saved = json!({ "city": "Bern" });
+	let out = follow(&s, "page", event, &saved, &en);
+	assert_eq!(out, json!({ "city": "Bern" }));
+	let out = follow(&s, "event", event, &saved, &json!({ "price": 8 }));
+	assert_eq!(out, json!({ "city": "Bern" }));
 }
 
 #[test]

@@ -88,20 +88,11 @@ pub(super) fn describe_view(
 	};
 	let conn = state.db.conn();
 	let uri = percent_decode(&uri);
-	let entry: Option<(i64, String, String)> = conn
-		.query_row(
-			"SELECT e.id, e.section, s.title FROM entries e
-			JOIN entry_sites s ON s.entry_id = e.id
-			WHERE s.site = ?1 AND s.uri = ?2 AND e.deleted_at IS NULL",
-			rusqlite::params![site, uri],
-			|r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-		)
-		.optional()
-		.ok()
-		.flatten();
-	let Some((id, section, title)) = entry.filter(|(_, section, _)| {
-		auth.can(&state.schema, section, Access::View)
-	}) else {
+	let entry = by_uri(&conn, &site, &uri).ok().flatten();
+	let Some(Entry {
+		id, section, title, ..
+	}) = entry.filter(|e| auth.can(&state.schema, &e.section, Access::View))
+	else {
 		return format!("The editor sees the page {url} in site {site}.");
 	};
 	// what is on the page, as the preview shows it

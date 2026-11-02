@@ -116,7 +116,7 @@ fn collect(
 				out.extend(value.as_str().map(markdown_text));
 			}
 			FieldKind::RichText { .. } => {
-				out.push(richtext::plain_text(value));
+				out.push(richtext::plain_text(value, true));
 			}
 			// the cells of text, not numbers, links or options
 			FieldKind::Table { columns } => {

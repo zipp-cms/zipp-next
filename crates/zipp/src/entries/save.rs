@@ -31,16 +31,7 @@ pub fn check(
 	if schema.get_site(&site).is_none() {
 		return Err(Error::Request(format!("unknown site {site}")));
 	}
-	let section = schema
-		.get_section(&input.section)
-		.filter(|s| s.types.contains(&input.ty))
-		.ok_or_else(|| {
-			Error::Request(format!(
-				"no type {} in section {}",
-				input.ty, input.section
-			))
-		})?;
-	let comp = schema.entry_type(&input.ty).unwrap();
+	let (section, comp) = schema.section_type(&input.section, &input.ty)?;
 
 	let parent_id = match id {
 		Some(id) => {
@@ -165,7 +156,6 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 			)?;
 			// another type converts the other sites, the uris may change
 			let retyped = was != c.ty;
-			let from = schema.entry_type(&was).filter(|_| retyped);
 			conn.execute(
 				"UPDATE entry_sites SET title = ?1, slug = ?2, uri = ?3,
 				published = ?4, fields = ?5, updated_at = ?6
@@ -190,12 +180,8 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 					params![id, other.handle],
 					|r| r.get(0),
 				)?;
-				let mut theirs =
-					serde_json::from_str(&theirs).unwrap_or_default();
-				if let Some(from) = from {
-					theirs = convert(from, comp, &theirs);
-				}
-				let theirs = share(comp, fields, &theirs);
+				let theirs = serde_json::from_str(&theirs).unwrap_or_default();
+				let theirs = follow(schema, &was, comp, fields, &theirs);
 				conn.execute(
 					"UPDATE entry_sites SET fields = ?1
 					WHERE entry_id = ?2 AND site = ?3",

@@ -30,10 +30,8 @@ async fn events(State(state): State<AppState>) -> Result<impl IntoResponse> {
 		("type", "event"),
 		("order", "date"),
 		("f.date.gte", today),
-	]
-	.map(|(k, v)| (k.to_string(), v.to_string()));
-	let mut q = Query::parse(&state.schema, &params).unwrap();
-	q.published_only = true;
+	];
+	let q = Query::published(&state.schema, &params).unwrap();
 	let (entries, _) = zipp::entries::list(&conn, &q)?;
 	let events: Vec<_> = entries
 		.into_iter()

@@ -196,12 +196,14 @@ fn imports_a_site() {
 		)
 		.unwrap();
 	let footer: Value = serde_json::from_str(&footer).unwrap();
+	// the url could be one of the sites' own, which GraphQL doesn't open
+	// in a new tab: the link says it
 	assert_eq!(
 		footer["navigation"],
 		json!([{
 			"type": "entry", "value": about.id,
 			"children": [{ "type": "url", "value": "https://insta.com",
-				"label": "Insta" }],
+				"label": "Insta", "newTab": true }],
 		}])
 	);
 

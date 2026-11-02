@@ -393,3 +393,22 @@ fn tabs_of_blocks_need_no_migration() {
 	let s = block(site(), false);
 	assert_eq!(diff(&s, &block(site(), true), &[]).unwrap(), []);
 }
+
+#[test]
+fn only_what_the_studio_shows_needs_no_migration() {
+	let s = site();
+	let mut s2 = s.clone();
+	let f = &mut s2.get_mut("event").unwrap().fields[0];
+	f.required = true;
+	f.default = Some(json!("Bern"));
+	s2.sections[0].name = "Start".into();
+	assert_eq!(diff(&s, &s2, &[]).unwrap(), []);
+
+	// anything else does, also what comes later
+	let mut s3 = s.clone();
+	s3.sections[0].site_uris.insert("en".into(), "home".into());
+	s3.get_mut("event").unwrap().fields[0].indexed = false;
+	let ops = diff(&s, &s3, &[]).unwrap();
+	assert!(matches!(ops[0], Op::ChangeField { .. }), "{ops:?}");
+	assert!(matches!(ops[1], Op::ChangeSection { .. }), "{ops:?}");
+}

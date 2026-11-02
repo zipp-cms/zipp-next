@@ -234,7 +234,7 @@ pub(super) fn content_field(
 				FieldKind::Link { new_tab, .. } if !value.is_null() => {
 					let to = targets(&ctx, &site, &value).await?;
 					let link = resolve_link(&ctx, &value, &site, new_tab, &to)?;
-					Ok(link.map(FieldValue::value))
+					link.as_ref().map(link_value).transpose()
 				}
 				FieldKind::Custom { .. } => match custom {
 					Some((t, options)) => t.resolve(&ctx, &options, &value),
@@ -263,8 +263,9 @@ pub(super) fn content_field(
 				FieldKind::Navigation { .. } => {
 					let to = targets(&ctx, &site, &value).await?;
 					let items = nav_items(&ctx, &value, &site, &to)?;
+					let items = items.iter().map(link_value);
 					Ok(Some(FieldValue::list(
-						items.into_iter().map(FieldValue::value),
+						items.collect::<async_graphql::Result<Vec<_>>>()?,
 					)))
 				}
 				FieldKind::Texts { keys } => {
@@ -433,7 +434,7 @@ fn table_cell(column: &crate::schema::Column) -> GqlField {
 				ColumnKind::Link { .. } if v.is_object() => {
 					let to = targets(&ctx, &row.site, v).await?;
 					let link = resolve_link(&ctx, v, &row.site, true, &to)?;
-					return Ok(link.map(FieldValue::value));
+					return link.as_ref().map(link_value).transpose();
 				}
 				ColumnKind::Link { .. } => return Ok(None),
 				ColumnKind::Text

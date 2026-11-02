@@ -109,34 +109,27 @@ pub enum Order {
 	Field(String, bool),
 }
 
-/// The order of the entries of a structure, depth first, from its top
-/// entries; the trash isn't in it. Positions are padded so the path sorts
-/// as text.
-const TREE: &str = "WITH RECURSIVE tree(id, sort) AS (
+/// The order of the entries of the structures, depth first, from their
+/// top entries, with `one` of a section (`?`); the trash isn't in it.
+/// Positions are padded so the path sorts as text.
+fn tree(one: bool) -> String {
+	let section = if one { " AND section = ?" } else { "" };
+	format!(
+		"WITH RECURSIVE tree(id, sort) AS (
 	SELECT id, printf('%010d', position) FROM entries
-	WHERE parent_id IS NULL AND deleted_at IS NULL AND section = ?
+	WHERE parent_id IS NULL AND deleted_at IS NULL{section}
 	UNION ALL
 	SELECT e.id, t.sort || printf('%010d', e.position)
 	FROM entries e JOIN tree t ON e.parent_id = t.id
 	WHERE e.deleted_at IS NULL
-) ";
-
-/// [`TREE`] of the structures of all sections.
-const TREES: &str = "WITH RECURSIVE tree(id, sort) AS (
-	SELECT id, printf('%010d', position) FROM entries
-	WHERE parent_id IS NULL AND deleted_at IS NULL
-	UNION ALL
-	SELECT e.id, t.sort || printf('%010d', e.position)
-	FROM entries e JOIN tree t ON e.parent_id = t.id
-	WHERE e.deleted_at IS NULL
-) ";
+) "
+	)
+}
 
 impl Query {
-	pub fn parse(
-		schema: &Schema,
-		params: &[(String, String)],
-	) -> Result<Self, String> {
-		let mut q = Query {
+	/// All entries of the primary site, the newest first.
+	pub fn new(schema: &Schema) -> Self {
+		Query {
 			site: schema.primary_site().handle.clone(),
 			section: None,
 			sections: None,
@@ -160,7 +153,28 @@ impl Query {
 			preview_sections: vec![],
 			with_uri: false,
 			nothing: false,
-		};
+		}
+	}
+
+	/// A query of what is live, for plugins and the site's own routes.
+	pub fn published(
+		schema: &Schema,
+		params: &[(&str, &str)],
+	) -> Result<Self, String> {
+		let params: Vec<(String, String)> = params
+			.iter()
+			.map(|(k, v)| (k.to_string(), v.to_string()))
+			.collect();
+		let mut q = Self::parse(schema, &params)?;
+		q.published_only = true;
+		Ok(q)
+	}
+
+	pub fn parse(
+		schema: &Schema,
+		params: &[(String, String)],
+	) -> Result<Self, String> {
+		let mut q = Self::new(schema);
 		let int = |k: &str, v: &str| {
 			v.parse::<i64>()
 				.map_err(|_| format!("{k} must be a number"))
@@ -179,7 +193,6 @@ impl Query {
 				_ => q.types = types,
 			}
 		}
-		// like Craft: a channel newest first, a structure in its order
 		let mut ordered = false;
 
 		for (key, value) in params {
@@ -233,21 +246,10 @@ impl Query {
 				"orderBy" => {
 					let mut words = value.split_whitespace();
 					let name = words.next().unwrap_or("postDate");
-					let desc = words
+					q.desc = words
 						.next()
 						.is_some_and(|d| d.eq_ignore_ascii_case("desc"));
-					q.desc = desc;
-					q.order = match name {
-						"title" => Order::Column("title"),
-						"postDate" => Order::Column("post_date"),
-						"dateCreated" => Order::Column("created_at"),
-						"dateUpdated" => Order::Column("updated_at"),
-						"lft" | "structure" => Order::Structure,
-						_ => {
-							let num = q.indexed_kind(schema, name)?;
-							Order::Field(name.into(), num)
-						}
-					};
+					q.order = q.order_of(schema, name)?;
 					ordered = true;
 				}
 				"order" => {
@@ -255,18 +257,9 @@ impl Query {
 						Some(n) => (true, n),
 						None => (false, value.as_str()),
 					};
-					ordered = true;
 					q.desc = desc;
-					q.order = match name {
-						"title" => Order::Column("title"),
-						"created" => Order::Column("created_at"),
-						"updated" => Order::Column("updated_at"),
-						"structure" => Order::Structure,
-						_ => {
-							let num = q.indexed_kind(schema, name)?;
-							Order::Field(name.into(), num)
-						}
-					};
+					q.order = q.order_of(schema, name)?;
+					ordered = true;
 				}
 				_ => match key.strip_prefix("f.") {
 					Some(f) => {
@@ -279,25 +272,39 @@ impl Query {
 		}
 
 		if !ordered {
-			let kind = q
-				.section
-				.as_ref()
-				.and_then(|s| schema.get_section(s))
-				.map(|s| s.kind);
-			match kind {
-				Some(SectionKind::Structure) => {
-					q.order = Order::Structure;
-					q.desc = false;
-				}
-				// newest first, like Craft's channels
-				Some(SectionKind::Channel) => {
-					q.order = Order::Column("post_date")
-				}
-				_ => {}
-			}
+			q.section_order(schema);
 		}
 
 		Ok(q)
+	}
+
+	/// The order of a name of `order` or Craft's `orderBy`, else of an
+	/// indexed field.
+	fn order_of(&self, schema: &Schema, name: &str) -> Result<Order, String> {
+		Ok(match name {
+			"title" => Order::Column("title"),
+			"postDate" => Order::Column("post_date"),
+			"created" | "dateCreated" => Order::Column("created_at"),
+			"updated" | "dateUpdated" => Order::Column("updated_at"),
+			"structure" | "lft" => Order::Structure,
+			_ => Order::Field(name.into(), self.indexed_kind(schema, name)?),
+		})
+	}
+
+	/// The order of the section without one asked for, like Craft: a
+	/// channel newest first, a structure in its order.
+	pub(crate) fn section_order(&mut self, schema: &Schema) {
+		let section = self.section.as_ref().and_then(|s| schema.get_section(s));
+		match section.map(|s| s.kind) {
+			Some(SectionKind::Structure) => {
+				self.order = Order::Structure;
+				self.desc = false;
+			}
+			Some(SectionKind::Channel) => {
+				self.order = Order::Column("post_date")
+			}
+			_ => {}
+		}
 	}
 
 	/// Whether an indexed field is stored as number.
@@ -359,11 +366,11 @@ impl Query {
 
 	/// The `WITH` clause that goes before `SELECT`, for the tree, and its
 	/// params.
-	pub fn with(&self) -> (&'static str, Vec<Value>) {
+	pub fn with(&self) -> (String, Vec<Value>) {
 		match &self.section {
-			_ if !self.tree() => ("", vec![]),
-			Some(s) => (TREE, vec![Value::Text(s.clone())]),
-			None => (TREES, vec![]),
+			_ if !self.tree() => (String::new(), vec![]),
+			Some(s) => (tree(true), vec![Value::Text(s.clone())]),
+			None => (tree(false), vec![]),
 		}
 	}
 

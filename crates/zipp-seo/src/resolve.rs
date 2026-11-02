@@ -11,6 +11,7 @@ use serde_json::{Map, Value, json};
 
 use crate::{ORGANIZATION_TYPES, Seo, SeoDefaults};
 use zipp::assets::{Asset, transform_size};
+use zipp::content::{markdown_text, richtext};
 use zipp::db::iso;
 use zipp::entries::Entry;
 use zipp::schema::{FieldKind, Schema, Site, Transform};
@@ -213,67 +214,6 @@ fn at<'a>(fields: &'a Value, path: &str) -> &'a Value {
 	path.split('.').fold(fields, |v, key| &v[key])
 }
 
-/// The text of html: tags out, entities decoded, the words of blocks
-/// kept apart (`<p>a</p><p>b</p>` is `a b`, `<em>a</em>,` is `a,`).
-fn html_text(html: &str) -> String {
-	let mut out = String::new();
-	let mut rest = html;
-	while let Some(start) = rest.find('<') {
-		out.push_str(&rest[..start]);
-		let Some(end) = rest[start..].find('>') else {
-			break;
-		};
-		let tag = rest[start + 1..start + end].trim_start_matches('/');
-		let name = tag
-			.chars()
-			.take_while(|c| c.is_ascii_alphanumeric())
-			.collect::<String>()
-			.to_ascii_lowercase();
-		let block = matches!(
-			name.as_str(),
-			"p" | "div" | "li" | "br" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
-		);
-		if block {
-			out.push(' ');
-		}
-		rest = &rest[start + end + 1..];
-	}
-	out.push_str(rest);
-	out.replace("&lt;", "<")
-		.replace("&gt;", ">")
-		.replace("&quot;", "\"")
-		.replace("&#39;", "'")
-		.replace("&nbsp;", " ")
-		.replace("&amp;", "&")
-}
-
-/// The text of a text, markdown or rich text value.
-pub fn plain_text(v: &Value) -> String {
-	fn walk(v: &Value, out: &mut String) {
-		if let Some(t) = v["text"].as_str() {
-			out.push_str(t);
-		}
-		// buttons and embedded blocks are no text
-		let ty = v["type"].as_str().unwrap_or_default();
-		if ty == "button" || ty == "embed" {
-			return;
-		}
-		for c in v["content"].as_array().into_iter().flatten() {
-			walk(c, out);
-		}
-		if matches!(ty, "paragraph" | "heading" | "listItem") {
-			out.push(' ');
-		}
-	}
-	let mut out = String::new();
-	match v {
-		Value::String(s) => out = html_text(s),
-		Value::Object(_) => walk(v, &mut out),
-		_ => {}
-	}
-	out.split_whitespace().collect::<Vec<_>>().join(" ")
-}
-
 pub fn truncate(text: &str, length: usize) -> String {
 	if text.chars().count() <= length {
 		return text.into();
@@ -304,21 +244,10 @@ pub fn render_title(
 	rendered.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// The robots of an entry, also whether it is in the sitemap.
-pub fn robots(
-	schema: &Schema,
-	entry: &Entry,
-	globals: &Globals,
-	indexing: bool,
-) -> String {
-	if !indexing {
-		return "noindex, nofollow".into();
-	}
-	let field = field_data(schema, entry);
+/// The robots of an entry with the values of its SEO field.
+fn robots(field: &Value, levels: &[Level], globals: &Globals) -> String {
 	text(&field["robots"])
-		.or_else(|| {
-			first(&defaults(schema, globals, entry), |d| d.robots.as_ref())
-		})
+		.or_else(|| first(levels, |d| d.robots.as_ref()))
 		.unwrap_or_else(|| globals.robots.clone())
 }
 
@@ -330,13 +259,45 @@ pub fn in_sitemap(
 	url: &str,
 	globals: &Globals,
 ) -> bool {
-	let canonical = text(&field_data(schema, entry)["canonicalUrl"]);
+	let field = field_data(schema, entry);
+	let canonical = text(&field["canonicalUrl"]);
 	if canonical.is_some_and(|c| c != url) {
 		return false;
 	}
 	let levels = defaults(schema, globals, entry);
 	levels.iter().find_map(|l| l.sitemap) != Some(false)
-		&& !robots(schema, entry, globals, true).contains("noindex")
+		&& !robots(&field, &levels, globals).contains("noindex")
+}
+
+/// The global settings of a site, `fields` loads those of `seoSettings`
+/// in a site: its own and the primary site's.
+pub fn load_globals<E>(
+	schema: &Schema,
+	site: &Site,
+	fields: impl Fn(&str) -> Result<Value, E>,
+) -> Result<Globals, E> {
+	let primary = &schema.primary_site().handle;
+	Ok(globals(site, &fields(&site.handle)?, &fields(primary)?))
+}
+
+/// The hreflang alternates of a page from its url in the sites, with
+/// `x-default` the primary site's; none without another language.
+pub fn alternates<'a>(
+	schema: &Schema,
+	urls: impl IntoIterator<Item = (&'a Site, String)>,
+) -> Vec<(String, String)> {
+	let primary = &schema.primary_site().handle;
+	let mut out = vec![];
+	for (site, url) in urls {
+		out.push((site.language.clone(), url.clone()));
+		if &site.handle == primary {
+			out.push(("x-default".into(), url));
+		}
+	}
+	if out.len() <= 2 {
+		out.clear();
+	}
+	out
 }
 
 /// An entry's page: what only an entry has.
@@ -368,33 +329,103 @@ pub struct Page<'a> {
 pub fn defaults_for_entry(page: &Page) -> Option<Value> {
 	let e = page.entry.as_ref()?;
 	let entry = e.entry;
+	let v = Values::of_entry(page, e, &Value::Null);
 	let defaults = defaults(page.schema, &page.globals, entry);
-	let pattern = first(&defaults, |d| d.title_pattern.as_ref())
-		.unwrap_or_else(|| page.globals.title_pattern.clone());
+	let pattern = title_pattern(&defaults, &page.globals);
 	let section = section_name(page.schema, entry);
 	let marker = "\u{1}";
 	let rendered =
 		render_title(&pattern, marker, &page.globals.site_name, &section);
 	let (prefix, suffix) = rendered.split_once(marker).unwrap_or(("", ""));
-	let image = mapped_image(&defaults, entry)
-		.or_else(|| defaults.iter().find_map(|d| d.image))
-		.or(page.globals.image)
-		.and_then(|id| (page.asset)(id));
 
 	Some(json!({
 		"title": mapped_title(&defaults, entry),
 		"titlePrefix": prefix,
 		"titleSuffix": suffix,
-		"description": mapped_description(page.schema, &defaults, entry)
-			.or_else(|| first(&defaults, |d| d.description.as_ref()))
-			.or(page.globals.description.clone()),
-		"image": image.map(|a| image_data(page, &a, true)),
-		"robots": first(&defaults, |d| d.robots.as_ref())
-			.unwrap_or(page.globals.robots.clone()),
+		"description": v.description,
+		"image": v.image.map(|a| image_data(page, &a, true)),
+		"robots": v.robots,
 		"canonicalUrl": e.url,
 		"url": e.url,
 		"siteName": page.globals.site_name,
 	}))
+}
+
+/// What a page shows, each from the first place that has it.
+struct Values {
+	title: String,
+	description: Option<String>,
+	image: Option<Asset>,
+	social_title: String,
+	social_description: Option<String>,
+	social_image: Option<Asset>,
+	url: Option<String>,
+	canonical: Option<String>,
+	robots: String,
+}
+
+impl Values {
+	/// An entry's: `field` are the values of its SEO field (null for the
+	/// placeholders), then the fields the code maps, the levels, the
+	/// globals.
+	fn of_entry(page: &Page, e: &EntryPage, field: &Value) -> Self {
+		let (g, entry) = (&page.globals, e.entry);
+		let defaults = defaults(page.schema, g, entry);
+		let title = render_title(
+			&title_pattern(&defaults, g),
+			&text(&field["title"])
+				.unwrap_or_else(|| mapped_title(&defaults, entry)),
+			&g.site_name,
+			&section_name(page.schema, entry),
+		);
+		let description = text(&field["description"])
+			.or_else(|| mapped_description(page.schema, &defaults, entry))
+			.or_else(|| first(&defaults, |d| d.description.as_ref()))
+			.or(g.description.clone());
+		let image = first_id(&field["image"])
+			.or_else(|| mapped_image(&defaults, entry))
+			.or_else(|| defaults.iter().find_map(|d| d.image))
+			.or(g.image)
+			.and_then(|id| (page.asset)(id));
+		let social_image = first_id(&field["socialImage"])
+			.and_then(|id| (page.asset)(id))
+			.or(image.clone());
+		Values {
+			social_title: text(&field["socialTitle"]).unwrap_or(title.clone()),
+			social_description: text(&field["socialDescription"])
+				.or(description.clone()),
+			social_image,
+			title,
+			description,
+			image,
+			url: e.url.clone(),
+			canonical: text(&field["canonicalUrl"]).or(e.url.clone()),
+			robots: robots(field, &defaults, g),
+		}
+	}
+
+	/// A page without an entry: the site's.
+	fn of_site(page: &Page) -> Self {
+		let g = &page.globals;
+		let image = g.image.and_then(|id| (page.asset)(id));
+		let url = Some(page.site_url.clone());
+		Values {
+			title: g.site_name.clone(),
+			description: g.description.clone(),
+			image: image.clone(),
+			social_title: g.site_name.clone(),
+			social_description: g.description.clone(),
+			social_image: image,
+			url: url.clone(),
+			canonical: url,
+			robots: g.robots.clone(),
+		}
+	}
+}
+
+fn title_pattern(levels: &[Level], globals: &Globals) -> String {
+	first(levels, |d| d.title_pattern.as_ref())
+		.unwrap_or_else(|| globals.title_pattern.clone())
 }
 
 fn section_name(schema: &Schema, entry: &Entry) -> String {
@@ -416,15 +447,19 @@ fn mapped_description(
 		.get(&entry.ty)
 		.and_then(|c| schema.field_at(c, &path))
 		.is_some_and(|f| f.kind == FieldKind::Markdown);
-	let text = match (markdown, value.as_str()) {
-		(true, Some(md)) => {
-			plain_text(&Value::from(zipp::content::markdown_html(md)))
-		}
-		// plain text has no tags to take out
-		(false, Some(t)) => t.split_whitespace().collect::<Vec<_>>().join(" "),
-		_ => plain_text(value),
-	};
+	let text = text_of(value, markdown);
 	(!text.is_empty()).then(|| truncate(&text, DESCRIPTION_LENGTH))
+}
+
+/// The text of a text, markdown or rich text value on one line.
+pub(crate) fn text_of(value: &Value, markdown: bool) -> String {
+	let text = match (markdown, value.as_str()) {
+		(true, Some(md)) => markdown_text(md),
+		(false, Some(t)) => t.into(),
+		// a button's label is no description
+		_ => richtext::plain_text(value, false),
+	};
+	text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// The text of the field the title comes from, else the entry's title.
@@ -441,81 +476,69 @@ fn mapped_image(defaults: &[Level], entry: &Entry) -> Option<i64> {
 
 /// The resolved SEO as the plugin's `seoJson`.
 pub fn resolve(page: &Page) -> Value {
-	let g = &page.globals;
-	let asset = |id: Option<i64>| id.and_then(|id| (page.asset)(id));
-
-	let (title, description, image, social, url, canonical, robots) =
-		match &page.entry {
-			Some(e) => {
-				let entry = e.entry;
-				let field = field_data(page.schema, entry);
-				let defaults = defaults(page.schema, g, entry);
-				let pattern = first(&defaults, |d| d.title_pattern.as_ref())
-					.unwrap_or_else(|| g.title_pattern.clone());
-				let title = render_title(
-					&pattern,
-					&text(&field["title"])
-						.unwrap_or_else(|| mapped_title(&defaults, entry)),
-					&g.site_name,
-					&section_name(page.schema, entry),
-				);
-				let description = text(&field["description"])
-					.or_else(|| {
-						mapped_description(page.schema, &defaults, entry)
-					})
-					.or_else(|| first(&defaults, |d| d.description.as_ref()))
-					.or(g.description.clone());
-				let image = asset(
-					first_id(&field["image"])
-						.or_else(|| mapped_image(&defaults, entry))
-						.or_else(|| defaults.iter().find_map(|d| d.image))
-						.or(g.image),
-				);
-				let social = (
-					text(&field["socialTitle"]).unwrap_or(title.clone()),
-					text(&field["socialDescription"]).or(description.clone()),
-					asset(first_id(&field["socialImage"])).or(image.clone()),
-				);
-				let canonical = text(&field["canonicalUrl"]).or(e.url.clone());
-				let robots = robots(page.schema, entry, g, page.indexing);
-				(
-					title,
-					description,
-					image,
-					social,
-					e.url.clone(),
-					canonical,
-					robots,
-				)
-			}
-			None => {
-				let image = asset(g.image);
-				let social =
-					(g.site_name.clone(), g.description.clone(), image.clone());
-				let robots = match page.indexing {
-					true => g.robots.clone(),
-					false => "noindex, nofollow".into(),
-				};
-				let url = Some(page.site_url.clone());
-				(
-					g.site_name.clone(),
-					g.description.clone(),
-					image,
-					social,
-					url.clone(),
-					url,
-					robots,
-				)
-			}
-		};
-	let (social_title, social_description, social_image) = social;
+	let mut v = match &page.entry {
+		Some(e) => {
+			let field = field_data(page.schema, e.entry);
+			Values::of_entry(page, e, &field)
+		}
+		None => Values::of_site(page),
+	};
+	if !page.indexing {
+		v.robots = "noindex, nofollow".into();
+	}
 	let locale = page.site.language.replace('-', "_");
 	let alternates =
 		page.entry.as_ref().map_or(vec![], |e| e.alternates.clone());
-	let image_json = image.as_ref().map(|a| image_data(page, a, true));
-	let social_json = social_image.as_ref().map(|a| image_data(page, a, true));
+	let social_image =
+		v.social_image.as_ref().map(|a| image_data(page, a, true));
 
-	// meta tags
+	// links
+	let mut links = vec![];
+	if let Some(c) = &v.canonical {
+		links.push(json!({ "rel": "canonical", "href": c, "hreflang": null }));
+	}
+	for (lang, href) in &alternates {
+		links.push(
+			json!({ "rel": "alternate", "href": href, "hreflang": lang }),
+		);
+	}
+
+	let json_ld = json_ld(
+		page,
+		&v.title,
+		v.description.as_deref(),
+		v.image.as_ref(),
+		v.url.as_deref(),
+	);
+
+	json!({
+		"title": v.title,
+		"description": v.description,
+		"canonical": v.canonical,
+		"robots": v.robots,
+		"siteName": page.globals.site_name,
+		"locale": locale,
+		"image": v.image.as_ref().map(|a| image_data(page, a, true)),
+		"socialTitle": v.social_title,
+		"socialDescription": v.social_description,
+		"socialImage": social_image,
+		"alternates": alternates.iter()
+			.map(|(l, u)| json!({ "hreflang": l, "url": u }))
+			.collect::<Vec<_>>(),
+		"meta": meta(page, &v, &alternates, social_image.as_ref()),
+		"links": links,
+		"jsonLd": script_json(&json_ld),
+	})
+}
+
+/// The meta tags, of what has a value.
+fn meta(
+	page: &Page,
+	v: &Values,
+	alternates: &[(String, String)],
+	social_image: Option<&Value>,
+) -> Vec<Value> {
+	let g = &page.globals;
 	let mut meta = vec![];
 	let mut add = |name: Option<&str>,
 	               property: Option<&str>,
@@ -526,15 +549,19 @@ pub fn resolve(page: &Page) -> Value {
 			);
 		}
 	};
-	add(Some("description"), None, description.clone());
-	add(Some("robots"), None, Some(robots.clone()));
+	add(Some("description"), None, v.description.clone());
+	add(Some("robots"), None, Some(v.robots.clone()));
 	add(None, Some("og:type"), Some("website".into()));
 	add(None, Some("og:site_name"), Some(g.site_name.clone()));
-	add(None, Some("og:title"), Some(social_title.clone()));
-	add(None, Some("og:description"), social_description.clone());
-	add(None, Some("og:url"), canonical.clone());
-	add(None, Some("og:locale"), Some(locale.clone()));
-	for (lang, _) in &alternates {
+	add(None, Some("og:title"), Some(v.social_title.clone()));
+	add(None, Some("og:description"), v.social_description.clone());
+	add(None, Some("og:url"), v.canonical.clone());
+	add(
+		None,
+		Some("og:locale"),
+		Some(page.site.language.replace('-', "_")),
+	);
+	for (lang, _) in alternates {
 		if lang != "x-default" && *lang != page.site.language {
 			add(
 				None,
@@ -543,7 +570,7 @@ pub fn resolve(page: &Page) -> Value {
 			);
 		}
 	}
-	if let Some(img) = &social_json {
+	if let Some(img) = social_image {
 		let s = |k: &str| {
 			img[k]
 				.as_str()
@@ -559,7 +586,7 @@ pub fn resolve(page: &Page) -> Value {
 		Some("twitter:card"),
 		None,
 		Some(
-			if social_json.is_some() {
+			if social_image.is_some() {
 				"summary_large_image"
 			} else {
 				"summary"
@@ -574,44 +601,7 @@ pub fn resolve(page: &Page) -> Value {
 			Some(format!("@{}", handle.trim_start_matches('@'))),
 		);
 	}
-
-	// links
-	let mut links = vec![];
-	if let Some(c) = &canonical {
-		links.push(json!({ "rel": "canonical", "href": c, "hreflang": null }));
-	}
-	for (lang, href) in &alternates {
-		links.push(
-			json!({ "rel": "alternate", "href": href, "hreflang": lang }),
-		);
-	}
-
-	let json_ld = json_ld(
-		page,
-		&title,
-		description.as_deref(),
-		image.as_ref(),
-		url.as_deref(),
-	);
-
-	json!({
-		"title": title,
-		"description": description,
-		"canonical": canonical,
-		"robots": robots,
-		"siteName": g.site_name,
-		"locale": locale,
-		"image": image_json,
-		"socialTitle": social_title,
-		"socialDescription": social_description,
-		"socialImage": social_json,
-		"alternates": alternates.iter()
-			.map(|(l, u)| json!({ "hreflang": l, "url": u }))
-			.collect::<Vec<_>>(),
-		"meta": meta,
-		"links": links,
-		"jsonLd": script_json(&json_ld),
-	})
+	meta
 }
 
 /// JSON for a `<script>` of the page: a title with `</script>` can't end

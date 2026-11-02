@@ -1462,3 +1462,61 @@ async fn children_of_a_list_load_together_in_their_order() {
 		])
 	);
 }
+
+#[tokio::test]
+async fn the_name_lists_match_the_types() {
+	use crate::schema::{Field, LinkKind, Section};
+	let db = Db::memory().unwrap();
+	// with a navigation for its type
+	let s = site().section(Section::single("menu", "menu")).entry(
+		"menu",
+		"Menu",
+		[Field::navigation("main", [LinkKind::Url])],
+	);
+	let gql = build(Arc::new(s), db, String::new(), SiteUrls::new()).unwrap();
+	let query = "{
+		entry: __type(name: \"Entry\") { fields { name } }
+		asset: __type(name: \"Asset\") { fields { name } }
+		link: __type(name: \"Link\") { fields { name } }
+		navItem: __type(name: \"NavItem\") { fields { name } }
+		__schema { queryType { fields { name args { name } } } }
+	}";
+	let v = run(&gql, query, false).await;
+	let names = |list: &Value| -> std::collections::BTreeSet<String> {
+		let list = list.as_array().unwrap().iter();
+		list.map(|f| f["name"].as_str().unwrap().to_string())
+			.collect()
+	};
+	let set = |l: &[&str]| l.iter().map(|s| s.to_string()).collect();
+
+	assert_eq!(names(&v["entry"]["fields"]), set(ENTRY_FIELDS));
+	assert_eq!(names(&v["asset"]["fields"]), set(ASSET_FIELDS));
+
+	// the arguments of entries, and the relation field of the test site
+	let fields = v["__schema"]["queryType"]["fields"].as_array().unwrap();
+	let entries = fields.iter().find(|f| f["name"] == "entries").unwrap();
+	let mut taken = set(query::TAKEN);
+	taken.insert("page".into());
+	assert_eq!(names(&entries["args"]), taken);
+
+	// what a resolved link has
+	let link = ResolvedLink {
+		kind: LinkKind::Url,
+		url: String::new(),
+		label: None,
+		default_label: String::new(),
+		target: None,
+		download: false,
+	};
+	let keys = |v: Value| -> std::collections::BTreeSet<String> {
+		v.as_object().unwrap().keys().cloned().collect()
+	};
+	let json = serde_json::to_value(&link).unwrap();
+	assert_eq!(names(&v["link"]["fields"]), keys(json));
+	let item = NavItem {
+		link,
+		children: vec![],
+	};
+	let json = serde_json::to_value(&item).unwrap();
+	assert_eq!(names(&v["navItem"]["fields"]), keys(json));
+}

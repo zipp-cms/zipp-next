@@ -304,6 +304,22 @@ pub fn convert(from: &Component, to: &Component, fields: &Value) -> Value {
 	Value::Object(out.into_iter().filter(|(k, _)| same(k)).collect())
 }
 
+/// The fields of another site after a save of `saved` as type `to`: of
+/// type `from` they are converted first, then the shared ones taken.
+pub fn follow(
+	schema: &Schema,
+	from: &str,
+	to: &Component,
+	saved: &Value,
+	theirs: &Value,
+) -> Value {
+	let converted = match schema.entry_type(from) {
+		Some(from) if from.handle != to.handle => convert(from, to, theirs),
+		_ => theirs.clone(),
+	};
+	share(to, saved, &converted)
+}
+
 /// The fields of `into` with the shared (not translatable) ones taken
 /// from `from`, so every site has the same shared values.
 pub fn share(comp: &Component, from: &Value, into: &Value) -> Value {

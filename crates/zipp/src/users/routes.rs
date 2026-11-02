@@ -7,9 +7,7 @@ use super::{
 };
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
-use crate::auth::links::{
-	self, create_link, end_password_links, link_mail, link_url,
-};
+use crate::auth::links::{self, end_password_links, link_mail, new_link};
 use crate::auth::{
 	Admin, Authed, end_sessions, hash_password, password_matches,
 	set_password_hash,
@@ -158,26 +156,24 @@ async fn password_link_route(
 	Admin(auth): Admin,
 	Req(req): Req<PasswordLinkReq>,
 ) -> ApiResult<PasswordLinkReq> {
-	let (kind, token, expires_at, to, by) = {
+	let (kind, url, expires_at, to, by) = {
 		let conn = state.db.conn();
 		let account = get(&conn, req.id)?;
 		let kind = match account.invited {
 			true => links::Kind::Invite,
 			false => links::Kind::Reset,
 		};
-		// without the url of the cms there is no link to make
-		link_url(&state.public_url, kind, "")?;
-		let (token, expires_at) =
-			create_link(&conn, req.id, kind, Some(auth.user_id))?;
+		let by = Some(auth.user_id);
+		let (url, expires_at) =
+			new_link(&conn, &state.public_url, req.id, kind, by)?;
 		let by = get(&conn, auth.user_id)?.user;
 		let by = if by.name.is_empty() {
 			by.email
 		} else {
 			by.name
 		};
-		(kind, token, expires_at, account.user.email, by)
+		(kind, url, expires_at, account.user.email, by)
 	};
-	let url = link_url(&state.public_url, kind, &token)?;
 	if req.send {
 		let mail = link_mail(&state.public_url, kind, &to, &url, Some(&by));
 		state.mail.send(mail).await?;
@@ -201,12 +197,12 @@ async fn login_as_route(
 		return Err(Error::Request("you can't log in as an admin".into()));
 	}
 	let kind = links::Kind::LoginAs;
-	link_url(&state.public_url, kind, "")?;
-	let (token, expires_at) =
-		create_link(&conn, req.id, kind, Some(auth.user_id))?;
+	let by = Some(auth.user_id);
+	let (url, expires_at) =
+		new_link(&conn, &state.public_url, req.id, kind, by)?;
 	Ok(Json(LinkResp {
 		kind,
-		url: link_url(&state.public_url, kind, &token)?,
+		url,
 		expires_at,
 		sent: false,
 	}))

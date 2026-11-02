@@ -9,7 +9,9 @@ use std::collections::{BTreeMap, HashMap};
 use async_graphql::dataloader::{DataLoader, HashMapCache, Loader};
 
 use super::*;
+use crate::content::link_kind;
 use crate::entries::query::MAX_IDS;
+use crate::schema::LinkKind;
 
 /// The loaders of a request, see [`Loaded`].
 pub(super) struct Loaders {
@@ -213,11 +215,11 @@ fn link_ids(value: &Value, entries: &mut Vec<i64>, assets: &mut Vec<i64>) {
 	match value {
 		Value::Object(o) => {
 			let id = o.get("value").and_then(Value::as_i64);
-			match (o.get("type").and_then(Value::as_str), id) {
-				(Some("entry"), Some(id)) if !entries.contains(&id) => {
+			match (link_kind(value), id) {
+				(Some(LinkKind::Entry), Some(id)) if !entries.contains(&id) => {
 					entries.push(id)
 				}
-				(Some("asset"), Some(id)) if !assets.contains(&id) => {
+				(Some(LinkKind::Asset), Some(id)) if !assets.contains(&id) => {
 					assets.push(id)
 				}
 				_ => {}

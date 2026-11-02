@@ -13,8 +13,8 @@ use serde_json::Value;
 
 use crate::auth::Authed;
 use crate::content::{
-	FieldError, Target, convert, drop_links, index_values, relations, share,
-	validate, with_defaults,
+	FieldError, Target, drop_links, follow, index_values, relations, validate,
+	with_defaults,
 };
 use crate::db::{marks, now};
 use crate::drafts::record_revision;
@@ -202,14 +202,18 @@ pub fn choices(
 	sections: &[&str],
 	site: &str,
 ) -> Result<Vec<EntryChoice>> {
+	if schema.get_site(site).is_none() {
+		return Err(Error::Request(format!("unknown site {site}")));
+	}
 	let mut all = vec![];
 	for section in sections {
-		let params = [
-			("section".into(), section.to_string()),
-			("site".into(), site.into()),
-			("limit".into(), query::MAX_LIMIT.to_string()),
-		];
-		let q = Query::parse(schema, &params).map_err(Error::Request)?;
+		let mut q = Query {
+			site: site.into(),
+			section: Some(section.to_string()),
+			limit: query::MAX_LIMIT,
+			..Query::new(schema)
+		};
+		q.section_order(schema);
 		let entries = select(conn, &q)?;
 		all.extend(entries.into_iter().map(|e| EntryChoice {
 			id: e.id,
@@ -225,6 +229,24 @@ pub fn choices(
 	Ok(all)
 }
 
+/// The fields of a single as published in a site, null if it isn't.
+/// Plugins keep their settings in one.
+pub fn single_fields(
+	conn: &Connection,
+	schema: &Schema,
+	section: &str,
+	site: &str,
+) -> Result<Value> {
+	let params = [("section", section), ("site", site), ("limit", "1")];
+	let q = Query::published(schema, &params).map_err(Error::Request)?;
+	let found = select(conn, &q)?;
+	Ok(found
+		.into_iter()
+		.next()
+		.map(|e| e.fields)
+		.unwrap_or_default())
+}
+
 pub fn get_entry(conn: &Connection, id: i64, site: &str) -> Result<Entry> {
 	let sql = format!(
 		"SELECT {COLUMNS} FROM entries e
@@ -232,6 +254,22 @@ pub fn get_entry(conn: &Connection, id: i64, site: &str) -> Result<Entry> {
 		WHERE e.id = ?1 AND e.deleted_at IS NULL"
 	);
 	Ok(conn.query_row(&sql, params![id, site], from_row)?)
+}
+
+/// The entry of a page of a site, `None` if no entry has the uri.
+pub fn by_uri(
+	conn: &Connection,
+	site: &str,
+	uri: &str,
+) -> Result<Option<Entry>> {
+	let sql = format!(
+		"SELECT {COLUMNS} FROM entries e
+		JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?1
+		WHERE s.uri = ?2 AND e.deleted_at IS NULL"
+	);
+	Ok(conn
+		.query_row(&sql, params![site, uri], from_row)
+		.optional()?)
 }
 
 /// The entries of a query and how many there are without its limit.
