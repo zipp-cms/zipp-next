@@ -104,31 +104,43 @@ pub(super) fn uri_for(
 	site: &str,
 	fields: &Value,
 ) -> Result<Option<String>> {
-	let parent_uri: Option<String> = match parent_id {
-		Some(p) => conn
-			.query_row(
-				"SELECT uri FROM entry_sites WHERE entry_id = ?1 AND site = ?2",
-				params![p, site],
-				|r| r.get(0),
-			)
-			.optional()?
-			.flatten(),
+	let parent_uri = match parent_id {
+		Some(p) => stored_uri(conn, p, site)?,
 		None => None,
 	};
 	Ok(section.render_uri(ty, slug, parent_uri.as_deref(), site, fields))
 }
 
-/// Recomputes the uris of all entries of a section in all sites, parents
-/// before their children.
+/// The uri an entry has in a site.
+fn stored_uri(
+	conn: &Connection,
+	id: i64,
+	site: &str,
+) -> Result<Option<String>> {
+	Ok(conn
+		.query_row(
+			"SELECT uri FROM entry_sites WHERE entry_id = ?1 AND site = ?2",
+			params![id, site],
+			|r| r.get(0),
+		)
+		.optional()?
+		.flatten())
+}
+
+/// Recomputes the uris of the entries of a section in all sites, parents
+/// before their children: of all of them, or of an entry and the ones
+/// below it, the others keep theirs.
 pub fn refresh_uris(
 	conn: &Connection,
 	schema: &Schema,
 	section: &Section,
+	from: Option<i64>,
 ) -> Result<()> {
 	let mut stmt = conn.prepare(
 		"WITH RECURSIVE tree(id, depth) AS (
 			SELECT id, 0 FROM entries
-			WHERE section = ?1 AND parent_id IS NULL AND deleted_at IS NULL
+			WHERE section = ?1 AND deleted_at IS NULL
+			AND (id = ?3 OR (?3 IS NULL AND parent_id IS NULL))
 			UNION ALL
 			SELECT e.id, t.depth + 1 FROM entries e JOIN tree t
 			ON e.parent_id = t.id WHERE e.deleted_at IS NULL
@@ -141,7 +153,7 @@ pub fn refresh_uris(
 
 	for site in &schema.sites {
 		let rows = stmt
-			.query_map(params![section.handle, site.handle], |r| {
+			.query_map(params![section.handle, site.handle, from], |r| {
 				Ok((
 					r.get(0)?,
 					r.get(1)?,
@@ -157,8 +169,13 @@ pub fn refresh_uris(
 
 		let mut uris: HashMap<i64, Option<String>> = HashMap::new();
 		for (id, parent, slug, old, ty, fields) in rows {
-			let parent_uri =
-				parent.and_then(|p| uris.get(&p).cloned().flatten());
+			let parent_uri = match parent {
+				Some(p) if !uris.contains_key(&p) => {
+					stored_uri(conn, p, &site.handle)?
+				}
+				Some(p) => uris[&p].clone(),
+				None => None,
+			};
 			let fields = serde_json::from_str(&fields).unwrap_or_default();
 			let uri = section.render_uri(
 				&ty,
@@ -249,7 +266,7 @@ pub fn move_entry(
 		"UPDATE entries SET parent_id = ?1 WHERE id = ?2",
 		params![parent, id],
 	)?;
-	refresh_uris(&tx, schema, section)?;
+	refresh_uris(&tx, schema, section, Some(id))?;
 	tx.commit()?;
 
 	Ok(())

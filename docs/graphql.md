@@ -27,6 +27,13 @@ entry's `children` are the first 500, `id` and `ids` at most 1000 ids.
 `search` matches its text, `%` and `_` are no wildcards. Pages of real
 sites load a few hundred.
 
+Relations, links, parents, `children`, `localized` and assets load
+together per request: the images of 30 events are one query, not 30,
+and an entry that many link to loads once. `entries` doesn't count,
+only `entryCount` does. A test of the example
+(`pages_load_in_a_few_statements`) keeps its page queries at a few
+statements, `TestServer::statements` counts them.
+
 ## Private GraphQL, dev and prod
 
 Like Craft's schema tokens, GraphQL

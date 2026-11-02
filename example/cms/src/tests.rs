@@ -7,9 +7,9 @@ use zipp::axum::http::{Request, header};
 use zipp::drafts::SiteDoc;
 use zipp::drafts::api::{PublishReq, PutReq};
 use zipp::entries::EntryInput;
-use zipp::entries::api::CreateReq;
+use zipp::entries::api::{CreateReq, UpdateReq};
 use zipp::error::Error;
-use zipp::testing::TestServer;
+use zipp::testing::{Client, TestServer};
 
 use super::*;
 
@@ -150,4 +150,106 @@ async fn graphql(ts: &TestServer, query: &str, variables: Value) -> Value {
 	let resp = ts.anonymous().send(req).await;
 	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
 	serde_json::from_slice(&body).unwrap()
+}
+
+/// A small png, 4 x 2.
+const PNG: &[u8] = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x04\x00\x00\x00\x02\x08\x02\x00\x00\x00\xf0\xca\xea4\x00\x00\x00\x0eIDATx\x9cch@\x02\x0c\xc8\x1c\x00\x9c\x1a\x0c\x01<\x82sD\x00\x00\x00\x00IEND\xaeB`\x82";
+
+#[tokio::test]
+async fn pages_load_in_a_few_statements() {
+	let ts = TestServer::new(schema());
+	let admin = ts.admin();
+	let resp = admin.upload("/assets", &vec![("a.png", PNG); 20]).await;
+	let assets: Vec<zipp::assets::Asset> = Client::json(resp).await.unwrap();
+	let image = |i: usize| json!([assets[i % assets.len()].id]);
+
+	// a page with children, images, buttons and links in its text
+	let about = create("pages", "page", "About", json!({}));
+	let about = admin.call(&about).await.unwrap();
+	let mut content = vec![];
+	for i in 0..5 {
+		let mut child =
+			create("pages", "page", &format!("Child {i}"), json!({}));
+		child.0.parent_id = Some(about.id);
+		let child = admin.call(&child).await.unwrap();
+		let link = json!({ "type": "entry", "value": child.id });
+		content.push(json!({ "type": "button", "fields": { "link": link } }));
+		let images: Vec<i64> = (0..4).map(|j| assets[i * 4 + j].id).collect();
+		content
+			.push(json!({ "type": "images", "fields": { "images": images } }));
+		let text = json!({ "type": "doc", "content": [
+			{ "type": "paragraph", "content": [{ "type": "text", "text": "more",
+				"marks": [{ "type": "link", "attrs": { "link": link } }] }] },
+			{ "type": "button", "attrs": { "link": link } },
+		] });
+		content.push(json!({ "type": "text", "fields": { "text": text } }));
+	}
+	let update = UpdateReq {
+		id: about.id,
+		input: EntryInput {
+			fields: json!({ "content": content, "hero": image(0) }),
+			..create("pages", "page", "About", json!({})).0
+		},
+	};
+	admin.call(&update).await.unwrap();
+
+	// articles with categories, events with images and a page
+	let category = |title| create("categories", "category", title, json!({}));
+	let mut categories = vec![];
+	for t in ["Konzerte", "Verein", "Kultur"] {
+		categories.push(admin.call(&category(t)).await.unwrap().id);
+	}
+	for i in 0..30 {
+		let fields = json!({ "categories": [categories[i % 3], categories[(i + 1) % 3]],
+			"hero": image(i) });
+		admin
+			.call(&create("news", "article", &format!("Article {i}"), fields))
+			.await
+			.unwrap();
+		let mut e = event(&format!("Event {i}"), "2099-01-01");
+		e.0.fields["image"] = image(i);
+		e.0.fields["page"] = json!([about.id]);
+		admin.call(&e).await.unwrap();
+	}
+
+	let count = |query: &'static str, vars: Value| {
+		let ts = &ts;
+		async move {
+			let (data, n) = ts.statements(graphql(ts, query, vars)).await;
+			assert!(data["errors"].is_null(), "{data}");
+			(data["data"].clone(), n)
+		}
+	};
+	let entry = include_str!("../../crelte/svelte/src/queries/entry.graphql");
+	let events = include_str!("../../crelte/svelte/src/queries/events.graphql");
+	let articles =
+		include_str!("../../crelte/svelte/src/queries/articles.graphql");
+	let (data, page) =
+		count(entry, json!({ "uri": "about", "siteId": 1 })).await;
+	let about = &data["entry"];
+	assert_eq!(about["children"].as_array().unwrap().len(), 5);
+	assert_eq!(about["content"][0]["link"]["url"], "/about/child-0");
+	let images = &about["content"][4]["images"];
+	assert_eq!(
+		images[3]["url"],
+		format!("/assets/{}/medium/a.png", assets[7].id)
+	);
+	let text = &about["content"][5]["text"]["chunks"];
+	assert_eq!(text[1]["buttons"][0]["url"], "/about/child-1");
+	assert_eq!(about["hero"][0]["width"], 4);
+
+	let (data, events) = count(events, json!({ "siteId": 1 })).await;
+	assert_eq!(data["events"].as_array().unwrap().len(), 30);
+	assert!(data["events"][29]["image"][0]["url"].is_string());
+	let (data, articles) = count(articles, json!({ "siteId": 1 })).await;
+	let last = &data["articles"][29];
+	assert_eq!(last["title"], "Article 0");
+	assert_eq!(last["categories"][1]["title"], "Verein");
+	// 66, 32 and 94 when each relation, asset and link had its query
+	assert!(page <= 30, "entry.graphql runs {page} statements");
+	assert!(events <= 10, "events.graphql runs {events} statements");
+	assert!(
+		articles <= 10,
+		"articles.graphql runs {articles} statements"
+	);
 }

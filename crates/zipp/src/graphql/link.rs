@@ -1,12 +1,14 @@
 use super::*;
 
 /// A link like Craft's LinkData: `url label defaultLabel target`. `None`
-/// if it points to an entry that isn't there (or not published).
+/// if it points to an entry that isn't there (or not published). The
+/// entries and assets are loaded before, see [`targets`].
 pub(super) fn resolve_link(
 	ctx: &ResolverContext,
 	link: &Value,
 	site: &str,
 	new_tab: bool,
+	targets: &Targets,
 ) -> async_graphql::Result<Option<GqlValue>> {
 	let value = &link["value"];
 	let text = value.as_str().unwrap_or_default().to_string();
@@ -15,22 +17,20 @@ pub(super) fn resolve_link(
 
 	let (url, default_label, external) = match ty {
 		"entry" => {
-			let params = site_params(site, [("ids", id.to_string())]);
-			let Some(e) = load(ctx, &params)?.into_iter().next() else {
+			let Some(e) = targets.entries.get(&id) else {
 				return Ok(None);
 			};
 			let url = match &e.uri {
 				Some(uri) => entry_url(ctx, site, uri)?,
 				None => return Ok(None),
 			};
-			(url, e.title, false)
+			(url, e.title.clone(), false)
 		}
 		"asset" => {
-			let db = ctx.data::<Db>()?;
-			let Some(a) = get_many(&db.conn(), &[id])?.pop() else {
+			let Some(a) = targets.assets.get(&id) else {
 				return Ok(None);
 			};
-			(asset_url(ctx, &a, None, None)?, a.filename, true)
+			(asset_url(ctx, a, None, None)?, a.filename.clone(), true)
 		}
 		"email" => (format!("mailto:{text}"), text, false),
 		"phone" => {
@@ -75,15 +75,16 @@ pub(super) fn nav_items(
 	ctx: &ResolverContext,
 	items: &Value,
 	site: &str,
+	targets: &Targets,
 ) -> async_graphql::Result<Vec<GqlValue>> {
 	let mut out = vec![];
 	for item in items.as_array().into_iter().flatten() {
 		let Some(GqlValue::Object(mut o)) =
-			resolve_link(ctx, item, site, true)?
+			resolve_link(ctx, item, site, true, targets)?
 		else {
 			continue;
 		};
-		let children = nav_items(ctx, &item["children"], site)?;
+		let children = nav_items(ctx, &item["children"], site, targets)?;
 		o.insert(
 			async_graphql::Name::new("children"),
 			GqlValue::List(children),

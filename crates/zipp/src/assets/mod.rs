@@ -8,7 +8,7 @@
 //! - `/assets/<id>/<transform>/<filename>`: a named transform of the
 //!   schema, `_thumb` is the one of the studio
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::{Path as FsPath, PathBuf};
 
@@ -23,11 +23,11 @@ use image::imageops::FilterType;
 use image::{
 	DynamicImage, ImageFormat, ImageReader, RgbImage, Rgba, RgbaImage,
 };
-use rusqlite::{Connection, OptionalExtension, Row, params};
+use rusqlite::{Connection, Row, params, params_from_iter};
 use serde::{Deserialize, Serialize};
 
 use crate::AppState;
-use crate::db::now;
+use crate::db::{marks, now};
 use crate::error::{Error, Result};
 use crate::schema::{Format, Transform};
 
@@ -83,8 +83,9 @@ pub struct Asset {
 	pub edits: Option<Edits>,
 	/// the email of who uploaded it
 	pub uploaded_by: Option<String>,
-	/// changes with the edits and the focal point, urls carry it so
-	/// browsers don't keep showing the image from before; empty without
+	/// changes with the file, the edits and the focal point, urls and the
+	/// names of transforms carry it, so browsers don't keep showing the
+	/// image from before; empty for an untouched upload
 	pub version: String,
 	/// the folder it is in, `None` on the top
 	pub folder_id: Option<i64>,
@@ -168,7 +169,8 @@ impl Asset {
 
 const COLUMNS: &str = "id, filename, kind, mime, size, width, height, alt, \
 	focal_x, focal_y, created_at, title, edits, \
-	(SELECT email FROM users WHERE id = uploaded_by), folder_id, fields";
+	(SELECT email FROM users WHERE id = uploaded_by), folder_id, fields, \
+	replaced";
 
 fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 	let (width, height): (Option<u32>, Option<u32>) = (r.get(5)?, r.get(6)?);
@@ -182,7 +184,7 @@ fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 	};
 	let (focal_x, focal_y): (f64, f64) = (r.get(8)?, r.get(9)?);
 	Ok(Asset {
-		version: version(&edits, focal_x, focal_y),
+		version: version(r.get(16)?, &edits, focal_x, focal_y),
 		id: r.get(0)?,
 		filename: r.get(1)?,
 		kind: r.get(2)?,
@@ -206,12 +208,18 @@ fn from_row(r: &Row) -> rusqlite::Result<Asset> {
 }
 
 /// A short hash of what changes the image, empty for an untouched one.
-fn version(edits: &Option<Edits>, focal_x: f64, focal_y: f64) -> String {
+fn version(
+	replaced: i64,
+	edits: &Option<Edits>,
+	focal_x: f64,
+	focal_y: f64,
+) -> String {
 	use std::hash::{Hash, Hasher};
-	if edits.is_none() && (focal_x, focal_y) == (0.5, 0.5) {
+	if replaced == 0 && edits.is_none() && (focal_x, focal_y) == (0.5, 0.5) {
 		return String::new();
 	}
 	let mut h = std::collections::hash_map::DefaultHasher::new();
+	replaced.hash(&mut h);
 	serde_json::to_string(edits)
 		.unwrap_or_default()
 		.hash(&mut h);
@@ -240,8 +248,8 @@ pub(crate) fn trashed(
 	let rows = stmt.query_map([], |r| {
 		Ok(crate::trash::TrashedAsset {
 			asset: from_row(r)?,
-			deleted_at: r.get(16)?,
-			deleted_by: r.get(17)?,
+			deleted_at: r.get(17)?,
+			deleted_by: r.get(18)?,
 		})
 	})?;
 	Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -249,16 +257,18 @@ pub(crate) fn trashed(
 
 /// The assets of these ids in the same order, missing ones are left out.
 pub fn get_many(conn: &Connection, ids: &[i64]) -> Result<Vec<Asset>> {
-	let mut out = vec![];
-	for id in ids {
-		let sql = format!(
-			"SELECT {COLUMNS} FROM assets WHERE id = ?1 AND deleted_at IS NULL"
-		);
-		if let Some(a) = conn.query_row(&sql, [id], from_row).optional()? {
-			out.push(a);
-		}
+	let sql = format!(
+		"SELECT {COLUMNS} FROM assets WHERE id IN ({}) AND deleted_at IS NULL",
+		marks(ids.len())
+	);
+	let mut stmt = conn.prepare(&sql)?;
+	let mut found = HashMap::new();
+	for a in stmt.query_map(params_from_iter(ids), from_row)? {
+		let a = a?;
+		found.insert(a.id, a);
 	}
-	Ok(out)
+	// in the order of the ids
+	Ok(ids.iter().filter_map(|id| found.get(id).cloned()).collect())
 }
 
 /// Only letters, digits, dots, dashes and underscores, so the name is a

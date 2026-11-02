@@ -243,8 +243,15 @@ pub(super) fn query(
 	ctx: &ResolverContext,
 	params: &[(String, String)],
 ) -> async_graphql::Result<Query> {
-	let schema = ctx.data::<Arc<Schema>>()?;
-	let viewer = ctx.data::<Viewer>()?;
+	viewer_query(ctx.data::<Arc<Schema>>()?, ctx.data::<Viewer>()?, params)
+}
+
+/// A query of entries with what the viewer may see.
+pub(super) fn viewer_query(
+	schema: &Schema,
+	viewer: &Viewer,
+	params: &[(String, String)],
+) -> async_graphql::Result<Query> {
 	let mut q = Query::parse(schema, params).map_err(GqlError::new)?;
 	q.published_only = viewer.published_only;
 	match &viewer.preview {
@@ -286,7 +293,7 @@ pub(super) fn spend(
 ) -> async_graphql::Result<()> {
 	use std::sync::atomic::Ordering;
 	let viewer = ctx.data::<Viewer>()?;
-	if viewer.loaded.fetch_add(n, Ordering::Relaxed) + n > MAX_LOADED {
+	if viewer.loaded.count.fetch_add(n, Ordering::Relaxed) + n > MAX_LOADED {
 		return Err(GqlError::new(format!(
 			"the query loads more than {MAX_LOADED} entries and assets"
 		)));
@@ -302,32 +309,43 @@ pub(super) fn load(
 	let db = ctx.data::<Db>()?;
 	// the query counts too, before it runs
 	spend(ctx, 1)?;
-	let (mut entries, _) = list(&db.conn(), &q)?;
+	let conn = db.conn();
+	let entries =
+		with_drafts(&conn, ctx.data::<Viewer>()?, select(&conn, &q)?)?;
 	spend(ctx, entries.len())?;
+	Ok(entries)
+}
 
-	// the entry of a preview shows its draft, or every entry its own
-	match &ctx.data::<Viewer>()?.preview {
+/// The entry of a preview shows its draft, or every entry its own.
+pub(super) fn with_drafts(
+	conn: &rusqlite::Connection,
+	viewer: &Viewer,
+	mut entries: Vec<Entry>,
+) -> async_graphql::Result<Vec<Entry>> {
+	let show = |e: &mut Entry, doc: &crate::drafts::Doc| {
+		if let Some(sd) = doc.get(&e.site) {
+			e.ty = sd.ty.clone();
+			e.title = sd.title.clone();
+			e.fields = sd.fields.clone();
+		}
+	};
+	match &viewer.preview {
 		Some(Preview::Entry(id, doc)) => {
 			for e in entries.iter_mut().filter(|e| e.id == *id) {
-				if let Some(sd) = doc.get(&e.site) {
-					e.ty = sd.ty.clone();
-					e.title = sd.title.clone();
-					e.fields = sd.fields.clone();
-				}
+				show(e, doc);
 			}
 		}
 		Some(Preview::All(sections)) => {
-			let conn = db.conn();
-			let shown =
-				entries.iter_mut().filter(|e| sections.contains(&e.section));
-			for e in shown {
-				let draft = get_draft(&conn, e.id)?;
-				if let Some(sd) =
-					draft.as_ref().and_then(|d| d.doc.get(&e.site))
-				{
-					e.ty = sd.ty.clone();
-					e.title = sd.title.clone();
-					e.fields = sd.fields.clone();
+			// drafts only of the sections the token's user may view
+			let ids: Vec<i64> = entries
+				.iter()
+				.filter(|e| sections.contains(&e.section))
+				.map(|e| e.id)
+				.collect();
+			let drafts = docs_of(conn, &ids)?;
+			for e in entries.iter_mut() {
+				if let Some(doc) = drafts.get(&e.id) {
+					show(e, doc);
 				}
 			}
 		}
@@ -376,7 +394,7 @@ pub(super) fn query_object(schema: &Schema) -> Object {
 						let q = query(&ctx, &params)?;
 						let db = ctx.data::<Db>()?;
 						spend(&ctx, 1)?;
-						let (_, total) = list(&db.conn(), &q)?;
+						let total = count(&db.conn(), &q)?;
 						Ok(Some(GqlValue::from(total)))
 					})
 				},

@@ -9,8 +9,8 @@
 //! - `f.<field>[.<op>]=value`: an indexed field, op is one of eq (default),
 //!   ne, lt, lte, gt, gte; needs `type`
 //! - `order`: `title`, `created`, `updated`, `structure` (the tree of a
-//!   structure, depth first) or an indexed field, `-` for descending,
-//!   default `-updated`
+//!   structure, depth first; with `parent` the order of the children) or
+//!   an indexed field, `-` for descending, default `-updated`
 //! - `limit` (default 100), `offset`
 
 use rusqlite::types::Value;
@@ -39,7 +39,9 @@ pub struct Query {
 	pub slug: Option<String>,
 	pub uri: Option<String>,
 	pub ids: Option<Vec<i64>>,
-	pub parent: Option<i64>,
+	/// children of these entries, `parent=5`; GraphQL loads the children
+	/// of several entries at once
+	pub parents: Vec<i64>,
 	pub search: Option<String>,
 	pub related: Option<i64>,
 	/// by a relation field of the entries, `r.offerCategory=5`
@@ -90,13 +92,26 @@ pub enum Order {
 	Field(String, bool),
 }
 
-/// The order of the entries of all structures, depth first. Positions are
-/// padded so the path sorts as text.
+/// The order of the entries of a structure, depth first, from its top
+/// entries; the trash isn't in it. Positions are padded so the path sorts
+/// as text.
 const TREE: &str = "WITH RECURSIVE tree(id, sort) AS (
-	SELECT id, printf('%010d', position) FROM entries WHERE parent_id IS NULL
+	SELECT id, printf('%010d', position) FROM entries
+	WHERE parent_id IS NULL AND deleted_at IS NULL AND section = ?
 	UNION ALL
 	SELECT e.id, t.sort || printf('%010d', e.position)
 	FROM entries e JOIN tree t ON e.parent_id = t.id
+	WHERE e.deleted_at IS NULL
+) ";
+
+/// [`TREE`] of the structures of all sections.
+const TREES: &str = "WITH RECURSIVE tree(id, sort) AS (
+	SELECT id, printf('%010d', position) FROM entries
+	WHERE parent_id IS NULL AND deleted_at IS NULL
+	UNION ALL
+	SELECT e.id, t.sort || printf('%010d', e.position)
+	FROM entries e JOIN tree t ON e.parent_id = t.id
+	WHERE e.deleted_at IS NULL
 ) ";
 
 impl Query {
@@ -114,7 +129,7 @@ impl Query {
 			slug: None,
 			uri: None,
 			ids: None,
-			parent: None,
+			parents: vec![],
 			search: None,
 			related: None,
 			relations: vec![],
@@ -179,7 +194,7 @@ impl Query {
 				"slug" => q.slug = Some(value.clone()),
 				"uri" => q.uri = Some(value.trim_matches('/').into()),
 				"search" => q.search = Some(value.clone()),
-				"parent" => q.parent = Some(int(key, value)?),
+				"parent" => q.parents = vec![int(key, value)?],
 				"related" => q.related = Some(int(key, value)?),
 				_ if key.starts_with("r.") => {
 					let field = key[2..].to_string();
@@ -330,11 +345,19 @@ impl Query {
 		})
 	}
 
-	/// The `WITH` clause that goes before `SELECT`, for the tree.
-	pub fn with(&self) -> &'static str {
-		match self.order {
-			Order::Structure => TREE,
-			_ => "",
+	/// Whether the order is the tree of the structure: children are in
+	/// the order of their parent, they need no tree.
+	fn tree(&self) -> bool {
+		self.order == Order::Structure && self.parents.is_empty()
+	}
+
+	/// The `WITH` clause that goes before `SELECT`, for the tree, and its
+	/// params.
+	pub fn with(&self) -> (&'static str, Vec<Value>) {
+		match &self.section {
+			_ if !self.tree() => ("", vec![]),
+			Some(s) => (TREE, vec![Value::Text(s.clone())]),
+			None => (TREES, vec![]),
 		}
 	}
 
@@ -389,8 +412,11 @@ impl Query {
 			let values = ids.iter().map(|i| Value::Integer(*i)).collect();
 			cond(format!("e.id IN ({marks})"), values);
 		}
-		if let Some(parent) = self.parent {
-			cond("e.parent_id = ?".into(), vec![Value::Integer(parent)]);
+		if !self.parents.is_empty() {
+			let marks = marks(self.parents.len());
+			let values =
+				self.parents.iter().map(|i| Value::Integer(*i)).collect();
+			cond(format!("e.parent_id IN ({marks})"), values);
 		}
 		if let Some(search) = &self.search {
 			let like = format!("%{}%", escape_like(search));
@@ -467,8 +493,10 @@ impl Query {
 					AND o.site = s.site AND o.field = ?";
 				join_params.push(Value::Text(field.clone()));
 			}
-			Order::Structure => joins += " JOIN tree t ON t.id = e.id",
-			Order::Column(_) => {}
+			Order::Structure if self.tree() => {
+				joins += " JOIN tree t ON t.id = e.id"
+			}
+			Order::Structure | Order::Column(_) => {}
 		}
 
 		let sql = format!(
@@ -489,7 +517,9 @@ impl Query {
 				"COALESCE(e.post_date, e.created_at)".into()
 			}
 			Order::Column(c) => format!("e.{c}"),
-			Order::Structure => "t.sort".into(),
+			Order::Structure if self.tree() => "t.sort".into(),
+			// children by parent, then as they are ordered
+			Order::Structure => "e.parent_id, e.position".into(),
 			Order::Field(_, true) => "o.num".into(),
 			Order::Field(_, false) => "o.text".into(),
 		};
@@ -575,9 +605,20 @@ mod tests {
 	fn structure_order_uses_the_tree() {
 		let q = parse("section=pages&order=structure&uri=/about/").unwrap();
 		let (sql, _) = q.from_where();
-		assert!(q.with().starts_with("WITH RECURSIVE tree"));
+		let (with, params) = q.with();
+		assert!(with.starts_with("WITH RECURSIVE tree"));
+		assert_eq!(params, [Value::Text("pages".into())]);
 		assert!(sql.contains("JOIN tree t"));
 		assert_eq!(q.uri.as_deref(), Some("about"));
 		assert_eq!(q.order_by(), "ORDER BY t.sort ASC, e.id ASC");
+
+		// children need no tree
+		let q = parse("section=pages&parent=5").unwrap();
+		assert_eq!(q.with().0, "");
+		assert!(!q.from_where().0.contains("tree"));
+		assert_eq!(
+			q.order_by(),
+			"ORDER BY e.parent_id, e.position ASC, e.id ASC"
+		);
 	}
 }

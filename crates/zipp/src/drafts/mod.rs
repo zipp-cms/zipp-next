@@ -12,17 +12,17 @@
 //! token of the whole site shows every draft of the sections its user
 //! sees, also of entries that only a draft publishes.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use axum::extract::State;
 use axum::{Json, Router};
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::AppState;
 use crate::content::{FieldError, convert, share};
-use crate::db::now;
+use crate::db::{marks, now};
 use crate::entries::{Dates, EntryInput, check, get_entry, write};
 use crate::error::{Error, Result};
 use crate::schema::Schema;
@@ -164,6 +164,24 @@ pub fn get_draft(conn: &Connection, id: i64) -> Result<Option<Draft>> {
 		user,
 		updated_at,
 	}))
+}
+
+/// The drafts of some entries, those that have one.
+pub fn docs_of(conn: &Connection, ids: &[i64]) -> Result<HashMap<i64, Doc>> {
+	let sql = format!(
+		"SELECT entry_id, doc FROM drafts WHERE entry_id IN ({})",
+		marks(ids.len())
+	);
+	let mut stmt = conn.prepare(&sql)?;
+	let rows = stmt.query_map(params_from_iter(ids), |r| {
+		Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?))
+	})?;
+	let mut out = HashMap::new();
+	for r in rows {
+		let (id, doc) = r?;
+		out.insert(id, serde_json::from_str(&doc).unwrap_or_default());
+	}
+	Ok(out)
 }
 
 fn store_draft(

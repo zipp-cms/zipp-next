@@ -26,7 +26,8 @@ pub(super) fn rich_text_object() -> Object {
 			|ctx| {
 				FieldFuture::new(async move {
 					let rt = ctx.parent_value.try_downcast_ref::<RichText>()?;
-					let mut resolve = resolver(&ctx, &rt.site);
+					let to = targets(&ctx, &rt.site, &rt.doc).await?;
+					let mut resolve = resolver(&ctx, &rt.site, &to);
 					let html = richtext::html(&rt.doc, &mut resolve);
 					Ok(Some(FieldValue::value(html)))
 				})
@@ -38,7 +39,8 @@ pub(super) fn rich_text_object() -> Object {
 			|ctx| {
 				FieldFuture::new(async move {
 					let rt = ctx.parent_value.try_downcast_ref::<RichText>()?;
-					let mut resolve = resolver(&ctx, &rt.site);
+					let to = targets(&ctx, &rt.site, &rt.doc).await?;
+					let mut resolve = resolver(&ctx, &rt.site, &to);
 					let mut out = vec![];
 					for chunk in richtext::chunks(&rt.doc, &mut resolve) {
 						out.push(match chunk {
@@ -52,7 +54,7 @@ pub(super) fn rich_text_object() -> Object {
 								let mut buttons = vec![];
 								for l in &links {
 									buttons.extend(resolve_link(
-										&ctx, l, &rt.site, true,
+										&ctx, l, &rt.site, true, &to,
 									)?);
 								}
 								let mut o =

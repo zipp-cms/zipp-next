@@ -82,11 +82,9 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 					let mut out = vec![];
 					for s in schema.sites.iter().filter(|s| s.handle != e.site)
 					{
-						let params =
-							site_params(&s.handle, [("ids", e.id.to_string())]);
-						out.extend(
-							load(&ctx, &params)?.into_iter().map(entry_value),
-						);
+						let found =
+							entries_by_id(&ctx, &s.handle, &[e.id]).await?;
+						out.extend(found.into_iter().map(entry_value));
 					}
 					return Ok(Some(FieldValue::list(out)));
 				}
@@ -94,21 +92,11 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 					let Some(p) = e.parent_id else {
 						return Ok(None);
 					};
-					let params = site_params(&e.site, [("ids", p.to_string())]);
-					let parent = load(&ctx, &params)?.into_iter().next();
-					return Ok(parent.map(entry_value));
+					let parent = entries_by_id(&ctx, &e.site, &[p]).await?;
+					return Ok(parent.into_iter().next().map(entry_value));
 				}
 				"children" => {
-					let params = site_params(
-						&e.site,
-						[
-							("parent", e.id.to_string()),
-							("order", "structure".into()),
-							// all of them, not the first page of a list
-							("limit", MAX_CHILDREN.to_string()),
-						],
-					);
-					let children = load(&ctx, &params)?;
+					let children = children_of(&ctx, &e.site, e.id).await?;
 					return Ok(Some(FieldValue::list(
 						children.into_iter().map(entry_value),
 					)));
@@ -199,25 +187,8 @@ pub(super) fn content_field(
 						.as_array()
 						.map(|a| a.iter().filter_map(Value::as_i64).collect())
 						.unwrap_or_default();
-					if ids.is_empty() {
-						return Ok(Some(FieldValue::list(
-							Vec::<FieldValue>::new(),
-						)));
-					}
-					let list: Vec<String> =
-						ids.iter().map(i64::to_string).collect();
-					// all of them, not the first page of a list
-					let params = site_params(
-						&site,
-						[
-							("ids", list.join(",")),
-							("limit", ids.len().to_string()),
-						],
-					);
-					let mut entries = load(&ctx, &params)?;
 					// in the order of the field
-					entries
-						.sort_by_key(|e| ids.iter().position(|i| *i == e.id));
+					let entries = entries_by_id(&ctx, &site, &ids).await?;
 					Ok(Some(FieldValue::list(
 						entries.into_iter().map(entry_value),
 					)))
@@ -227,10 +198,7 @@ pub(super) fn content_field(
 						.as_array()
 						.map(|a| a.iter().filter_map(Value::as_i64).collect())
 						.unwrap_or_default();
-					let db = ctx.data::<Db>()?;
-					spend(&ctx, 1)?;
-					let assets = get_many(&db.conn(), &ids)?;
-					spend(&ctx, assets.len())?;
+					let assets = assets_by_id(&ctx, &ids).await?;
 					Ok(Some(FieldValue::list(
 						assets.into_iter().map(|a| asset_value(a, &site)),
 					)))
@@ -264,7 +232,8 @@ pub(super) fn content_field(
 					Ok(Some(FieldValue::owned_any(rt)))
 				}
 				FieldKind::Link { new_tab, .. } if !value.is_null() => {
-					let link = resolve_link(&ctx, &value, &site, new_tab)?;
+					let to = targets(&ctx, &site, &value).await?;
+					let link = resolve_link(&ctx, &value, &site, new_tab, &to)?;
 					Ok(link.map(FieldValue::value))
 				}
 				FieldKind::Custom { .. } => match custom {
@@ -292,7 +261,8 @@ pub(super) fn content_field(
 					)))
 				}
 				FieldKind::Navigation { .. } => {
-					let items = nav_items(&ctx, &value, &site)?;
+					let to = targets(&ctx, &site, &value).await?;
+					let items = nav_items(&ctx, &value, &site, &to)?;
 					Ok(Some(FieldValue::list(
 						items.into_iter().map(FieldValue::value),
 					)))
@@ -461,7 +431,8 @@ fn table_cell(column: &crate::schema::Column) -> GqlField {
 					None => return Ok(None),
 				},
 				ColumnKind::Link { .. } if v.is_object() => {
-					let link = resolve_link(&ctx, v, &row.site, true)?;
+					let to = targets(&ctx, &row.site, v).await?;
+					let link = resolve_link(&ctx, v, &row.site, true, &to)?;
 					return Ok(link.map(FieldValue::value));
 				}
 				ColumnKind::Link { .. } => return Ok(None),

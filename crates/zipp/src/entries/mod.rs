@@ -208,7 +208,7 @@ pub fn choices(
 			("limit".into(), query::MAX_LIMIT.to_string()),
 		];
 		let q = Query::parse(schema, &params).map_err(Error::Request)?;
-		let (entries, _) = list(conn, &q)?;
+		let entries = select(conn, &q)?;
 		all.extend(entries.into_iter().map(|e| Choice {
 			id: e.id,
 			section: e.section,
@@ -232,15 +232,16 @@ pub fn get_entry(conn: &Connection, id: i64, site: &str) -> Result<Entry> {
 	Ok(conn.query_row(&sql, params![id, site], from_row)?)
 }
 
+/// The entries of a query and how many there are without its limit.
 pub fn list(conn: &Connection, q: &Query) -> Result<(Vec<Entry>, i64)> {
-	let (from, params) = q.from_where();
-	let with = q.with();
+	Ok((select(conn, q)?, count(conn, q)?))
+}
 
-	let total = conn.query_row(
-		&format!("{with}SELECT COUNT(*) {from}"),
-		params_from_iter(&params),
-		|r| r.get(0),
-	)?;
+/// The entries of a query, [`list`] without the count.
+pub fn select(conn: &Connection, q: &Query) -> Result<Vec<Entry>> {
+	let (with, mut params) = q.with();
+	let (from, more) = q.from_where();
+	params.extend(more);
 
 	let sql = format!(
 		"{with}SELECT {COLUMNS} {from} {} LIMIT {} OFFSET {}",
@@ -252,8 +253,37 @@ pub fn list(conn: &Connection, q: &Query) -> Result<(Vec<Entry>, i64)> {
 	let entries = stmt
 		.query_map(params_from_iter(&params), from_row)?
 		.collect::<rusqlite::Result<_>>()?;
+	Ok(entries)
+}
 
-	Ok((entries, total))
+/// The children of the query's parents in their order, at most `each` of
+/// a parent; the query's own order and limit don't count.
+pub fn children(conn: &Connection, q: &Query, each: i64) -> Result<Vec<Entry>> {
+	let (from, params) = q.from_where();
+	// the columns of the entries have different names
+	let sql = format!(
+		"SELECT * FROM (SELECT {COLUMNS}, ROW_NUMBER() OVER (
+			PARTITION BY e.parent_id ORDER BY e.position, e.id) AS n {from})
+		WHERE n <= {each} ORDER BY parent_id, n"
+	);
+	let mut stmt = conn.prepare(&sql)?;
+	let entries = stmt
+		.query_map(params_from_iter(&params), from_row)?
+		.collect::<rusqlite::Result<_>>()?;
+	Ok(entries)
+}
+
+/// How many entries a query finds without its limit.
+pub fn count(conn: &Connection, q: &Query) -> Result<i64> {
+	let (with, mut params) = q.with();
+	let (from, more) = q.from_where();
+	params.extend(more);
+
+	Ok(conn.query_row(
+		&format!("{with}SELECT COUNT(*) {from}"),
+		params_from_iter(&params),
+		|r| r.get(0),
+	)?)
 }
 
 /// A save that passed all checks, ready to be written. Publishing a draft

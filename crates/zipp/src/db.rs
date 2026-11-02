@@ -148,6 +148,8 @@ const MIGRATIONS: &[&str] = &[r#"
 		created_at INTEGER NOT NULL,
 		-- the image editor's, JSON
 		edits TEXT,
+		-- how often its file was replaced, urls change with it
+		replaced INTEGER NOT NULL DEFAULT 0,
 		-- the values of the schema's asset fields, JSON
 		fields TEXT NOT NULL DEFAULT '{}',
 		uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,

@@ -104,13 +104,17 @@ export function transparentEdges(e: Edits): boolean {
 	return transparent && (!!e.canvas || cropsOutside(e));
 }
 
-/** The image with its edits, its thumbnail, or the file as uploaded. */
+/**
+ * The image with its edits, its thumbnail, or the file as uploaded; with
+ * the version, a replaced file gets a new url.
+ */
 export function assetUrl(a: Asset, thumb = false, original = false): string {
 	const path = thumb
 		? `/assets/${a.id}/_thumb/${a.filename}`
 		: `/assets/${a.id}/${a.filename}`;
-	if (original) return `${path}?original`;
-	return a.version ? `${path}?v=${a.version}` : path;
+	const params = [original ? 'original' : '', a.version && `v=${a.version}`];
+	const query = params.filter(Boolean).join('&');
+	return query ? `${path}?${query}` : path;
 }
 
 /** The alt text of a site, else of another one, to show in a list. */

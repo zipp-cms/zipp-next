@@ -45,8 +45,8 @@ use crate::AppState;
 use crate::assets::{Asset, get_many};
 use crate::auth::{role_of, session};
 use crate::db::Db;
-use crate::drafts::{Preview, get_draft, preview};
-use crate::entries::{Entry, list};
+use crate::drafts::{Preview, docs_of, preview};
+use crate::entries::{Entry, count, select};
 use crate::error::{Error, Result};
 use crate::field_type::{GraphqlType, Scalar as FieldScalar};
 use crate::query::Query;
@@ -60,6 +60,7 @@ mod asset;
 mod entry;
 pub mod ext;
 mod link;
+mod loaders;
 mod query;
 mod rich;
 mod routes;
@@ -72,6 +73,7 @@ pub(crate) use crate::content::markdown_html;
 use asset::*;
 use entry::*;
 use link::*;
+use loaders::*;
 use query::*;
 use rich::*;
 use texts::*;
@@ -139,8 +141,31 @@ struct Viewer {
 	indexing: bool,
 	/// what the token of a frontend may read
 	scope: Scope,
-	/// the entries and assets loaded so far, see [`MAX_LOADED`]
-	loaded: std::sync::atomic::AtomicUsize,
+	/// what the request loaded so far
+	loaded: Loaded,
+}
+
+impl Viewer {
+	/// The same viewer, for the loaders of its request.
+	fn copy(&self) -> Viewer {
+		Viewer {
+			published_only: self.published_only,
+			preview: self.preview.clone(),
+			token: self.token.clone(),
+			indexing: self.indexing,
+			scope: self.scope.clone(),
+			loaded: Default::default(),
+		}
+	}
+}
+
+/// What a request loaded so far.
+#[derive(Default)]
+struct Loaded {
+	/// the number of entries and assets, see [`MAX_LOADED`]
+	count: std::sync::atomic::AtomicUsize,
+	/// the loaders, made on first use, see [`Loaders`]
+	loaders: std::sync::OnceLock<Loaders>,
 }
 
 /// The most entries and assets a request may load, each query counts as
@@ -187,9 +212,10 @@ pub fn value_field<'a>(
 fn resolver<'a>(
 	ctx: &'a ResolverContext,
 	site: &'a str,
+	targets: &'a Targets,
 ) -> impl FnMut(&Value) -> Option<(String, Option<String>)> + 'a {
 	move |link| {
-		let v = resolve_link(ctx, link, site, true).ok()??;
+		let v = resolve_link(ctx, link, site, true, targets).ok()??;
 		let GqlValue::Object(o) = v else { return None };
 		let url = match o.get("url")? {
 			GqlValue::String(u) => u.clone(),

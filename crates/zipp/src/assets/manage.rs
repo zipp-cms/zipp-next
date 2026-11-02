@@ -258,8 +258,8 @@ pub fn replace(
 	let tx = conn.unchecked_transaction()?;
 	tx.execute(
 		"UPDATE assets SET filename = ?1, kind = ?2, mime = ?3, size = ?4,
-		width = ?5, height = ?6, edits = NULL, focal_x = 0.5, focal_y = 0.5
-		WHERE id = ?7",
+		width = ?5, height = ?6, edits = NULL, focal_x = 0.5, focal_y = 0.5,
+		replaced = replaced + 1 WHERE id = ?7",
 		params![up.filename, up.kind, up.mime, size, up.width, up.height, id],
 	)?;
 	fs::create_dir_all(&dir)?;

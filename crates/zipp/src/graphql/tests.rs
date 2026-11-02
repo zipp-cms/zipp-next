@@ -1462,3 +1462,49 @@ async fn a_request_loads_a_limited_number_of_entries() {
 		resp.errors
 	);
 }
+
+#[tokio::test]
+async fn children_of_a_list_load_together_in_their_order() {
+	let db = Db::memory().unwrap();
+	let s = Arc::new(site());
+	let gql =
+		build(s.clone(), db.clone(), String::new(), SiteUrls::new()).unwrap();
+	{
+		let conn = db.conn();
+		let page = |title: &str, parent: Option<i64>| {
+			let mut p = input("pages", "page", title, json!({}));
+			p.parent_id = parent;
+			save(&conn, &s, None, p, None).unwrap().id
+		};
+		let about = page("About", None);
+		let jobs = page("Jobs", None);
+		let team = page("Team", Some(about));
+		page("Board", Some(about));
+		page("Open", Some(jobs));
+		crate::entries::move_entry(&conn, &s, team, Some(about), 1).unwrap();
+	}
+
+	let data = run(
+		&gql,
+		r#"{ entries(section: "pages", order: "structure") {
+			title children { title parent { title } }
+		} }"#,
+		true,
+	)
+	.await;
+	assert_eq!(
+		data["entries"],
+		json!([
+			{ "title": "About", "children": [
+				{ "title": "Board", "parent": { "title": "About" } },
+				{ "title": "Team", "parent": { "title": "About" } },
+			] },
+			{ "title": "Board", "children": [] },
+			{ "title": "Team", "children": [] },
+			{ "title": "Jobs", "children": [
+				{ "title": "Open", "parent": { "title": "Jobs" } },
+			] },
+			{ "title": "Open", "children": [] },
+		])
+	);
+}

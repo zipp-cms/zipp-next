@@ -216,7 +216,7 @@ fn tool_list_entries(t: &Ctx, input: &Value) -> ToolResult {
 		}
 	}
 	let q = Query::parse(schema, &params).map_err(Error::Request)?;
-	let (entries, _) = list(conn, &q)?;
+	let entries = select(conn, &q)?;
 	let mut out = vec![];
 	for e in entries
 		.iter()

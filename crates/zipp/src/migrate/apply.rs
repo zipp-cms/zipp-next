@@ -430,7 +430,7 @@ fn rebuild(conn: &Connection, schema: &Schema) -> Result<()> {
 	}
 
 	for section in &schema.sections {
-		refresh_uris(conn, schema, section)?;
+		refresh_uris(conn, schema, section, None)?;
 	}
 	Ok(())
 }

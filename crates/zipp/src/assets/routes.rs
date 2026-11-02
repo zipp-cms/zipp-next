@@ -97,33 +97,61 @@ pub(super) async fn serve_transform(
 /// or the type of the image.
 async fn transformed(
 	state: &AppState,
-	asset: Asset,
+	mut asset: Asset,
 	name: &str,
 	t: Transform,
 	format: Option<Format>,
 	req: axum::extract::Request,
 ) -> Result<Response> {
-	let id = asset.id;
-	let dir = asset_dir(&state.files, id);
-	let original = dir.join(&asset.filename);
-	let (filename, mime) = match format {
-		Some(f) => (asset.format_filename(f), f.mime()),
-		None => (asset.filename.clone(), asset.output_mime()),
-	};
-	let out = dir.join(TRANSFORMS).join(format!("{name}-{filename}"));
+	let mut out = transform_path(state, &asset, name, format);
 	if !out.exists() {
 		let _permit = GENERATING.acquire().await.unwrap();
+		// as it is now, it may have changed while this one waited
+		asset = get_asset(&state.db.conn(), asset.id)?;
+		out = transform_path(state, &asset, name, format);
 		// not made already while this one waited
 		if !out.exists() {
-			let (a, o, m) = (asset.clone(), out.clone(), mime.to_string());
+			let original =
+				asset_dir(&state.files, asset.id).join(&asset.filename);
+			let mime = mime_of(&asset, format).to_string();
+			let (a, o) = (asset.clone(), out.clone());
 			tokio::task::spawn_blocking(move || {
-				generate(&a, &original, &t, &m, &o)
+				generate(&a, &original, &t, &mime, &o)
 			})
 			.await??;
 		}
 	}
 
-	serve_file(out, mime, req).await
+	serve_file(out, mime_of(&asset, format), req).await
+}
+
+/// The type of a transform: `format`'s or the image's.
+fn mime_of(asset: &Asset, format: Option<Format>) -> &str {
+	match format {
+		Some(f) => f.mime(),
+		None => asset.output_mime(),
+	}
+}
+
+/// Where a transform of an asset is kept, with its version: one made of
+/// the image before an edit is never served after it.
+fn transform_path(
+	state: &AppState,
+	asset: &Asset,
+	name: &str,
+	format: Option<Format>,
+) -> PathBuf {
+	let filename = match format {
+		Some(f) => asset.format_filename(f),
+		None => asset.filename.clone(),
+	};
+	let file = match asset.version.as_str() {
+		"" => format!("{name}-{filename}"),
+		v => format!("{name}-{v}-{filename}"),
+	};
+	asset_dir(&state.files, asset.id)
+		.join(TRANSFORMS)
+		.join(file)
 }
 
 /// Files are served from the studio's origin: nothing may run as a page

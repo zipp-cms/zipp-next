@@ -12,7 +12,7 @@
 use std::fs;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 use axum::Router;
 use axum::body::{Body, to_bytes};
@@ -149,6 +149,27 @@ impl TestServer {
 
 	pub fn admin(&self) -> Client {
 		self.user(None)
+	}
+
+	/// The result of `f` and how many SQL statements it ran, so a test
+	/// sees when the queries of a page grow with its content.
+	pub async fn statements<F: Future>(&self, f: F) -> (F::Output, usize) {
+		use rusqlite::trace::{TraceEvent, TraceEventCodes};
+		// one count at a time, the counter is the same for all servers
+		static COUNTING: tokio::sync::Mutex<()> =
+			tokio::sync::Mutex::const_new(());
+		static COUNT: AtomicUsize = AtomicUsize::new(0);
+		fn count(_: TraceEvent) {
+			COUNT.fetch_add(1, Ordering::Relaxed);
+		}
+
+		let _counting = COUNTING.lock().await;
+		COUNT.store(0, Ordering::Relaxed);
+		let stmt = TraceEventCodes::SQLITE_TRACE_STMT;
+		self.state.db.conn().trace_v2(stmt, Some(count));
+		let out = f.await;
+		self.state.db.conn().trace_v2(stmt, None);
+		(out, COUNT.load(Ordering::Relaxed))
 	}
 }
 

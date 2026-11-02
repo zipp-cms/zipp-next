@@ -138,7 +138,8 @@ blocks) to `entry_relations`. So entries can be filtered and sorted by
 them and you can ask what links to an entry:
 `/api/entries?type=event&f.city=Bern&f.date.gte=2026-11-01&order=date`,
 `/api/entries?related=5`, `/api/entries?site=en&uri=about/team`,
-`/api/entries?section=pages&order=structure`. See
+`/api/entries?section=pages&order=structure` (the tree; with
+`parent=5` the children in their order). See
 `crates/zipp/src/query.rs`.
 
 ## Rich text
@@ -227,6 +228,11 @@ than the jpegs at 82 on photos; transparency stays, a jpeg of a
 transparent image gets white. No AVIF yet: rav1e takes seconds per
 image. There is no `Accept` negotiation either, the url says the type,
 so caches and CDNs need no `Vary`.
+
+Asset urls carry a version (`?v=…`) that changes with the edits, the
+focal point and a replaced file, also with the same name, so browsers
+and CDNs never show the image from before; transforms are kept under
+their version too.
 
 In the studio assets are in folders (only there, urls don't change). An
 asset field can say where its uploads go and its picker opens,

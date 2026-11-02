@@ -1,3 +1,4 @@
+use std::fs;
 use std::io::Cursor;
 
 use axum::body::{Body, to_bytes};
@@ -114,6 +115,40 @@ async fn uploads_changes_and_deletes() {
 		get(&editor, &replaced.url(None)).await.0,
 		StatusCode::NOT_FOUND
 	);
+}
+
+#[tokio::test]
+async fn a_new_file_gets_new_urls() {
+	let ts = TestServer::new(site_with_roles());
+	let editor = ts.user(Some("editor"));
+	let a = upload(&editor, "photo.png", &png(20, 10)).await.unwrap();
+	assert_eq!(a.version, "");
+	let (_, small) = get(&ts.anonymous(), &a.url(Some("small"))).await;
+
+	// the same name, another file: caches can't keep the old one
+	let replace = async |size| {
+		let path = format!("/assets/{}/file", a.id);
+		let resp = editor.upload(&path, &[("photo.png", &png(size, 8))]).await;
+		Client::json::<Asset>(resp).await.unwrap()
+	};
+	let b = replace(8).await;
+	assert_eq!(b.filename, a.filename);
+	assert_ne!(b.version, "");
+	assert_ne!(b.url(None), a.url(None));
+	let (status, new) = get(&ts.anonymous(), &b.url(Some("small"))).await;
+	assert_eq!(status, StatusCode::OK);
+	assert_ne!(new, small);
+	let c = replace(8).await;
+	assert_ne!(c.version, b.version);
+
+	// a transform is kept with the version it was made of
+	get(&ts.anonymous(), &c.url(Some("small"))).await;
+	let dir = asset_dir(&ts.state.files, a.id).join(TRANSFORMS);
+	let names: Vec<String> = fs::read_dir(dir)
+		.unwrap()
+		.map(|e| e.unwrap().file_name().into_string().unwrap())
+		.collect();
+	assert_eq!(names, [format!("small-{}-photo.png", c.version)]);
 }
 
 #[tokio::test]

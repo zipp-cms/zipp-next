@@ -157,8 +157,8 @@ fn settings(
 		("site".to_string(), site.to_string()),
 	];
 	let q = zipp::query::Query::parse(&state.schema, &params)?;
-	let (found, _) =
-		zipp::entries::list(&state.db.conn(), &q).map_err(|e| e.to_string())?;
+	let found = zipp::entries::select(&state.db.conn(), &q)
+		.map_err(|e| e.to_string())?;
 	let fields = found.first().map(|e| e.fields.clone()).unwrap_or_default();
 	let text = |key: &str| {
 		fields[format!("{form}{key}")]

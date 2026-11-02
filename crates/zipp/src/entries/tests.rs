@@ -166,6 +166,32 @@ fn structures_build_uris_from_parents() {
 	assert!(err.is_err());
 }
 
+#[test]
+fn the_tree_is_the_order_of_the_section_without_the_trash() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+
+	let about = page(&conn, &s, "About", None);
+	let team = page(&conn, &s, "Team", Some(about));
+	page(&conn, &s, "Jobs", Some(about));
+	let old = page(&conn, &s, "Old", None);
+	page(&conn, &s, "Older", Some(old));
+	move_entry(&conn, &s, team, Some(about), 1).unwrap();
+	crate::trash::trash_entry(&conn, &s, old, None).unwrap();
+
+	let tree = [("section", "pages"), ("order", "structure")];
+	assert_eq!(titles(&conn, &tree), ["About", "Jobs", "Team"]);
+	// the children in their order, without the tree
+	let children = [("parent", &*about.to_string()), ("order", "structure")];
+	assert_eq!(titles(&conn, &children), ["Jobs", "Team"]);
+	let children = [("parent", &*about.to_string()), ("order", "-structure")];
+	assert_eq!(titles(&conn, &children), ["Team", "Jobs"]);
+	// the trees of all sections
+	let all = [("type", "page"), ("order", "structure")];
+	assert_eq!(titles(&conn, &all), ["About", "Jobs", "Team"]);
+}
+
 /// [`site`] with pages `max` levels deep.
 pub fn site_with_levels(max: u32) -> Schema {
 	let mut s = site();

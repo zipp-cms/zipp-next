@@ -234,7 +234,7 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 				|| section.kind == SectionKind::Structure
 				|| section.uri_if.is_some()
 			{
-				refresh_uris(conn, schema, section)?;
+				refresh_uris(conn, schema, section, Some(id))?;
 			}
 			id
 		}
