@@ -2,7 +2,8 @@
 //! relations, links, parents and children of a list of entries load in a
 //! query per site, not one per entry. A request has its own loaders, made
 //! on first use; they keep what they loaded, so an entry that many link
-//! to loads once.
+//! to loads once. Everything loads with what the viewer may see and
+//! counts against [`MAX_LOADED`].
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -131,6 +132,116 @@ impl Loader<i64> for Assets {
 		let assets = get_many(&self.0.conn(), ids)?;
 		Ok(assets.into_iter().map(|a| (a.id, a)).collect())
 	}
+}
+
+/// A query of entries with the arguments, what the viewer may see.
+pub(super) fn query(
+	ctx: &ResolverContext,
+	params: &[(String, String)],
+) -> async_graphql::Result<Query> {
+	viewer_query(ctx.data::<Arc<Schema>>()?, ctx.data::<Viewer>()?, params)
+}
+
+/// A query of entries with what the viewer may see.
+pub(super) fn viewer_query(
+	schema: &Schema,
+	viewer: &Viewer,
+	params: &[(String, String)],
+) -> async_graphql::Result<Query> {
+	let mut q = Query::parse(schema, params).map_err(GqlError::new)?;
+	q.published_only = viewer.published_only;
+	match &viewer.preview {
+		Some(Preview::Entry(id, _)) => q.preview_id = Some(*id),
+		Some(Preview::All(sections)) => q.preview_sections = sections.clone(),
+		None => {}
+	}
+	// a frontend gets nothing of an offline site, counts neither; the
+	// preview of one entry only that entry, its link opens no more
+	if schema.is_offline(&q.site) && viewer.published_only {
+		match &viewer.preview {
+			None => q.nothing = true,
+			Some(Preview::Entry(id, _)) => match &mut q.ids {
+				Some(ids) => ids.retain(|i| i == id),
+				None => q.ids = Some(vec![*id]),
+			},
+			Some(Preview::All(_)) => {}
+		}
+	}
+
+	// nor of what its token doesn't read
+	let scope = &viewer.scope;
+	match &q.section {
+		Some(s) if !scope.section(s) => q.nothing = true,
+		Some(_) => {}
+		None => q.sections = scope.sections.clone(),
+	}
+	if !scope.site(&q.site) {
+		q.nothing = true;
+	}
+	Ok(q)
+}
+
+/// Counts `n` loaded entries or assets of the request, an error past
+/// [`MAX_LOADED`].
+pub(super) fn spend(
+	ctx: &ResolverContext,
+	n: usize,
+) -> async_graphql::Result<()> {
+	use std::sync::atomic::Ordering;
+	let viewer = ctx.data::<Viewer>()?;
+	if viewer.loaded.count.fetch_add(n, Ordering::Relaxed) + n > MAX_LOADED {
+		return Err(GqlError::new(format!(
+			"the query loads more than {MAX_LOADED} entries and assets"
+		)));
+	}
+	Ok(())
+}
+
+/// The entries of a query, counted against [`MAX_LOADED`].
+pub(super) fn load(
+	ctx: &ResolverContext,
+	params: &[(String, String)],
+) -> async_graphql::Result<Vec<Entry>> {
+	let q = query(ctx, params)?;
+	let db = ctx.data::<Db>()?;
+	// the query counts too, before it runs
+	spend(ctx, 1)?;
+	let conn = db.conn();
+	let entries =
+		with_drafts(&conn, ctx.data::<Viewer>()?, select(&conn, &q)?)?;
+	spend(ctx, entries.len())?;
+	Ok(entries)
+}
+
+/// The entry of a preview shows its draft, or every entry its own.
+pub(super) fn with_drafts(
+	conn: &rusqlite::Connection,
+	viewer: &Viewer,
+	mut entries: Vec<Entry>,
+) -> async_graphql::Result<Vec<Entry>> {
+	match &viewer.preview {
+		Some(Preview::Entry(id, doc)) => {
+			for e in entries.iter_mut().filter(|e| e.id == *id) {
+				e.show_draft(doc);
+			}
+		}
+		Some(Preview::All(sections)) => {
+			// drafts only of the sections the token's user may view
+			let ids: Vec<i64> = entries
+				.iter()
+				.filter(|e| sections.contains(&e.section))
+				.map(|e| e.id)
+				.collect();
+			let drafts = docs_of(conn, &ids)?;
+			for e in entries.iter_mut() {
+				if let Some(doc) = drafts.get(&e.id) {
+					e.show_draft(doc);
+				}
+			}
+		}
+		None => {}
+	}
+	Ok(entries)
 }
 
 /// Entries of a site in the order of the ids, the ones the viewer sees.

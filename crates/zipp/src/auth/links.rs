@@ -201,7 +201,7 @@ pub fn login_as_session(
 	user_id: i64,
 	by: i64,
 ) -> Result<Session> {
-	super::insert_session(conn, user_id, LOGIN_AS_MS, false, Some(by))
+	super::sessions::insert_session(conn, user_id, LOGIN_AS_MS, false, Some(by))
 }
 
 /// The full url of a link, after `serve --public-url`.

@@ -380,3 +380,24 @@ fn fields_in_a_hidden_group_needn_t_be_filled() {
 	assert_eq!(err[0].path, "box.title");
 	assert_eq!(err[0].message, "is required");
 }
+
+#[test]
+fn a_required_table_needs_a_row() {
+	let s = site()
+		.section(Section::channel("prices", ["price"]).uri("{slug}"))
+		.entry(
+			"price",
+			"Price",
+			[Field::table("rows", [Column::text("name")]).required()],
+		);
+	s.check().unwrap();
+	let comp = s.get("price").unwrap();
+	let ok = json!({ "rows": [{ "name": "Kids" }] });
+	assert_eq!(validate(&s, comp, &ok).unwrap(), ok);
+
+	// only empty rows are no rows, like an empty group
+	let empty = json!({ "rows": [{ "name": " " }] });
+	let err = validate(&s, comp, &empty).unwrap_err();
+	assert_eq!(err[0].path, "rows");
+	assert_eq!(err[0].message, "is required");
+}

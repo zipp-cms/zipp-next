@@ -123,17 +123,46 @@ pub(super) fn content_field(
 			.map(|t| (t.clone(), options.clone())),
 		_ => None,
 	};
+	let ty = type_of(comp, field, custom.as_ref().map(|(t, _)| t.as_ref()))?;
+	let handle = field.handle.clone();
+	let kind = field.kind.clone();
+
+	Some(GqlField::new(field.handle.clone(), ty, move |ctx| {
+		let handle = handle.clone();
+		let kind = kind.clone();
+		let custom = custom.clone();
+		FieldFuture::new(async move {
+			let parent = &ctx.parent_value;
+			let (fields, site) = if let Some(e) = parent.downcast_ref::<Entry>()
+			{
+				(&e.fields, e.site.clone())
+			} else if let Some(a) = parent.downcast_ref::<SiteAsset>() {
+				(&a.asset.fields, a.site.clone())
+			} else {
+				let b = parent.try_downcast_ref::<Block>()?;
+				(&b.fields, b.site.clone())
+			};
+			let value = fields.get(&handle).cloned().unwrap_or(Value::Null);
+			resolve_value(&ctx, kind, custom, value, site).await
+		})
+	}))
+}
+
+/// The GraphQL type of a field; none for a note.
+fn type_of(
+	comp: &str,
+	field: &crate::schema::Field,
+	custom: Option<&dyn FieldType>,
+) -> Option<TypeRef> {
 	let ty = match &field.kind {
 		// as it is stored, `2026-11-14` or `2026-11-14T20:00`
 		FieldKind::Date { .. } => TypeRef::named(TypeRef::STRING),
-		FieldKind::Custom { .. } => {
-			match custom.as_ref().map(|(t, _)| t.graphql()) {
-				Some(GraphqlType::Object { name, .. }) => TypeRef::named(name),
-				Some(GraphqlType::Scalar(s)) => TypeRef::named(scalar_name(s)),
-				Some(GraphqlType::Named(name)) => TypeRef::named(name),
-				None => TypeRef::named(TypeRef::STRING),
-			}
-		}
+		FieldKind::Custom { .. } => match custom.map(|t| t.graphql()) {
+			Some(GraphqlType::Object { name, .. }) => TypeRef::named(name),
+			Some(GraphqlType::Scalar(s)) => TypeRef::named(scalar_name(s)),
+			Some(GraphqlType::Named(name)) => TypeRef::named(name),
+			None => TypeRef::named(TypeRef::STRING),
+		},
 		FieldKind::Text { .. } | FieldKind::Email => {
 			TypeRef::named(TypeRef::STRING)
 		}
@@ -161,137 +190,122 @@ pub(super) fn content_field(
 		FieldKind::Blocks { .. } => TypeRef::named_nn_list_nn("Block"),
 		FieldKind::Note { .. } => return None,
 	};
-	let handle = field.handle.clone();
-	let kind = field.kind.clone();
+	Some(ty)
+}
 
-	Some(GqlField::new(field.handle.clone(), ty, move |ctx| {
-		let handle = handle.clone();
-		let kind = kind.clone();
-		let custom = custom.clone();
-		FieldFuture::new(async move {
-			let parent = &ctx.parent_value;
-			let (fields, site) = if let Some(e) = parent.downcast_ref::<Entry>()
-			{
-				(&e.fields, e.site.clone())
-			} else if let Some(a) = parent.downcast_ref::<SiteAsset>() {
-				(&a.asset.fields, a.site.clone())
-			} else {
-				let b = parent.try_downcast_ref::<Block>()?;
-				(&b.fields, b.site.clone())
-			};
-			let value = fields.get(&handle).cloned().unwrap_or(Value::Null);
-
-			match kind {
-				FieldKind::Relation { .. } => {
-					let ids: Vec<i64> = value
-						.as_array()
-						.map(|a| a.iter().filter_map(Value::as_i64).collect())
-						.unwrap_or_default();
-					// in the order of the field
-					let entries = entries_by_id(&ctx, &site, &ids).await?;
-					Ok(Some(FieldValue::list(
-						entries.into_iter().map(entry_value),
-					)))
-				}
-				FieldKind::Assets { .. } => {
-					let ids: Vec<i64> = value
-						.as_array()
-						.map(|a| a.iter().filter_map(Value::as_i64).collect())
-						.unwrap_or_default();
-					let assets = assets_by_id(&ctx, &ids).await?;
-					Ok(Some(FieldValue::list(
-						assets.into_iter().map(|a| asset_value(a, &site)),
-					)))
-				}
-				FieldKind::Blocks { .. } => {
-					let blocks = value.as_array().into_iter().flatten();
-					// a switched off block isn't on the website
-					let blocks = blocks
-						.filter(|b| b["enabled"] != false)
-						.map(|b| block_of(b, &site));
-					Ok(Some(FieldValue::list(blocks)))
-				}
-				FieldKind::Group { component } if value.is_object() => {
-					// read like a block, it has no id or type of its own
-					Ok(Some(FieldValue::owned_any(Block {
-						id: String::new(),
-						ty: component,
-						site,
-						fields: value,
-					})))
-				}
-				FieldKind::Markdown if value.is_string() => {
-					let md = value.as_str().unwrap_or_default().to_string();
-					let html = markdown_html(&md);
-					Ok(Some(FieldValue::value(GqlValue::from_json(
-						serde_json::json!({ "markdown": md, "html": html }),
-					)?)))
-				}
-				FieldKind::RichText { .. } if !value.is_null() => {
-					let rt = RichText { doc: value, site };
-					Ok(Some(FieldValue::owned_any(rt)))
-				}
-				FieldKind::Link { new_tab, .. } if !value.is_null() => {
-					let to = targets(&ctx, &site, &value).await?;
-					let link = resolve_link(&ctx, &value, &site, new_tab, &to)?;
-					link.as_ref().map(link_value).transpose()
-				}
-				FieldKind::Custom { .. } => match custom {
-					Some((t, options)) => t.resolve(&ctx, &options, &value),
-					None => Ok(None),
-				},
-				FieldKind::Table { .. } => {
-					let rows = value.as_array().cloned().unwrap_or_default();
-					Ok(Some(FieldValue::list(rows.into_iter().map(|cells| {
-						FieldValue::owned_any(TableRow {
-							cells,
-							site: site.clone(),
-						})
-					}))))
-				}
-				FieldKind::Checkboxes { .. } => {
-					let items = value.as_array().cloned().unwrap_or_default();
-					Ok(Some(FieldValue::list(
-						items
-							.into_iter()
-							.map(|v| {
-								GqlValue::from_json(v).map(FieldValue::value)
-							})
-							.collect::<std::result::Result<Vec<_>, _>>()?,
-					)))
-				}
-				FieldKind::Navigation { .. } => {
-					let to = targets(&ctx, &site, &value).await?;
-					let items = nav_items(&ctx, &value, &site, &to)?;
-					let items = items.iter().map(link_value);
-					Ok(Some(FieldValue::list(
-						items.collect::<async_graphql::Result<Vec<_>>>()?,
-					)))
-				}
-				FieldKind::Texts { keys } => {
-					let texts = crate::content::texts_of(&keys, &value);
-					let json = serde_json::to_string(&texts)?;
-					Ok(Some(FieldValue::value(GqlValue::from(json))))
-				}
-				// a value of another shape (a draft, an older migration) is
-				// none rather than JSON in the place of an object
-				FieldKind::Group { .. }
-				| FieldKind::Markdown
-				| FieldKind::RichText { .. }
-				| FieldKind::Link { .. }
-				| FieldKind::Note { .. } => Ok(None),
-				FieldKind::Text { .. }
-				| FieldKind::Email
-				| FieldKind::Number { .. }
-				| FieldKind::Boolean
-				| FieldKind::Date { .. }
-				| FieldKind::Dropdown { .. } => match value {
-					Value::Null => Ok(None),
-					v => Ok(Some(FieldValue::value(GqlValue::from_json(v)?))),
-				},
-			}
-		})
-	}))
+/// The value of a field for GraphQL, from its JSON in the entry or block.
+async fn resolve_value<'a>(
+	ctx: &ResolverContext<'a>,
+	kind: FieldKind,
+	custom: Option<(Arc<dyn FieldType>, Value)>,
+	value: Value,
+	site: String,
+) -> async_graphql::Result<Option<FieldValue<'a>>> {
+	match kind {
+		FieldKind::Relation { .. } => {
+			let ids: Vec<i64> = value
+				.as_array()
+				.map(|a| a.iter().filter_map(Value::as_i64).collect())
+				.unwrap_or_default();
+			// in the order of the field
+			let entries = entries_by_id(ctx, &site, &ids).await?;
+			Ok(Some(FieldValue::list(entries.into_iter().map(entry_value))))
+		}
+		FieldKind::Assets { .. } => {
+			let ids: Vec<i64> = value
+				.as_array()
+				.map(|a| a.iter().filter_map(Value::as_i64).collect())
+				.unwrap_or_default();
+			let assets = assets_by_id(ctx, &ids).await?;
+			Ok(Some(FieldValue::list(
+				assets.into_iter().map(|a| asset_value(a, &site)),
+			)))
+		}
+		FieldKind::Blocks { .. } => {
+			let blocks = value.as_array().into_iter().flatten();
+			// a switched off block isn't on the website
+			let blocks = blocks
+				.filter(|b| b["enabled"] != false)
+				.map(|b| block_of(b, &site));
+			Ok(Some(FieldValue::list(blocks)))
+		}
+		FieldKind::Group { component } if value.is_object() => {
+			// read like a block, it has no id or type of its own
+			Ok(Some(FieldValue::owned_any(Block {
+				id: String::new(),
+				ty: component,
+				site,
+				fields: value,
+			})))
+		}
+		FieldKind::Markdown if value.is_string() => {
+			let md = value.as_str().unwrap_or_default().to_string();
+			let html = markdown_html(&md);
+			Ok(Some(FieldValue::value(GqlValue::from_json(
+				serde_json::json!({ "markdown": md, "html": html }),
+			)?)))
+		}
+		FieldKind::RichText { .. } if !value.is_null() => {
+			let rt = RichText { doc: value, site };
+			Ok(Some(FieldValue::owned_any(rt)))
+		}
+		FieldKind::Link { new_tab, .. } if !value.is_null() => {
+			let to = targets(ctx, &site, &value).await?;
+			let link = resolve_link(ctx, &value, &site, new_tab, &to)?;
+			link.as_ref().map(link_value).transpose()
+		}
+		FieldKind::Custom { .. } => match custom {
+			Some((t, options)) => t.resolve(ctx, &options, &value),
+			None => Ok(None),
+		},
+		FieldKind::Table { .. } => {
+			let rows = value.as_array().cloned().unwrap_or_default();
+			Ok(Some(FieldValue::list(rows.into_iter().map(|cells| {
+				FieldValue::owned_any(TableRow {
+					cells,
+					site: site.clone(),
+				})
+			}))))
+		}
+		FieldKind::Checkboxes { .. } => {
+			let items = value.as_array().cloned().unwrap_or_default();
+			Ok(Some(FieldValue::list(
+				items
+					.into_iter()
+					.map(|v| GqlValue::from_json(v).map(FieldValue::value))
+					.collect::<std::result::Result<Vec<_>, _>>()?,
+			)))
+		}
+		FieldKind::Navigation { .. } => {
+			let to = targets(ctx, &site, &value).await?;
+			let items = nav_items(ctx, &value, &site, &to)?;
+			let items = items.iter().map(link_value);
+			Ok(Some(FieldValue::list(
+				items.collect::<async_graphql::Result<Vec<_>>>()?,
+			)))
+		}
+		FieldKind::Texts { keys } => {
+			let texts = crate::content::texts_of(&keys, &value);
+			let json = serde_json::to_string(&texts)?;
+			Ok(Some(FieldValue::value(GqlValue::from(json))))
+		}
+		// a value of another shape (a draft, an older migration) is
+		// none rather than JSON in the place of an object
+		FieldKind::Group { .. }
+		| FieldKind::Markdown
+		| FieldKind::RichText { .. }
+		| FieldKind::Link { .. }
+		| FieldKind::Note { .. } => Ok(None),
+		FieldKind::Text { .. }
+		| FieldKind::Email
+		| FieldKind::Number { .. }
+		| FieldKind::Boolean
+		| FieldKind::Date { .. }
+		| FieldKind::Dropdown { .. } => match value {
+			Value::Null => Ok(None),
+			v => Ok(Some(FieldValue::value(GqlValue::from_json(v)?))),
+		},
+	}
 }
 
 pub(super) fn block_value(

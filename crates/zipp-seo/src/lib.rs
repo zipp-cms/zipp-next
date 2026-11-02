@@ -36,6 +36,7 @@ pub mod api;
 #[cfg(test)]
 mod api_tests;
 mod graphql;
+mod json_ld;
 mod plugin;
 mod resolve;
 mod routes;

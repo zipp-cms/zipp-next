@@ -10,7 +10,7 @@ use super::*;
 use crate::fixtures::site;
 use crate::testing::TestServer;
 
-use crate::db::DAY_MS as DAY;
+use crate::db::{DAY_MS as DAY, token_hash};
 
 fn login(email: &str, password: &str) -> LoginReq {
 	LoginReq {

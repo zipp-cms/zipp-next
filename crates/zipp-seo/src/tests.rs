@@ -4,6 +4,7 @@ use zipp::Schema;
 use zipp::db::iso;
 use zipp::schema::Site;
 
+use crate::json_ld::script_json;
 use crate::resolve::*;
 use crate::{Seo, SeoDefaults};
 

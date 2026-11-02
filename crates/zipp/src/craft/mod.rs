@@ -19,103 +19,20 @@ use std::fs;
 use std::path::{Component as PathPart, Path, PathBuf};
 
 use rusqlite::{Connection, params};
-use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
 use crate::assets;
 use crate::db::{now, parse_iso};
 use crate::entries::{self, EntryInput, next_position};
 use crate::error::{Error, Result};
-use crate::schema::{
-	Component, Field, FieldKind, LinkKind, Schema, SectionKind,
-};
+use crate::schema::{Component, Field, FieldKind, Schema, SectionKind};
 
+mod export;
 mod html;
+mod rich;
 
-#[derive(Debug, Deserialize)]
-pub struct Export {
-	pub sites: Vec<CraftSite>,
-	#[serde(default, deserialize_with = "map_or_list")]
-	pub sections: BTreeMap<String, CraftSection>,
-	/// group, site, categories
-	#[serde(default, deserialize_with = "map_or_list")]
-	pub categories: BTreeMap<String, BTreeMap<String, Vec<Element>>>,
-	/// set, site, its fields
-	#[serde(default, deserialize_with = "map_or_list")]
-	pub globals: BTreeMap<String, BTreeMap<String, Global>>,
-	#[serde(default)]
-	pub assets: Vec<CraftAsset>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CraftSite {
-	pub handle: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CraftSection {
-	/// the elements per site, a structure in its order
-	#[serde(deserialize_with = "map_or_list")]
-	pub sites: BTreeMap<String, Vec<Element>>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Element {
-	pub id: i64,
-	#[serde(rename = "type")]
-	pub ty: Option<String>,
-	pub title: Option<String>,
-	pub slug: Option<String>,
-	pub enabled: bool,
-	pub parent_id: Option<i64>,
-	pub post_date: Option<String>,
-	pub expiry_date: Option<String>,
-	pub date_created: Option<String>,
-	#[serde(default)]
-	pub fields: Value,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Global {
-	#[serde(default)]
-	pub fields: Value,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CraftAsset {
-	pub id: i64,
-	pub volume: String,
-	pub path: String,
-	pub title: Option<String>,
-	/// of the primary site
-	pub alt: Option<String>,
-	/// per Craft site, from exports that have it
-	#[serde(default, deserialize_with = "map_or_list")]
-	pub alts: BTreeMap<String, String>,
-	pub focal_point: Option<(f64, f64)>,
-}
-
-/// PHP writes an empty map as `[]`.
-fn map_or_list<'de, D, T>(
-	d: D,
-) -> std::result::Result<BTreeMap<String, T>, D::Error>
-where
-	D: serde::Deserializer<'de>,
-	T: Deserialize<'de>,
-{
-	#[derive(Deserialize)]
-	#[serde(untagged)]
-	enum Either<T> {
-		Map(BTreeMap<String, T>),
-		List(#[allow(dead_code)] Vec<Value>),
-	}
-	Ok(match Either::deserialize(d)? {
-		Either::Map(m) => m,
-		Either::List(_) => BTreeMap::new(),
-	})
-}
+use export::Element;
+pub use export::Export;
 
 pub struct Options {
 	/// Craft site handle to zipp site handle; without it sites match by
@@ -163,150 +80,9 @@ pub fn import(
 
 	let tx = conn.unchecked_transaction()?;
 	im.assets(&tx, files, export, opts, &sites)?;
-
-	// every element of a section with its entry type, in Craft's order
-	// section, entry type, the element in each zipp site
-	type Planned = (String, String, Vec<(String, Element)>);
-	let mut planned: Vec<Planned> = vec![];
-	let groups = export.sections.iter().map(|(h, s)| (h, &s.sites, false));
-	let cats = export.categories.iter().map(|(h, s)| (h, s, true));
-	for (handle, per_site, category) in groups.chain(cats) {
-		let Some(section) = schema.get_section(handle) else {
-			im.skip(format!("section {handle}: not in the schema"));
-			continue;
-		};
-		if section.kind == SectionKind::Single {
-			im.skip(format!("section {handle}: a single in zipp"));
-			continue;
-		}
-
-		let mut order: Vec<i64> = vec![];
-		let mut by_id: HashMap<i64, Vec<(String, Element)>> = HashMap::new();
-		for (craft_site, elements) in per_site {
-			let Some(site) = sites.get(craft_site) else {
-				continue;
-			};
-			for e in elements {
-				if !by_id.contains_key(&e.id) {
-					order.push(e.id);
-				}
-				by_id
-					.entry(e.id)
-					.or_default()
-					.push((site.clone(), e.clone()));
-			}
-		}
-
-		for id in order {
-			let versions = by_id.remove(&id).unwrap();
-			let craft_ty = versions[0].1.ty.clone();
-			let ty = match craft_ty {
-				Some(t) if section.types.contains(&t) => t,
-				_ if category || section.types.len() == 1 => {
-					section.types[0].clone()
-				}
-				t => {
-					let title = versions[0].1.title.clone().unwrap_or_default();
-					im.skip(format!(
-						"{handle}: {title}: no entry type {}",
-						t.unwrap_or_default()
-					));
-					continue;
-				}
-			};
-			planned.push((handle.clone(), ty, versions));
-		}
-	}
-
-	// first every entry without fields, so relations find each other
-	for (section, ty, versions) in &planned {
-		let e = &versions[0].1;
-		let parent = e.parent_id.and_then(|p| im.entries.get(&p).copied());
-		let id = create_empty(&tx, schema, section, ty, &title_of(e), parent)?;
-		im.entries.insert(e.id, id);
-	}
-
-	for (section, ty, versions) in &planned {
-		let id = im.entries[&versions[0].1.id];
-		let comp = schema.entry_type(ty).unwrap();
-		let mut saved = false;
-		for (site, e) in versions {
-			let fields = im.fields(comp, &e.fields);
-			let input = EntryInput {
-				section: section.clone(),
-				ty: ty.clone(),
-				site: Some(site.clone()),
-				title: title_of(e),
-				slug: e.slug.clone().unwrap_or_default(),
-				published: e.enabled,
-				dates: entries::Dates {
-					post_date: e.post_date.as_deref().and_then(parse_iso),
-					expiry_date: e.expiry_date.as_deref().and_then(parse_iso),
-				},
-				parent_id: None,
-				fields,
-			};
-			match save(&tx, schema, id, input) {
-				Ok(()) => saved = true,
-				Err(err) => im.skip(format!(
-					"{section}: {}: {}",
-					title_of(e),
-					describe(err)
-				)),
-			}
-		}
-		// not even an empty entry of what fits in no site
-		if !saved {
-			entries::delete(&tx, schema, id)?;
-			continue;
-		}
-		let e = &versions[0].1;
-		let created = e.post_date.as_deref().or(e.date_created.as_deref());
-		if let Some(ms) = created.and_then(parse_iso) {
-			tx.execute(
-				"UPDATE entries SET created_at = ?1 WHERE id = ?2",
-				params![ms, id],
-			)?;
-		}
-		im.report.entries += 1;
-	}
-
-	// global sets fill the singles of the same handle
-	for (handle, per_site) in &export.globals {
-		let single = schema
-			.get_section(handle)
-			.filter(|s| s.kind == SectionKind::Single);
-		let Some(section) = single else {
-			im.skip(format!("global set {handle}: no single {handle}"));
-			continue;
-		};
-		let id: i64 = tx.query_row(
-			"SELECT id FROM entries WHERE section = ?1",
-			[handle],
-			|r| r.get(0),
-		)?;
-		let comp = schema.entry_type(&section.types[0]).unwrap();
-		for (craft_site, global) in per_site {
-			let Some(site) = sites.get(craft_site) else {
-				continue;
-			};
-			let current = entries::get_entry(&tx, id, site)?;
-			let input = EntryInput {
-				section: handle.clone(),
-				ty: section.types[0].clone(),
-				site: Some(site.clone()),
-				title: current.title,
-				slug: current.slug,
-				published: true,
-				dates: Default::default(),
-				parent_id: None,
-				fields: im.fields(comp, &global.fields),
-			};
-			if let Err(err) = save(&tx, schema, id, input) {
-				im.skip(format!("global set {handle}: {}", describe(err)));
-			}
-		}
-	}
+	let planned = im.plan(export, &sites);
+	im.save_planned(&tx, &planned)?;
+	im.import_globals(&tx, export, &sites)?;
 
 	tx.commit()?;
 	Ok(im.report)
@@ -414,6 +190,13 @@ fn create_empty(
 	Ok(id)
 }
 
+/// An element of Craft in each zipp site, with its section and entry type.
+struct Planned {
+	section: String,
+	ty: String,
+	versions: Vec<(String, Element)>,
+}
+
 struct Importer<'a> {
 	schema: &'a Schema,
 	/// Craft element id to zipp entry id
@@ -426,6 +209,193 @@ struct Importer<'a> {
 impl Importer<'_> {
 	fn skip(&mut self, what: String) {
 		self.report.skipped.push(what);
+	}
+
+	/// Every element of a section with its entry type, in Craft's order.
+	fn plan(
+		&mut self,
+		export: &Export,
+		sites: &HashMap<String, String>,
+	) -> Vec<Planned> {
+		let mut planned: Vec<Planned> = vec![];
+		let groups = export.sections.iter().map(|(h, s)| (h, &s.sites, false));
+		let cats = export.categories.iter().map(|(h, s)| (h, s, true));
+		for (handle, per_site, category) in groups.chain(cats) {
+			let Some(section) = self.schema.get_section(handle) else {
+				self.skip(format!("section {handle}: not in the schema"));
+				continue;
+			};
+			if section.kind == SectionKind::Single {
+				self.skip(format!("section {handle}: a single in zipp"));
+				continue;
+			}
+
+			let mut order: Vec<i64> = vec![];
+			let mut by_id: HashMap<i64, Vec<(String, Element)>> =
+				HashMap::new();
+			for (craft_site, elements) in per_site {
+				let Some(site) = sites.get(craft_site) else {
+					continue;
+				};
+				for e in elements {
+					if !by_id.contains_key(&e.id) {
+						order.push(e.id);
+					}
+					by_id
+						.entry(e.id)
+						.or_default()
+						.push((site.clone(), e.clone()));
+				}
+			}
+
+			for id in order {
+				let versions = by_id.remove(&id).unwrap();
+				let craft_ty = versions[0].1.ty.clone();
+				let ty = match craft_ty {
+					Some(t) if section.types.contains(&t) => t,
+					_ if category || section.types.len() == 1 => {
+						section.types[0].clone()
+					}
+					t => {
+						let title =
+							versions[0].1.title.clone().unwrap_or_default();
+						self.skip(format!(
+							"{handle}: {title}: no entry type {}",
+							t.unwrap_or_default()
+						));
+						continue;
+					}
+				};
+				planned.push(Planned {
+					section: handle.clone(),
+					ty,
+					versions,
+				});
+			}
+		}
+		planned
+	}
+
+	/// Saves the planned entries: first every entry without fields, so
+	/// relations find each other, then their fields in each site.
+	fn save_planned(
+		&mut self,
+		tx: &Connection,
+		planned: &[Planned],
+	) -> Result<()> {
+		for p in planned {
+			let e = &p.versions[0].1;
+			let parent =
+				e.parent_id.and_then(|p| self.entries.get(&p).copied());
+			let id = create_empty(
+				tx,
+				self.schema,
+				&p.section,
+				&p.ty,
+				&title_of(e),
+				parent,
+			)?;
+			self.entries.insert(e.id, id);
+		}
+
+		for p in planned {
+			let id = self.entries[&p.versions[0].1.id];
+			let comp = self.schema.entry_type(&p.ty).unwrap();
+			let mut saved = false;
+			for (site, e) in &p.versions {
+				let fields = self.fields(comp, &e.fields);
+				let input = EntryInput {
+					section: p.section.clone(),
+					ty: p.ty.clone(),
+					site: Some(site.clone()),
+					title: title_of(e),
+					slug: e.slug.clone().unwrap_or_default(),
+					published: e.enabled,
+					dates: entries::Dates {
+						post_date: e.post_date.as_deref().and_then(parse_iso),
+						expiry_date: e
+							.expiry_date
+							.as_deref()
+							.and_then(parse_iso),
+					},
+					parent_id: None,
+					fields,
+				};
+				match save(tx, self.schema, id, input) {
+					Ok(()) => saved = true,
+					Err(err) => self.skip(format!(
+						"{}: {}: {}",
+						p.section,
+						title_of(e),
+						describe(err)
+					)),
+				}
+			}
+			// not even an empty entry of what fits in no site
+			if !saved {
+				entries::delete(tx, self.schema, id)?;
+				continue;
+			}
+			let e = &p.versions[0].1;
+			let created = e.post_date.as_deref().or(e.date_created.as_deref());
+			if let Some(ms) = created.and_then(parse_iso) {
+				tx.execute(
+					"UPDATE entries SET created_at = ?1 WHERE id = ?2",
+					params![ms, id],
+				)?;
+			}
+			self.report.entries += 1;
+		}
+		Ok(())
+	}
+
+	/// Global sets fill the singles of the same handle.
+	fn import_globals(
+		&mut self,
+		tx: &Connection,
+		export: &Export,
+		sites: &HashMap<String, String>,
+	) -> Result<()> {
+		for (handle, per_site) in &export.globals {
+			let single = self
+				.schema
+				.get_section(handle)
+				.filter(|s| s.kind == SectionKind::Single);
+			let Some(section) = single else {
+				self.skip(format!("global set {handle}: no single {handle}"));
+				continue;
+			};
+			let id: i64 = tx.query_row(
+				"SELECT id FROM entries WHERE section = ?1",
+				[handle],
+				|r| r.get(0),
+			)?;
+			let comp = self.schema.entry_type(&section.types[0]).unwrap();
+			for (craft_site, global) in per_site {
+				let Some(site) = sites.get(craft_site) else {
+					continue;
+				};
+				let current = entries::get_entry(tx, id, site)?;
+				let input = EntryInput {
+					section: handle.clone(),
+					ty: section.types[0].clone(),
+					site: Some(site.clone()),
+					title: current.title,
+					slug: current.slug,
+					published: true,
+					dates: Default::default(),
+					parent_id: None,
+					fields: self.fields(comp, &global.fields),
+				};
+				if let Err(err) = save(tx, self.schema, id, input) {
+					self.skip(format!(
+						"global set {handle}: {}",
+						describe(err)
+					));
+				}
+			}
+		}
+		Ok(())
 	}
 
 	fn assets(
@@ -715,248 +685,6 @@ impl Importer<'_> {
 			block["enabled"] = false.into();
 		}
 		Some(block)
-	}
-
-	/// Craft's link `{ type, id, value, label, target, download }`.
-	fn link(&self, v: &Value, new_tab: bool) -> Option<Value> {
-		let ty = v["type"].as_str()?;
-		let (kind, value) = match ty {
-			"entry" | "category" => (
-				LinkKind::Entry,
-				Value::from(*self.entries.get(&v["id"].as_i64()?)?),
-			),
-			"asset" => (
-				LinkKind::Asset,
-				Value::from(*self.assets.get(&v["id"].as_i64()?)?),
-			),
-			"url" => (LinkKind::Url, v["value"].clone()),
-			"email" => {
-				let e = v["value"].as_str()?;
-				(
-					LinkKind::Email,
-					Value::from(e.trim_start_matches("mailto:")),
-				)
-			}
-			"tel" => {
-				let p = v["value"].as_str()?;
-				(LinkKind::Phone, Value::from(p.trim_start_matches("tel:")))
-			}
-			_ => return None,
-		};
-		let mut link = json!({ "type": kind, "value": value });
-		if let Some(l) = v["label"].as_str().filter(|l| !l.is_empty()) {
-			link["label"] = Value::from(l);
-		}
-		// zipp opens external links in a new tab, Craft only with a
-		// target. The import doesn't know the urls of the sites, and a url
-		// of their own isn't external (see graphql's links): where that
-		// would matter, the link says what Craft's does.
-		let http = value.as_str().is_some_and(|u| u.starts_with("http"));
-		let default = match kind {
-			LinkKind::Asset => Some(new_tab),
-			LinkKind::Url if http && new_tab => None,
-			_ => Some(false),
-		};
-		let blank = v["target"] == "_blank";
-		if default != Some(blank) {
-			link["newTab"] = Value::from(blank);
-		}
-		if kind == LinkKind::Asset && v["download"] == true {
-			link["download"] = Value::from(true);
-		}
-		Some(link)
-	}
-
-	/// A matrix as a navigation: each nested entry's link and the nested
-	/// entries of its own matrix under it.
-	fn nav(&self, v: &Value) -> Value {
-		let mut items = vec![];
-		for nested in v.as_array().into_iter().flatten() {
-			if nested["enabled"] == false {
-				continue;
-			}
-			let fields = nested["fields"].as_object();
-			let values = || fields.into_iter().flat_map(|f| f.values());
-			let link = values()
-				.filter(|f| f.get("type").is_some() && f.get("label").is_some())
-				.find_map(|f| self.link(f, true));
-			let Some(mut item) = link else {
-				continue;
-			};
-			let children = values().find(|f| {
-				f.as_array().is_some_and(|a| {
-					a.first().is_some_and(|n| n.get("fields").is_some())
-				})
-			});
-			if let Some(children) = children {
-				item["children"] = self.nav(children);
-			}
-			items.push(item);
-		}
-		Value::from(items)
-	}
-
-	/// CKEditor's `{ html, entries }` as a document of what the field
-	/// allows.
-	fn rich_text(&mut self, field: &Field, v: &Value) -> Value {
-		let FieldKind::RichText {
-			headings,
-			lists,
-			links,
-			buttons,
-			blocks,
-			..
-		} = &field.kind
-		else {
-			unreachable!()
-		};
-		let doc = html::to_doc(v["html"].as_str().unwrap_or_default());
-		let nested: HashMap<i64, &Value> = v["entries"]
-			.as_array()
-			.into_iter()
-			.flatten()
-			.filter_map(|e| Some((e["id"].as_i64()?, e)))
-			.collect();
-
-		let mut content: Vec<Value> = vec![];
-		for mut node in doc["content"].as_array().cloned().unwrap_or_default() {
-			match node["type"].as_str().unwrap_or_default() {
-				"craftEntry" => {
-					let id = node["attrs"]["id"].as_i64().unwrap_or_default();
-					let Some(e) =
-						nested.get(&id).filter(|e| e["enabled"] != false)
-					else {
-						continue;
-					};
-					let ty = e["type"].as_str().unwrap_or_default();
-					if blocks.iter().any(|b| b == ty) {
-						let comp = self.schema.get(ty).unwrap();
-						let fields = self.fields(comp, &e["fields"]);
-						content.push(json!({
-							"type": "embed",
-							"attrs": { "type": ty, "fields": fields },
-						}));
-						continue;
-					}
-					let link = e["fields"]
-						.as_object()
-						.into_iter()
-						.flat_map(|f| f.values())
-						.find_map(|f| self.link(f, true));
-					match link {
-						// buttons next to each other are one row on the
-						// website
-						Some(link) if *buttons => content.push(json!({
-							"type": "button",
-							"attrs": { "link": link },
-						})),
-						_ => self.skip(format!(
-							"{}: an entry {ty} in the text",
-							field.handle
-						)),
-					}
-					continue;
-				}
-				"heading" => {
-					let level =
-						node["attrs"]["level"].as_u64().unwrap_or(0) as u8;
-					let nearest =
-						headings.iter().min_by_key(|l| l.abs_diff(level));
-					match nearest {
-						Some(l) => node["attrs"]["level"] = Value::from(*l),
-						None => {
-							node = json!({
-								"type": "paragraph",
-								"content": node["content"],
-							})
-						}
-					}
-				}
-				"bulletList" | "orderedList" if !lists => {
-					for item in node["content"].as_array().into_iter().flatten()
-					{
-						content.extend(
-							item["content"]
-								.as_array()
-								.cloned()
-								.unwrap_or_default(),
-						);
-					}
-					continue;
-				}
-				_ => {}
-			}
-			content.push(node);
-		}
-
-		let mut doc = json!({ "type": "doc", "content": content });
-		self.links(&mut doc, *links);
-		doc
-	}
-
-	/// The link marks of a document as zipp's links, or plain text when
-	/// the field has no links.
-	fn links(&self, node: &mut Value, allowed: bool) {
-		if let Some(marks) = node.get_mut("marks").and_then(Value::as_array_mut)
-		{
-			let mut kept = vec![];
-			for m in marks.drain(..) {
-				if m["type"] != "link" {
-					kept.push(m);
-					continue;
-				}
-				let link = self.href(&m["attrs"]);
-				if let (true, Some(link)) = (allowed, link) {
-					kept.push(
-						json!({ "type": "link", "attrs": { "link": link } }),
-					);
-				}
-			}
-			*marks = kept;
-		}
-		for child in node
-			.get_mut("content")
-			.and_then(Value::as_array_mut)
-			.into_iter()
-			.flatten()
-		{
-			self.links(child, allowed);
-		}
-	}
-
-	/// An `href` of CKEditor: `{entry:12@1:url||https://…}`, mailto:,
-	/// tel: or a url.
-	fn href(&self, attrs: &Value) -> Option<Value> {
-		let href = attrs["href"].as_str()?;
-		let target = attrs["target"].clone();
-		let link = if let Some(r) = href.strip_prefix('{') {
-			let (reference, fallback) =
-				r.trim_end_matches('}').split_once("||").unwrap_or((r, ""));
-			let (kind, rest) = reference.split_once(':')?;
-			let id: i64 = rest.split(['@', ':']).next()?.parse().ok()?;
-			match kind {
-				"entry" | "category" => json!({
-					"type": "entry",
-					"id": id,
-					"target": target,
-				}),
-				// rich text links don't go to files, the file's url stays
-				_ => {
-					json!({ "type": "url", "value": fallback, "target": target })
-				}
-			}
-		} else if let Some(e) = href.strip_prefix("mailto:") {
-			json!({ "type": "email", "value": e, "target": target })
-		} else if let Some(p) = href.strip_prefix("tel:") {
-			json!({ "type": "tel", "value": p, "target": target })
-		} else {
-			json!({ "type": "url", "value": href, "target": target })
-		};
-		let mut link = self.link(&link, true)?;
-		if let Some(o) = link.as_object_mut() {
-			o.remove("label");
-		}
-		Some(link)
 	}
 }
 

@@ -133,10 +133,7 @@ pub(super) fn validate_value(
 	// hidden by its condition it needn't be filled, its value is checked
 	let required = field.required && !hidden;
 	if is_blank(field, value) {
-		if required {
-			error(errors, path, "is required");
-		}
-		return None;
+		return filled(Value::Null, true, required, path, errors);
 	}
 
 	match (&field.kind, value) {
@@ -197,68 +194,24 @@ pub(super) fn validate_value(
 					_ => error(errors, path, "not one of the options"),
 				}
 			}
-			return (!out.is_empty()).then_some(Value::Array(out));
+			let empty = out.is_empty();
+			return filled(Value::Array(out), empty, required, path, errors);
 		}
 		(FieldKind::Table { columns }, Value::Array(rows)) => {
-			let mut out = vec![];
-			for (i, row) in rows.iter().enumerate() {
-				let Some(row) = row.as_object() else {
-					error(errors, &format!("{path}.{i}"), "must be a row");
-					continue;
-				};
-				let mut cells = Map::new();
-				for c in columns {
-					let cell = row.get(&c.handle).unwrap_or(&Value::Null);
-					// texts without the spaces around them
-					let cell = match cell {
-						Value::String(t) => Value::from(t.trim()),
-						v => v.clone(),
-					};
-					let p = format!("{path}.{i}.{}", c.handle);
-					let field = c.as_field();
-					let v = validate_value(
-						schema, &field, &cell, &p, hidden, errors,
-					);
-					match v {
-						// no is nothing, a row of only noes is empty
-						None | Some(Value::Bool(false)) => continue,
-						Some(Value::String(u))
-							if c.kind == ColumnKind::Url && !safe_url(&u) =>
-						{
-							error(errors, &p, "a url like https://… or /path")
-						}
-						Some(v) => {
-							cells.insert(c.handle.clone(), v);
-						}
-					}
-				}
-				// an empty row is no row
-				if !cells.is_empty() {
-					out.push(Value::Object(cells));
-				}
-			}
-			return (!out.is_empty()).then_some(Value::Array(out));
+			let out =
+				validate_table(schema, columns, rows, path, hidden, errors);
+			let empty = out.is_empty();
+			return filled(Value::Array(out), empty, required, path, errors);
 		}
 		(FieldKind::Navigation { to, depth }, Value::Array(items)) => {
 			let out = validate_navigation(to, *depth, items, path, errors);
-			return (!out.is_empty()).then_some(Value::Array(out));
+			let empty = out.is_empty();
+			return filled(Value::Array(out), empty, required, path, errors);
 		}
 		(FieldKind::Texts { keys }, Value::Object(texts)) => {
-			// only the keys of the code, empty ones fall back to its text
-			let mut out = Map::new();
-			for (key, text) in texts {
-				match text {
-					Value::String(t) if t.is_empty() => {}
-					Value::String(_) if keys.iter().any(|(k, _)| k == key) => {
-						out.insert(key.clone(), text.clone());
-					}
-					Value::String(_) => {}
-					_ => {
-						error(errors, &format!("{path}.{key}"), "must be text")
-					}
-				}
-			}
-			return (!out.is_empty()).then_some(Value::Object(out));
+			let out = validate_texts(keys, texts, path, errors);
+			let empty = out.is_empty();
+			return filled(Value::Object(out), empty, required, path, errors);
 		}
 		(FieldKind::Dropdown { options }, Value::String(s)) => {
 			if !options.iter().any(|o| &o.value == s) {
@@ -270,26 +223,16 @@ pub(super) fn validate_value(
 			let prefix = format!("{path}.");
 			let out =
 				validate_fields(schema, comp, value, &prefix, hidden, errors);
-			if out.as_object().is_some_and(|o| o.is_empty()) {
-				if required {
-					error(errors, path, "is required");
-				}
-				return None;
-			}
-			return Some(out);
+			let empty = out.as_object().is_some_and(|o| o.is_empty());
+			return filled(out, empty, required, path, errors);
 		}
 		(kind @ FieldKind::RichText { .. }, Value::Object(_)) => {
 			let allowed = richtext::Allowed::of(kind).unwrap();
 			let doc = richtext::validate(
 				schema, &allowed, value, path, hidden, errors,
 			);
-			if richtext::is_empty(&doc) {
-				if required {
-					error(errors, path, "is required");
-				}
-				return None;
-			}
-			return Some(doc);
+			let empty = richtext::is_empty(&doc);
+			return filled(doc, empty, required, path, errors);
 		}
 		(FieldKind::Link { to, labels, .. }, Value::Object(link)) => {
 			if let Err(e) = check_link(to, *labels, link) {
@@ -337,6 +280,93 @@ pub(super) fn validate_value(
 	}
 
 	Some(value.clone())
+}
+
+/// A value after its check: nothing left of it is no value, and an error
+/// when the field must be filled.
+fn filled(
+	value: Value,
+	empty: bool,
+	required: bool,
+	path: &str,
+	errors: &mut Vec<FieldError>,
+) -> Option<Value> {
+	if empty {
+		if required {
+			error(errors, path, "is required");
+		}
+		return None;
+	}
+	Some(value)
+}
+
+/// The rows of a table, each cell checked like a field of its column.
+fn validate_table(
+	schema: &Schema,
+	columns: &[Column],
+	rows: &[Value],
+	path: &str,
+	hidden: bool,
+	errors: &mut Vec<FieldError>,
+) -> Vec<Value> {
+	let mut out = vec![];
+	for (i, row) in rows.iter().enumerate() {
+		let Some(row) = row.as_object() else {
+			error(errors, &format!("{path}.{i}"), "must be a row");
+			continue;
+		};
+		let mut cells = Map::new();
+		for c in columns {
+			let cell = row.get(&c.handle).unwrap_or(&Value::Null);
+			// texts without the spaces around them
+			let cell = match cell {
+				Value::String(t) => Value::from(t.trim()),
+				v => v.clone(),
+			};
+			let p = format!("{path}.{i}.{}", c.handle);
+			let field = c.as_field();
+			let v = validate_value(schema, &field, &cell, &p, hidden, errors);
+			match v {
+				// no is nothing, a row of only noes is empty
+				None | Some(Value::Bool(false)) => continue,
+				Some(Value::String(u))
+					if c.kind == ColumnKind::Url && !safe_url(&u) =>
+				{
+					error(errors, &p, "a url like https://… or /path")
+				}
+				Some(v) => {
+					cells.insert(c.handle.clone(), v);
+				}
+			}
+		}
+		// an empty row is no row
+		if !cells.is_empty() {
+			out.push(Value::Object(cells));
+		}
+	}
+	out
+}
+
+/// The texts of a texts field: only the keys of the code, empty ones fall
+/// back to its text.
+fn validate_texts(
+	keys: &[(String, String)],
+	texts: &Map<String, Value>,
+	path: &str,
+	errors: &mut Vec<FieldError>,
+) -> Map<String, Value> {
+	let mut out = Map::new();
+	for (key, text) in texts {
+		match text {
+			Value::String(t) if t.is_empty() => {}
+			Value::String(_) if keys.iter().any(|(k, _)| k == key) => {
+				out.insert(key.clone(), text.clone());
+			}
+			Value::String(_) => {}
+			_ => error(errors, &format!("{path}.{key}"), "must be text"),
+		}
+	}
+	out
 }
 
 pub(super) fn validate_block(

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::schema::{
-	ColumnKind, Component, Field, FieldKind, Holds, LinkKind, Schema,
+	Column, ColumnKind, Component, Field, FieldKind, Holds, LinkKind, Schema,
 };
 
 mod relations;
