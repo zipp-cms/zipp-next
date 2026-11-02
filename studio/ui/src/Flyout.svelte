@@ -16,14 +16,11 @@
 		onclose,
 		actions,
 		children,
-		narrow = false,
 	}: {
 		title: string;
 		onclose: () => void;
 		actions?: Snippet;
 		children: Snippet;
-		/** for a list to choose from, not a whole page */
-		narrow?: boolean;
 	} = $props();
 
 	const bar: FlyoutBar = $state({ content: null });
@@ -41,7 +38,6 @@
 <div class="backdrop" role="presentation" onclick={onclose}></div>
 <div
 	class="flyout"
-	class:narrow
 	role="dialog"
 	aria-modal="true"
 	aria-label={title}
@@ -80,13 +76,6 @@
 <style lang="scss">
 	@use '../vars' as *;
 
-	.backdrop {
-		position: fixed;
-		inset: 0;
-		z-index: var(--z-overlay);
-		background: var(--backdrop);
-	}
-
 	.flyout {
 		position: fixed;
 		top: 0;
@@ -100,10 +89,6 @@
 		box-shadow: var(--shadow-flyout);
 		outline: none;
 		animation: slide 0.18s ease-out;
-	}
-
-	.narrow {
-		width: min(47.5rem, 92vw);
 	}
 
 	// a phone has no room for the page beside it

@@ -75,9 +75,4 @@
 		margin-bottom: 1.25rem;
 		overflow-x: auto;
 	}
-
-	.muted {
-		color: var(--muted);
-		font-size: 0.875rem;
-	}
 </style>

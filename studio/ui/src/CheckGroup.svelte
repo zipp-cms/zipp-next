@@ -28,7 +28,7 @@
 				checked={on}
 				onchange={e => ontoggle(o.value, e.currentTarget.checked)}
 			/>
-			<span class="box" aria-hidden="true">
+			<span class="tick" aria-hidden="true">
 				{#if on}<Icon name="check" size={12} />{/if}
 			</span>
 			{o.label}
@@ -90,19 +90,13 @@
 		}
 	}
 
-	// the input stays for the keyboard and screen readers, the box
+	// the input stays for the keyboard and screen readers, the tick
 	// shows it
 	input {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		border: 0;
-		opacity: 0;
-		pointer-events: none;
+		@include visually-hidden;
 	}
 
-	.box {
+	.tick {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;

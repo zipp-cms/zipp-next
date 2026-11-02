@@ -13,7 +13,6 @@
 		kindIcon,
 		summary,
 		open = $bindable(true),
-		collapsible = true,
 		invalid = false,
 		changed = false,
 		off = false,
@@ -27,7 +26,6 @@
 		kindIcon?: Snippet;
 		summary?: Snippet;
 		open?: boolean;
-		collapsible?: boolean;
 		invalid?: boolean;
 		/** new or changed in the draft */
 		changed?: boolean;
@@ -40,18 +38,16 @@
 		id?: string;
 	} = $props();
 
-	const shown = $derived(open || !collapsible);
-	const toggle = () => collapsible && (open = !open);
+	const toggle = () => (open = !open);
 </script>
 
-<div class="item-card box" class:open={shown} class:invalid class:off {id}>
+<div class="item-card box" class:open class:invalid class:off {id}>
 	<div class="head">
 		{@render handle?.()}
 		<button
 			type="button"
 			class="toggle plain"
-			aria-expanded={shown}
-			disabled={!collapsible}
+			aria-expanded={open}
 			onclick={toggle}
 		>
 			{#if changed}<span
@@ -70,18 +66,16 @@
 			{/if}
 		</button>
 		{#if actions}<span class="reveal">{@render actions()}</span>{/if}
-		{#if collapsible}
-			<button
-				type="button"
-				class="icon"
-				title={shown ? ui.texts.collapse : ui.texts.expand}
-				onclick={toggle}
-			>
-				<Icon name={shown ? 'chevron-down' : 'chevron-right'} />
-			</button>
-		{/if}
+		<button
+			type="button"
+			class="icon"
+			title={open ? ui.texts.collapse : ui.texts.expand}
+			onclick={toggle}
+		>
+			<Icon name={open ? 'chevron-down' : 'chevron-right'} />
+		</button>
 	</div>
-	{#if shown}
+	{#if open}
 		<div class="body">{@render children()}</div>
 	{/if}
 </div>
@@ -120,11 +114,6 @@
 		flex: 1;
 		min-width: 0;
 		padding: 0.375rem;
-
-		&:disabled {
-			opacity: 1;
-			cursor: default;
-		}
 	}
 
 	.kind {

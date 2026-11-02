@@ -66,7 +66,7 @@
 		>
 			<Icon name="reload" size={15} />
 		</button>
-		<span class="url" title={shown}>
+		<span class="url truncate" title={shown}>
 			{shown}
 		</span>
 		<Segmented
@@ -130,14 +130,11 @@
 	.url {
 		flex: 1;
 		min-width: 0;
-		overflow: hidden;
 		padding: 0.3125rem 0.75rem;
 		border-radius: var(--radius-lg);
 		background: var(--hover);
 		color: var(--text-2);
 		font-size: var(--fs-md);
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 
 	.device {

@@ -56,18 +56,4 @@
 			@include focus-ring;
 		}
 	}
-
-	.primary {
-		border-color: var(--accent);
-		background: var(--accent);
-		color: var(--on-accent);
-
-		@include hover {
-			&:hover {
-				color: var(--on-accent);
-				border-color: var(--accent-hover);
-				background: var(--accent-hover);
-			}
-		}
-	}
 </style>

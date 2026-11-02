@@ -106,6 +106,10 @@
 
 	/* the handle for developers, links to the field in Setup */
 	.handle-code {
+		font-family: var(--mono);
+		font-size: var(--fs-xs);
+		font-weight: 400;
+		color: var(--subtle);
 		text-decoration: none;
 
 		@include hover {

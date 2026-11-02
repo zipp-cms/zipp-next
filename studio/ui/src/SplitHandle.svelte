@@ -18,7 +18,6 @@
 		key,
 		initial,
 		min,
-		maxShare = 0.6,
 		side = 'start',
 		label,
 	}: {
@@ -27,13 +26,12 @@
 		key: string;
 		initial: number;
 		min: number;
-		/** of the window's width */
-		maxShare?: number;
 		side?: 'start' | 'end';
 		label: string;
 	} = $props();
 
-	const max = () => Math.max(min, Math.round(innerWidth * maxShare));
+	// at most 60% of the window's width
+	const max = () => Math.max(min, Math.round(innerWidth * 0.6));
 	const clamp = (w: number) => Math.round(Math.min(Math.max(w, min), max()));
 
 	width = untrack(() => clamp(Number(localStorage.getItem(key)) || initial));

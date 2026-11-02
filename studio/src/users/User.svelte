@@ -418,12 +418,6 @@
 		padding-top: 0.875rem;
 		border-top: 1px solid var(--line);
 
-		h3 {
-			margin: 0;
-			font-size: var(--fs-sm);
-			font-weight: 600;
-		}
-
 		p {
 			margin: 0;
 		}

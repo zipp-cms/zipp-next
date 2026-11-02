@@ -67,12 +67,6 @@
 		padding: 0.75rem;
 	}
 
-	h3 {
-		margin: 0;
-		font-size: var(--fs-sm);
-		font-weight: 600;
-	}
-
 	.block {
 		display: grid;
 		grid-template-columns: 1.375rem auto minmax(0, 1fr);

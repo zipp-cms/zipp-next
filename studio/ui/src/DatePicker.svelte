@@ -18,8 +18,6 @@
 		label: givenLabel,
 		placeholder: givenPlaceholder,
 		min = null,
-		max = null,
-		disabled = false,
 	}: {
 		value: string;
 		onchange: (value: string) => void;
@@ -27,10 +25,8 @@
 		/** the name for screen readers, the label of the field has it */
 		label?: string;
 		placeholder?: string;
-		/** the first and last day that can be picked, `2026-11-14` */
+		/** the first day that can be picked, `2026-11-14` */
 		min?: string | null;
-		max?: string | null;
-		disabled?: boolean;
 	} = $props();
 
 	const label = $derived(givenLabel ?? ui.texts.date);
@@ -54,7 +50,7 @@
 </script>
 
 <!-- one box like an input: the day, its time, the x that empties it -->
-<span class="date-picker" class:with-time={time} class:disabled>
+<span class="date-picker" class:with-time={time}>
 	<Popover bind:open width="18rem" label={ui.texts.pickDay}>
 		{#snippet trigger({ toggle, open })}
 			<button
@@ -63,18 +59,18 @@
 				aria-label="{label}: {shown || placeholder}"
 				aria-haspopup="dialog"
 				aria-expanded={open}
-				{disabled}
 				onclick={toggle}
 			>
 				<Icon name="calendar" size={15} />
-				<span class:placeholder={!shown}>{shown || placeholder}</span>
+				<span class="truncate" class:placeholder={!shown}>
+					{shown || placeholder}
+				</span>
 			</button>
 		{/snippet}
 		{#key open}
 			<Calendar
 				value={day}
 				{min}
-				{max}
 				onpick={d => {
 					set(d, clock);
 					open = false;
@@ -112,11 +108,10 @@
 			type="time"
 			aria-label="{label}: {ui.texts.time}"
 			value={clock}
-			{disabled}
 			onchange={e => set(day, e.currentTarget.value)}
 		/>
 	{/if}
-	{#if value && !disabled}
+	{#if value}
 		<button
 			type="button"
 			class="icon clear"
@@ -150,13 +145,12 @@
 		}
 
 		@include hover {
-			&:hover:not(.disabled, :has(.field:disabled)) {
+			&:hover:not(:has(.field:disabled)) {
 				border-color: var(--accent);
 			}
 		}
 
-		// also in a disabled fieldset, read only
-		&.disabled,
+		// in a disabled fieldset, read only
 		&:has(.field:disabled) {
 			background: var(--surface-2);
 		}
@@ -197,13 +191,6 @@
 		&:disabled {
 			opacity: 1;
 			color: var(--text-2);
-		}
-
-		// one line, a narrow column cuts it
-		span {
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
 		}
 
 		.placeholder {

@@ -142,13 +142,6 @@
 		}
 	}
 
-	.backdrop {
-		position: fixed;
-		inset: 0;
-		z-index: var(--z-overlay);
-		background: var(--backdrop);
-	}
-
 	.drawer {
 		position: fixed;
 		top: 0;

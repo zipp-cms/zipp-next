@@ -52,13 +52,7 @@
 	// the input stays for the keyboard and screen readers, the track
 	// shows it
 	input {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		border: 0;
-		opacity: 0;
-		pointer-events: none;
+		@include visually-hidden;
 	}
 
 	.track {

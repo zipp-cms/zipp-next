@@ -5,21 +5,14 @@
 $bpTablet: 800px;
 $bpDesktop: 1100px;
 
-@mixin tablet {
-	@media (min-width: $bpTablet) {
-		@content;
-	}
-}
+// the label on the left of a field and the space to its value: the
+// fields in a block (fields/Fields.svelte) and FieldRow
+$label-col: 8.125rem;
+$label-gap: 1.25rem;
 
 // a phone: one column, the sidebar on top
 @mixin max-tablet {
 	@media (max-width: calc($bpTablet - 1px)) {
-		@content;
-	}
-}
-
-@mixin desktop {
-	@media (min-width: $bpDesktop) {
 		@content;
 	}
 }
@@ -42,4 +35,16 @@ $bpDesktop: 1100px;
 @mixin focus-ring($offset: 2px) {
 	outline: 2px solid var(--accent);
 	outline-offset: $offset;
+}
+
+// there for the keyboard and screen readers, something else shows it,
+// e.g. the input of a switch
+@mixin visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	border: 0;
+	opacity: 0;
+	pointer-events: none;
 }

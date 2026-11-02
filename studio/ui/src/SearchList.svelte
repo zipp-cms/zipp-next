@@ -11,7 +11,6 @@
 		items,
 		search = $bindable(''),
 		placeholder,
-		loading = false,
 		key,
 		item,
 		onpick,
@@ -19,7 +18,6 @@
 		items: T[];
 		search?: string;
 		placeholder?: string;
-		loading?: boolean;
 		key: (t: T) => string | number;
 		item: Snippet<[T]>;
 		onpick: (t: T) => void;
@@ -40,9 +38,7 @@
 			{@render item(t)}
 		</button>
 	{:else}
-		<p class="empty">
-			{loading ? ui.texts.loading : ui.texts.nothingFound}
-		</p>
+		<p class="empty">{ui.texts.nothingFound}</p>
 	{/each}
 </div>
 

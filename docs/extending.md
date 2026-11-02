@@ -56,9 +56,11 @@ import Table from 'zipp-ui/Table.svelte';
 The crates of this repository link it (`"zipp-ui":
 "file:../../../studio/ui"`), so a change of a component reaches them
 with their next build; others will get it from npm with the version of
-zipp. The components are scss: the module's `vite.config.js` needs
-`svelte({ preprocess: vitePreprocess() })` and `sass`, like
-`crates/zipp-seo/studio`.
+zipp. The module's `vite.config.js` is `pluginConfig` of `zipp-ui/vite`
+(one ES module in `../assets`, Svelte with `vitePreprocess`); the
+components are scss, so it needs `sass` too, like `crates/zipp-seo/studio`.
+Its own styles get the breakpoints and mixins with `@use
+'zipp-ui/vars.scss' as *;`.
 
 The components write their few own texts (Today, Close, Nothing found)
 and dates in the user's language: the studio sets them in

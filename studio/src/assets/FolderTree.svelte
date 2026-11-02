@@ -454,24 +454,22 @@
 		width: 1.75rem;
 	}
 
-	.menu {
-		opacity: 0;
-
-		:global(button.icon) {
-			width: 1.75rem;
-			height: 1.75rem;
-		}
+	.menu :global(button.icon) {
+		width: 1.75rem;
+		height: 1.75rem;
 	}
 
-	.row:hover .menu,
-	.row.active .menu,
-	.row:focus-within .menu,
-	.menu:has(:global([aria-expanded='true'])) {
-		opacity: 1;
-	}
-
-	@media (hover: none) {
+	// the ⋯ shows on the row of the pointer and the open one, always on
+	// touch screens
+	@include hover {
 		.menu {
+			opacity: 0;
+		}
+
+		.row:hover .menu,
+		.row.active .menu,
+		.row:focus-within .menu,
+		.menu:has(:global([aria-expanded='true'])) {
 			opacity: 1;
 		}
 	}

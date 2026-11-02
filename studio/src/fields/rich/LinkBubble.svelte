@@ -128,7 +128,7 @@
 {#if shown && place}
 	<!-- not part of the text: clicks here keep the cursor on the link -->
 	<div
-		class="link-bubble"
+		class="popup link-bubble"
 		class:editing
 		style:top="{place?.top ?? 0}px"
 		style:left="{place?.left ?? 0}px"
@@ -183,10 +183,6 @@
 		z-index: var(--z-popup);
 		max-width: calc(100% - 0.5rem);
 		padding: 0.375rem 0.375rem 0.375rem 0.5rem;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-lg);
-		background: var(--surface);
-		box-shadow: var(--shadow-pop);
 
 		&.editing {
 			padding: 1rem;

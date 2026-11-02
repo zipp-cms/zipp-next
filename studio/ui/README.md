@@ -3,8 +3,8 @@
 The components of the zipp studio: the studio is built of them, and the
 editors of field types and the studio modules of plugins use them to
 look the same (see `docs/extending.md`). Svelte 5 components as source,
-in scss: a module bundles them with `svelte({ preprocess:
-vitePreprocess() })` and `sass`, like `crates/zipp-seo/studio`.
+in scss: a module bundles them with `pluginConfig` of `zipp-ui/vite`
+(its `vite.config.js`) and `sass`, like `crates/zipp-seo/studio`.
 
 What a module may import is in `exports` of `package.json`, nothing
 else: the components (`zipp-ui/Table.svelte`, …), `zipp-ui/sortable`
@@ -12,7 +12,8 @@ else: the components (`zipp-ui/Table.svelte`, …), `zipp-ui/sortable`
 `zipp-ui/field` (the contract of a field editor: `FieldProps`,
 `FieldModule`, `fieldModule(Component)` for its `mount`) and
 `zipp-ui/vars.scss` (the breakpoints and mixins: `@include hover`,
-`max-tablet`, `focus-ring`).
+`max-tablet`, `focus-ring`, `visually-hidden`) and `zipp-ui/vite` (the
+vite config of a module).
 
 For the values of a field, beside the inputs of the page: `Segmented`
 (one of a few), `CheckGroup` (some of a few, chips that wrap),
@@ -41,9 +42,11 @@ studio puts there:
   `--shadow-*`.
 - Base styles of `button`, `input`, `select`, `textarea` and `h1`–`h3`.
 - Classes: buttons `.primary`, `.light`, `.icon`, `.link`, `.plain`,
-  `.danger`; `.popup` and `.popup-item` (menus and popovers); `.card`,
-  `.box`, `.truncate`, `.note`, `.muted`, `.empty`, `.error`, `.badge`,
-  `.changed-dot`, `.toolbar-sep`, `.reveal` (shows on hover).
+  `.danger`; `.popup` (the look, its place is the component's) and
+  `.popup-item` (menus and popovers); `.backdrop` (under a flyout or
+  dialog); `.card`, `.box`, `.truncate`, `.note`, `.muted`, `.empty`,
+  `.error`, `.badge`, `.changed-dot`, `.toolbar-sep`, `.reveal` (shows on
+  hover), `.sort-dragging` (the row `sortable` drags).
 
 They are part of the contract: renaming one of them breaks modules.
 A component's own classes are scoped, a module's too.

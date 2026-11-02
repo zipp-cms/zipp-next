@@ -188,6 +188,11 @@
 			margin-bottom: 0;
 		}
 
+		// the browser's size, not the small heading of the studio
+		:global(.tiptap h3) {
+			font-size: 1.17em;
+		}
+
 		:global(.rt-link) {
 			color: var(--accent);
 			text-decoration: underline;

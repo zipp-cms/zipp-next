@@ -10,7 +10,7 @@
 		{#if item.href && i < items.length - 1}
 			<a href={item.href}>{item.label}</a>
 		{:else}
-			<span class="here">{item.label}</span>
+			<span class="here truncate">{item.label}</span>
 		{/if}
 	{/each}
 </nav>
@@ -34,10 +34,7 @@
 	}
 
 	.here {
-		overflow: hidden;
 		color: var(--text);
 		font-weight: 500;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 </style>

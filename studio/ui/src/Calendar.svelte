@@ -14,25 +14,22 @@
 	/**
 	 * A month to pick a day of, like hilterfingen's date picker: the
 	 * month's name opens its year's months, the year the years around it;
-	 * picking one goes back down to the days. `min` and `max` are days
-	 * (`2026-11-14`) that can't be passed.
+	 * picking one goes back down to the days. `min` is the first day
+	 * (`2026-11-14`) that can be picked.
 	 */
 	let {
 		value,
 		onpick,
 		min = null,
-		max = null,
 	}: {
 		/** the chosen day, `2026-11-14`, or none */
 		value: string | null;
 		onpick: (day: string) => void;
 		min?: string | null;
-		max?: string | null;
 	} = $props();
 
 	const chosen = $derived(parseDay(value));
 	const first = $derived(parseDay(min));
-	const last = $derived(parseDay(max));
 
 	// the month of the chosen day at the start, then where it was moved
 	let shown = $state(untrack(() => monthOf(parseDay(value) ?? new Date())));
@@ -56,9 +53,8 @@
 				: `${decade}–${decade + 11}`,
 	);
 
-	/** Whether a range of days is all before `min` or after `max`. */
-	const outside = (from: Date, to: Date) =>
-		(!!first && to < first) || (!!last && from > last);
+	/** Whether a range of days ending on `to` is all before `min`. */
+	const before = (to: Date) => !!first && to < first;
 
 	/** Back or forth a month, a year or twelve years, as the view shows. */
 	function move(by: number) {
@@ -117,7 +113,7 @@
 						aria-label={spoken.format(day)}
 						aria-pressed={!!chosen && iso === formatDay(chosen)}
 						aria-current={iso === today ? 'date' : undefined}
-						disabled={outside(day, day)}
+						disabled={before(day)}
 						onclick={() => onpick(iso)}
 					>
 						{day.getDate()}
@@ -136,7 +132,7 @@
 					class="option"
 					class:on={chosen?.getFullYear() === y &&
 						chosen.getMonth() === m}
-					disabled={outside(new Date(y, m, 1), new Date(y, m + 1, 0))}
+					disabled={before(new Date(y, m + 1, 0))}
 					onclick={() => {
 						shown = new Date(y, m, 1);
 						view = 'days';
@@ -153,7 +149,7 @@
 					type="button"
 					class="option"
 					class:on={chosen?.getFullYear() === y}
-					disabled={outside(new Date(y, 0, 1), new Date(y, 11, 31))}
+					disabled={before(new Date(y, 11, 31))}
 					onclick={() => {
 						shown = new Date(y, shown.getMonth(), 1);
 						view = 'months';

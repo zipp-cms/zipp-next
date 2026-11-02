@@ -250,7 +250,9 @@
 				<DropOverlay label={t('assets.dropInto', { path: lib.path })} />
 			{/if}
 			<div class="top">
-				<h2>{lib.search ? t('assets.inAllFolders') : lib.path}</h2>
+				<h2 class="truncate">
+					{lib.search ? t('assets.inAllFolders') : lib.path}
+				</h2>
 				<Segmented
 					options={kinds()}
 					value={lib.kind}
@@ -338,11 +340,8 @@
 
 		h2 {
 			flex: 1;
-			overflow: hidden;
 			margin: 0;
 			font-size: var(--fs-md);
-			text-overflow: ellipsis;
-			white-space: nowrap;
 		}
 
 		:global(.search) {

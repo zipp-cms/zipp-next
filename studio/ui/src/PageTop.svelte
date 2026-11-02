@@ -15,7 +15,6 @@
 		note,
 		state,
 		actions,
-		lead,
 		bleed = true,
 	}: {
 		crumbs?: { label: string; href?: string }[];
@@ -23,8 +22,6 @@
 		note?: string;
 		state?: Snippet;
 		actions?: Snippet;
-		/** before the title, e.g. the button of a hidden sidebar */
-		lead?: Snippet;
 		/** reaches to the edges of the page's padding */
 		bleed?: boolean;
 	} = $props();
@@ -42,7 +39,6 @@
 
 {#snippet inner()}
 	{#if !host}{@render frame?.content?.()}{/if}
-	{@render lead?.()}
 	<h1>
 		{#if crumbs}<Crumbs items={crumbs} />{:else}{title}{/if}
 	</h1>

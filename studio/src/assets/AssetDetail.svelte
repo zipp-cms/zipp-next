@@ -366,12 +366,6 @@
 		gap: 0.375rem;
 	}
 
-	h3 {
-		margin: 0;
-		font-size: var(--fs-sm);
-		font-weight: 600;
-	}
-
 	.usage {
 		display: flex;
 		flex-direction: column;

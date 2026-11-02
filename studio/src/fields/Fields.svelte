@@ -142,8 +142,8 @@
 
 		.field {
 			display: grid;
-			grid-template-columns: 8.125rem minmax(0, 1fr);
-			gap: 1.25rem;
+			grid-template-columns: $label-col minmax(0, 1fr);
+			gap: $label-gap;
 			align-items: center;
 
 			// at the top of tall fields like blocks or rich text, the first

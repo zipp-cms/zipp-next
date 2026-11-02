@@ -7,7 +7,8 @@
 	"files": [
 		"src",
 		"vars.scss",
-		"README.md"
+		"README.md",
+		"vite.js"
 	],
 	"exports": {
 		"./date": "./src/date.ts",
@@ -16,12 +17,11 @@
 		"./pageLead": "./src/pageLead.ts",
 		"./sortable": "./src/sortable.svelte.ts",
 		"./texts": "./src/texts.svelte.ts",
+		"./vite": "./vite.js",
 		"./vars.scss": "./vars.scss",
 		"./AddButton.svelte": "./src/AddButton.svelte",
 		"./AddGroup.svelte": "./src/AddGroup.svelte",
-		"./Calendar.svelte": "./src/Calendar.svelte",
 		"./CheckGroup.svelte": "./src/CheckGroup.svelte",
-		"./Crumbs.svelte": "./src/Crumbs.svelte",
 		"./DatePicker.svelte": "./src/DatePicker.svelte",
 		"./DragHandle.svelte": "./src/DragHandle.svelte",
 		"./FieldGroup.svelte": "./src/FieldGroup.svelte",

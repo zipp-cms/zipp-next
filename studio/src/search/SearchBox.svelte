@@ -75,7 +75,7 @@
 
 <div class="backdrop" role="presentation" onclick={close}></div>
 <div
-	class="box"
+	class="dialog"
 	role="dialog"
 	aria-modal="true"
 	aria-label={t('common.search')}
@@ -193,14 +193,7 @@
 </div>
 
 <style lang="scss">
-	.backdrop {
-		position: fixed;
-		inset: 0;
-		z-index: var(--z-overlay);
-		background: var(--backdrop);
-	}
-
-	.box {
+	.dialog {
 		position: fixed;
 		top: 12vh;
 		left: 50%;
@@ -212,6 +205,7 @@
 		max-height: 76vh;
 		transform: translateX(-50%);
 		background: var(--surface);
+		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-pop);
 		overflow: hidden;

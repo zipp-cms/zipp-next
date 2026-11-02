@@ -121,7 +121,7 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   shadows, z-index layers), no hex colors or pixel font sizes in
   components; a component styles only its own layout. Sizes are rem
   (16px = 1rem), px only for hairlines up to 3px and shadows.
-- Media queries only through the mixins of `sass/vars.scss`
+- Media queries only through the mixins of `ui/vars.scss`
   (`@include max-tablet`, `max-desktop`, ...); `:hover` only inside
   `@include hover { ... }`, so touch screens get no sticky hover and
   what shows on hover is always there without a pointer.

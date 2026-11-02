@@ -27,7 +27,9 @@
 	{/each}
 </div>
 
-<style>
+<style lang="scss">
+	@use 'zipp-ui/vars.scss' as *;
+
 	.group {
 		display: flex;
 		flex-wrap: wrap;
@@ -40,29 +42,33 @@
 		gap: 0.5rem;
 		padding: 0.5rem 0.75rem;
 		font: inherit;
-		font-size: 0.875rem;
+		font-size: var(--fs-base);
 		border: 1px solid transparent;
-		border-radius: 2px;
-		background: var(--input, #e9e9ec);
+		border-radius: var(--radius-sm);
+		background: var(--input);
 		color: inherit;
 		cursor: pointer;
 		transition:
 			background-color 0.2s ease,
 			color 0.2s ease;
-	}
 
-	/* no sticky hover on touch screens, like the studio's hover mixin;
-	   the picked one keeps its color, the studio's hover of buttons
-	   would make it grey */
-	@media (hover: hover) {
-		button:hover:not(:disabled) {
-			border-color: var(--color);
+		// the picked one keeps its color, the studio's hover of buttons
+		// would make it grey
+		@include hover {
+			&:hover:not(:disabled) {
+				border-color: var(--color);
+			}
+
+			&.on:hover:not(:disabled) {
+				background: var(--color);
+				color: var(--on-accent);
+				filter: brightness(0.9);
+			}
 		}
 
-		button.on:hover:not(:disabled) {
-			background: var(--color);
-			color: white;
-			filter: brightness(0.9);
+		&:disabled {
+			cursor: default;
+			opacity: 0.8;
 		}
 	}
 
@@ -75,15 +81,10 @@
 
 	.on {
 		background: var(--color);
-		color: white;
-	}
+		color: var(--on-accent);
 
-	.on .dot {
-		background: white;
-	}
-
-	button:disabled {
-		cursor: default;
-		opacity: 0.8;
+		.dot {
+			background: var(--on-accent);
+		}
 	}
 </style>

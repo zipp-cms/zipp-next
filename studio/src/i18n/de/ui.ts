@@ -19,7 +19,6 @@ export default {
 	'ui.forward': 'Vorwärts',
 	'ui.hasErrors': 'Hat Fehler',
 	'ui.hide': 'Auf der Website ausblenden',
-	'ui.loading': 'Lädt…',
 	'ui.monthAfter': 'Nächster Monat',
 	'ui.monthBefore': 'Vorheriger Monat',
 	'ui.move': 'Verschieben',

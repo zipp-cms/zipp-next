@@ -24,7 +24,6 @@ const en = {
 	forward: 'Forward',
 	hasErrors: 'Has errors',
 	hide: 'Hide it on the website',
-	loading: 'Loading…',
 	monthAfter: 'Month after',
 	monthBefore: 'Month before',
 	move: 'Move',

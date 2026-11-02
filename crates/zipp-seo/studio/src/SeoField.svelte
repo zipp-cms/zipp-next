@@ -22,23 +22,10 @@
 		'noindex, nofollow',
 	];
 
-	// the field's values, always an object here
-	let seo = $state({ ...(value ?? {}) });
-	let sent = JSON.stringify(value ?? {});
-	// a new value from outside, like a restored revision
-	$effect.pre(() => {
-		const outside = JSON.stringify(value ?? {});
-		if (outside !== sent) {
-			sent = outside;
-			seo = { ...(value ?? {}) };
-		}
-	});
-	$effect(() => {
-		const now = JSON.stringify(seo);
-		if (now === sent) return;
-		sent = now;
-		onchange($state.snapshot(seo));
-	});
+	// the field's values, always an object here; what it sends is its
+	// value at once (zipp-ui's fieldModule)
+	const seo = $derived(value ?? {});
+	const set = (key, v) => onchange({ ...seo, [key]: v });
 
 	let defaults = $state(null);
 	let social = $state(false);
@@ -73,7 +60,7 @@
 		const m = host.mountField(target, {
 			field,
 			value: seo[key] ?? null,
-			onchange: v => (seo[key] = v?.length ? v : undefined),
+			onchange: v => set(key, v?.length ? v : undefined),
 		});
 		$effect(() => m.update({ value: seo[key] ?? null }));
 		return { destroy: () => m.destroy() };
@@ -94,7 +81,7 @@
 		{/snippet}
 		<input
 			id="{uid}-title"
-			bind:value={seo.title}
+			bind:value={() => seo.title, v => set('title', v)}
 			placeholder={defaults?.title ?? ''}
 		/>
 	</FieldRow>
@@ -107,7 +94,7 @@
 		<textarea
 			id="{uid}-description"
 			rows="3"
-			bind:value={seo.description}
+			bind:value={() => seo.description, v => set('description', v)}
 			placeholder={defaults?.description ?? ''}
 		></textarea>
 	</FieldRow>
@@ -115,7 +102,10 @@
 		<div use:image={'image'}></div>
 	</FieldRow>
 	<FieldRow label={tx.robots} for="{uid}-robots">
-		<select id="{uid}-robots" bind:value={seo.robots}>
+		<select
+			id="{uid}-robots"
+			bind:value={() => seo.robots, v => set('robots', v)}
+		>
 			<option value={undefined}>
 				{tx.inherit}: {defaults?.robots ?? 'index, follow'}
 			</option>
@@ -125,7 +115,7 @@
 	<FieldRow label={tx.canonicalUrl} for="{uid}-canonical">
 		<input
 			id="{uid}-canonical"
-			bind:value={seo.canonicalUrl}
+			bind:value={() => seo.canonicalUrl, v => set('canonicalUrl', v)}
 			placeholder={defaults?.canonicalUrl ?? ''}
 		/>
 	</FieldRow>
@@ -139,7 +129,7 @@
 		<FieldRow label={tx.socialTitle} for="{uid}-social-title">
 			<input
 				id="{uid}-social-title"
-				bind:value={seo.socialTitle}
+				bind:value={() => seo.socialTitle, v => set('socialTitle', v)}
 				placeholder={title}
 			/>
 		</FieldRow>
@@ -147,7 +137,10 @@
 			<textarea
 				id="{uid}-social-description"
 				rows="2"
-				bind:value={seo.socialDescription}
+				bind:value={
+					() => seo.socialDescription,
+					v => set('socialDescription', v)
+				}
 				placeholder={description}
 			></textarea>
 		</FieldRow>

@@ -158,11 +158,11 @@
 	h3,
 	summary {
 		margin: 0 0 -0.375rem;
-		font-size: var(--fs-sm);
-		font-weight: 600;
 	}
 
 	summary {
+		font-size: var(--fs-sm);
+		font-weight: 600;
 		cursor: pointer;
 	}
 

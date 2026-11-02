@@ -17,7 +17,6 @@ export default {
 	'ui.forward': 'Forward',
 	'ui.hasErrors': 'Has errors',
 	'ui.hide': 'Hide it on the website',
-	'ui.loading': 'Loading…',
 	'ui.monthAfter': 'Month after',
 	'ui.monthBefore': 'Month before',
 	'ui.move': 'Move',
