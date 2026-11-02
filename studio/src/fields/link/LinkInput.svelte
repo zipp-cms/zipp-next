@@ -54,7 +54,7 @@
 		onremove
 			? [
 					{
-						label: removeLabel ?? t('common.remove'),
+						label: removeLabel ?? t('ui.remove'),
 						icon: 'delete',
 						onclick: onremove,
 						danger: true,

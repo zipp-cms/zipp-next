@@ -35,7 +35,7 @@ export type Column = {
  */
 export type Style = { class: string; label: string; inline: boolean };
 
-export type FieldKind =
+type FieldKind =
 	| { kind: 'text'; max: number | null; multiline: boolean }
 	| {
 			kind: 'number';
@@ -183,7 +183,7 @@ export type Section = {
 };
 
 /** A named image size, only these exist. */
-export type Transform = {
+type Transform = {
 	handle: string;
 	width: number | null;
 	height: number | null;
@@ -243,7 +243,7 @@ export type Block = {
 export type Values = Record<string, unknown>;
 
 /** The value of a field of each kind, as the content keeps it. */
-export type ValueOf = {
+type ValueOf = {
 	text: string;
 	number: number;
 	boolean: boolean;

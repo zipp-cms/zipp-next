@@ -12,12 +12,11 @@
 	import {
 		groupChoices,
 		initiallyClosed,
-		listChoices,
 		openRows,
 		searchRows,
-		type Choice,
 		type Row,
 	} from './picker';
+	import { listChoices, type Choice } from './api';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -251,7 +250,7 @@
 			{#each found as r (r.e.id)}
 				{@render line(r, false)}
 			{:else}
-				<p class="empty">{t('common.nothingFound')}</p>
+				<p class="empty">{t('ui.nothingFound')}</p>
 			{/each}
 		{:else}
 			{#each groups as g (g.section.handle)}
@@ -270,7 +269,7 @@
 	{#if multiple}
 		<div class="foot">
 			<button type="button" onclick={() => (open = false)}>
-				{t('common.done')}
+				{t('ui.done')}
 			</button>
 		</div>
 	{/if}

@@ -85,7 +85,7 @@ export function fitScale(area: Size, turned: Size, r: Rect): number {
 }
 
 /** Where the image is in the area, and how far a crop may go. */
-export type Place = {
+type Place = {
 	left: number;
 	top: number;
 	w: number;

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { request } from '../core/client';
+	import { mailStatus, sendTestMail, type MailStatus } from './api';
 	import { Busy } from '../core/busy.svelte';
 	import { session } from '../core/session.svelte';
 	import { t } from '../i18n/index.svelte';
@@ -10,26 +10,20 @@
 	 * --smtp-url` or none (then mails are only logged), and a test mail
 	 * to oneself.
 	 */
-	type MailStatus = {
-		configured: boolean;
-		server: string | null;
-		from: string;
-	};
-
 	let status = $state<MailStatus | null>(null);
 	let sent = $state(false);
 	const action = new Busy();
 
 	onMount(() => {
 		action.run(async () => {
-			status = await request<MailStatus>('GET', '/mail');
+			status = await mailStatus();
 		});
 	});
 
 	function test() {
 		sent = false;
 		action.run(async () => {
-			await request('POST', '/mail/test');
+			await sendTestMail();
 			sent = true;
 		});
 	}

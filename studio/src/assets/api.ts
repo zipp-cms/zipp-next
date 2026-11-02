@@ -1,4 +1,4 @@
-import { download, request } from '../core/client';
+import { download, request, upload } from '../core/client';
 import type { Values } from '../core/schema';
 import { t } from '../i18n/index.svelte';
 
@@ -35,7 +35,7 @@ export type Asset = {
 export const ASSET_FIELDS = 'asset';
 
 /** The extensions of `Field::videos`. */
-export const VIDEOS = ['mp4', 'webm', 'mov'];
+const VIDEOS = ['mp4', 'webm', 'mov'];
 
 /** Whether a field of these extensions takes only videos. */
 export function onlyVideos(extensions: string[] | undefined): boolean {
@@ -135,15 +135,35 @@ export function assetUsage(id: number): Promise<AssetUsage[]> {
 	return request('GET', `/assets/${id}/usage`);
 }
 
-/** Another file for the asset, where it is used stays. */
-export function replaceAsset(id: number, file: File): Promise<Asset> {
+function fileForm(file: File): FormData {
 	const form = new FormData();
 	form.append('file', file, file.name);
-	return request('POST', `/assets/${id}/file`, form);
+	return form;
+}
+
+/**
+ * A new file in `folder` (null: the top) with its progress; a zip with
+ * `unzip` is unpacked into folders there.
+ */
+export function uploadAsset(
+	file: File,
+	folder: number | null,
+	unzip: boolean,
+	onprogress: (sent: number) => void,
+): Promise<Asset[] | Unzipped> {
+	const path =
+		(unzip ? '/assets/unzip' : '/assets') +
+		(folder === null ? '' : `?folder=${folder}`);
+	return upload(path, fileForm(file), onprogress);
+}
+
+/** Another file for the asset, where it is used stays. */
+export function replaceAsset(id: number, file: File): Promise<Asset> {
+	return request('POST', `/assets/${id}/file`, fileForm(file));
 }
 
 /** What to list: a search looks in all folders, else in `folder`. */
-export type AssetQuery = {
+type AssetQuery = {
 	search?: string;
 	/** these, in this order */
 	ids?: number[];

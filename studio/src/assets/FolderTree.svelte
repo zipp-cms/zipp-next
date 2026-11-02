@@ -46,7 +46,7 @@
 		editable?: boolean;
 		deletable?: boolean;
 		/** after a folder was added, renamed or deleted */
-		onchange?: (folder?: Folder) => void;
+		onchange?: () => void;
 		onmove?: (ids: number[], folder: number | null) => void;
 		onupload?: (items: Upload[], folder: number | null) => void;
 		/** a folder's ⋯ downloads it as a zip */
@@ -111,19 +111,18 @@
 		}
 		saving = true;
 		try {
-			let saved: Folder;
 			if ('id' in e) {
 				const f = folders.find(f => f.id === e.id)!;
 				if (name.trim() === f.name) {
 					editing = null;
 					return;
 				}
-				saved = await updateFolder(f.id, f.parentId, name);
+				await updateFolder(f.id, f.parentId, name);
 			} else {
-				saved = await createFolder(e.parent, name);
+				await createFolder(e.parent, name);
 			}
 			editing = null;
-			onchange?.(saved);
+			onchange?.();
 		} catch (err) {
 			error = (err as Error).message;
 		} finally {

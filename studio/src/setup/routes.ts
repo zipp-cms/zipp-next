@@ -1,6 +1,6 @@
 import { inLayout } from '../core/router.svelte';
 import { Shell } from '../shell/layouts';
-import { SETUP_TABS } from '../shell/nav';
+import { SETUP_TABS } from './tabs';
 
 // `/admin/setup/types/page`: a tab and maybe a handle of it
 const TAB = new RegExp(

@@ -5,7 +5,7 @@
 
 <script lang="ts">
 	import Icon from 'zipp-ui/Icon.svelte';
-	import { request } from '../core/client';
+	import { forgotPassword } from './api';
 	import AuthLayout from './AuthLayout.svelte';
 	import { t } from '../i18n/index.svelte';
 
@@ -23,7 +23,7 @@
 		error = '';
 		busy = true;
 		try {
-			await request('POST', '/auth/forgot', { email });
+			await forgotPassword(email);
 			sent = true;
 		} catch (e: any) {
 			error = e.message;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { type Schema } from '../core/schema';
-	import { accessOf } from '../core/access';
-	import { accessText, visibleSections } from './setup';
+	import { accessOf, accessText } from '../core/access';
+	import { visibleSections } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
 	import { setupPath } from '../core/paths';
 	import { t } from '../i18n/index.svelte';

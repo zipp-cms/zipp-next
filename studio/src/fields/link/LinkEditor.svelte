@@ -252,7 +252,7 @@
 				class:push={!onremove}
 				onclick={ondone}
 			>
-				{t('common.done')}
+				{t('ui.done')}
 			</button>
 		{/if}
 	</div>

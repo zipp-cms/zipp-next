@@ -1,15 +1,8 @@
-import type {
-	Access,
-	Component,
-	Field,
-	Role,
-	Schema,
-	Section,
-} from '../core/schema';
+import type { Component, Field, Role, Schema, Section } from '../core/schema';
 import { componentOf } from '../core/schema';
 import { can, isAdmin, visibleNav } from '../core/access';
 import { listEntries } from '../entries/api';
-import { describeField } from '../fields/fieldKind';
+import { describeField } from './fieldKind';
 import { session } from '../core/session.svelte';
 import { t } from '../i18n/index.svelte';
 import { ASSET_FIELDS } from '../assets/api';
@@ -41,14 +34,6 @@ export function visibleEntryTypes(schema: Schema): Component[] {
 export function gqlType(c: Pick<Component, 'handle' | 'entry'>): string {
 	if (!c.entry && c.handle === ASSET_FIELDS) return 'Asset';
 	return `${c.handle}_${c.entry ? 'Entry' : 'Block'}`;
-}
-
-/** A level of access in words, `none` without one. */
-export function accessText(
-	level: Access | null | undefined,
-	none = '–',
-): string {
-	return level ? t(`common.${level}`) : none;
 }
 
 /** Where a component is used: sections and fields, as links of Setup. */

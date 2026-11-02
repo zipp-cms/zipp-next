@@ -8,7 +8,6 @@ import {
 	type Values,
 } from '../core/schema';
 import { isEmpty } from './link/link';
-import { t } from '../i18n/index.svelte';
 
 /** The conditions of a field: its own and the one of its tab. */
 function conditionsOf(c: Component, handle: string): Condition[] {
@@ -74,24 +73,4 @@ export function pathShown(
 		return !bc || pathShown(schema, bc, b.fields, rest.slice(1).join('.'));
 	}
 	return true;
-}
-
-/** For Setup: `hasPage is on`, `genre is concert or reading`. */
-export function describeCondition(c: Component, cond: Condition): string {
-	const field = c.fields.find(f => f.handle === cond.field);
-	switch (cond.test) {
-		case 'oneOf':
-			if (field?.kind === 'boolean' && cond.values.length === 1)
-				return t(cond.values[0] ? 'fields.isOn' : 'fields.isOff', {
-					field: cond.field,
-				});
-			return t('fields.isOneOf', {
-				field: cond.field,
-				values: cond.values.map(String).join(` ${t('fields.or')} `),
-			});
-		case 'filled':
-			return t('fields.isFilled', { field: cond.field });
-		case 'empty':
-			return t('fields.isEmpty', { field: cond.field });
-	}
 }

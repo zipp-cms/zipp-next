@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
-	import { isAdmin, roleName } from '../core/access';
-	import { accessText, visibleRoles, visibleSections } from './setup';
+	import { accessText, isAdmin, roleName } from '../core/access';
+	import { visibleRoles, visibleSections } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
 	import MailCard from './MailCard.svelte';
 	import { t } from '../i18n/index.svelte';

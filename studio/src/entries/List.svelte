@@ -52,7 +52,7 @@
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { date, time } from '../core/format';
-	import { ancestors, depths as depthsOf } from './tree';
+	import { ancestors, depths as depthsOf } from '../core/tree';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
 	import { Sortable, placeIn } from 'zipp-ui/sortable';
@@ -289,7 +289,7 @@
 		</div>
 	{:else}
 		<p class="empty">
-			{search ? t('common.nothingFound') : t('entries.noneYet')}
+			{search ? t('ui.nothingFound') : t('entries.noneYet')}
 		</p>
 	{/each}
 	{#if total > entries.length}

@@ -53,7 +53,7 @@ export class Library {
 	/** What an empty list says. */
 	empty = $derived(
 		this.search || this.kind
-			? t('common.nothingFound')
+			? t('ui.nothingFound')
 			: this.folder === null
 				? t('assets.noAssets')
 				: t('assets.noFilesInFolder'),

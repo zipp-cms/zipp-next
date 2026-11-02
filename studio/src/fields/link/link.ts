@@ -94,7 +94,7 @@ export function linkableTypes(schema: Schema): string[] {
 }
 
 /** Like the website: external urls and files open in a new tab. */
-export function isExternal(schema: Schema, link: Link): boolean {
+function isExternal(schema: Schema, link: Link): boolean {
 	if (link.type === 'asset') return true;
 	if (link.type !== 'url') return false;
 	const url = String(link.value ?? '');

@@ -68,7 +68,7 @@ it again. -->
 					{t('auth.logIn')}
 				</button>
 				<button class="primary" onclick={back} disabled={busy}>
-					{t('auth.backToAccount')}
+					{t('common.backToAccount')}
 				</button>
 			</div>
 		</div>
@@ -117,7 +117,7 @@ it again. -->
 
 			<div class="actions">
 				<button type="button" onclick={() => endSession()}>
-					{t('auth.logOut')}
+					{t('common.logOut')}
 				</button>
 				<button class="primary" disabled={busy}>
 					{t('auth.logIn')}

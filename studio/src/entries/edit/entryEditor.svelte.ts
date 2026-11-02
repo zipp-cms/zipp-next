@@ -12,7 +12,7 @@ import {
 	deleteEntry,
 	getEntry,
 	listEntries,
-	saveEntry,
+	createEntry,
 	type Dates,
 	type Entry,
 	type Refs,
@@ -35,7 +35,7 @@ import { site } from '../../core/router.svelte';
 import { changedPaths } from './diff';
 import { clean } from '../../core/values';
 import { slugify } from '../../core/format';
-import { depths } from '../tree';
+import { depths } from '../../core/tree';
 import { t } from '../../i18n/index.svelte';
 
 /** What the role may do with the entry; the server checks it too. */
@@ -422,7 +422,7 @@ export class EntryEditor {
 		if (this.busy) return null;
 		const created = await this.action.run(async () => {
 			if (this.id === null) {
-				const entry = await saveEntry(null, {
+				const entry = await createEntry({
 					section: this.sec,
 					type: this.ty,
 					site: this.site,

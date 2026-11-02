@@ -36,7 +36,7 @@
 				<button
 					type="button"
 					class="icon"
-					aria-label={t('common.close')}
+					aria-label={t('ui.close')}
 					onclick={() => uploads.close()}
 				>
 					<Icon name="close" size={14} />

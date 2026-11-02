@@ -15,7 +15,7 @@ export type Account = User & {
 };
 
 /** A link for a user, see `passwordLink` and `loginAsLink`. */
-export type UserLink = {
+type UserLink = {
 	kind: 'invite' | 'reset' | 'loginAs';
 	url: string;
 	expiresAt: number;

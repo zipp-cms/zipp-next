@@ -1,7 +1,7 @@
 import { request } from '../core/client';
 
 /** What a token reads; `null` is all sections or sites. */
-export type Scope = {
+type Scope = {
 	sections: string[] | null;
 	sites: string[] | null;
 	/** whether preview tokens show drafts */

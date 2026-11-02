@@ -34,7 +34,7 @@
 		rows={requests}
 		key={r => r.id}
 		columns={[
-			t('common.done'),
+			t('ui.done'),
 			t('setup.request'),
 			t('setup.where'),
 			t('setup.who'),
@@ -46,7 +46,7 @@
 			<td>
 				<input
 					type="checkbox"
-					aria-label={t('common.done')}
+					aria-label={t('ui.done')}
 					checked={r.done}
 					disabled={action.busy}
 					onchange={e => toggle(r, e.currentTarget)}

@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { Component, Field, Schema } from '../core/schema';
-	import { describeField } from '../fields/fieldKind';
-	import { describeCondition } from '../fields/conditions';
-	import { fieldOptions } from '../fields/fieldOptions';
+	import { describeField } from './fieldKind';
+	import { describeCondition, fieldOptions } from './fieldOptions';
 	import { gqlType, usedIn } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
 	import { t } from '../i18n/index.svelte';

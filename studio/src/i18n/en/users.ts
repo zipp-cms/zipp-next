@@ -7,13 +7,11 @@ export default {
 	'users.you': '(you)',
 	'users.invited': 'Invited',
 	'users.account': 'Account',
-	'users.yourAccount': 'Your account',
 	'users.thatsYou': "That's you",
 	'users.delete': 'Delete the user',
 	'users.confirmDelete': "Delete {name}? They can't log in any more.",
 	'users.confirmEndOwn': 'Log out in all other browsers?',
 	'users.confirmEnd': 'Log {name} out everywhere?',
-	'users.namePlaceholder': 'Anna Muster',
 	'users.language': 'Language of the studio',
 	'users.browserLanguage': "The browser's ({language})",
 	'users.passwordNew':
@@ -22,8 +20,6 @@ export default {
 		'Leave it empty to keep the current one. A new password logs you out in all other browsers.',
 	'users.passwordKeep':
 		'Leave it empty to keep the current one. A new password logs them out in all browsers.',
-	'users.newPassword': 'New password',
-	'users.passwordPlaceholder': 'At least 8 characters',
 	'users.sendInvite': 'Send the invite by mail',
 	'users.currentPassword': 'Your current password',
 	'users.created': 'Created',

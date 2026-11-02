@@ -22,10 +22,8 @@ export default {
 	'auth.sessionEnded': 'Die Sitzung ist abgelaufen',
 	'auth.wereLoggedInAs':
 		'Sie waren als {name} angemeldet. Gehen Sie zurück zu Ihrem Konto oder melden Sie sich an.',
-	'auth.backToAccount': 'Zurück zu Ihrem Konto',
 	'auth.logInAgain':
 		'Melden Sie sich erneut an, um weiterzuarbeiten. Ihre Änderungen bleiben erhalten.',
-	'auth.logOut': 'Abmelden',
 	'auth.welcome': 'Willkommen',
 	'auth.newPasswordTitle': 'Ein neues Passwort',
 	'auth.inviteIntro':
@@ -33,11 +31,8 @@ export default {
 	'auth.resetIntro':
 		'Wählen Sie ein neues Passwort für {email}. Sie werden überall sonst abgemeldet.',
 	'auth.yourName': 'Ihr Name',
-	'auth.namePlaceholder': 'Anna Muster',
-	'auth.passwordPlaceholder': 'Mindestens 8 Zeichen',
 	'auth.setAndLogIn': 'Passwort festlegen und anmelden',
 	'auth.saveAndLogIn': 'Speichern und anmelden',
 	'auth.linkProblem':
 		'{problem}. Fordern Sie einen neuen an oder bitten Sie einen Admin um eine Einladung.',
-	'auth.newPassword': 'Neues Passwort',
 } satisfies Texts<typeof en>;

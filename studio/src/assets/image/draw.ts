@@ -4,7 +4,7 @@ import { WHOLE, type Size, sizes } from './edits';
 /** Draws images with their edits on canvases, like the server makes them. */
 
 /** The image rotated and flipped, what the crop is made of. */
-export function turnedCanvas(
+function turnedCanvas(
 	img: HTMLImageElement,
 	edits: Edits,
 	turned: Size,

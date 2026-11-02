@@ -24,7 +24,9 @@
 			<strong>{displayName(session.user)}</strong>
 			{after}
 		</span>
-		<button class="light" onclick={back}>{t('shell.backToAccount')}</button>
+		<button class="light" onclick={back}>
+			{t('common.backToAccount')}
+		</button>
 	</div>
 {/if}
 

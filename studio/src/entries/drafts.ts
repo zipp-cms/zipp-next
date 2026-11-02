@@ -1,6 +1,6 @@
 import type { Dates } from './api';
 import type { Refs } from './api';
-import { request, token } from '../core/client';
+import { request } from '../core/client';
 import { type Values } from '../core/schema';
 
 export type SiteDoc = Dates & {
@@ -19,7 +19,7 @@ export type Draft = {
 };
 
 /** A field (or type, title, slug, …) that changed, in which sites. */
-export type FieldChange = { field: string; sites: string[] };
+type FieldChange = { field: string; sites: string[] };
 
 export type Revision = {
 	id: number;

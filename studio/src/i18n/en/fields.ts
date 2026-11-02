@@ -18,7 +18,6 @@ export default {
 	// assets
 	'fields.moveFile': 'Move the file',
 	'fields.deletedFile': 'A file that was deleted',
-	'fields.detailsTitle': 'Details: title, alt text, focal point',
 	'fields.details': 'Details',
 	'fields.dropToAdd': 'Drop to add',
 	'fields.dragVideos': 'Drag videos here',

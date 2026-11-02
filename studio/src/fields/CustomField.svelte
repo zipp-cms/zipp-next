@@ -32,13 +32,13 @@
 	let {
 		field,
 		values,
-		errors = {},
-		path = '',
+		errors,
+		path,
 	}: {
 		field: FieldOf<'custom'>;
 		values: Values;
-		errors?: Record<string, string>;
-		path?: string;
+		errors: Record<string, string>;
+		path: string;
 	} = $props();
 
 	const editing = getEditing();

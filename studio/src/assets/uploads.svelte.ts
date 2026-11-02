@@ -1,11 +1,10 @@
-import { upload } from '../core/client';
 import { t } from '../i18n/index.svelte';
 import {
 	childFolder,
 	createFolder,
 	listFolders,
+	uploadAsset,
 	type Asset,
-	type Unzipped,
 } from './api';
 
 /** What an asset tile carries when it is dragged: the asset ids. */
@@ -69,7 +68,7 @@ export async function fromDrop(data: DataTransfer): Promise<Upload[]> {
 }
 
 /** What an asset field takes: only images, only some extensions. */
-export type Allowed = { images: boolean; extensions?: string[] };
+type Allowed = { images: boolean; extensions?: string[] };
 
 /** Whether a file fits the field. */
 export function allows(allowed: Allowed, file: File): boolean {
@@ -168,15 +167,11 @@ class Uploads {
 			for (let item; (item = queue.shift());) {
 				const into = dirs.get(item.dir.join('/')) ?? null;
 				let sent = 0;
-				const form = new FormData();
-				form.append('file', item.file, item.file.name);
-				const path =
-					(item.unzip ? '/assets/unzip' : '/assets') +
-					(into === null ? '' : `?folder=${into}`);
 				try {
-					const done = await upload<Asset[] | Unzipped>(
-						path,
-						form,
+					const done = await uploadAsset(
+						item.file,
+						into,
+						!!item.unzip,
 						s => {
 							// the form is a bit larger than the file
 							const now = Math.min(s, item.file.size);

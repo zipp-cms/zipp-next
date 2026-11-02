@@ -131,7 +131,7 @@
 				<div class="card-size">
 					<AssetCard
 						asset={a}
-						openTitle={t('fields.detailsTitle')}
+						openTitle={t('assets.details')}
 						onopen={() => openAsset(a.id)}
 						menu={[
 							{
@@ -141,7 +141,7 @@
 							},
 							...linkItems(a),
 							{
-								label: t('common.remove'),
+								label: t('ui.remove'),
 								icon: 'close',
 								danger: true,
 								onclick: () => set(removed(ids, i)),

@@ -61,7 +61,7 @@
 		{/if}
 		<div class="buttons">
 			<button type="button" class="light" onclick={() => (open = false)}>
-				{t('common.close')}
+				{t('ui.close')}
 			</button>
 			<button class="primary" disabled={action.busy || !text.trim()}>
 				{t('setup.send')}

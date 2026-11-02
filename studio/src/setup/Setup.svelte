@@ -51,7 +51,7 @@
 	import type { EntryList } from '../entries/api';
 	import type { ChangeRequest } from './api';
 	import PageTop from 'zipp-ui/PageTop.svelte';
-	import { SETUP_TABS } from '../shell/nav';
+	import { SETUP_TABS } from './tabs';
 	import { componentOf } from '../core/schema';
 	import { current } from '../core/router.svelte';
 	import ComponentPage from './ComponentPage.svelte';

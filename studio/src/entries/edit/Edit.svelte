@@ -43,7 +43,7 @@
 	import EntrySidebar from './EntrySidebar.svelte';
 	import EntryStatus from './EntryStatus.svelte';
 	import RevisionView from './RevisionView.svelte';
-	import TabBar from './TabBar.svelte';
+	import TabBar from '../../fields/TabBar.svelte';
 	import Preview from '../Preview.svelte';
 	import SplitHandle from 'zipp-ui/SplitHandle.svelte';
 	import { SitePreview } from '../preview.svelte';

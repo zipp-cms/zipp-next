@@ -1,25 +1,12 @@
-import { request } from '../core/client';
 import type { Schema, Section } from '../core/schema';
-import type { EntryRef } from './api';
-import { ancestors } from './tree';
+import type { Choice } from './api';
+import { ancestors } from '../core/tree';
 
 /**
  * What the entry picker shows: the sections of the types, a structure as
  * its tree, a channel newest first; a search over all of them with the
  * path of each match.
  */
-
-/** An entry to choose, with its parent for the tree. */
-export type Choice = EntryRef & { parentId: number | null };
-
-/** The entries of the sections that have one of the types. */
-export function listChoices(
-	types: string[],
-	site: string,
-): Promise<{ entries: Choice[] }> {
-	const params = new URLSearchParams({ type: types.join(','), site });
-	return request('GET', '/entries/choices?' + params);
-}
 
 export type Row = {
 	e: Choice;
@@ -106,7 +93,7 @@ export function initiallyClosed(groups: Group[], chosen: number[]) {
 }
 
 /** Lower case without accents: "uber" finds "Über". */
-export function plain(s: string): string {
+function plain(s: string): string {
 	return s
 		.normalize('NFD')
 		.replace(/\p{Diacritic}/gu, '')

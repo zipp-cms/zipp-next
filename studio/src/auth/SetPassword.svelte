@@ -1,23 +1,13 @@
 <script module lang="ts">
-	import { request } from '../core/client';
+	import { getLink } from './api';
 
 	/** Anyone with the link, it is the key. */
 	export const isPublic = true;
 
-	export type LinkInfo = {
-		kind: 'invite' | 'reset' | 'loginAs';
-		email: string;
-		name: string;
-		expiresAt: number;
-	};
-
 	/** What the link is for; used or expired, the page says so. */
 	export async function loadProps(props: { token: string }) {
 		try {
-			const link = await request<LinkInfo>(
-				'GET',
-				`/auth/links/${props.token}`,
-			);
+			const link = await getLink(props.token);
 			return { link, problem: '' };
 		} catch (e: any) {
 			return { link: null, problem: e.message as string };
@@ -27,7 +17,8 @@
 
 <script lang="ts">
 	import Icon from 'zipp-ui/Icon.svelte';
-	import { session, type Authenticated } from '../core/session.svelte';
+	import { session } from '../core/session.svelte';
+	import { setPassword, type LinkInfo } from './api';
 	import { ApiError } from '../core/client';
 	import AuthLayout from './AuthLayout.svelte';
 	import { t } from '../i18n/index.svelte';
@@ -54,10 +45,10 @@
 		error = '';
 		busy = true;
 		try {
-			const auth = await request<Authenticated>(
-				'POST',
-				`/auth/links/${token}/password`,
-				{ password, name: invite ? name : null },
+			const auth = await setPassword(
+				token,
+				password,
+				invite ? name : null,
 			);
 			session.use(auth);
 			location.assign('/admin');
@@ -90,7 +81,7 @@
 					{t('auth.yourName')}
 					<input
 						autocomplete="name"
-						placeholder={t('auth.namePlaceholder')}
+						placeholder={t('common.namePlaceholder')}
 						bind:value={name}
 					/>
 				</label>
@@ -102,7 +93,7 @@
 					<input
 						type={showPassword ? 'text' : 'password'}
 						autocomplete="new-password"
-						placeholder={t('auth.passwordPlaceholder')}
+						placeholder={t('common.passwordPlaceholder')}
 						bind:value={password}
 						required
 					/>
@@ -135,7 +126,7 @@
 				</p>
 			</div>
 			<p class="note">
-				<a href="/admin/forgot">{t('auth.newPassword')}</a>
+				<a href="/admin/forgot">{t('common.newPassword')}</a>
 				·
 				<a href="/admin/login">{t('auth.logIn')}</a>
 			</p>

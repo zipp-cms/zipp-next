@@ -2,7 +2,7 @@
 	import { untrack } from 'svelte';
 	import type { Component, Schema, Values } from '../core/schema';
 	import type { Refs } from '../entries/api';
-	import TabBar from '../entries/edit/TabBar.svelte';
+	import TabBar from './TabBar.svelte';
 	import { tabShown } from './conditions';
 	import Fields from './Fields.svelte';
 	import { lastTab, rememberTab } from './opened';

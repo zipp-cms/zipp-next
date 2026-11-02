@@ -45,6 +45,18 @@ export type EntryRef = {
 
 export type Refs = Record<number, EntryRef>;
 
+/** An entry to choose, with its parent for the tree. */
+export type Choice = EntryRef & { parentId: number | null };
+
+/** The entries of the sections that have one of the types. */
+export function listChoices(
+	types: string[],
+	site: string,
+): Promise<{ entries: Choice[] }> {
+	const params = new URLSearchParams({ type: types.join(','), site });
+	return request('GET', '/entries/choices?' + params);
+}
+
 /** A page of entries with what lists show of them. */
 export type EntryList = {
 	entries: Entry[];
@@ -76,7 +88,7 @@ export function moveEntry(
 	return request('POST', `/entries/${id}/move`, { parentId, index });
 }
 
-export type EntryInput = {
+type EntryInput = {
 	section: string;
 	type: string;
 	site: string;
@@ -87,12 +99,8 @@ export type EntryInput = {
 	fields: Values;
 };
 
-export function saveEntry(
-	id: number | null,
-	input: EntryInput,
-): Promise<Entry> {
-	if (id === null) return request('POST', '/entries', input);
-	return request('PUT', '/entries/' + id, input);
+export function createEntry(input: EntryInput): Promise<Entry> {
+	return request('POST', '/entries', input);
 }
 
 export function deleteEntry(id: number): Promise<void> {

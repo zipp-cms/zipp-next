@@ -1,4 +1,4 @@
-// the texts of zipp-ui's components, see `uiTexts`
+// the texts of zipp-ui's components, see `uiTexts`; the studio uses them too
 export default {
 	'ui.actions': 'Actions',
 	'ui.back': 'Back',

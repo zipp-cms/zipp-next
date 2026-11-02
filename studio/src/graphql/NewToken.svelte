@@ -36,7 +36,7 @@
 	{#snippet actions()}
 		{#if form.created}
 			<button class="primary" onclick={() => go('/admin/graphql')}>
-				{t('common.done')}
+				{t('ui.done')}
 			</button>
 		{:else}
 			<button class="primary" form="token" disabled={form.busy}>

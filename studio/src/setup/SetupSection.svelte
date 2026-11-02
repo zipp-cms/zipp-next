@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { accessText, gqlType, uriOf, visibleRoles } from './setup';
+	import { gqlType, uriOf, visibleRoles } from './setup';
 	import { componentPath, entryPath, sectionPath } from '../core/paths';
-	import { depths } from '../entries/tree';
+	import { depths } from '../core/tree';
 	import SiteBadges from '../entries/SiteBadges.svelte';
 	import { entryUrl, navGroups, type Schema } from '../core/schema';
 	import type { EntryList } from '../entries/api';
-	import { accessOf, isAdmin } from '../core/access';
+	import { accessOf, accessText, isAdmin } from '../core/access';
 	import PluginCards from './PluginCards.svelte';
 	import Table from 'zipp-ui/Table.svelte';
 	import { componentOf, sectionOf } from '../core/schema';

@@ -54,7 +54,7 @@
 					{ label: t('users.title'), href: '/admin/users' },
 					{ label: title },
 				]
-			: [{ label: t('users.yourAccount') }],
+			: [{ label: t('common.yourAccount') }],
 	);
 
 	// empty follows the browser, it says which that is
@@ -159,7 +159,7 @@
 				{t('common.name')}
 				<input
 					bind:value={form.name}
-					placeholder={t('users.namePlaceholder')}
+					placeholder={t('common.namePlaceholder')}
 				/>
 			</label>
 			<label class="stacked">
@@ -217,11 +217,11 @@
 				</p>
 			{/if}
 			<label class="stacked">
-				{isNew ? t('common.password') : t('users.newPassword')}
+				{isNew ? t('common.password') : t('common.newPassword')}
 				<input
 					type="password"
 					autocomplete="new-password"
-					placeholder={t('users.passwordPlaceholder')}
+					placeholder={t('common.passwordPlaceholder')}
 					bind:value={form.password}
 				/>
 				{#if form.fields.password}

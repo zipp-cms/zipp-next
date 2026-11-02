@@ -20,7 +20,7 @@ export type AiAction = {
 };
 
 /** What the chat streams while the model works. */
-export type AiEvents = {
+type AiEvents = {
 	/** more text of the answer */
 	delta: (text: string) => void;
 	/** a tool did something */

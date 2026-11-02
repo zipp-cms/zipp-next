@@ -14,14 +14,14 @@
 </script>
 
 <div class="me">
-	<a href="/admin/users/{session.user?.id}" title={t('shell.yourAccount')}>
+	<a href="/admin/users/{session.user?.id}" title={t('common.yourAccount')}>
 		<span class="avatar">{name[0].toUpperCase()}</span>
 		<span class="who">
 			<strong class="truncate">{name}</strong>
 			<small>{roleName(schema)}</small>
 		</span>
 	</a>
-	<button class="icon" onclick={onlogout} title={t('shell.logOut')}>
+	<button class="icon" onclick={onlogout} title={t('common.logOut')}>
 		<Icon name="logout" />
 	</button>
 </div>

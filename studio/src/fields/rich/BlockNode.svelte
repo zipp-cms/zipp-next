@@ -3,7 +3,9 @@
 	import type { Schema, Values } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
 	import BlockFields from '../BlockFields.svelte';
-	import EmbedCard from './EmbedCard.svelte';
+	import ItemActions from 'zipp-ui/ItemActions.svelte';
+	import ItemCard from 'zipp-ui/ItemCard.svelte';
+	import NodeFrame from './NodeFrame.svelte';
 	import { rememberOpen, wasOpen } from '../opened';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import type { Sortable } from 'zipp-ui/sortable';
@@ -34,7 +36,7 @@
 		update: (attrs: Record<string, unknown>) => void;
 		remove: () => void;
 		insertLine: (where: 'before' | 'after') => void;
-		sortable?: Sortable;
+		sortable: Sortable;
 		index: () => number;
 	} = $props();
 
@@ -60,32 +62,40 @@
 	);
 </script>
 
-<EmbedCard
-	kind={comp?.name ?? attrs.type}
-	{editable}
-	bind:editing
-	onremove={remove}
-	oninsert={insertLine}
->
-	{#snippet handle()}
-		{#if editable && sortable}
-			<DragHandle {sortable} {index} label={t('fields.moveBlock')} />
+<NodeFrame {editable} oninsert={insertLine}>
+	<ItemCard
+		kind={comp?.name ?? attrs.type}
+		bind:open={editing}
+		summary={preview}
+		{handle}
+	>
+		{#snippet actions()}
+			{#if editable}
+				<ItemActions onremove={remove} />
+			{/if}
+		{/snippet}
+		{#if comp}
+			<fieldset disabled={!editable}>
+				<BlockFields
+					{schema}
+					component={comp}
+					values={fields.value}
+					errors={{}}
+					{refs}
+					prefix="{uid}."
+					id={attrs.id}
+				/>
+			</fieldset>
 		{/if}
-	{/snippet}
-	{#snippet preview()}
-		{blockSummary(comp, fields.value, refs) || t('fields.empty')}
-	{/snippet}
-	{#if comp}
-		<fieldset disabled={!editable}>
-			<BlockFields
-				{schema}
-				component={comp}
-				values={fields.value}
-				errors={{}}
-				{refs}
-				prefix="{uid}."
-				id={attrs.id}
-			/>
-		</fieldset>
+	</ItemCard>
+</NodeFrame>
+
+{#snippet handle()}
+	{#if editable}
+		<DragHandle {sortable} {index} label={t('fields.moveBlock')} />
 	{/if}
-</EmbedCard>
+{/snippet}
+
+{#snippet preview()}
+	{blockSummary(comp, fields.value, refs) || t('fields.empty')}
+{/snippet}

@@ -12,7 +12,7 @@ export type Hit =
 	{ kind: 'entry'; entry: EntryHit } | { kind: 'asset'; asset: Asset };
 
 /** The results under a heading: a section's entries, or the files. */
-export type HitGroup = { name: string; hits: Hit[] };
+type HitGroup = { name: string; hits: Hit[] };
 
 /**
  * The search of the studio as you type: it asks the server a moment

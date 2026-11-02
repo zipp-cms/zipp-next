@@ -78,7 +78,7 @@
 	class="dialog"
 	role="dialog"
 	aria-modal="true"
-	aria-label={t('common.search')}
+	aria-label={t('ui.search')}
 	tabindex="-1"
 	bind:this={box}
 	use:layer={close}
@@ -109,16 +109,14 @@
 			class="results"
 			id="{uid}-results"
 			role="listbox"
-			aria-label={t('common.search')}
+			aria-label={t('ui.search')}
 			bind:this={list}
 		>
 			{#if s.error}
 				<p class="error">{s.error}</p>
 			{:else if !s.hits.length}
 				<p class="empty">
-					{s.loading
-						? t('search.searching')
-						: t('common.nothingFound')}
+					{s.loading ? t('search.searching') : t('ui.nothingFound')}
 				</p>
 			{/if}
 			{#each s.groups as g (g.name)}

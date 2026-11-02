@@ -17,20 +17,15 @@ export default {
 	'auth.sessionEnded': 'The session ended',
 	'auth.wereLoggedInAs':
 		'You were logged in as {name}. Go back to your account or log in.',
-	'auth.backToAccount': 'Back to your account',
 	'auth.logInAgain': 'Log in again to go on, what you changed stays.',
-	'auth.logOut': 'Log out',
 	'auth.welcome': 'Welcome',
 	'auth.newPasswordTitle': 'A new password',
 	'auth.inviteIntro': 'Your account is {email}. Choose a password to log in.',
 	'auth.resetIntro':
 		'Choose a new password for {email}. You are logged out everywhere else.',
 	'auth.yourName': 'Your name',
-	'auth.namePlaceholder': 'Anna Muster',
-	'auth.passwordPlaceholder': 'At least 8 characters',
 	'auth.setAndLogIn': 'Set the password and log in',
 	'auth.saveAndLogIn': 'Save and log in',
 	'auth.linkProblem':
 		'{problem}. Ask for a new one, or an admin for an invite.',
-	'auth.newPassword': 'New password',
 };

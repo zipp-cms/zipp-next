@@ -33,6 +33,14 @@ export function accessOf(schema: Schema, section: string): Access | null {
 	return role(schema)?.sections[section] ?? null;
 }
 
+/** A level of access in words, `none` without one. */
+export function accessText(
+	level: Access | null | undefined,
+	none = '–',
+): string {
+	return level ? t(`common.${level}`) : none;
+}
+
 export function isAdmin(schema: Schema): boolean {
 	return session.user !== null && session.user.role === null;
 }

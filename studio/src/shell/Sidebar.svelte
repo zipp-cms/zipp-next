@@ -14,7 +14,8 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import SiteSwitch from './SiteSwitch.svelte';
 	import UserMenu from './UserMenu.svelte';
-	import { setupTabs, groupIcon, groupItems } from './nav';
+	import { groupIcon, groupItems } from './nav';
+	import { setupTabs } from '../setup/tabs';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import { searchBox } from '../search/search.svelte';
 	import { sideNav } from './sideNav.svelte';
@@ -61,7 +62,7 @@
 
 	<button type="button" class="open-search" onclick={search}>
 		<Icon name="search" size={14} />
-		{t('common.search')}
+		{t('ui.search')}
 		<kbd>{mod}K</kbd>
 	</button>
 

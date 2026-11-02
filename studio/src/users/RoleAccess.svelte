@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
-	import { accessText } from '../setup/setup';
+	import { accessText } from '../core/access';
 	import { t } from '../i18n/index.svelte';
 
 	/** What a role may do, from the code: per section, assets, AI. */

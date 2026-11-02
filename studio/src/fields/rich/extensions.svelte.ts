@@ -130,7 +130,7 @@ type Options = {
 	schema: Schema;
 	refs: () => Refs;
 	/** moves the nodes of the text, see RichTextField */
-	sortable: () => Sortable | undefined;
+	sortable: () => Sortable;
 };
 
 /**
@@ -217,7 +217,7 @@ export const Button = Node.create<Options>({
 		return {
 			schema: null as any,
 			refs: () => ({}),
-			sortable: () => undefined,
+			sortable: null as any,
 		};
 	},
 	addAttributes() {
@@ -249,7 +249,7 @@ export const Block = Node.create<Options>({
 		return {
 			schema: null as any,
 			refs: () => ({}),
-			sortable: () => undefined,
+			sortable: null as any,
 		};
 	},
 	addAttributes() {

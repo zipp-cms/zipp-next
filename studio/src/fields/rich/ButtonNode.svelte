@@ -30,7 +30,7 @@
 		update: (attrs: Record<string, unknown>) => void;
 		remove: () => void;
 		insertLine: (where: 'before' | 'after') => void;
-		sortable?: Sortable;
+		sortable: Sortable;
 		index: () => number;
 	} = $props();
 </script>
@@ -48,7 +48,7 @@
 			removeLabel={t('fields.deleteButton')}
 		>
 			{#snippet handle()}
-				{#if editable && sortable}
+				{#if editable}
 					<DragHandle
 						{sortable}
 						{index}

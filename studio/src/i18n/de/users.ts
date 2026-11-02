@@ -10,14 +10,12 @@ export default {
 	'users.you': '(Sie)',
 	'users.invited': 'Eingeladen',
 	'users.account': 'Konto',
-	'users.yourAccount': 'Ihr Konto',
 	'users.thatsYou': 'Das sind Sie',
 	'users.delete': 'Benutzer löschen',
 	'users.confirmDelete':
 		'{name} löschen? Die Person kann sich nicht mehr anmelden.',
 	'users.confirmEndOwn': 'In allen anderen Browsern abmelden?',
 	'users.confirmEnd': '{name} überall abmelden?',
-	'users.namePlaceholder': 'Anna Muster',
 	'users.language': 'Sprache des Studios',
 	'users.browserLanguage': 'Die des Browsers ({language})',
 	'users.passwordNew':
@@ -26,8 +24,6 @@ export default {
 		'Leer lassen, um das bisherige zu behalten. Ein neues Passwort meldet Sie in allen anderen Browsern ab.',
 	'users.passwordKeep':
 		'Leer lassen, um das bisherige zu behalten. Ein neues Passwort meldet die Person in allen Browsern ab.',
-	'users.newPassword': 'Neues Passwort',
-	'users.passwordPlaceholder': 'Mindestens 8 Zeichen',
 	'users.sendInvite': 'Einladung per E-Mail senden',
 	'users.currentPassword': 'Ihr aktuelles Passwort',
 	'users.created': 'Erstellt',

@@ -91,7 +91,7 @@ export function setSite(handle: string) {
 }
 
 /** Opens the login, which comes back to this page. */
-export function toLogin() {
+function toLogin() {
 	if (location.pathname === BASE + '/login') return;
 	const back = new URLSearchParams({
 		url: location.pathname + location.search,
@@ -116,7 +116,7 @@ function loadSchema(): Promise<Schema> {
 }
 
 /** After a logout the next user gets their own schema. */
-export function forgetSchema() {
+function forgetSchema() {
 	schema = null;
 }
 
@@ -137,7 +137,7 @@ export const view = $state<{ page: Page | null; loading: number }>({
 });
 
 /** A page in a frame: the layout's props go to the page too. */
-export function withLayout(layout: LoadModule, page: LoadModule): LoadModule {
+function withLayout(layout: LoadModule, page: LoadModule): LoadModule {
 	return async req => {
 		const [l, p] = await Promise.all([layout(req), page(req)]);
 		return {

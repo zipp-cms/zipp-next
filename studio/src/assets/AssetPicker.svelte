@@ -98,7 +98,7 @@
 			{uploads.active ? t('assets.uploading') : t('common.upload')}
 		</UploadButton>
 		<button type="button" class="primary" onclick={onclose}>
-			{t('common.done')}
+			{t('ui.done')}
 		</button>
 	{/snippet}
 	<div class="search">

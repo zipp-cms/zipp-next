@@ -21,7 +21,6 @@ export default {
 	// assets
 	'fields.moveFile': 'Datei verschieben',
 	'fields.deletedFile': 'Eine gelöschte Datei',
-	'fields.detailsTitle': 'Details: Titel, Alternativtext, Fokuspunkt',
 	'fields.details': 'Details',
 	'fields.dropToAdd': 'Loslassen zum Hinzufügen',
 	'fields.dragVideos': 'Videos hierher ziehen',

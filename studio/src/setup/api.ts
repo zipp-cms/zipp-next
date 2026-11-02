@@ -31,3 +31,19 @@ export function createRequest(req: {
 export function setRequestDone(id: number, done: boolean): Promise<void> {
 	return request('PUT', `/change-requests/${id}`, { done });
 }
+
+/** How the cms sends mails: its SMTP server, or none (mails are logged). */
+export type MailStatus = {
+	configured: boolean;
+	server: string | null;
+	from: string;
+};
+
+export function mailStatus(): Promise<MailStatus> {
+	return request('GET', '/mail');
+}
+
+/** A test mail to oneself. */
+export function sendTestMail(): Promise<void> {
+	return request('POST', '/mail/test');
+}
