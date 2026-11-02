@@ -13,8 +13,9 @@ import {
 /**
  * What the Assets page and the picker show of the library: its folders,
  * the open one (null: the top), a search that looks in all of them, a
- * type (images, videos, documents) and the assets of that. A response that came after a newer request is
- * dropped.
+ * type (images, videos, documents) and the assets of that. A response
+ * that came after a newer request is dropped, an error shows until the
+ * next answer of its kind.
  */
 export class Library {
 	folders = $state<Folder[]>([]);
@@ -26,9 +27,12 @@ export class Library {
 	kind = $state<AssetKind | ''>('');
 	assets = $state<Asset[]>([]);
 	loaded = $state(false);
-	error = $state('');
+	private assetsError = $state('');
+	private foldersError = $state('');
+	error = $derived(this.assetsError || this.foldersError);
 	private wait: ReturnType<typeof setTimeout> | undefined;
 	private asked = 0;
+	private askedFolders = 0;
 
 	/** only images, only files that end so */
 	constructor(
@@ -68,19 +72,23 @@ export class Library {
 			if (n !== this.asked) return;
 			this.assets = assets;
 			this.loaded = true;
+			this.assetsError = '';
 		} catch (e: any) {
-			this.error = e.message;
+			if (n === this.asked) this.assetsError = e.message;
 		}
 	}
 
 	/** The folders with their counts. */
 	async loadFolders() {
+		const n = ++this.askedFolders;
 		try {
 			const { folders, top } = await listFolders();
+			if (n !== this.askedFolders) return;
 			this.folders = folders;
 			this.top = top;
+			this.foldersError = '';
 		} catch (e: any) {
-			this.error = e.message;
+			if (n === this.askedFolders) this.foldersError = e.message;
 		}
 	}
 

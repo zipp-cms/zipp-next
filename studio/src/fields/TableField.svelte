@@ -41,8 +41,18 @@
 		onmove: (from, drop) => set(moved(rows, from, drop)),
 	});
 
+	// rows have no id; a key per row, so a moved or removed row takes
+	// its cells' editors along (an edit makes a new row, it keeps the key)
+	let keys = new WeakMap<Values, number>();
+	let nextKey = 0;
+	function key(row: Values) {
+		if (!keys.has(row)) keys.set(row, nextKey++);
+		return keys.get(row)!;
+	}
+
 	// nothing leaves the row, so an empty row is one
 	function cell(i: number, column: string, value: unknown) {
+		const k = key(rows[i]);
 		const { [column]: _, ...row } = rows[i];
 		set(
 			replaced(
@@ -51,6 +61,8 @@
 				value === null ? row : { ...row, [column]: value },
 			),
 		);
+		// the one in the state, a proxy
+		keys.set(rows[i], k);
 	}
 </script>
 
@@ -64,7 +76,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each rows as row, i (i)}
+			{#each rows as row, i (key(row))}
 				<tr data-sort class:sort-dragging={sort.dragging === i}>
 					<td class="handle">
 						<DragHandle

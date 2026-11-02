@@ -1,4 +1,5 @@
-import type { Component, Link, Values } from '../core/schema';
+import type { Block, Component, Link, Schema, Values } from '../core/schema';
+import { componentOf } from '../core/schema';
 import { t } from '../i18n/index.svelte';
 import type { Refs } from '../entries/api';
 import { hasTarget, isEmpty, linkTarget } from './link/link';
@@ -13,6 +14,32 @@ export function showBlock(path: string, index: number) {
 	focus.path = path;
 	focus.index = index;
 	focus.at = Date.now();
+}
+
+/**
+ * A copy of a block is new, also the blocks in it: its fields' blocks,
+ * the blocks embedded in a rich text and those in groups lose their ids,
+ * saving gives them new ones. Changes `block`, a snapshot.
+ */
+export function withoutIds(schema: Schema, block: Block) {
+	delete block.id;
+	fieldsWithoutIds(schema, block.type, block.fields);
+}
+
+function fieldsWithoutIds(schema: Schema, type: string, values: Values) {
+	for (const f of componentOf(schema, type)?.fields ?? []) {
+		const v = values?.[f.handle] as any;
+		if (!v) continue;
+		if (f.kind === 'blocks' && Array.isArray(v))
+			for (const b of v) withoutIds(schema, b);
+		else if (f.kind === 'group') fieldsWithoutIds(schema, f.component, v);
+		else if (f.kind === 'richText')
+			for (const n of v.content ?? []) {
+				if (n.type !== 'embed' || !n.attrs) continue;
+				n.attrs.id = null;
+				fieldsWithoutIds(schema, n.attrs.type, n.attrs.fields);
+			}
+	}
 }
 
 /** The text of a rich text document, without its marks. */

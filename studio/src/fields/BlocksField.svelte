@@ -10,7 +10,12 @@
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
 	import { Sortable, moved } from 'zipp-ui/sortable';
-	import { blockMissing, blockSummary, focus } from './blocks.svelte';
+	import {
+		blockMissing,
+		blockSummary,
+		focus,
+		withoutIds,
+	} from './blocks.svelte';
 	import { rememberOpen, wasOpen } from './opened';
 	import { inserted, isFull, removed } from '../core/list';
 	import { componentOf, defaults } from '../core/schema';
@@ -80,7 +85,7 @@
 
 	function duplicate(i: number) {
 		const copy: Block = $state.snapshot(blocks[i]);
-		delete copy.id;
+		withoutIds(schema, copy);
 		insert(copy, i + 1);
 	}
 
@@ -96,9 +101,13 @@
 			p => p === `${path}.${i}` || p.startsWith(`${path}.${i}.`),
 		);
 
-	// the outline of the editor opens a block and scrolls to it
+	// the outline of the editor opens a block and scrolls to it; an ask
+	// from before this field mounted is old, another editor's
+	let seen = untrack(() => focus.at);
 	$effect(() => {
-		if (focus.path !== path || !focus.at) return;
+		if (focus.at === seen) return;
+		seen = focus.at;
+		if (focus.path !== path) return;
 		// only when asked, not when the blocks change later
 		const b = untrack(() => blocks[focus.index]);
 		if (!b) return;

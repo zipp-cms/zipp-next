@@ -81,7 +81,7 @@
 
 <FieldGroup>
 	<FieldRow label="Preview">
-		<div class="preview" aria-label="Search result">
+		<div class="preview">
 			<span class="url">{defaults?.url ?? ''}</span>
 			<span class="title">{title}</span>
 			<span class="description">{description}</span>

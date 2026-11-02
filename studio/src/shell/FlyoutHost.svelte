@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { listAssets, type Asset } from '../assets/api';
 	import AssetDetail from '../assets/AssetDetail.svelte';
 	import { closeFlyout, flyout } from '../core/flyout.svelte';
 	import { site } from '../core/router.svelte';
+	import { session } from '../core/session.svelte';
 	import { type Schema } from '../core/schema';
 	import Edit from '../entries/edit/Edit.svelte';
 	import { EntryEditor } from '../entries/edit/entryEditor.svelte';
@@ -21,9 +23,18 @@
 		| { kind: 'error'; message: string };
 	let loaded = $state<Loaded | null>(null);
 
+	// what failed while the session was gone loads after the new login
+	let tries = $state(0);
+	onDestroy(
+		session.onRenewed(() => {
+			if (loaded?.kind === 'error') tries++;
+		}),
+	);
+
 	$effect(() => {
 		const open = flyout.open;
 		void site.current;
+		void tries;
 		loaded = null;
 		if (!open) return;
 		const load: Promise<Loaded> =

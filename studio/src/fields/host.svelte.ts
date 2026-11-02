@@ -40,5 +40,3 @@ export const host = {
 		};
 	},
 };
-
-export type Host = typeof host;

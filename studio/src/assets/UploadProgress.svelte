@@ -23,9 +23,7 @@
 						total: uploads.files,
 					})}
 				{:else}
-					{t('assets.uploadedFiles', {
-						n: uploads.files - uploads.errors.length,
-					})}
+					{t('assets.uploadedFiles', { n: uploads.uploaded })}
 				{/if}
 			</strong>
 			<span class="note">

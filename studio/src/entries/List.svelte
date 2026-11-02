@@ -82,19 +82,26 @@
 	let total = $state(untrack(() => first.total));
 	let error = $state('');
 
-	/** Loads the list again: after a search, a move, a delete. */
-	function load() {
-		const q = search;
-		listEntries(listParams(sec.kind, section, site.current, q))
-			.then(r => {
-				// an answer to an older search
-				if (q !== search) return;
-				entries = r.entries;
-				total = r.total;
-				published = r.published;
-				drafts = r.drafts;
-			})
-			.catch(e => (error = e.message));
+	/**
+	 * Loads the list again: after a search, a move, a delete. Only the
+	 * last one counts, an older answer would show an old order.
+	 */
+	let loads = 0;
+	async function load() {
+		const n = ++loads;
+		try {
+			const r = await listEntries(
+				listParams(sec.kind, section, site.current, search),
+			);
+			if (n !== loads) return;
+			entries = r.entries;
+			total = r.total;
+			published = r.published;
+			drafts = r.drafts;
+			error = '';
+		} catch (e: any) {
+			if (n === loads) error = e.message;
+		}
 	}
 
 	// the first list came with the page
@@ -125,7 +132,8 @@
 			const parentId = to.parent === null ? null : entries[to.parent].id;
 			try {
 				await moveEntry(entries[from].id, parentId, to.index);
-				load();
+				// the handle keeps the focus in the new order
+				await load();
 			} catch (err: any) {
 				error = err.message;
 			}

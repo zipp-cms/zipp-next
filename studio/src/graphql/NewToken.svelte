@@ -4,6 +4,7 @@
 	import Switch from 'zipp-ui/Switch.svelte';
 	import CheckGroup from 'zipp-ui/CheckGroup.svelte';
 	import DatePicker from 'zipp-ui/DatePicker.svelte';
+	import { formatDay } from 'zipp-ui/date';
 	import type { Schema } from '../core/schema';
 	import { go } from '../core/router.svelte';
 	import { TokenForm } from './tokenForm.svelte';
@@ -17,7 +18,8 @@
 	let { schema }: { schema: Schema } = $props();
 
 	const form = new TokenForm();
-	const today = new Date().toISOString().slice(0, 10);
+	// the editor's day, not UTC's: after midnight here it is tomorrow
+	const today = formatDay(new Date());
 
 	function save(e: SubmitEvent) {
 		e.preventDefault();

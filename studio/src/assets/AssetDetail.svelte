@@ -87,7 +87,8 @@
 	}
 
 	async function remove() {
-		if (!confirmDelete(current, form.usage?.length ?? 0)) return;
+		const usage = await form.usageLoaded;
+		if (!confirmDelete(current, usage.length)) return;
 		if (await form.remove()) ondeleted();
 	}
 

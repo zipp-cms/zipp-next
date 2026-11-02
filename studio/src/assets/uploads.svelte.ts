@@ -118,6 +118,8 @@ class Uploads {
 	done = $state(0);
 	sent = $state(0);
 	total = $state(0);
+	/** the assets made, a zip makes several and skips some */
+	uploaded = $state(0);
 	errors = $state<string[]>([]);
 	/** whether the last ones are through, shown a moment longer */
 	finished = $state(false);
@@ -176,11 +178,10 @@ class Uploads {
 							sent = now;
 						},
 					);
-					if (Array.isArray(done)) added.push(...done);
-					else {
-						added.push(...done.assets);
-						this.errors.push(...done.skipped);
-					}
+					const assets = Array.isArray(done) ? done : done.assets;
+					added.push(...assets);
+					this.uploaded += assets.length;
+					if (!Array.isArray(done)) this.errors.push(...done.skipped);
 				} catch (e) {
 					this.errors.push(
 						`${item.file.name}: ${(e as Error).message}`,
@@ -196,7 +197,7 @@ class Uploads {
 	}
 
 	private reset() {
-		this.files = this.done = this.sent = this.total = 0;
+		this.files = this.done = this.sent = this.total = this.uploaded = 0;
 		this.finished = false;
 		this.errors = [];
 	}

@@ -15,9 +15,12 @@
 	let requests = $state(untrack(() => loaded));
 	const action = new Busy();
 
-	async function toggle(r: ChangeRequest, done: boolean) {
+	async function toggle(r: ChangeRequest, box: HTMLInputElement) {
+		const done = box.checked;
 		const ok = await action.run(() => setRequestDone(r.id, done));
 		if (ok !== undefined) r.done = done;
+		// a failed save leaves r.done, the box has to go back itself
+		else box.checked = r.done;
 	}
 </script>
 
@@ -46,7 +49,7 @@
 					aria-label={t('common.done')}
 					checked={r.done}
 					disabled={action.busy}
-					onchange={e => toggle(r, e.currentTarget.checked)}
+					onchange={e => toggle(r, e.currentTarget)}
 				/>
 			</td>
 			<td class="text" class:done={r.done}>{r.text}</td>

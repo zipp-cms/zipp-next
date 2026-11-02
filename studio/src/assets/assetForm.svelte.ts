@@ -54,15 +54,17 @@ export class AssetForm extends Busy {
 	/** null: no folder */
 	folder = $state<number | null>(null);
 	usage = $state<AssetUsage[] | null>(null);
+	/** the usage once it is there, deleting asks with it */
+	readonly usageLoaded: Promise<AssetUsage[]>;
 	/** what Cancel would throw away */
 	private initial = $state('');
 
 	constructor(asset: Asset) {
 		super();
 		this.reset(asset);
-		assetUsage(asset.id)
-			.then(u => (this.usage = u))
-			.catch(() => (this.usage = []));
+		this.usageLoaded = assetUsage(asset.id)
+			.catch(() => [])
+			.then(u => (this.usage = u));
 	}
 
 	private reset(asset: Asset) {

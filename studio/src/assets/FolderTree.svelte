@@ -58,18 +58,26 @@
 	const parentOf = (id: number) =>
 		folders.find(f => f.id === id)?.parentId ?? null;
 
-	// the folders around the current one start open
-	let open = $state(
+	// the folders around the current one open, also when the folders
+	// come after the tree (the picker loads them) or another one opens
+	let open = $state(new Set<number>());
+	let openedFor: number | null = null;
+	$effect(() => {
+		const id = current;
+		if (id === null || id === openedFor) return;
+		if (!folders.some(f => f.id === id)) return;
+		openedFor = id;
 		untrack(() => {
-			const ids = new Set<number>();
-			let at = current === null ? null : parentOf(current);
-			while (at !== null && !ids.has(at)) {
+			const ids = new Set(open);
+			const seen = new Set<number>();
+			for (let at = parentOf(id); at !== null && !seen.has(at);) {
+				seen.add(at);
 				ids.add(at);
 				at = parentOf(at);
 			}
-			return ids;
-		}),
-	);
+			open = ids;
+		});
+	});
 
 	const hasChildren = (id: number) => folders.some(f => f.parentId === id);
 

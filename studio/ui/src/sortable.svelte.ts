@@ -1,3 +1,5 @@
+import { tick } from 'svelte';
+
 /**
  * Moving the items of a list or a tree: dragging a handle with the pointer
  * (also on touch), its menu and the arrow keys (see DragHandle.svelte).
@@ -35,7 +37,8 @@ export type SortableOptions = {
 	inset?: number;
 	/** rows at the end that stay last, nothing goes below them */
 	keepLast?: () => number;
-	onmove: (from: number, drop: Drop) => void;
+	/** a list that saves first returns the promise, see `step` */
+	onmove: (from: number, drop: Drop) => unknown;
 };
 
 /** The rows of `from` with the ones under it: their count. */
@@ -243,9 +246,18 @@ export class Sortable {
 		}
 	}
 
-	step(from: number, step: Step) {
+	/**
+	 * Moves a row one step and gives its handle the focus again: the rows
+	 * moved in the page, or are new ones, the focus is gone.
+	 */
+	async step(from: number, step: Step) {
 		const drop = this.stepDrop(from, step);
-		if (drop) this.o.onmove(from, drop);
+		if (!drop) return;
+		await this.o.onmove(from, drop);
+		await tick();
+		// a moved row is at the drop's index
+		const row = this.rows()[drop.index];
+		row?.querySelector<HTMLElement>('.drag-handle')?.focus();
 	}
 }
 
