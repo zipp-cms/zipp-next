@@ -12,21 +12,10 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::{Path as FsPath, PathBuf};
 
-use axum::Json;
-use axum::Router;
-use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
-use axum::http::header;
-use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
-use image::codecs::jpeg::JpegEncoder;
-use image::imageops::FilterType;
-use image::{
-	DynamicImage, ImageFormat, ImageReader, RgbImage, Rgba, RgbaImage,
-};
+use image::ImageReader;
 use rusqlite::{Connection, Row, params, params_from_iter};
 use serde::{Deserialize, Serialize};
 
-use crate::AppState;
 use crate::db::{marks, now};
 use crate::error::{Error, Result};
 use crate::schema::{Format, Transform};
@@ -38,6 +27,7 @@ mod archive;
 #[cfg(test)]
 mod archive_tests;
 mod edits;
+mod files;
 mod folders;
 mod manage;
 mod routes;
@@ -60,10 +50,10 @@ pub(crate) use manage::{
 	AssetChange, InFolder, Usage, delete, find, replace, search, update, usage,
 };
 
-pub(crate) use routes::api_routes;
 #[cfg(test)]
-use routes::file_headers;
-pub(crate) use routes::file_routes;
+use files::file_headers;
+pub(crate) use files::file_routes;
+pub(crate) use routes::api_routes;
 pub use transform::transform_size;
 use transform::*;
 

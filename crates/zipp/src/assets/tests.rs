@@ -1,6 +1,10 @@
+use std::io::Cursor;
+
+use axum::http::header;
+use image::ImageFormat;
+
 use super::*;
 use crate::fixtures::png;
-use std::io::Cursor;
 
 #[test]
 fn cleans_filenames() {

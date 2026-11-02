@@ -9,7 +9,8 @@ use zipp::entries::api::{CreateReq, UpdateReq};
 use zipp::error::Error;
 use zipp::testing::{Client, TestServer, input};
 
-use super::*;
+use crate::content::schema;
+use crate::routes::routes;
 
 fn create(section: &str, ty: &str, title: &str, fields: Value) -> CreateReq {
 	CreateReq(input(section, ty, title, fields))
@@ -59,8 +60,7 @@ async fn authors_write_editors_publish() {
 
 #[tokio::test]
 async fn upcoming_events_as_json() {
-	let ts = TestServer::new(schema())
-		.routes(Router::new().route("/events.json", get(events)));
+	let ts = TestServer::new(schema()).routes(routes());
 	let admin = ts.admin();
 	admin.call(&event("Gestern", "2000-01-01")).await.unwrap();
 	admin.call(&event("Bald", "2099-01-01")).await.unwrap();

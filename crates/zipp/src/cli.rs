@@ -1,4 +1,15 @@
-use super::*;
+use std::fs;
+use std::io::{self, BufRead, Write};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+use clap::{Parser, Subcommand};
+
+use crate::db::Db;
+use crate::migrate::{self, Migration, Migrations, Rename};
+use crate::{Schema, auth, client, graphql};
+#[cfg(feature = "craft")]
+use crate::{assets, craft, migrate::apply};
 
 /// The error of a command, printed before zipp exits.
 pub(super) type CmdError = Box<dyn std::error::Error + Send + Sync>;
@@ -96,6 +107,8 @@ impl MailArgs {
 	}
 }
 
+// parsed once at the start, its size doesn't matter
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Subcommand)]
 pub(super) enum Cmd {
 	/// Apply new migrations and serve the api and the studio.
@@ -264,7 +277,7 @@ pub(super) fn makemigration(
 	Ok(())
 }
 
-pub(super) fn add_user(
+pub(super) fn save_user(
 	schema: &Schema,
 	db_path: &Path,
 	email: &str,

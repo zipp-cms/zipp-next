@@ -1,3 +1,7 @@
+use image::codecs::jpeg::JpegEncoder;
+use image::imageops::FilterType;
+use image::{DynamicImage, ImageFormat, RgbImage, Rgba, RgbaImage};
+
 use super::*;
 
 /// The size of a `width` x `height` image after a transform, never bigger

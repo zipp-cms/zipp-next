@@ -33,23 +33,21 @@ pub mod trash;
 mod typescript;
 mod users;
 
-use std::fs;
-use std::io::{self, BufRead, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::Router;
 use axum::extract::FromRef;
-use axum::http::{Method, header};
-use clap::{Parser, Subcommand};
-use tower_http::cors::{self, CorsLayer};
-use tower_http::trace::TraceLayer;
-use tracing::info;
+use clap::Parser;
 
 use crate::db::Db;
-use crate::migrate::{Migration, Migrations, Rename, apply};
-use cli::*;
-use server::*;
+use crate::migrate::Migrations;
+#[cfg(feature = "craft")]
+use cli::import_craft;
+use cli::{
+	Cmd, Opts, backup, check, makemigration, restore, save_user, test_mail,
+};
+use server::serve;
 
 pub use crate::plugin::{EntryField, GraphqlExt, Plugin, PluginStudio};
 pub use crate::schema::field_type::{
@@ -305,7 +303,7 @@ impl Cms {
 				&site,
 			),
 			Cmd::User { email, role } => {
-				add_user(&schema, &opts.db, &email, role.as_deref())
+				save_user(&schema, &opts.db, &email, role.as_deref())
 			}
 			Cmd::Mail { to, mail } => test_mail(&to, &mail),
 			Cmd::Backup { dir, files, keep } => {

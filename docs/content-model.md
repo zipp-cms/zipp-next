@@ -2,7 +2,7 @@
 
 The content model is code: a site's crate builds a `Schema` and zipp
 makes the api, the studio and the migrations from it. See
-`example/cms/src/main.rs` for one that uses everything.
+`example/cms/src/content.rs` for one that uses everything.
 
 ## Sections, entry types and sites
 

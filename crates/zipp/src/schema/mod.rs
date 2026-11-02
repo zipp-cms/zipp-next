@@ -22,11 +22,12 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::schema::field_type::{FieldType, FieldTypes, GraphqlType};
+use crate::schema::field_type::{FieldType, FieldTypes, GraphqlType, Scalar};
 pub use role::{Access, Role};
 
 mod builders;
 mod check;
+mod column;
 mod condition;
 mod field;
 pub mod field_type;
@@ -34,14 +35,15 @@ pub mod role;
 #[cfg(test)]
 mod tests;
 
+pub use column::{Column, ColumnKind, Style};
 pub use condition::Condition;
 pub use field::Choice;
 pub use field::Field;
 pub use field::FieldKind;
 pub use field::Holds;
 pub use field::LinkKind;
+pub use field::VIDEOS;
 pub use field::humanize;
-pub use field::{Column, ColumnKind, Style, VIDEOS};
 
 /// The single of the texts of the frontend, see [`Schema::translations`].
 pub const TRANSLATIONS: &str = "translations";
@@ -258,57 +260,6 @@ pub struct Component {
 	pub part_of: Option<String>,
 }
 
-impl Component {
-	fn new(
-		handle: &str,
-		name: &str,
-		entry: bool,
-		fields: Vec<Field>,
-		part_of: Option<String>,
-	) -> Self {
-		Self {
-			handle: handle.into(),
-			name: name.into(),
-			entry,
-			fields,
-			tabs: vec![],
-			card: false,
-			icon: None,
-			title_field: None,
-			part_of,
-		}
-	}
-}
-
-/// Makes the fields of inline groups blocks of their own, named after
-/// the parent and the field (`event` + `tickets` = `eventTickets`), so
-/// content, GraphQL and migrations only know normal groups.
-fn hoist_groups(parent: &str, fields: &mut [Field], out: &mut Vec<Component>) {
-	for f in fields {
-		let Some(mut inner) = f.inline.take() else {
-			continue;
-		};
-		let mut chars = f.handle.chars();
-		let first = chars.next().map(|c| c.to_ascii_uppercase());
-		let handle =
-			format!("{parent}{}{}", first.unwrap_or_default(), chars.as_str());
-		f.kind = FieldKind::Group {
-			component: handle.clone(),
-		};
-
-		let mut nested = vec![];
-		hoist_groups(&handle, &mut inner, &mut nested);
-		out.push(Component::new(
-			&handle,
-			&f.label,
-			false,
-			inner,
-			Some(parent.into()),
-		));
-		out.extend(nested);
-	}
-}
-
 /// How an indexed field is compared and sorted, see
 /// [`Schema::index_kind`].
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -331,188 +282,16 @@ pub struct Tab {
 }
 
 impl Schema {
-	pub fn new() -> Self {
-		Self::default()
-	}
-
-	pub fn site(mut self, handle: &str, name: &str, language: &str) -> Self {
-		self.sites.push(Site {
-			handle: handle.into(),
-			name: name.into(),
-			language: language.into(),
-		});
-		self
-	}
-
-	/// A site that is not on the website, like a disabled site in Craft:
-	/// frontends get none of its entries, only previews and admins do, and
-	/// it is not in `crelteSites` and the sitemaps. Editors fill it in.
-	pub fn offline(mut self, site: &str) -> Self {
-		self.offline.push(site.into());
-		self
-	}
-
 	pub fn is_offline(&self, site: &str) -> bool {
 		self.offline.iter().any(|s| s == site)
-	}
-
-	pub fn section(mut self, section: Section) -> Self {
-		self.sections.push(section);
-		self
-	}
-
-	/// A group of sections in the top bar of the studio. Once there is one,
-	/// every section has to be in exactly one group.
-	pub fn nav<'a>(
-		mut self,
-		name: &str,
-		sections: impl IntoIterator<Item = &'a str>,
-	) -> Self {
-		self.nav.push(NavGroup {
-			name: name.into(),
-			sections: sections.into_iter().map(Into::into).collect(),
-			icon: None,
-		});
-		self
-	}
-
-	/// The icon of a group of the studio's navigation, after its `nav`:
-	/// `.nav_icon("Content", "folder-open")`.
-	pub fn nav_icon(mut self, group: &str, icon: impl Into<Icon>) -> Self {
-		let Some(g) = self.nav.iter_mut().find(|g| g.name == group) else {
-			panic!("nav_icon: there is no group {group}");
-		};
-		g.icon = Some(icon.into());
-		self
-	}
-
-	/// The icon of an entry type or a block, after it:
-	/// `.icon("event", "calendar")` or
-	/// `.icon("logo", Icon::svg(include_str!("logo.svg")))`.
-	pub fn icon(mut self, component: &str, icon: impl Into<Icon>) -> Self {
-		let Some(c) = self.get_mut(component) else {
-			panic!("icon: there is no entry type or block {component}");
-		};
-		c.icon = Some(icon.into());
-		self
-	}
-
-	/// The field that names a block in the studio, after it, like Craft
-	/// shows a nested entry by a field: `.block_title("feedback",
-	/// "author")` shows `Feedback · Anna Muster` instead of only the type.
-	pub fn block_title(mut self, block: &str, field: &str) -> Self {
-		let Some(c) = self.get_mut(block).filter(|c| !c.entry) else {
-			panic!("block_title: there is no block {block}");
-		};
-		c.title_field = Some(field.into());
-		self
-	}
-
-	/// Shows the fields of a tab in one card with the labels on the left,
-	/// like a group, after the type: `.tab_card("article", "Intro")`. For
-	/// tabs of several short fields, a long column of them reads badly.
-	/// Not for blocks, their fields are in a card already.
-	pub fn tab_card(mut self, component: &str, tab: &str) -> Self {
-		let t = self
-			.get_mut(component)
-			.filter(|c| c.entry)
-			.and_then(|c| c.tabs.iter_mut().find(|t| t.name == tab));
-		let Some(t) = t else {
-			panic!(
-				"tab_card: there is no entry type {component} with a tab {tab}"
-			);
-		};
-		t.card = true;
-		self
-	}
-
-	/// [`Schema::tab_card`] for every tab of an entry type, or its one
-	/// page when it has none: `.entry_card("event")`.
-	pub fn entry_card(mut self, component: &str) -> Self {
-		let Some(c) = self.get_mut(component).filter(|c| c.entry) else {
-			panic!("entry_card: there is no entry type {component}");
-		};
-		c.card = true;
-		self
-	}
-
-	/// Registers a field type of another crate, fields use it with
-	/// [`Field::custom`].
-	pub fn field_type(mut self, ty: impl FieldType) -> Self {
-		self.field_types.0.push(std::sync::Arc::new(ty));
-		self
-	}
-
-	/// A page of markdown in the studio, read only, e.g.
-	/// `.doc("readme", "Readme", include_str!("../readme.md"))`. Put its
-	/// handle into a nav group like a section.
-	pub fn doc(mut self, handle: &str, name: &str, markdown: &str) -> Self {
-		self.docs.push(DocPage {
-			handle: handle.into(),
-			name: name.into(),
-			markdown: markdown.into(),
-		});
-		self
-	}
-
-	/// Texts of the frontend in a namespace, the key and its text in the
-	/// primary site; editors translate them. They are a single
-	/// `translations` with a texts field per namespace, so they have
-	/// drafts like any entry; put `translations` into a nav group.
-	pub fn translations<'a>(
-		mut self,
-		namespace: &str,
-		keys: impl IntoIterator<Item = (&'a str, &'a str)>,
-	) -> Self {
-		if self.get(TRANSLATIONS).is_none() {
-			self.sections.push(
-				Section::single(TRANSLATIONS, TRANSLATIONS)
-					.name("Translations"),
-			);
-			self = self.component(TRANSLATIONS, "Translations", true, []);
-		}
-		let field = Field::texts(namespace, keys);
-		self.get_mut(TRANSLATIONS).unwrap().fields.push(field);
-		self
-	}
-
-	/// Fields of every asset beside title and alt, like a photographer or
-	/// a licence: `.asset_fields([Field::text("credit")])`. They are a
-	/// component `asset`, so validation and migrations are the ones of
-	/// blocks; the values are the same in all sites, GraphQL has them on
-	/// `Asset`.
-	pub fn asset_fields(self, fields: impl IntoIterator<Item = Field>) -> Self {
-		self.component(ASSET, "Asset", false, fields)
-	}
-
-	/// A role of studio users, see [`Role`].
-	pub fn role(mut self, role: Role) -> Self {
-		self.roles.push(role);
-		self
 	}
 
 	pub fn get_role(&self, handle: &str) -> Option<&Role> {
 		self.roles.iter().find(|r| r.handle == handle)
 	}
 
-	pub fn transform(mut self, transform: Transform) -> Self {
-		self.transforms.push(transform);
-		self
-	}
-
 	pub fn get_transform(&self, handle: &str) -> Option<&Transform> {
 		self.transforms.iter().find(|t| t.handle == handle)
-	}
-
-	/// Widths images can be resized to without a named transform, like
-	/// Craft's `url(width: 800)`: only these, so nobody can make the
-	/// server render any size.
-	pub fn image_widths(
-		mut self,
-		widths: impl IntoIterator<Item = u32>,
-	) -> Self {
-		self.image_widths.extend(widths);
-		self
 	}
 
 	/// The transform of a name: a named one or `w800` of an allowed width.
@@ -529,86 +308,6 @@ impl Schema {
 		self.image_widths
 			.contains(&width)
 			.then(|| Transform::new(&format!("w{width}")).width(width))
-	}
-
-	pub fn entry(
-		self,
-		handle: &str,
-		name: &str,
-		fields: impl IntoIterator<Item = Field>,
-	) -> Self {
-		self.component(handle, name, true, fields)
-	}
-
-	/// An entry type with its fields in tabs, like Craft's field layout:
-	/// `[("Content", vec![...]), ("SEO", vec![...])]`.
-	pub fn entry_tabs<'a>(
-		self,
-		handle: &str,
-		name: &str,
-		tabs: impl IntoIterator<Item = (&'a str, Vec<Field>)>,
-	) -> Self {
-		self.component_tabs(handle, name, true, tabs)
-	}
-
-	pub fn block(
-		self,
-		handle: &str,
-		name: &str,
-		fields: impl IntoIterator<Item = Field>,
-	) -> Self {
-		self.component(handle, name, false, fields)
-	}
-
-	/// A block with its fields in tabs like [`Schema::entry_tabs`], for a
-	/// big block: `[("Content", vec![...]), ("Layout", vec![...])]`. The
-	/// studio shows them as tabs inside its card.
-	pub fn block_tabs<'a>(
-		self,
-		handle: &str,
-		name: &str,
-		tabs: impl IntoIterator<Item = (&'a str, Vec<Field>)>,
-	) -> Self {
-		self.component_tabs(handle, name, false, tabs)
-	}
-
-	fn component_tabs<'a>(
-		mut self,
-		handle: &str,
-		name: &str,
-		entry: bool,
-		tabs: impl IntoIterator<Item = (&'a str, Vec<Field>)>,
-	) -> Self {
-		let mut fields = vec![];
-		let mut layout = vec![];
-		for (tab, tab_fields) in tabs {
-			layout.push(Tab {
-				name: tab.into(),
-				fields: tab_fields.iter().map(|f| f.handle.clone()).collect(),
-				when: None,
-				card: false,
-			});
-			fields.extend(tab_fields);
-		}
-		self = self.component(handle, name, entry, fields);
-		self.get_mut(handle).unwrap().tabs = layout;
-		self
-	}
-
-	fn component(
-		mut self,
-		handle: &str,
-		name: &str,
-		entry: bool,
-		fields: impl IntoIterator<Item = Field>,
-	) -> Self {
-		let mut fields: Vec<Field> = fields.into_iter().collect();
-		let mut parts = vec![];
-		hoist_groups(handle, &mut fields, &mut parts);
-		self.components
-			.push(Component::new(handle, name, entry, fields, None));
-		self.components.extend(parts);
-		self
 	}
 
 	pub fn get(&self, handle: &str) -> Option<&Component> {
@@ -651,5 +350,93 @@ impl Schema {
 	/// The site of a number of [`Schema::site_id`].
 	pub fn site_by_id(&self, id: i64) -> Option<&Site> {
 		self.sites.get(usize::try_from(id).ok()?.checked_sub(1)?)
+	}
+
+	/// The field at a path like `pageIntro.text`, through group fields.
+	pub fn field_at<'a>(
+		&'a self,
+		comp: &'a Component,
+		path: &str,
+	) -> Option<&'a Field> {
+		let (first, rest) = match path.split_once('.') {
+			Some((f, r)) => (f, Some(r)),
+			None => (path, None),
+		};
+		let field = comp.fields.iter().find(|f| f.handle == first)?;
+		match (rest, &field.kind) {
+			(None, _) => Some(field),
+			(Some(rest), FieldKind::Group { component }) => {
+				self.field_at(self.get(component)?, rest)
+			}
+			_ => None,
+		}
+	}
+
+	/// How a field of this kind is indexed, `None`: it can't be. A
+	/// custom type is like the scalar GraphQL shows. Every kind is named,
+	/// a new one has to say.
+	pub fn index_kind(&self, kind: &FieldKind) -> Option<IndexKind> {
+		match kind {
+			// a date sorts as text, `2026-11-14T20:00`
+			FieldKind::Text { .. }
+			| FieldKind::Email
+			| FieldKind::Dropdown { .. }
+			| FieldKind::Date { .. } => Some(IndexKind::Text),
+			FieldKind::Number { .. } | FieldKind::Boolean => {
+				Some(IndexKind::Number)
+			}
+			FieldKind::Custom { ty, .. } => {
+				match self.field_types.get(ty)?.graphql() {
+					GraphqlType::Scalar(Scalar::String) => {
+						Some(IndexKind::Text)
+					}
+					GraphqlType::Scalar(_) => Some(IndexKind::Number),
+					_ => None,
+				}
+			}
+			FieldKind::Relation { .. }
+			| FieldKind::Assets { .. }
+			| FieldKind::Link { .. }
+			| FieldKind::RichText { .. }
+			| FieldKind::Group { .. }
+			| FieldKind::Markdown
+			| FieldKind::Checkboxes { .. }
+			| FieldKind::Table { .. }
+			| FieldKind::Navigation { .. }
+			| FieldKind::Texts { .. }
+			| FieldKind::Note { .. }
+			| FieldKind::Blocks { .. } => None,
+		}
+	}
+}
+
+impl Section {
+	/// The uri of an entry in a site, `None` if it has no page. `fields`
+	/// are its values in the site, for [`Section::uri_if`].
+	pub fn render_uri(
+		&self,
+		ty: &str,
+		slug: &str,
+		parent: Option<&str>,
+		site: &str,
+		fields: &serde_json::Value,
+	) -> Option<String> {
+		if let Some(f) = &self.uri_if
+			&& fields[f] != true
+		{
+			return None;
+		}
+		let format = self
+			.type_uris
+			.get(ty)
+			.or(self.site_uris.get(site))
+			.or(self.uri.as_ref())?;
+		let uri = match parent {
+			Some(p) => format.replace("{parent.uri}", p),
+			None => format
+				.replace("{parent.uri}/", "")
+				.replace("{parent.uri}", ""),
+		};
+		Some(uri.replace("{slug}", slug).trim_matches('/').into())
 	}
 }

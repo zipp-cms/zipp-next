@@ -1,145 +1,204 @@
 use super::*;
-use crate::schema::field_type::Scalar;
 
 impl Schema {
 	/// Finds mistakes a compiler can't: unknown or duplicate handles and
 	/// settings that don't fit the field.
 	pub fn check(&self) -> Result<(), String> {
+		self.check_sites()?;
+		self.check_sections()?;
+		self.check_names()?;
+		self.check_components()?;
+		self.check_nav()?;
+		self.check_offline()?;
+		for p in &self.plugins.0 {
+			p.check(self).map_err(|e| format!("{}: {e}", p.name()))?;
+		}
+		self.check_roles()?;
+		self.check_docs()?;
+		self.check_transforms()
+	}
+
+	fn check_sites(&self) -> Result<(), String> {
 		if self.sites.is_empty() {
 			return Err("a schema needs at least one site".into());
 		}
-		for (i, site) in self.sites.iter().enumerate() {
+		for site in &self.sites {
 			check_handle(&site.handle)?;
-			if self.sites[..i].iter().any(|s| s.handle == site.handle) {
-				return Err(format!("site {} exists twice", site.handle));
-			}
 		}
+		if let Some(s) = first_twice(&self.sites, |a, b| a.handle == b.handle) {
+			return Err(format!("site {} exists twice", s.handle));
+		}
+		Ok(())
+	}
 
-		for (i, section) in self.sections.iter().enumerate() {
+	fn check_sections(&self) -> Result<(), String> {
+		for section in &self.sections {
 			check_handle(&section.handle)?;
-			if self.sections[..i]
-				.iter()
-				.any(|s| s.handle == section.handle)
-			{
-				return Err(format!("section {} exists twice", section.handle));
-			}
+		}
+		if let Some(s) =
+			first_twice(&self.sections, |a, b| a.handle == b.handle)
+		{
+			return Err(format!("section {} exists twice", s.handle));
+		}
+		for section in &self.sections {
 			self.check_section(section)
 				.map_err(|e| format!("section {}: {e}", section.handle))?;
 		}
+		Ok(())
+	}
 
-		// code finds its plugin and field types by name
+	/// Code finds its plugins and field types by name.
+	fn check_names(&self) -> Result<(), String> {
 		let plugins: Vec<&str> =
 			self.plugins.0.iter().map(|p| p.name()).collect();
 		let types: Vec<&str> =
 			self.field_types.0.iter().map(|t| t.name()).collect();
 		for names in [&plugins, &types] {
-			for (i, n) in names.iter().enumerate() {
-				if names[..i].contains(n) {
-					return Err(format!("two plugins or field types {n}"));
-				}
+			if let Some(n) = first_twice(names, |a, b| a == b) {
+				return Err(format!("two plugins or field types {n}"));
 			}
 		}
+		Ok(())
+	}
 
-		for (i, comp) in self.components.iter().enumerate() {
+	fn check_components(&self) -> Result<(), String> {
+		for comp in &self.components {
 			check_handle(&comp.handle)?;
-			let mut before = self.components[..i].iter();
-			if let Some(other) = before.find(|c| c.handle == comp.handle) {
-				// the handle of an inline group is made, say where from
-				let made =
-					[comp, other].into_iter().find_map(|c| c.part_of.as_ref());
-				return Err(match made {
-					Some(p) => format!(
-						"component {} exists twice, an inline group of {p} \
-						makes it",
-						comp.handle
-					),
-					None => format!("component {} exists twice", comp.handle),
-				});
-			}
-			if comp.handle == ASSET && comp.entry {
+		}
+		if let Some(comp) =
+			first_twice(&self.components, |a, b| a.handle == b.handle)
+		{
+			// the handle of an inline group is made, say where from
+			let other = self.get(&comp.handle);
+			let made = [Some(comp), other]
+				.into_iter()
+				.flatten()
+				.find_map(|c| c.part_of.as_ref());
+			return Err(match made {
+				Some(p) => format!(
+					"component {} exists twice, an inline group of {p} \
+					makes it",
+					comp.handle
+				),
+				None => format!("component {} exists twice", comp.handle),
+			});
+		}
+		for comp in &self.components {
+			self.check_component(comp)?;
+		}
+
+		for comp in self.components.iter().filter(|c| c.entry) {
+			if !self.sections.iter().any(|s| s.types.contains(&comp.handle)) {
 				return Err(format!(
-					"{ASSET} is the handle of the asset fields, not of an entry type"
+					"entry type {} is in no section",
+					comp.handle
 				));
 			}
-			for (j, tab) in comp.tabs.iter().enumerate() {
-				let at = format!("{}: tab {}", comp.handle, tab.name);
-				if tab.name.trim().is_empty() {
-					return Err(format!("{}: a tab needs a name", comp.handle));
-				}
-				if comp.tabs[..j].iter().any(|t| t.name == tab.name) {
-					return Err(format!("{at} exists twice"));
-				}
-				if tab.fields.is_empty() {
-					return Err(format!("{at} has no fields"));
-				}
-				if let Some(c) = &tab.when {
-					self.check_condition(comp, c, &tab.fields)
-						.map_err(|e| format!("{at}: {e}"))?;
-				}
-			}
+		}
+		Ok(())
+	}
 
-			for (j, field) in comp.fields.iter().enumerate() {
-				let at = format!("{}.{}", comp.handle, field.handle);
-				check_handle(&field.handle)
-					.map_err(|e| format!("{at}: {e}"))?;
-				if comp.fields[..j].iter().any(|f| f.handle == field.handle) {
-					return Err(format!("field {at} exists twice"));
-				}
-				let reserved = match comp.entry {
-					true => crate::graphql::ENTRY_FIELDS,
-					false if comp.handle == ASSET => {
-						crate::graphql::ASSET_FIELDS
-					}
-					false => crate::graphql::BLOCK_FIELDS,
-				};
-				if reserved.contains(&field.handle.as_str()) {
-					return Err(format!(
-						"field {at}: {} is built in",
-						field.handle
-					));
-				}
-				self.check_field(comp, field)
-					.map_err(|e| format!("{at}: {e}"))?;
-				if let Some(c) = &field.when {
-					let of = [field.handle.clone()];
-					self.check_condition(comp, c, &of)
-						.map_err(|e| format!("{at}: {e}"))?;
-				}
-			}
-			if let Some(t) = &comp.title_field {
-				check_title_field(comp, t)
-					.map_err(|e| format!("{}: title {t}: {e}", comp.handle))?;
-			}
-			Self::check_cycles(comp)
-				.map_err(|e| format!("{}: {e}", comp.handle))?;
+	fn check_component(&self, comp: &Component) -> Result<(), String> {
+		if comp.handle == ASSET && comp.entry {
+			return Err(format!(
+				"{ASSET} is the handle of the asset fields, not of an entry type"
+			));
 		}
 
-		if !self.nav.is_empty() {
-			for section in &self.sections {
-				let n = self
-					.nav
-					.iter()
-					.filter(|g| g.sections.contains(&section.handle))
-					.count();
-				if n != 1 {
-					return Err(format!(
-						"section {} is in {n} nav groups, it needs one",
-						section.handle
-					));
-				}
+		for tab in &comp.tabs {
+			if tab.name.trim().is_empty() {
+				return Err(format!("{}: a tab needs a name", comp.handle));
 			}
-			for g in &self.nav {
-				// docs are pages of the studio, not sections
-				let unknown = g.sections.iter().find(|s| {
-					self.get_section(s).is_none()
-						&& !self.docs.iter().any(|d| d.handle == **s)
-				});
-				if let Some(s) = unknown {
-					return Err(format!("nav {}: unknown section {s}", g.name));
-				}
+		}
+		if let Some(tab) = first_twice(&comp.tabs, |a, b| a.name == b.name) {
+			return Err(format!(
+				"{}: tab {} exists twice",
+				comp.handle, tab.name
+			));
+		}
+		for tab in &comp.tabs {
+			let at = format!("{}: tab {}", comp.handle, tab.name);
+			if tab.fields.is_empty() {
+				return Err(format!("{at} has no fields"));
+			}
+			if let Some(c) = &tab.when {
+				self.check_condition(comp, c, &tab.fields)
+					.map_err(|e| format!("{at}: {e}"))?;
 			}
 		}
 
+		for field in &comp.fields {
+			check_handle(&field.handle).map_err(|e| {
+				format!("{}.{}: {e}", comp.handle, field.handle)
+			})?;
+		}
+		if let Some(f) = first_twice(&comp.fields, |a, b| a.handle == b.handle)
+		{
+			return Err(format!(
+				"field {}.{} exists twice",
+				comp.handle, f.handle
+			));
+		}
+		let reserved = match comp.entry {
+			true => crate::graphql::ENTRY_FIELDS,
+			false if comp.handle == ASSET => crate::graphql::ASSET_FIELDS,
+			false => crate::graphql::BLOCK_FIELDS,
+		};
+		for field in &comp.fields {
+			let at = format!("{}.{}", comp.handle, field.handle);
+			if reserved.contains(&field.handle.as_str()) {
+				return Err(format!(
+					"field {at}: {} is built in",
+					field.handle
+				));
+			}
+			self.check_field(comp, field)
+				.map_err(|e| format!("{at}: {e}"))?;
+			if let Some(c) = &field.when {
+				let of = [field.handle.clone()];
+				self.check_condition(comp, c, &of)
+					.map_err(|e| format!("{at}: {e}"))?;
+			}
+		}
+
+		if let Some(t) = &comp.title_field {
+			check_title_field(comp, t)
+				.map_err(|e| format!("{}: title {t}: {e}", comp.handle))?;
+		}
+		Self::check_cycles(comp).map_err(|e| format!("{}: {e}", comp.handle))
+	}
+
+	fn check_nav(&self) -> Result<(), String> {
+		if self.nav.is_empty() {
+			return Ok(());
+		}
+		for section in &self.sections {
+			let n = self
+				.nav
+				.iter()
+				.filter(|g| g.sections.contains(&section.handle))
+				.count();
+			if n != 1 {
+				return Err(format!(
+					"section {} is in {n} nav groups, it needs one",
+					section.handle
+				));
+			}
+		}
+		for g in &self.nav {
+			// docs are pages of the studio, not sections
+			let unknown = g.sections.iter().find(|s| {
+				self.get_section(s).is_none()
+					&& !self.docs.iter().any(|d| d.handle == **s)
+			});
+			if let Some(s) = unknown {
+				return Err(format!("nav {}: unknown section {s}", g.name));
+			}
+		}
+		Ok(())
+	}
+
+	fn check_offline(&self) -> Result<(), String> {
 		if let Some(s) =
 			self.offline.iter().find(|s| self.get_site(s).is_none())
 		{
@@ -148,35 +207,47 @@ impl Schema {
 		if self.is_offline(&self.primary_site().handle) {
 			return Err("the primary site can't be offline".into());
 		}
+		Ok(())
+	}
 
-		for p in &self.plugins.0 {
-			p.check(self).map_err(|e| format!("{}: {e}", p.name()))?;
-		}
-
-		for (i, r) in self.roles.iter().enumerate() {
+	fn check_roles(&self) -> Result<(), String> {
+		for r in &self.roles {
 			check_handle(&r.handle)?;
-			if r.handle == "admin"
-				|| self.roles[..i].iter().any(|x| x.handle == r.handle)
-			{
-				return Err(format!("role {} exists twice", r.handle));
-			}
+		}
+		let twice = self.roles.iter().find(|r| r.handle == "admin");
+		if let Some(r) =
+			twice.or(first_twice(&self.roles, |a, b| a.handle == b.handle))
+		{
+			return Err(format!("role {} exists twice", r.handle));
+		}
+		for r in &self.roles {
 			if let Some(s) =
 				r.sections.keys().find(|s| self.get_section(s).is_none())
 			{
 				return Err(format!("role {}: unknown section {s}", r.handle));
 			}
 		}
+		Ok(())
+	}
 
-		for (i, d) in self.docs.iter().enumerate() {
+	fn check_docs(&self) -> Result<(), String> {
+		for d in &self.docs {
 			check_handle(&d.handle)?;
-			if self.get_section(&d.handle).is_some()
-				|| self.docs[..i].iter().any(|x| x.handle == d.handle)
-			{
-				return Err(format!("doc {} exists twice", d.handle));
-			}
 		}
+		let twice = self
+			.docs
+			.iter()
+			.find(|d| self.get_section(&d.handle).is_some());
+		if let Some(d) =
+			twice.or(first_twice(&self.docs, |a, b| a.handle == b.handle))
+		{
+			return Err(format!("doc {} exists twice", d.handle));
+		}
+		Ok(())
+	}
 
-		for (i, t) in self.transforms.iter().enumerate() {
+	fn check_transforms(&self) -> Result<(), String> {
+		for t in &self.transforms {
 			// only a name in urls, so also Craft's `land_w400`; `_thumb`
 			// and other zipp's own start with an underscore
 			let mut chars = t.handle.chars();
@@ -189,9 +260,13 @@ impl Schema {
 					t.handle
 				));
 			}
-			if self.transforms[..i].iter().any(|x| x.handle == t.handle) {
-				return Err(format!("transform {} exists twice", t.handle));
-			}
+		}
+		if let Some(t) =
+			first_twice(&self.transforms, |a, b| a.handle == b.handle)
+		{
+			return Err(format!("transform {} exists twice", t.handle));
+		}
+		for t in &self.transforms {
 			if t.width.is_none() && t.height.is_none() {
 				return Err(format!("transform {} needs a size", t.handle));
 			}
@@ -202,16 +277,6 @@ impl Schema {
 				));
 			}
 		}
-
-		for comp in self.components.iter().filter(|c| c.entry) {
-			if !self.sections.iter().any(|s| s.types.contains(&comp.handle)) {
-				return Err(format!(
-					"entry type {} is in no section",
-					comp.handle
-				));
-			}
-		}
-
 		Ok(())
 	}
 
@@ -285,157 +350,17 @@ impl Schema {
 		comp: &Component,
 		field: &Field,
 	) -> Result<(), String> {
-		let (types, entry) = match &field.kind {
-			FieldKind::Relation { types, .. } => (types, true),
-			FieldKind::Blocks { types, .. } => (types, false),
-			FieldKind::RichText { blocks, .. } => (blocks, false),
-			_ => (&vec![], false),
-		};
-		if let FieldKind::RichText { headings, .. } = &field.kind
-			&& headings.iter().any(|h| !(1..=6).contains(h))
-		{
-			return Err("headings go from 1 to 6".into());
-		}
-		if let FieldKind::RichText { styles, .. } = &field.kind {
-			for (i, style) in styles.iter().enumerate() {
-				// a class of css the frontend can select
-				let mut chars = style.class.chars();
-				let ok = chars.next().is_some_and(|c| c.is_ascii_alphabetic())
-					&& chars
-						.all(|c| c.is_ascii_alphanumeric() || "-_".contains(c));
-				if !ok {
-					return Err(format!(
-						"style {:?} must be a class like lead or text-large",
-						style.class
-					));
-				}
-				if styles[..i].iter().any(|s| s.class == style.class) {
-					return Err(format!("style {} exists twice", style.class));
-				}
-			}
-		}
-		if matches!(
-			field.kind,
-			FieldKind::Relation { .. } | FieldKind::Blocks { .. }
-		) && types.is_empty()
-		{
-			return Err("needs at least one type".into());
-		}
-		// more places than an f64 keeps exactly
-		if let FieldKind::Number {
-			decimals: Some(d), ..
-		} = &field.kind
-			&& *d > 10
-		{
-			return Err("decimals go from 0 to 10".into());
-		}
-		if let FieldKind::Link { to, .. } = &field.kind
-			&& to.is_empty()
-		{
-			return Err("a link needs something to point to".into());
-		}
-		if let FieldKind::Texts { keys } = &field.kind {
-			for (i, (key, _)) in keys.iter().enumerate() {
-				if keys[..i].iter().any(|(k, _)| k == key) {
-					return Err(format!("text {key} exists twice"));
-				}
-			}
-		}
-		if let FieldKind::Dropdown { options }
-		| FieldKind::Checkboxes { options } = &field.kind
-		{
-			if options.is_empty() {
-				return Err("it needs options".into());
-			}
-			for (i, o) in options.iter().enumerate() {
-				if o.value.is_empty() {
-					return Err("an option needs a value".into());
-				}
-				if options[..i].iter().any(|x| x.value == o.value) {
-					return Err(format!("option {} exists twice", o.value));
-				}
-			}
-		}
-		if let FieldKind::Assets {
-			folder, extensions, ..
-		} = &field.kind
-		{
-			// the folders are names, the api refuses a `/` in them
-			if folder
-				.as_deref()
-				.is_some_and(|f| f.split('/').any(|n| n.trim().is_empty()))
-			{
-				return Err("a folder is a path like Photos/Events".into());
-			}
-			if extensions.iter().any(|e| {
-				e.is_empty() || !e.chars().all(|c| c.is_alphanumeric())
-			}) {
-				return Err("extensions are like pdf or jpg".into());
-			}
-		}
-		if let FieldKind::Table { columns } = &field.kind {
-			if columns.is_empty() {
-				return Err("a table needs columns".into());
-			}
-			for (i, c) in columns.iter().enumerate() {
-				check_handle(&c.handle)?;
-				if columns[..i].iter().any(|x| x.handle == c.handle) {
-					return Err(format!("column {} exists twice", c.handle));
-				}
-				// a cell is checked like the field of its kind
-				self.check_field(comp, &c.as_field())
-					.map_err(|e| format!("column {}: {e}", c.handle))?;
-			}
-		}
-		if let FieldKind::Navigation { to, depth } = &field.kind
-			&& (to.is_empty() || *depth == 0)
-		{
-			return Err("a navigation needs link kinds and a depth".into());
-		}
-		if let FieldKind::Custom { ty, options } = &field.kind {
-			let Some(t) = self.field_types.get(ty) else {
-				return Err(format!("unknown field type {ty}, register it"));
-			};
-			t.check(options)?;
-		}
-		if let FieldKind::Group { component } = &field.kind {
-			if self.get(component).is_none() {
-				return Err(format!("unknown component {component}"));
-			}
-			// its defaults would never end
-			if self.group_holds(component, &comp.handle) {
-				return Err("a group can't hold its own component".into());
-			}
-		}
-		// the asset fields only live on assets
-		let group = match &field.kind {
-			FieldKind::Group { component } => Some(component),
-			_ => None,
-		};
-		if types.iter().chain(group).any(|t| t == ASSET) {
-			return Err(format!("{ASSET} holds the asset fields, no content"));
-		}
-		for t in types {
-			match self.get(t) {
-				Some(c) if c.entry == entry => {}
-				Some(_) if entry => return Err(format!("{t} is not an entry")),
-				Some(_) => return Err(format!("{t} is not a block")),
-				None => return Err(format!("unknown component {t}")),
-			}
-		}
+		self.check_kind(comp, &field.kind)?;
 
 		if ![25, 50, 75, 100].contains(&field.width) {
 			return Err("the width is 25, 50, 75 or 100".into());
 		}
-		if let FieldKind::Note { text } = &field.kind {
-			if text.trim().is_empty() {
-				return Err("a note needs a text".into());
-			}
-			if field.required || field.indexed || field.translatable {
-				return Err("a note holds no value, it can't be required, \
-					indexed or translatable"
-					.into());
-			}
+		if matches!(field.kind, FieldKind::Note { .. })
+			&& (field.required || field.indexed || field.translatable)
+		{
+			return Err("a note holds no value, it can't be required, \
+				indexed or translatable"
+				.into());
 		}
 
 		// uploads start empty, they know no schema
@@ -466,6 +391,163 @@ impl Schema {
 		Ok(())
 	}
 
+	/// The settings of a field's kind.
+	fn check_kind(
+		&self,
+		comp: &Component,
+		kind: &FieldKind,
+	) -> Result<(), String> {
+		match kind {
+			FieldKind::Relation { types, .. }
+			| FieldKind::Blocks { types, .. }
+				if types.is_empty() =>
+			{
+				Err("needs at least one type".into())
+			}
+			FieldKind::Relation { types, .. } => self.check_types(types, true),
+			FieldKind::Blocks { types, .. } => self.check_types(types, false),
+			FieldKind::RichText {
+				headings,
+				styles,
+				blocks,
+				..
+			} => {
+				if headings.iter().any(|h| !(1..=6).contains(h)) {
+					return Err("headings go from 1 to 6".into());
+				}
+				for style in styles {
+					// a class of css the frontend can select
+					let mut chars = style.class.chars();
+					let ok =
+						chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+							&& chars.all(|c| {
+								c.is_ascii_alphanumeric() || "-_".contains(c)
+							});
+					if !ok {
+						return Err(format!(
+							"style {:?} must be a class like lead or text-large",
+							style.class
+						));
+					}
+				}
+				if let Some(s) = first_twice(styles, |a, b| a.class == b.class)
+				{
+					return Err(format!("style {} exists twice", s.class));
+				}
+				self.check_types(blocks, false)
+			}
+			// more places than an f64 keeps exactly
+			FieldKind::Number {
+				decimals: Some(d), ..
+			} if *d > 10 => Err("decimals go from 0 to 10".into()),
+			FieldKind::Link { to, .. } if to.is_empty() => {
+				Err("a link needs something to point to".into())
+			}
+			FieldKind::Texts { keys } => {
+				match first_twice(keys, |(a, _), (b, _)| a == b) {
+					Some((key, _)) => Err(format!("text {key} exists twice")),
+					None => Ok(()),
+				}
+			}
+			FieldKind::Dropdown { options }
+			| FieldKind::Checkboxes { options } => {
+				if options.is_empty() {
+					return Err("it needs options".into());
+				}
+				if options.iter().any(|o| o.value.is_empty()) {
+					return Err("an option needs a value".into());
+				}
+				match first_twice(options, |a, b| a.value == b.value) {
+					Some(o) => Err(format!("option {} exists twice", o.value)),
+					None => Ok(()),
+				}
+			}
+			FieldKind::Assets {
+				folder, extensions, ..
+			} => {
+				// the folders are names, the api refuses a `/` in them
+				if folder
+					.as_deref()
+					.is_some_and(|f| f.split('/').any(|n| n.trim().is_empty()))
+				{
+					return Err("a folder is a path like Photos/Events".into());
+				}
+				if extensions.iter().any(|e| {
+					e.is_empty() || !e.chars().all(|c| c.is_alphanumeric())
+				}) {
+					return Err("extensions are like pdf or jpg".into());
+				}
+				Ok(())
+			}
+			FieldKind::Table { columns } => {
+				if columns.is_empty() {
+					return Err("a table needs columns".into());
+				}
+				for c in columns {
+					check_handle(&c.handle)?;
+				}
+				if let Some(c) =
+					first_twice(columns, |a, b| a.handle == b.handle)
+				{
+					return Err(format!("column {} exists twice", c.handle));
+				}
+				for c in columns {
+					// a cell is checked like the field of its kind
+					self.check_field(comp, &c.as_field())
+						.map_err(|e| format!("column {}: {e}", c.handle))?;
+				}
+				Ok(())
+			}
+			FieldKind::Navigation { to, depth }
+				if to.is_empty() || *depth == 0 =>
+			{
+				Err("a navigation needs link kinds and a depth".into())
+			}
+			FieldKind::Custom { ty, options } => {
+				let Some(t) = self.field_types.get(ty) else {
+					return Err(format!(
+						"unknown field type {ty}, register it"
+					));
+				};
+				t.check(options)
+			}
+			FieldKind::Group { component } => {
+				if self.get(component).is_none() {
+					return Err(format!("unknown component {component}"));
+				}
+				// its defaults would never end
+				if self.group_holds(component, &comp.handle) {
+					return Err("a group can't hold its own component".into());
+				}
+				if component == ASSET {
+					return Err(asset_holds_no_content());
+				}
+				Ok(())
+			}
+			FieldKind::Note { text } if text.trim().is_empty() => {
+				Err("a note needs a text".into())
+			}
+			_ => Ok(()),
+		}
+	}
+
+	/// The components a relation (`entry`) or blocks field holds.
+	fn check_types(&self, types: &[String], entry: bool) -> Result<(), String> {
+		// the asset fields only live on assets
+		if types.iter().any(|t| t == ASSET) {
+			return Err(asset_holds_no_content());
+		}
+		for t in types {
+			match self.get(t) {
+				Some(c) if c.entry == entry => {}
+				Some(_) if entry => return Err(format!("{t} is not an entry")),
+				Some(_) => return Err(format!("{t} is not a block")),
+				None => return Err(format!("unknown component {t}")),
+			}
+		}
+		Ok(())
+	}
+
 	/// Whether the group of `component` holds `target`, also through the
 	/// groups inside it.
 	fn group_holds(&self, component: &str, target: &str) -> bool {
@@ -489,65 +571,6 @@ impl Schema {
 	}
 }
 
-impl Schema {
-	/// The field at a path like `pageIntro.text`, through group fields.
-	pub fn field_at<'a>(
-		&'a self,
-		comp: &'a Component,
-		path: &str,
-	) -> Option<&'a Field> {
-		let (first, rest) = match path.split_once('.') {
-			Some((f, r)) => (f, Some(r)),
-			None => (path, None),
-		};
-		let field = comp.fields.iter().find(|f| f.handle == first)?;
-		match (rest, &field.kind) {
-			(None, _) => Some(field),
-			(Some(rest), FieldKind::Group { component }) => {
-				self.field_at(self.get(component)?, rest)
-			}
-			_ => None,
-		}
-	}
-
-	/// How a field of this kind is indexed, `None`: it can't be. A
-	/// custom type is like the scalar GraphQL shows. Every kind is named,
-	/// a new one has to say.
-	pub fn index_kind(&self, kind: &FieldKind) -> Option<IndexKind> {
-		match kind {
-			// a date sorts as text, `2026-11-14T20:00`
-			FieldKind::Text { .. }
-			| FieldKind::Email
-			| FieldKind::Dropdown { .. }
-			| FieldKind::Date { .. } => Some(IndexKind::Text),
-			FieldKind::Number { .. } | FieldKind::Boolean => {
-				Some(IndexKind::Number)
-			}
-			FieldKind::Custom { ty, .. } => {
-				match self.field_types.get(ty)?.graphql() {
-					GraphqlType::Scalar(Scalar::String) => {
-						Some(IndexKind::Text)
-					}
-					GraphqlType::Scalar(_) => Some(IndexKind::Number),
-					_ => None,
-				}
-			}
-			FieldKind::Relation { .. }
-			| FieldKind::Assets { .. }
-			| FieldKind::Link { .. }
-			| FieldKind::RichText { .. }
-			| FieldKind::Group { .. }
-			| FieldKind::Markdown
-			| FieldKind::Checkboxes { .. }
-			| FieldKind::Table { .. }
-			| FieldKind::Navigation { .. }
-			| FieldKind::Texts { .. }
-			| FieldKind::Note { .. }
-			| FieldKind::Blocks { .. } => None,
-		}
-	}
-}
-
 /// The title field of a block is one of its fields that holds a short
 /// text, the studio shows it in the block's head.
 fn check_title_field(comp: &Component, handle: &str) -> Result<(), String> {
@@ -568,6 +591,20 @@ fn check_title_field(comp: &Component, handle: &str) -> Result<(), String> {
 			markdown, link and relation fields give a title"
 			.into()),
 	}
+}
+
+fn asset_holds_no_content() -> String {
+	format!("{ASSET} holds the asset fields, no content")
+}
+
+/// The first item that is the same as one before it, for the handles
+/// that exist twice.
+fn first_twice<T>(items: &[T], same: impl Fn(&T, &T) -> bool) -> Option<&T> {
+	items
+		.iter()
+		.enumerate()
+		.find(|(i, x)| items[..*i].iter().any(|y| same(x, y)))
+		.map(|(_, x)| x)
 }
 
 /// A uri has no other placeholders than `{slug}` and `{parent.uri}`.

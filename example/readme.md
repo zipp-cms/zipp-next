@@ -1,6 +1,6 @@
 # Welcome to the zipp demo
 
-zipp is a headless CMS where the **content model is code**. This studio, the GraphQL API and the migrations are all made from one Rust file: [`example/cms/src/main.rs`](https://github.com/zipp-cms/zipp-next/blob/code-first/example/cms/src/main.rs). The website is a separate crelte project that reads the content over GraphQL.
+zipp is a headless CMS where the **content model is code**. This studio, the GraphQL API and the migrations are all made from one Rust file: [`example/cms/src/content.rs`](https://github.com/zipp-cms/zipp-next/blob/code-first/example/cms/src/content.rs). The website is a separate crelte project that reads the content over GraphQL.
 
 - **Website (crelte):** <https://zipp-crelte.noah.meierlabs.dev> — and `/en` for English
 - **GraphQL** is private like Craft's: frontends send a token, admins make tokens with the sections and sites they read under GraphQL in the studio; the playground (GraphiQL) is for admins (Try it) and in development (`serve --dev`)
