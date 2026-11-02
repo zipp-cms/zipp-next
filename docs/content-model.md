@@ -236,7 +236,8 @@ downloads it with its subfolders as a zip (`GET /api/assets/zip`, the
 files as uploaded, nothing from the trash), and a zip uploaded in the
 library can be unpacked into folders (`POST /api/assets/unzip`: folders
 of the same name merge, hidden files and `__MACOSX` stay out, at most
-2000 files and 1 GB unpacked). The library filters by type: images,
+2000 files, 500 folders 20 deep and 1 GB unpacked; folder names have no
+`/` or `\`). The library filters by type: images,
 videos or documents (`GET /api/assets?kind=video`).
 
 Assets can have fields of their own beside title and alt, like Craft's

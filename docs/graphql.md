@@ -19,6 +19,14 @@ Values are typed like their fields: numbers `Float`, booleans
 cells of a table row; rich text has `html` and `chunks`, its styles as
 `class="…"`.
 
+A query is limited, so one request can't stall the cms: at most 15
+deep, a complexity of 2000, and at most 10000 loaded entries and assets
+(each list, relation and `children` counts as one more); past it the
+answer is an error. A list takes at most 1000 entries (`limit`), an
+entry's `children` are the first 500, `id` and `ids` at most 1000 ids.
+`search` matches its text, `%` and `_` are no wildcards. Pages of real
+sites load a few hundred.
+
 ## Private GraphQL, dev and prod
 
 Like Craft's schema tokens, GraphQL

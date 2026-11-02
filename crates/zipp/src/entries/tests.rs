@@ -521,3 +521,25 @@ fn search_finds_signs_as_they_are() {
 	assert_eq!(titles(&conn, &[("search", "0%")]), ["100% sure"]);
 	assert_eq!(titles(&conn, &[("search", "a_")]), ["a_b"]);
 }
+
+#[test]
+fn searches_literally_and_caps_id_lists() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	for title in ["100% Bern", "1000 Bern", "a_b", "axb"] {
+		let e = input("pages", "page", title, json!({}));
+		save(&conn, &s, None, e, None).unwrap();
+	}
+	// % and _ are no wildcards
+	assert_eq!(titles(&conn, &[("search", "0%")]), ["100% Bern"]);
+	assert_eq!(titles(&conn, &[("search", "a_")]), ["a_b"]);
+
+	let many: Vec<String> = (1..=1001).map(|i| i.to_string()).collect();
+	let many = many.join(",");
+	for key in ["ids", "notIds", "r.page"] {
+		let params = [(key.to_string(), many.clone())];
+		let err = Query::parse(&s, &params).unwrap_err();
+		assert!(err.contains("more than 1000"), "{err}");
+	}
+}

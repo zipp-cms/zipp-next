@@ -332,6 +332,11 @@ fn imports_the_alt_text_per_site() {
 			// an export from before the alt text per site
 			{ "id": 2, "volume": "default", "path": "a.txt", "title": null,
 				"alt": "Noch ein A", "focalPoint": null },
+			// nothing out of the volume
+			{ "id": 3, "volume": "default", "path": "../secret.txt",
+				"title": null, "alt": null, "focalPoint": null },
+			{ "id": 4, "volume": "default", "path": "/etc/hostname",
+				"title": null, "alt": null, "focalPoint": null },
 		],
 	}))
 	.unwrap();
@@ -341,8 +346,11 @@ fn imports_the_alt_text_per_site() {
 	};
 
 	let files = dir.join("files");
+	fs::write(dir.join("secret.txt"), "s").unwrap();
 	let report = import(&conn, &schema, &files, &export, &opts).unwrap();
 	assert_eq!(report.assets, 2);
+	let out = report.skipped.iter().filter(|s| s.contains("out of the"));
+	assert_eq!(out.count(), 2, "{:?}", report.skipped);
 	let alt = |id| assets::get_asset(&conn, id).unwrap().alt;
 	assert_eq!(
 		alt(1),

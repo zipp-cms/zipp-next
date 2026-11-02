@@ -232,26 +232,11 @@ fn check_edits(asset: &Asset, e: &Edits) -> Result<()> {
 		return Err(Error::Request("only images can be edited".into()));
 	}
 	e.check().map_err(Error::Request)?;
-	let (ow, oh) = (
+	let (w, h) = (
 		asset.original_width.unwrap_or(1),
 		asset.original_height.unwrap_or(1),
 	);
-	let (w, h) = e.size(ow, oh);
-	// a crop past the image is made before a resize makes it smaller
-	let crop = Edits {
-		resize: None,
-		canvas: None,
-		..e.clone()
-	};
-	let (cw, ch) = crop.size(ow, oh);
-	if u64::from(w) * u64::from(h) > MAX_PIXELS
-		|| u64::from(cw) * u64::from(ch) > MAX_PIXELS
-	{
-		return Err(Error::Request(
-			"the edited image is bigger than 40 megapixels".into(),
-		));
-	}
-	Ok(())
+	e.check_size(w, h).map_err(Error::Request)
 }
 
 /// Another file for the asset, like Craft's replace file: where it is
@@ -261,42 +246,26 @@ pub fn replace(
 	files: &FsPath,
 	id: i64,
 	filename: &str,
-	data: &[u8],
+	tmp: tempfile::NamedTempFile,
 ) -> Result<Asset> {
 	let old = get_asset(conn, id)?;
-	let up = inspect(filename, data)?;
-
+	let up = inspect(filename, tmp.path())?;
+	let size = tmp.as_file().metadata()?.len();
 	let dir = asset_dir(files, id);
-	let tmp = dir.join(format!(".replace{}", rand::random::<u32>()));
-	fs::write(&tmp, data)?;
 
 	// the row first, the new file goes in before the commit; the old one
 	// only goes when both worked
 	let tx = conn.unchecked_transaction()?;
-	let updated = tx.execute(
+	tx.execute(
 		"UPDATE assets SET filename = ?1, kind = ?2, mime = ?3, size = ?4,
 		width = ?5, height = ?6, edits = NULL, focal_x = 0.5, focal_y = 0.5
 		WHERE id = ?7",
-		params![
-			up.filename,
-			up.kind,
-			up.mime,
-			data.len(),
-			up.width,
-			up.height,
-			id
-		],
-	);
-	let moved = updated
-		.map_err(Error::from)
-		.and_then(|_| {
-			fs::rename(&tmp, dir.join(&up.filename)).map_err(Error::from)
-		})
-		.and_then(|_| tx.commit().map_err(Error::from));
-	if let Err(e) = moved {
-		let _ = fs::remove_file(&tmp);
-		return Err(e);
-	}
+		params![up.filename, up.kind, up.mime, size, up.width, up.height, id],
+	)?;
+	fs::create_dir_all(&dir)?;
+	tmp.persist(dir.join(&up.filename))
+		.map_err(|e| Error::Internal(e.to_string()))?;
+	tx.commit()?;
 	if old.filename != up.filename {
 		let _ = fs::remove_file(dir.join(&old.filename));
 	}

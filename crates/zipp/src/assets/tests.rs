@@ -1,4 +1,5 @@
 use super::*;
+use std::io::Cursor;
 
 #[test]
 fn cleans_filenames() {
@@ -83,13 +84,15 @@ fn stores_and_transforms_an_image() {
 
 #[test]
 fn files_never_run_as_pages() {
-	let r = file_response("image/svg+xml", vec![]);
-	let h = r.headers();
-	assert_eq!(h[header::CONTENT_DISPOSITION], "attachment");
-	assert_eq!(h[header::CONTENT_SECURITY_POLICY], "sandbox");
-	assert_eq!(h[header::X_CONTENT_TYPE_OPTIONS], "nosniff");
-	let r = file_response("image/png", vec![]);
-	assert_eq!(r.headers()[header::CONTENT_DISPOSITION], "inline");
+	let h: std::collections::HashMap<_, _> =
+		file_headers("image/svg+xml").into();
+	assert_eq!(h[&header::CONTENT_DISPOSITION], "attachment");
+	assert_eq!(h[&header::CONTENT_SECURITY_POLICY], "sandbox");
+	assert_eq!(h[&header::X_CONTENT_TYPE_OPTIONS], "nosniff");
+	// a file in the trash leaves caches soon
+	assert_eq!(h[&header::CACHE_CONTROL], "public, max-age=300");
+	let h: std::collections::HashMap<_, _> = file_headers("image/png").into();
+	assert_eq!(h[&header::CONTENT_DISPOSITION], "inline");
 }
 
 #[test]
@@ -194,6 +197,65 @@ fn edits_change_the_image_not_the_file() {
 }
 
 #[test]
+fn edits_stay_within_the_pixel_limit() {
+	let db = crate::db::Db::memory().unwrap();
+	let dir = std::env::temp_dir()
+		.join(format!("zipp-test-{}", rand::random::<u32>()));
+	let mut png = vec![];
+	image::GrayImage::new(1, 40_000)
+		.write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
+		.unwrap();
+	let conn = db.conn();
+	let a = store(&conn, &dir, "line.png", &png, None).unwrap();
+
+	// 10000 wide keeps the ratio at 400 million high: capped, but the
+	// resize would still go through 10000x40000
+	let edits = Edits {
+		resize: Some(Resize {
+			width: 10_000,
+			height: None,
+		}),
+		canvas: Some(Canvas {
+			width: 100,
+			height: 100,
+		}),
+		..Default::default()
+	};
+	assert_eq!(edits.size(1, 40_000), (100, 100));
+	assert_eq!(
+		Edits {
+			canvas: None,
+			..edits.clone()
+		}
+		.size(1, 40_000),
+		(10_000, 10_000)
+	);
+	let change = AssetChange {
+		edits: Some(edits.clone()),
+		..Default::default()
+	};
+	let schema = crate::schema::Schema::new();
+	let err = update(&conn, &dir, &schema, a.id, change).unwrap_err();
+	assert!(err.to_string().contains("40 megapixels"), "{err}");
+
+	// edits that got in anyway fail their transform, nothing is decoded
+	// into a giant image
+	conn.execute(
+		"UPDATE assets SET edits = ?1 WHERE id = ?2",
+		params![serde_json::to_string(&edits).unwrap(), a.id],
+	)
+	.unwrap();
+	let a = get_asset(&conn, a.id).unwrap();
+	let original = dir.join(a.id.to_string()).join(&a.filename);
+	let out = dir.join("edited.png");
+	let t = Transform::new("_edited");
+	let err = generate(&a, &original, &t, "image/png", &out).unwrap_err();
+	assert!(matches!(err, Error::Internal(_)), "{err}");
+	assert!(!out.exists());
+	fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn knows_where_assets_are_used() {
 	use crate::entries::save;
 	use crate::entries::tests::input;
@@ -258,6 +320,17 @@ pub(crate) fn zip_of(files: &[(&str, &[u8])]) -> Vec<u8> {
 	zip.finish().unwrap().into_inner()
 }
 
+/// Reads a zip and unpacks it on the top.
+fn unzip_top(
+	conn: &Connection,
+	files: &FsPath,
+	zip: &[u8],
+	limits: &Limits,
+) -> Result<Unzipped> {
+	let zip = read_zip(files, Cursor::new(zip), limits)?;
+	unzip(conn, files, zip, None, None)
+}
+
 #[test]
 fn unzips_within_limits() {
 	let db = crate::db::Db::memory().unwrap();
@@ -267,19 +340,50 @@ fn unzips_within_limits() {
 	let zip = zip_of(&[("a.txt", b"hello"), ("b.txt", b"world!")]);
 	let limits = Limits {
 		files: 2,
+		folders: 2,
+		depth: 2,
 		size: 11,
 		file: 6,
 	};
-	let refused = |limits: Limits| {
-		let err = unzip(&conn, &dir, &zip, None, None, &limits).unwrap_err();
+	let refused = |zip: &[u8], limits: Limits| {
+		let err = unzip_top(&conn, &dir, zip, &limits).unwrap_err();
 		assert!(matches!(err, Error::Request(_)), "{err:?}");
 	};
-	refused(Limits { files: 1, ..limits });
-	refused(Limits { size: 10, ..limits });
-	refused(Limits { file: 5, ..limits });
-	let done = unzip(&conn, &dir, &zip, None, None, &limits).unwrap();
+	refused(&zip, Limits { files: 1, ..limits });
+	refused(&zip, Limits { size: 10, ..limits });
+	refused(&zip, Limits { file: 5, ..limits });
+
+	// folders count too, also the ones only in the path of a file, and
+	// how deep they go
+	let folders = zip_of(&[("x/", b""), ("y/", b""), ("z/a.txt", b"a")]);
+	refused(&folders, limits);
+	let deep = zip_of(&[("x/y/z/a.txt", b"a")]);
+	refused(&deep, limits);
+	let fine = zip_of(&[("x/", b""), ("X/y/a.txt", b"a")]);
+	let done = unzip_top(&conn, &dir, &fine, &limits).unwrap();
+	assert_eq!(done.assets.len(), 1);
+	assert_eq!(folders_of(&conn), ["x", "y"]);
+
+	let done = unzip_top(&conn, &dir, &zip, &limits).unwrap();
 	assert_eq!(done.assets.len(), 2);
 	fs::remove_dir_all(dir).unwrap();
+}
+
+fn folders_of(conn: &Connection) -> Vec<String> {
+	folders(conn).unwrap().into_iter().map(|f| f.name).collect()
+}
+
+#[test]
+fn folder_names_are_no_paths() {
+	let db = crate::db::Db::memory().unwrap();
+	let conn = db.conn();
+	for name in ["a/b", "a\\b", "..", " "] {
+		let err = create_folder(&conn, None, name).unwrap_err();
+		assert!(matches!(err, Error::Request(_)), "{name}");
+	}
+	let f = create_folder(&conn, None, "a.b").unwrap();
+	assert_eq!(folder(&conn, f.id).unwrap().name, "a.b");
+	assert!(matches!(folder(&conn, f.id + 1), Err(Error::NotFound)));
 }
 
 #[test]
@@ -301,7 +405,7 @@ fn a_zip_that_holds_more_than_it_says_stores_nothing() {
 	}
 
 	let conn = db.conn();
-	let err = unzip(&conn, &dir, &zip, None, None, &Limits::default());
+	let err = unzip_top(&conn, &dir, &zip, &Limits::default());
 	let larger = matches!(&err, Err(Error::Request(m)) if m.contains("larger"));
 	assert!(larger, "{err:?}");
 	let n: i64 = conn

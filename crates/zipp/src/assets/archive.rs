@@ -128,6 +128,10 @@ fn broken(e: impl std::fmt::Display) -> Error {
 #[derive(Debug, Clone, Copy)]
 pub struct Limits {
 	pub files: usize,
+	/// folders, also the ones only the paths of files have
+	pub folders: usize,
+	/// folders in folders
+	pub depth: usize,
 	/// bytes of all files unpacked
 	pub size: u64,
 	/// bytes of one file unpacked, what an upload may be
@@ -138,6 +142,8 @@ impl Default for Limits {
 	fn default() -> Self {
 		Self {
 			files: 2000,
+			folders: 500,
+			depth: 20,
 			size: 1024 * 1024 * 1024,
 			file: MAX_UPLOAD as u64,
 		}
@@ -161,29 +167,66 @@ struct Item {
 	name: Option<String>,
 }
 
-/// The files of a zip as assets into `folder`, its folders as folders
-/// in it (merged with the ones of the same name). Hidden files, macOS'
-/// `__MACOSX` and links are left out; paths out of the zip, encrypted
-/// files and more than `limits` refuse the whole zip. All or nothing,
-/// only a file that is no fitting asset is skipped.
+/// A zip read by [`read_zip`]: its folders and its files unpacked into
+/// temporary files, ready to go in.
+pub struct Unpacked(Vec<Spooled>);
+
+/// A file or folder of a read zip.
+struct Spooled {
+	dirs: Vec<String>,
+	/// the name and the content of a file, `None` for a folder
+	file: Option<(String, tempfile::NamedTempFile)>,
+}
+
+/// Unpacks a zip into temporary files in `files`, before the database is
+/// needed. Hidden files, macOS' `__MACOSX` and links are left out; paths
+/// out of the zip, encrypted files and more than `limits` refuse the
+/// whole zip.
+pub fn read_zip(
+	files: &FsPath,
+	zip: impl Read + Seek,
+	limits: &Limits,
+) -> Result<Unpacked> {
+	let mut archive = ZipArchive::new(zip).map_err(broken)?;
+	let items = plan(&mut archive, limits)?;
+	let mut unpacked = vec![];
+	for item in items {
+		let file = match item.name {
+			Some(name) => {
+				// zip refuses a file that holds more than it says, the
+				// limits of the plan hold
+				let mut tmp = temp_file(files)?;
+				let mut f = archive.by_index(item.index).map_err(broken)?;
+				std::io::copy(&mut f, &mut tmp).map_err(broken)?;
+				Some((name, tmp))
+			}
+			None => None,
+		};
+		unpacked.push(Spooled {
+			dirs: item.dirs,
+			file,
+		});
+	}
+	Ok(Unpacked(unpacked))
+}
+
+/// The files of a read zip as assets into `folder`, its folders as
+/// folders in it (merged with the ones of the same name). All or
+/// nothing, only a file that is no fitting asset is skipped.
 pub fn unzip(
 	conn: &Connection,
 	files: &FsPath,
-	data: &[u8],
+	zip: Unpacked,
 	folder: Option<i64>,
 	user: Option<i64>,
-	limits: &Limits,
 ) -> Result<Unzipped> {
 	check_folder(conn, folder)?;
-	let mut archive = ZipArchive::new(Cursor::new(data)).map_err(broken)?;
-	let items = plan(&mut archive, limits)?;
 
-	// the rows go with the transaction, the files written so far by hand
+	// the rows go with the transaction, the files moved in so far by hand
 	let tx = conn.unchecked_transaction()?;
 	let mut stored = vec![];
-	let unpacked =
-		unpack(&tx, files, &mut archive, &items, folder, user, &mut stored)
-			.and_then(|u| Ok(tx.commit().map(|_| u)?));
+	let unpacked = unpack(&tx, files, zip, folder, user, &mut stored)
+		.and_then(|u| Ok(tx.commit().map(|_| u)?));
 	if unpacked.is_err() {
 		for id in stored {
 			let _ = fs::remove_dir_all(asset_dir(files, id));
@@ -200,6 +243,8 @@ fn plan<R: Read + Seek>(
 ) -> Result<Vec<Item>> {
 	let mut items = vec![];
 	let (mut count, mut size) = (0, 0u64);
+	// the folders by their path in lowercase, like unpack makes them
+	let mut folders = HashSet::new();
 	for index in 0..archive.len() {
 		let f = archive.by_index_raw(index).map_err(broken)?;
 		let path = f.name().map_err(broken)?.replace('\\', "/");
@@ -224,25 +269,37 @@ fn plan<R: Read + Seek>(
 			)));
 		}
 
-		let dirs = parts.iter().map(|p| p.trim().to_string());
-		if f.is_dir() {
-			items.push(Item {
-				index,
-				dirs: dirs.collect(),
-				name: None,
-			});
-			continue;
-		}
-		if f.size() > limits.file {
+		let mut dirs: Vec<String> =
+			parts.iter().map(|p| p.trim().to_string()).collect();
+		let name = match f.is_dir() {
+			true => None,
+			false => dirs.pop(),
+		};
+		if dirs.len() > limits.depth {
 			return Err(Error::Request(format!(
-				"the zip: {path} is bigger than {} MB",
-				limits.file / 1024 / 1024
+				"the zip has folders more than {} deep",
+				limits.depth
 			)));
 		}
-		count += 1;
-		size += f.size();
-		let mut dirs: Vec<String> = dirs.collect();
-		let name = dirs.pop();
+		for n in 1..=dirs.len() {
+			folders.insert(dirs[..n].join("/").to_lowercase());
+		}
+		if folders.len() > limits.folders {
+			return Err(Error::Request(format!(
+				"the zip has more than {} folders",
+				limits.folders
+			)));
+		}
+		if name.is_some() {
+			if f.size() > limits.file {
+				return Err(Error::Request(format!(
+					"the zip: {path} is bigger than {} MB",
+					limits.file / 1024 / 1024
+				)));
+			}
+			count += 1;
+			size += f.size();
+		}
 		items.push(Item { index, dirs, name });
 	}
 	if count > limits.files {
@@ -260,11 +317,10 @@ fn plan<R: Read + Seek>(
 	Ok(items)
 }
 
-fn unpack<R: Read + Seek>(
+fn unpack(
 	conn: &Connection,
 	files: &FsPath,
-	archive: &mut ZipArchive<R>,
-	items: &[Item],
+	zip: Unpacked,
 	folder: Option<i64>,
 	user: Option<i64>,
 	stored: &mut Vec<i64>,
@@ -273,10 +329,10 @@ fn unpack<R: Read + Seek>(
 	let mut ids: HashMap<String, Option<i64>> =
 		HashMap::from([(String::new(), folder)]);
 	let mut skipped = vec![];
-	for item in items {
+	for Spooled { dirs, file } in zip.0 {
 		let mut into = folder;
 		let mut path = String::new();
-		for name in &item.dirs {
+		for name in &dirs {
 			path = format!("{path}/{}", name.to_lowercase());
 			into = match ids.get(&path) {
 				Some(id) => *id,
@@ -284,15 +340,9 @@ fn unpack<R: Read + Seek>(
 			};
 			ids.insert(path.clone(), into);
 		}
-		let Some(name) = &item.name else { continue };
+		let Some((name, tmp)) = file else { continue };
 
-		// zip refuses a file that holds more than it says, the limits
-		// of the plan hold
-		let mut data = vec![];
-		let mut f = archive.by_index(item.index).map_err(broken)?;
-		f.read_to_end(&mut data).map_err(broken)?;
-
-		match store(conn, files, name, &data, user) {
+		match store_file(conn, files, &name, tmp, user) {
 			Ok(a) => {
 				stored.push(a.id);
 				move_assets(conn, &[a.id], into)?;

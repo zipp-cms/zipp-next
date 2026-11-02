@@ -1,5 +1,6 @@
 use std::io::Seek;
 
+use axum::extract::multipart::Field;
 use axum::http::StatusCode;
 use tower::ServiceExt;
 use tower_http::services::ServeFile;
@@ -8,6 +9,7 @@ use super::api::*;
 use super::*;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::auth::{AssetAccess, Delete, Edit, View};
+use crate::entries::query::MAX_IDS;
 use crate::schema::Access;
 
 pub(super) fn transform_by_name(
@@ -38,20 +40,23 @@ pub(super) async fn serve_original(
 	}
 	// the edited image is a transform of its own size
 	if asset.edits.is_some() && asset.kind == "image" && p.original.is_none() {
-		return transformed(
-			&state,
-			asset,
-			"_edited",
-			Transform::new("_edited"),
-			None,
-		)
-		.await;
+		let t = Transform::new("_edited");
+		return transformed(&state, asset, "_edited", t, None, req).await;
 	}
-	// from the disk with ranges, a video plays and seeks without
-	// loading the whole file
 	let path = asset_dir(&state.files, id).join(&asset.filename);
-	let mime = asset.mime.parse().map_err(|_| Error::NotFound)?;
-	let resp = ServeFile::new_with_mime(path, &mime)
+	serve_file(path, &asset.mime, req).await
+}
+
+/// A file from the disk with ranges, a video plays and seeks without
+/// loading the whole file, and its date: a cache asks again after a
+/// while, a deleted file goes from it.
+async fn serve_file(
+	path: PathBuf,
+	mime: &str,
+	req: axum::extract::Request,
+) -> Result<Response> {
+	let parsed = mime.parse().map_err(|_| Error::NotFound)?;
+	let resp = ServeFile::new_with_mime(path, &parsed)
 		.oneshot(req)
 		.await
 		.map_err(|e| Error::Internal(e.to_string()))?;
@@ -59,7 +64,7 @@ pub(super) async fn serve_original(
 		return Err(Error::NotFound);
 	}
 	let (mut parts, body) = resp.into_parts();
-	for (name, value) in file_headers(&asset.mime) {
+	for (name, value) in file_headers(mime) {
 		parts.headers.insert(name, value.parse().unwrap());
 	}
 	Ok(Response::from_parts(parts, axum::body::Body::new(body)))
@@ -68,6 +73,7 @@ pub(super) async fn serve_original(
 pub(super) async fn serve_transform(
 	State(state): State<AppState>,
 	Path((id, name, filename)): Path<(i64, String, String)>,
+	req: axum::extract::Request,
 ) -> Result<Response> {
 	let asset = get_asset(&state.db.conn(), id)?;
 	let t = transform_by_name(&state, &name).ok_or(Error::NotFound)?;
@@ -84,7 +90,7 @@ pub(super) async fn serve_transform(
 				.ok_or(Error::NotFound)?,
 		),
 	};
-	transformed(&state, asset, &name, t, format).await
+	transformed(&state, asset, &name, t, format, req).await
 }
 
 /// A transform of an image, generated on the first request, in `format`
@@ -95,6 +101,7 @@ async fn transformed(
 	name: &str,
 	t: Transform,
 	format: Option<Format>,
+	req: axum::extract::Request,
 ) -> Result<Response> {
 	let id = asset.id;
 	let dir = asset_dir(&state.files, id);
@@ -116,25 +123,21 @@ async fn transformed(
 		}
 	}
 
-	let data = fs::read(out)?;
-	Ok(file_response(mime, data))
+	serve_file(out, mime, req).await
 }
 
 /// Files are served from the studio's origin: nothing may run as a page
 /// there. Images, video, audio and pdf show in the browser, everything
-/// else (svg too) downloads.
-pub(super) fn file_response(mime: &str, data: Vec<u8>) -> Response {
-	(file_headers(mime), data).into_response()
-}
-
-fn file_headers(mime: &str) -> [(header::HeaderName, String); 5] {
+/// else (svg too) downloads. Caches keep them five minutes, then ask
+/// with the date (`Last-Modified`): one in the trash isn't shown long.
+pub(super) fn file_headers(mime: &str) -> [(header::HeaderName, String); 5] {
 	let inline = (mime.starts_with("image/") && mime != "image/svg+xml")
 		|| mime.starts_with("video/")
 		|| mime.starts_with("audio/")
 		|| mime == "application/pdf";
 	[
 		(header::CONTENT_TYPE, mime.to_string()),
-		(header::CACHE_CONTROL, "public, max-age=86400".into()),
+		(header::CACHE_CONTROL, "public, max-age=300".into()),
 		(header::X_CONTENT_TYPE_OPTIONS, "nosniff".into()),
 		(header::CONTENT_SECURITY_POLICY, "sandbox".into()),
 		(
@@ -152,6 +155,40 @@ pub(super) static GENERATING: tokio::sync::Semaphore =
 pub(super) struct UploadParams {
 	/// the folder the files go into, the top without
 	folder: Option<i64>,
+}
+
+/// A file of a multipart request into a temporary file, a chunk at a
+/// time: uploads of 200 MB don't wait in memory.
+async fn spool(
+	files: &FsPath,
+	mut field: Field<'_>,
+) -> Result<tempfile::NamedTempFile> {
+	use tokio::io::AsyncWriteExt;
+	let tmp = temp_file(files)?;
+	let mut out = tokio::fs::File::from_std(tmp.reopen()?);
+	while let Some(chunk) = field
+		.chunk()
+		.await
+		.map_err(|e| Error::Request(e.to_string()))?
+	{
+		out.write_all(&chunk).await?;
+	}
+	out.flush().await?;
+	Ok(tmp)
+}
+
+/// The first file of a multipart request.
+async fn first_file(
+	files: &FsPath,
+	multipart: &mut Multipart,
+) -> Result<(String, tempfile::NamedTempFile)> {
+	let field = multipart
+		.next_field()
+		.await
+		.map_err(|e| Error::Request(e.to_string()))?
+		.ok_or_else(|| Error::Request("no file".into()))?;
+	let name = field.file_name().unwrap_or("file").to_string();
+	Ok((name, spool(files, field).await?))
 }
 
 /// `POST /assets?folder=<id>`, multipart: the files of the upload.
@@ -172,13 +209,10 @@ pub(super) async fn upload(
 		.map_err(|e| Error::Request(e.to_string()))?
 	{
 		let filename = field.file_name().unwrap_or("file").to_string();
-		let data = field
-			.bytes()
-			.await
-			.map_err(|e| Error::Request(e.to_string()))?;
+		let tmp = spool(&state.files, field).await?;
 		let conn = state.db.conn();
-		let asset =
-			store(&conn, &state.files, &filename, &data, Some(auth.user_id))?;
+		let user = Some(auth.user_id);
+		let asset = store_file(&conn, &state.files, &filename, tmp, user)?;
 		move_assets(&conn, &[asset.id], params.folder)?;
 		assets.push(get_asset(&conn, asset.id)?);
 	}
@@ -193,45 +227,38 @@ pub(super) async fn replace_route(
 	mut multipart: Multipart,
 ) -> Result<Json<Asset>> {
 	get_asset(&state.db.conn(), id)?;
-	let field = multipart
-		.next_field()
-		.await
-		.map_err(|e| Error::Request(e.to_string()))?
-		.ok_or_else(|| Error::Request("no file".into()))?;
-	let name = field.file_name().unwrap_or("file").to_string();
-	let data = field
-		.bytes()
-		.await
-		.map_err(|e| Error::Request(e.to_string()))?;
-	let asset = replace(&state.db.conn(), &state.files, id, &name, &data)?;
+	let (name, tmp) = first_file(&state.files, &mut multipart).await?;
+	let asset = replace(&state.db.conn(), &state.files, id, &name, tmp)?;
 	Ok(Json(asset))
 }
 
 /// `POST /assets/unzip?folder=<id>`, multipart: a zip, its folders
-/// become folders in the folder, its files assets.
+/// become folders in the folder, its files assets. It is unpacked before
+/// the database is taken.
 pub(super) async fn unzip_route(
 	State(state): State<AppState>,
 	AssetAccess { auth, .. }: AssetAccess<Edit>,
 	Query(params): Query<UploadParams>,
 	mut multipart: Multipart,
 ) -> Result<Json<Unzipped>> {
-	let field = multipart
-		.next_field()
-		.await
-		.map_err(|e| Error::Request(e.to_string()))?
-		.ok_or_else(|| Error::Request("no file".into()))?;
-	let data = field
-		.bytes()
-		.await
-		.map_err(|e| Error::Request(e.to_string()))?;
+	let (_, tmp) = first_file(&state.files, &mut multipart).await?;
 	let user = Some(auth.user_id);
 	let unzipped = tokio::task::spawn_blocking(move || {
+		let zip = read_zip(&state.files, tmp.as_file(), &Limits::default())?;
 		let conn = state.db.conn();
-		let limits = Limits::default();
-		unzip(&conn, &state.files, &data, params.folder, user, &limits)
+		unzip(&conn, &state.files, zip, params.folder, user)
 	})
 	.await??;
 	Ok(Json(unzipped))
+}
+
+/// `1,2,3`, at most [`MAX_IDS`] of them.
+fn id_list(ids: &str) -> Result<Vec<i64>> {
+	let ids: Vec<i64> = ids.split(',').filter_map(|i| i.parse().ok()).collect();
+	if ids.len() > MAX_IDS {
+		return Err(Error::Request(format!("more than {MAX_IDS} ids")));
+	}
+	Ok(ids)
 }
 
 #[derive(Deserialize)]
@@ -251,16 +278,9 @@ pub(super) async fn zip_route(
 ) -> Result<Response> {
 	let (of, name) = match (p.folder, p.ids) {
 		(Some(id), _) => {
-			let f = folders(&state.db.conn())?
-				.into_iter()
-				.find(|f| f.id == id)
-				.ok_or(Error::NotFound)?;
-			(ZipOf::Folder(id), f.name)
+			(ZipOf::Folder(id), folder(&state.db.conn(), id)?.name)
 		}
-		(None, Some(ids)) => {
-			let ids = ids.split(',').filter_map(|i| i.parse().ok());
-			(ZipOf::Assets(ids.collect()), "assets".to_string())
-		}
+		(None, Some(ids)) => (ZipOf::Assets(id_list(&ids)?), "assets".into()),
 		(None, None) => {
 			return Err(Error::Request("ids or a folder".into()));
 		}
@@ -301,8 +321,7 @@ pub(super) async fn list_route(
 ) -> ApiResult<ListReq> {
 	let conn = state.db.conn();
 	if let Some(ids) = req.ids {
-		let ids: Vec<i64> =
-			ids.split(',').filter_map(|i| i.parse().ok()).collect();
+		let ids = id_list(&ids)?;
 		return Ok(Json(get_many(&conn, &ids)?));
 	}
 	let folder = match req.folder.as_deref() {

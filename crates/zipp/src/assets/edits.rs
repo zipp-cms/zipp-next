@@ -46,6 +46,17 @@ pub struct Resize {
 	pub height: Option<u32>,
 }
 
+impl Resize {
+	/// The height for a `width` x `height` image: the given one or the
+	/// one that keeps the ratio, never more than [`MAX_SIDE`].
+	fn height_for(&self, width: u32, height: u32) -> u32 {
+		self.height.unwrap_or_else(|| {
+			let h = height as f64 * self.width as f64 / width as f64;
+			(h.round() as u32).clamp(1, MAX_SIDE)
+		})
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Canvas {
 	pub width: u32,
@@ -122,6 +133,33 @@ impl Edits {
 		Ok(())
 	}
 
+	/// Whether the edits of a `width` x `height` image stay within
+	/// [`MAX_PIXELS`], also on the way: a crop past the image is made
+	/// before a resize makes it smaller, and a resize goes through the
+	/// wider and the taller of both sizes.
+	pub fn check_size(
+		&self,
+		width: u32,
+		height: u32,
+	) -> std::result::Result<(), String> {
+		let too_big = |w: u32, h: u32| u64::from(w) * u64::from(h) > MAX_PIXELS;
+		let crop = Edits {
+			resize: None,
+			canvas: None,
+			..self.clone()
+		};
+		let (cw, ch) = crop.size(width, height);
+		let resize = Edits {
+			canvas: None,
+			..self.clone()
+		};
+		let (rw, rh) = resize.size(width, height);
+		if too_big(cw, ch) || too_big(cw.max(rw), ch.max(rh)) {
+			return Err("the edited image is bigger than 40 megapixels".into());
+		}
+		Ok(())
+	}
+
 	/// The size of a `width` x `height` image after the edits.
 	pub fn size(&self, width: u32, height: u32) -> (u32, u32) {
 		let (mut w, mut h) = match self.rotate {
@@ -133,10 +171,7 @@ impl Edits {
 			h = ((h as f64 * c.h).round() as u32).max(1);
 		}
 		if let Some(r) = self.resize {
-			let height = r.height.unwrap_or_else(|| {
-				((h as f64 * r.width as f64 / w as f64).round() as u32).max(1)
-			});
-			(w, h) = (r.width, height);
+			(w, h) = (r.width, r.height_for(w, h));
 		}
 		if let Some(c) = &self.canvas {
 			(w, h) = (c.width, c.height);
@@ -177,10 +212,7 @@ impl Edits {
 			};
 		}
 		if let Some(r) = self.resize {
-			let (w, h) = (img.width(), img.height());
-			let height = r.height.unwrap_or_else(|| {
-				((h as f64 * r.width as f64 / w as f64).round() as u32).max(1)
-			});
+			let height = r.height_for(img.width(), img.height());
 			img = img.resize_exact(r.width, height, FilterType::Lanczos3);
 		}
 		if let Some(c) = &self.canvas {

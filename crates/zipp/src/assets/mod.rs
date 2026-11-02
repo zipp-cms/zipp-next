@@ -10,7 +10,6 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::io::Cursor;
 use std::path::{Path as FsPath, PathBuf};
 
 use axum::Json;
@@ -44,20 +43,22 @@ mod routes;
 pub(crate) mod tests;
 mod transform;
 
-pub use archive::{Limits, Unzipped, ZipOf, unzip, write_zip, zip_files};
+pub use archive::{
+	Limits, Unpacked, Unzipped, ZipOf, read_zip, unzip, write_zip, zip_files,
+};
 pub use edits::{Canvas, Crop, Edits, Resize};
-use folders::folder_named;
 pub use folders::{
 	Folder, check_folder, create_folder, delete_folder, folders, move_assets,
 	top_count, update_folder,
 };
+use folders::{folder, folder_named};
 pub use manage::{
 	AssetChange, InFolder, Usage, delete, find, replace, search, update, usage,
 };
 
 pub use routes::api_routes;
 #[cfg(test)]
-use routes::file_response;
+use routes::file_headers;
 pub use routes::file_routes;
 pub use transform::crop_rect;
 pub use transform::transform_size;
@@ -322,6 +323,19 @@ pub const MAX_UPLOAD: usize = 200 * 1024 * 1024;
 /// transform would take too much memory.
 const MAX_PIXELS: u64 = 40_000_000;
 
+/// The longest side of an image, longer ones are refused like big ones.
+const MAX_IMAGE_SIDE: u32 = 65_535;
+
+/// What decoding an image may take: the biggest image an upload may have,
+/// in 16 bit colors.
+fn decode_limits() -> image::Limits {
+	let mut limits = image::Limits::default();
+	limits.max_image_width = Some(MAX_IMAGE_SIDE);
+	limits.max_image_height = Some(MAX_IMAGE_SIDE);
+	limits.max_alloc = Some(MAX_PIXELS * 8 + 64 * 1024 * 1024);
+	limits
+}
+
 /// What an upload is: its clean name, kind, type and size.
 struct Upload {
 	filename: String,
@@ -331,13 +345,18 @@ struct Upload {
 	height: Option<u32>,
 }
 
-fn inspect(filename: &str, data: &[u8]) -> Result<Upload> {
+/// An upload by its content, only the header of an image is read.
+fn inspect(filename: &str, file: &FsPath) -> Result<Upload> {
 	let filename = clean_filename(filename);
-	let image = image::guess_format(data).ok().and_then(|f| {
-		let reader = ImageReader::with_format(Cursor::new(data), f);
-		let (w, h) = reader.into_dimensions().ok()?;
-		Some((f, w, h))
-	});
+	let image = fs::File::open(file)
+		.map(|f| ImageReader::new(std::io::BufReader::new(f)))
+		.and_then(|r| r.with_guessed_format())
+		.ok()
+		.and_then(|r| {
+			let f = r.format()?;
+			let (w, h) = r.into_dimensions().ok()?;
+			Some((f, w, h))
+		});
 	let (kind, mime, width, height) = match image {
 		Some((f, w, h)) => {
 			("image", f.to_mime_type().to_string(), Some(w), Some(h))
@@ -345,7 +364,8 @@ fn inspect(filename: &str, data: &[u8]) -> Result<Upload> {
 		None => ("file", file_mime(&filename).to_string(), None, None),
 	};
 	if let (Some(w), Some(h)) = (width, height)
-		&& u64::from(w) * u64::from(h) > MAX_PIXELS
+		&& (u64::from(w) * u64::from(h) > MAX_PIXELS
+			|| w.max(h) > MAX_IMAGE_SIDE)
 	{
 		return Err(Error::Request(format!(
 			"{filename}: the image is too big ({w}×{h}), at most 40 megapixels"
@@ -360,13 +380,38 @@ fn inspect(filename: &str, data: &[u8]) -> Result<Upload> {
 	})
 }
 
-/// Stores an upload: the row first for the id, then the file. `user` is
-/// who uploads, none for imports.
+/// A file in the making in `files`, like an upload while it comes in:
+/// hidden, so backups leave it out, and gone unless it is stored.
+pub(crate) fn temp_file(files: &FsPath) -> Result<tempfile::NamedTempFile> {
+	use std::os::unix::fs::PermissionsExt;
+	fs::create_dir_all(files)?;
+	// readable like any other file once it is stored
+	let file = tempfile::Builder::new()
+		.permissions(fs::Permissions::from_mode(0o644))
+		.tempfile_in(files)?;
+	Ok(file)
+}
+
+/// Stores an upload, see [`store_file`].
 pub fn store(
 	conn: &Connection,
 	files: &FsPath,
 	filename: &str,
 	data: &[u8],
+	user: Option<i64>,
+) -> Result<Asset> {
+	let mut tmp = temp_file(files)?;
+	std::io::Write::write_all(&mut tmp, data)?;
+	store_file(conn, files, filename, tmp, user)
+}
+
+/// Stores an upload that came in as `tmp`: the row first for the id, then
+/// the file moves in. `user` is who uploads, none for imports.
+pub fn store_file(
+	conn: &Connection,
+	files: &FsPath,
+	filename: &str,
+	tmp: tempfile::NamedTempFile,
 	user: Option<i64>,
 ) -> Result<Asset> {
 	let Upload {
@@ -375,20 +420,24 @@ pub fn store(
 		mime,
 		width,
 		height,
-	} = inspect(filename, data)?;
+	} = inspect(filename, tmp.path())?;
+	let size = tmp.as_file().metadata()?.len();
 	conn.execute(
 		"INSERT INTO assets (filename, kind, mime, size, width, height,
 		created_at, uploaded_by) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-		params![filename, kind, mime, data.len(), width, height, now(), user],
+		params![filename, kind, mime, size, width, height, now(), user],
 	)?;
 	let id = conn.last_insert_rowid();
 
 	let dir = asset_dir(files, id);
 	let written = fs::create_dir_all(&dir)
-		.and_then(|_| fs::write(dir.join(&filename), data));
+		.map_err(|e| e.to_string())
+		.and_then(|_| {
+			tmp.persist(dir.join(&filename)).map_err(|e| e.to_string())
+		});
 	if let Err(e) = written {
 		conn.execute("DELETE FROM assets WHERE id = ?1", [id])?;
-		return Err(Error::Internal(e.to_string()));
+		return Err(Error::Internal(e));
 	}
 
 	get_asset(conn, id)

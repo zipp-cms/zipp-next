@@ -13,6 +13,7 @@ async fn run(gql: &GqlSchema, query: &str, published_only: bool) -> Value {
 		token: None,
 		indexing: true,
 		scope: Scope::ALL,
+		loaded: Default::default(),
 	});
 	let resp = gql.execute(req).await;
 	assert!(resp.errors.is_empty(), "{:?}", resp.errors);
@@ -261,6 +262,7 @@ async fn assets_with_transforms() {
 			token: None,
 			indexing: true,
 			scope: Scope::ALL,
+			loaded: Default::default(),
 		});
 		assert!(!gql.execute(req).await.errors.is_empty(), "{q}");
 	}
@@ -378,6 +380,7 @@ async fn answers_crelte_like_craft() {
 		token: None,
 		indexing: true,
 		scope: Scope::ALL,
+		loaded: Default::default(),
 	});
 	let resp = gql.execute(req).await;
 	assert!(resp.errors.is_empty(), "{:?}", resp.errors);
@@ -423,6 +426,7 @@ async fn preview_shows_the_draft() {
 		token: None,
 		indexing: true,
 		scope: Scope::ALL,
+		loaded: Default::default(),
 	});
 	let data = gql.execute(req).await.data.into_json().unwrap();
 	assert_eq!(data["entry"], json!({ "title": "Draft", "intro": "new" }));
@@ -499,6 +503,7 @@ async fn site_preview_shows_every_draft() {
 			token: None,
 			indexing: true,
 			scope: Scope::ALL,
+			loaded: Default::default(),
 		});
 		let gql = gql.clone();
 		async move { gql.execute(req).await.data.into_json().unwrap() }
@@ -537,6 +542,7 @@ async fn urls_of_a_preview_keep_the_token() {
 					token: token.map(Into::into),
 					indexing: true,
 					scope: Scope::ALL,
+					loaded: Default::default(),
 				});
 		let gql = gql.clone();
 		async move {
@@ -1159,7 +1165,7 @@ async fn craft_arguments_and_fields() {
 	let req = async_graphql::Request::new(format!(
 		r#"{{ entry(id: [{a}]) {{ ... on event_Entry {{ image {{ url(width: 500) }} }} }} }}"#
 	))
-	.data(Viewer { published_only: true, preview: None, token: None, indexing: true, scope: Scope::ALL });
+	.data(Viewer { published_only: true, preview: None, token: None, indexing: true, scope: Scope::ALL, loaded: Default::default() });
 	let resp = gql.execute(req).await;
 	assert!(resp.errors[0].message.contains("width 500 is not allowed"));
 	std::fs::remove_dir_all(dir).ok();
@@ -1336,6 +1342,7 @@ async fn localized_lists_the_live_versions_a_viewer_may_see() {
 			sites: sites.map(|l| l.into_iter().map(Into::into).collect()),
 			..Scope::ALL
 		},
+		loaded: Default::default(),
 	};
 	let sites = async |v: Viewer| {
 		let req = async_graphql::Request::new(q.clone()).data(v);
@@ -1380,5 +1387,45 @@ async fn localized_lists_the_live_versions_a_viewer_may_see() {
 	assert_eq!(
 		sites(viewer(true, Some(preview), Some(vec!["de", "en"]))).await,
 		["en"]
+	);
+}
+
+#[tokio::test]
+async fn a_request_loads_a_limited_number_of_entries() {
+	let db = Db::memory().unwrap();
+	let s = Arc::new(site());
+	let gql =
+		build(s.clone(), db.clone(), String::new(), SiteUrls::new()).unwrap();
+	{
+		let conn = db.conn();
+		for i in 0..60 {
+			let page = input("pages", "page", &format!("P{i}"), json!({}));
+			save(&conn, &s, None, page, None).unwrap();
+		}
+	}
+
+	// 61 for the list and its query, one query per entry for the children
+	let one = "entries(section: \"pages\", limit: 1000) { id children { id } }";
+	let data = run(&gql, &format!("{{ {one} }}"), true).await;
+	assert_eq!(data["entries"].as_array().unwrap().len(), 60);
+
+	// aliases repeat it past the budget: an error, not a stall
+	let many: String = (0..100).map(|i| format!("a{i}: {one}\n")).collect();
+	let req =
+		async_graphql::Request::new(format!("{{ {many} }}")).data(Viewer {
+			published_only: true,
+			preview: None,
+			token: None,
+			indexing: true,
+			scope: Scope::ALL,
+			loaded: Default::default(),
+		});
+	let resp = gql.execute(req).await;
+	assert!(
+		resp.errors
+			.iter()
+			.any(|e| e.message.contains("more than 10000")),
+		"{:?}",
+		resp.errors
 	);
 }

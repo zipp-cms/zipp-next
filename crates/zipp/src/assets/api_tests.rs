@@ -70,6 +70,13 @@ async fn uploads_changes_and_deletes() {
 		..Default::default()
 	};
 	assert_eq!(editor.call(&ids).await.unwrap().len(), 1);
+	let many: Vec<String> = (1..=1001).map(|i| i.to_string()).collect();
+	let too_many = ListReq {
+		ids: Some(many.join(",")),
+		..Default::default()
+	};
+	let err = editor.call(&too_many).await.unwrap_err();
+	assert!(matches!(err, Error::Request(_)), "{err:?}");
 
 	let change = UpdateReq {
 		id: a.id,
@@ -131,8 +138,16 @@ async fn transforms_in_other_formats() {
 	assert_eq!(resp.status(), StatusCode::OK);
 	let h = resp.headers();
 	assert_eq!(h[header::CONTENT_TYPE], "image/webp");
-	assert_eq!(h[header::CACHE_CONTROL], "public, max-age=86400");
+	// not long in caches, then they ask again with the date
+	assert_eq!(h[header::CACHE_CONTROL], "public, max-age=300");
+	let modified = h[header::LAST_MODIFIED].clone();
 	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+	let again = Request::get(&url)
+		.header(header::IF_MODIFIED_SINCE, modified)
+		.body(Body::empty())
+		.unwrap();
+	let resp = ts.anonymous().send(again).await;
+	assert_eq!(resp.status(), StatusCode::NOT_MODIFIED);
 	let img = image::load_from_memory_with_format(&body, ImageFormat::WebP)
 		.unwrap()
 		.to_rgba8();
@@ -291,6 +306,9 @@ async fn folders_hold_assets() {
 	assert!(matches!(twice.unwrap_err(), Error::Request(_)));
 	let missing = author.call(&create(Some(999), "x")).await;
 	assert_eq!(missing.unwrap_err(), Error::NotFound);
+	// a path on Windows
+	let slash = author.call(&create(None, "a\\b")).await;
+	assert!(matches!(slash.unwrap_err(), Error::Request(_)));
 
 	// renamed and moved, not into itself
 	let rename = UpdateFolderReq {

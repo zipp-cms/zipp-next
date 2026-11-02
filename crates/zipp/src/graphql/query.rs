@@ -268,13 +268,32 @@ pub(super) fn query(
 	Ok(q)
 }
 
+/// Counts `n` loaded entries or assets of the request, an error past
+/// [`MAX_LOADED`].
+pub(super) fn spend(
+	ctx: &ResolverContext,
+	n: usize,
+) -> async_graphql::Result<()> {
+	use std::sync::atomic::Ordering;
+	let viewer = ctx.data::<Viewer>()?;
+	if viewer.loaded.fetch_add(n, Ordering::Relaxed) + n > MAX_LOADED {
+		return Err(GqlError::new(format!(
+			"the query loads more than {MAX_LOADED} entries and assets"
+		)));
+	}
+	Ok(())
+}
+
 pub(super) fn load(
 	ctx: &ResolverContext,
 	params: &[(String, String)],
 ) -> async_graphql::Result<Vec<Entry>> {
 	let q = query(ctx, params)?;
 	let db = ctx.data::<Db>()?;
+	// the query counts too, before it runs
+	spend(ctx, 1)?;
 	let (mut entries, _) = list(&db.conn(), &q)?;
+	spend(ctx, entries.len())?;
 
 	// the entry of a preview shows its draft, or every entry its own
 	match &ctx.data::<Viewer>()?.preview {
@@ -344,6 +363,7 @@ pub(super) fn query_object(schema: &Schema) -> Object {
 						let params = params_from_args(&ctx)?;
 						let q = query(&ctx, &params)?;
 						let db = ctx.data::<Db>()?;
+						spend(&ctx, 1)?;
 						let (_, total) = list(&db.conn(), &q)?;
 						Ok(Some(GqlValue::from(total)))
 					})

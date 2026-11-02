@@ -53,13 +53,18 @@ pub(super) fn generate(
 ) -> Result<()> {
 	let internal = |e: &dyn std::fmt::Display| Error::Internal(e.to_string());
 	// by its content, a name may have no or another extension
-	let img = image::ImageReader::open(original)
+	let mut reader = image::ImageReader::open(original)
 		.and_then(|r| r.with_guessed_format())
-		.map_err(|e| internal(&e))?
-		.decode()
 		.map_err(|e| internal(&e))?;
+	reader.limits(decode_limits());
+	let img = reader.decode().map_err(|e| internal(&e))?;
 	let img = match &asset.edits {
-		Some(e) => e.apply(img),
+		// edits saved before a limit was lower must not take all memory
+		Some(e) => {
+			e.check_size(img.width(), img.height())
+				.map_err(|e| internal(&e))?;
+			e.apply(img)
+		}
 		None => img,
 	};
 	let format = ImageFormat::from_mime_type(mime)

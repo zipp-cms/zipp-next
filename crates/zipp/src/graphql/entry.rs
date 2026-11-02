@@ -105,7 +105,7 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 							("parent", e.id.to_string()),
 							("order", "structure".into()),
 							// all of them, not the first page of a list
-							("limit", MAX_LIMIT.to_string()),
+							("limit", MAX_CHILDREN.to_string()),
 						],
 					);
 					let children = load(&ctx, &params)?;
@@ -228,7 +228,9 @@ pub(super) fn content_field(
 						.map(|a| a.iter().filter_map(Value::as_i64).collect())
 						.unwrap_or_default();
 					let db = ctx.data::<Db>()?;
+					spend(&ctx, 1)?;
 					let assets = get_many(&db.conn(), &ids)?;
+					spend(&ctx, assets.len())?;
 					Ok(Some(FieldValue::list(
 						assets.into_iter().map(|a| asset_value(a, &site)),
 					)))

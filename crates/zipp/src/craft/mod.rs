@@ -16,7 +16,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component as PathPart, Path, PathBuf};
 
 use rusqlite::{Connection, params};
 use serde::Deserialize;
@@ -442,6 +442,17 @@ impl Importer<'_> {
 				));
 				continue;
 			};
+			// the export says where in the volume, never out of it
+			let inside = Path::new(&a.path)
+				.components()
+				.all(|c| matches!(c, PathPart::Normal(_) | PathPart::CurDir));
+			if !inside {
+				self.skip(format!(
+					"asset {}: a path out of the volume",
+					a.path
+				));
+				continue;
+			}
 			let data = match fs::read(dir.join(&a.path)) {
 				Ok(d) => d,
 				Err(e) => {

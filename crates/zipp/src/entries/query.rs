@@ -22,6 +22,9 @@ use crate::schema::{IndexKind, Schema, SectionKind};
 /// The most entries of one query.
 pub const MAX_LIMIT: i64 = 1000;
 
+/// The most ids of a list in a query, `ids=1,2,3`.
+pub const MAX_IDS: usize = 1000;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Query {
 	pub site: String,
@@ -129,6 +132,17 @@ impl Query {
 			v.parse::<i64>()
 				.map_err(|_| format!("{k} must be a number"))
 		};
+		let ints = |k: &str, v: &str| {
+			let ids: Vec<i64> = v
+				.split(',')
+				.filter(|s| !s.is_empty())
+				.map(|s| int(k, s))
+				.collect::<Result<_, _>>()?;
+			if ids.len() > MAX_IDS {
+				return Err(format!("{k} has more than {MAX_IDS} ids"));
+			}
+			Ok(ids)
+		};
 
 		// type first, filters need it
 		if let Some((_, types)) = params.iter().find(|(k, _)| k == "type") {
@@ -180,24 +194,14 @@ impl Query {
 					match value.as_str() {
 						":notempty:" => f.any = true,
 						":empty:" => f.none = true,
-						v => {
-							f.ids = v
-								.split(',')
-								.filter(|s| !s.is_empty())
-								.map(|s| int(key, s))
-								.collect::<Result<_, _>>()?;
-						}
+						v => f.ids = ints(key, v)?,
 					}
 					q.relations.push(f);
 				}
 				"limit" => q.limit = int(key, value)?.clamp(1, MAX_LIMIT),
 				"offset" => q.offset = int(key, value)?.max(0),
 				"ids" | "notIds" => {
-					let ids = value
-						.split(',')
-						.filter(|s| !s.is_empty())
-						.map(|s| int(key, s))
-						.collect::<Result<_, _>>()?;
+					let ids = ints(key, value)?;
 					match key.as_str() {
 						"ids" => q.ids = Some(ids),
 						_ => q.not_ids = ids,

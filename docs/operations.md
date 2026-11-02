@@ -68,6 +68,16 @@ password.
 | `--smtp-url` | `ZIPP_SMTP_URL` | the SMTP server of mails, see below; without it mails are only logged |
 | `--mail-from` | `ZIPP_MAIL_FROM` | their sender, `Website <cms@example.ch>`, needed with `--smtp-url` |
 
+### Limits
+
+An upload is at most 200 MB (also a zip), written to `--files` while it
+comes in (hidden temporary files, backups leave them out). Images are
+at most 40 megapixels and 65535 pixels on a side, also after the edits
+of the image editor (which refuses more on save). Files and transforms
+are cached for five minutes (`Cache-Control: public, max-age=300`), then
+caches ask again with `If-Modified-Since`: a deleted asset leaves a CDN
+soon. GraphQL's limits are in docs/graphql.md.
+
 ### Mail
 
 The cms sends mails over SMTP (lettre): `--smtp-url
@@ -247,7 +257,8 @@ place only: a field of the entry type itself wins, and a Craft field
 that fits two places (or two that fit one) is left out and listed, so
 rename one of them. Assets come with their title, alt text (per
 site, `export.php` from before gives only the primary site's) and focal
-point; entries keep Craft's post date, structures their order. What
+point (a path out of its volume, absolute or with `..`, is left out
+and listed); entries keep Craft's post date, structures their order. What
 the schema doesn't have is left out and listed; slugs are made zipp's
 (`teddy--co.` becomes `teddy-co`), so redirect such urls in the
 frontend. SEO fields aren't imported yet.

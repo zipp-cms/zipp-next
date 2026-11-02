@@ -28,14 +28,7 @@ pub fn folders(conn: &Connection) -> Result<Vec<Folder>> {
 		FROM asset_folders f ORDER BY name COLLATE NOCASE",
 	)?;
 	let all = stmt
-		.query_map([], |r| {
-			Ok(Folder {
-				id: r.get(0)?,
-				parent_id: r.get(1)?,
-				name: r.get(2)?,
-				assets: r.get(3)?,
-			})
-		})?
+		.query_map([], from_row)?
 		.collect::<rusqlite::Result<_>>()?;
 	Ok(all)
 }
@@ -51,11 +44,26 @@ pub fn top_count(conn: &Connection) -> Result<i64> {
 	Ok(n)
 }
 
-fn folder(conn: &Connection, id: i64) -> Result<Folder> {
-	folders(conn)?
-		.into_iter()
-		.find(|f| f.id == id)
-		.ok_or(Error::NotFound)
+pub(crate) fn folder(conn: &Connection, id: i64) -> Result<Folder> {
+	conn.query_row(
+		"SELECT id, parent_id, name,
+			(SELECT COUNT(*) FROM assets a
+				WHERE a.folder_id = f.id AND a.deleted_at IS NULL)
+		FROM asset_folders f WHERE id = ?1",
+		[id],
+		from_row,
+	)
+	.optional()?
+	.ok_or(Error::NotFound)
+}
+
+fn from_row(r: &rusqlite::Row) -> rusqlite::Result<Folder> {
+	Ok(Folder {
+		id: r.get(0)?,
+		parent_id: r.get(1)?,
+		name: r.get(2)?,
+		assets: r.get(3)?,
+	})
 }
 
 /// A name for a folder in `parent`: not empty, not the one of another
@@ -67,9 +75,15 @@ fn check_name(
 	id: Option<i64>,
 ) -> Result<String> {
 	let name = name.trim();
-	// `.` and `..` would be paths in a zip
-	if name.is_empty() || name.contains('/') || name == "." || name == ".." {
-		return Err(Error::Request("a name, without / and not . or ..".into()));
+	// `.` and `..` would be paths in a zip, `\` a folder on Windows
+	if name.is_empty()
+		|| name.contains(['/', '\\'])
+		|| name == "."
+		|| name == ".."
+	{
+		return Err(Error::Request(
+			"a name, without / or \\ and not . or ..".into(),
+		));
 	}
 	let taken: Option<i64> = conn
 		.query_row(

@@ -47,7 +47,6 @@ use crate::assets::{Asset, get_many};
 use crate::auth::{role_of, session};
 use crate::db::Db;
 use crate::drafts::{Preview, get_draft, preview};
-use crate::entries::query::MAX_LIMIT;
 use crate::entries::{Entry, list};
 use crate::error::{Error, Result};
 use crate::field_type::{GraphqlType, Scalar as FieldScalar};
@@ -141,7 +140,18 @@ struct Viewer {
 	indexing: bool,
 	/// what the token of a frontend may read
 	scope: Scope,
+	/// the entries and assets loaded so far, see [`MAX_LOADED`]
+	loaded: std::sync::atomic::AtomicUsize,
 }
+
+/// The most entries and assets a request may load, each query counts as
+/// one more: depth and complexity limit the shape of a query, not how
+/// many entries nested lists of a thousand load. Pages of real sites
+/// load a few hundred.
+const MAX_LOADED: usize = 10_000;
+
+/// Most children an entry has in GraphQL, they are loaded per entry.
+const MAX_CHILDREN: i64 = 500;
 
 /// A rich text field as parent of html and chunks.
 struct RichText {
@@ -377,6 +387,7 @@ async fn graphql(
 		token,
 		indexing: state.indexing,
 		scope,
+		loaded: Default::default(),
 	});
 	Ok(state.gql.execute(req).await.into())
 }
@@ -391,6 +402,7 @@ pub async fn check_query(gql: &GqlSchema, query: &str) -> Vec<String> {
 		token: None,
 		indexing: true,
 		scope: Scope::ALL,
+		loaded: Default::default(),
 	});
 	gql.execute(req)
 		.await
