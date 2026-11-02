@@ -193,7 +193,7 @@ const MIGRATIONS: &[&str] = &[r#"
 		created_at INTEGER NOT NULL,
 		-- using the studio pushes it back
 		expires_at INTEGER NOT NULL,
-		-- 0: it ends when it ends, see auth::short_session
+		-- 0: it ends when it ends, see auth::short_session and login_as_session
 		renews INTEGER NOT NULL DEFAULT 1,
 		-- an admin who logged in as the user, see auth/links.rs
 		impersonated_by INTEGER REFERENCES users(id) ON DELETE CASCADE
@@ -367,6 +367,11 @@ pub fn parse_iso(s: &str) -> Option<i64> {
 	let secs = days * 86_400 + h * 3600 + min * 60 + sec - offset;
 	Some(secs * 1000)
 }
+
+// durations in milliseconds, like the times in the database
+pub const MINUTE_MS: i64 = 60 * 1000;
+pub const HOUR_MS: i64 = 60 * MINUTE_MS;
+pub const DAY_MS: i64 = 24 * HOUR_MS;
 
 pub fn now() -> i64 {
 	SystemTime::now()

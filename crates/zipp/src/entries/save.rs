@@ -27,10 +27,7 @@ pub fn check(
 	id: Option<i64>,
 	mut input: EntryInput,
 ) -> Result<Checked> {
-	let site = input
-		.site
-		.clone()
-		.unwrap_or_else(|| schema.primary_site().handle.clone());
+	let site = schema.site_or_primary(input.site.clone());
 	if schema.get_site(&site).is_none() {
 		return Err(Error::Request(format!("unknown site {site}")));
 	}
@@ -77,7 +74,7 @@ pub fn check(
 	let mut errors = vec![];
 	let title = input.title.trim().to_string();
 	if title.is_empty() {
-		errors.push(field_error("title", "is required"));
+		errors.push(FieldError::new("title", "is required"));
 	}
 	let slug = match input.slug.trim() {
 		"" => slugify(&title),
@@ -86,7 +83,7 @@ pub fn check(
 	// a title of only signs makes none, the uri would be the parent's (or
 	// the home page's)
 	if slug.is_empty() && !title.is_empty() {
-		errors.push(field_error("slug", "is required"));
+		errors.push(FieldError::new("slug", "is required"));
 	}
 
 	// the uri in every site, a new entry starts with this slug everywhere
@@ -104,19 +101,12 @@ pub fn check(
 			&s.handle,
 			&input.fields,
 		)?;
-		if let Some(uri) = &uri {
-			let taken: Option<i64> = conn
-				.query_row(
-					"SELECT entry_id FROM entry_sites WHERE site = ?1 AND uri = ?2",
-					params![s.handle, uri],
-					|r| r.get(0),
-				)
-				.optional()?;
-			if taken.is_some() && taken != id {
-				let msg = format!("the uri /{uri} is already used");
-				errors.push(field_error("slug", &msg));
-				break;
-			}
+		if let Some(uri) = &uri
+			&& uri_taken(conn, &s.handle, uri, id)?
+		{
+			let msg = format!("the uri /{uri} is already used");
+			errors.push(FieldError::new("slug", msg));
+			break;
 		}
 		uris.insert(s.handle.clone(), uri);
 	}
@@ -137,7 +127,7 @@ pub fn check(
 	} = input.dates
 		&& expiry <= post
 	{
-		errors.push(field_error("expiryDate", "after the post date"));
+		errors.push(FieldError::new("expiryDate", "after the post date"));
 	}
 	if !errors.is_empty() {
 		return Err(Error::Invalid(errors));
@@ -239,12 +229,7 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 			id
 		}
 		None => {
-			let position: i64 = conn.query_row(
-				"SELECT IFNULL(MAX(position) + 1, 0) FROM entries
-				WHERE section = ?1 AND parent_id IS ?2",
-				params![section.handle, c.parent_id],
-				|r| r.get(0),
-			)?;
+			let position = next_position(conn, &section.handle, c.parent_id)?;
 			let post = c.dates.post_date.or(c.published.then_some(now));
 			conn.execute(
 				"INSERT INTO entries (section, type, parent_id, position,
@@ -284,13 +269,6 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 		}
 	};
 	Ok(id)
-}
-
-pub(super) fn field_error(path: &str, message: &str) -> FieldError {
-	FieldError {
-		path: path.into(),
-		message: message.into(),
-	}
 }
 
 /// Relations must point to entries of the allowed types, asset fields to
@@ -372,7 +350,7 @@ pub(crate) fn check_relations(
 				}
 				_ => continue,
 			};
-			errors.push(field_error(&rel.path, &error));
+			errors.push(FieldError::new(&rel.path, &error));
 		}
 	}
 
@@ -385,6 +363,27 @@ pub(crate) fn has_extension(filename: &str, extensions: &[String]) -> bool {
 	ext.is_some_and(|e| extensions.contains(&e))
 }
 
+/// Rewrites the index rows of every entry that isn't in the trash, in
+/// all its sites (the trash keeps none). Content that isn't JSON fails,
+/// it would be lost from the index without anyone noticing.
+pub fn reindex_all(conn: &Connection, schema: &Schema) -> Result<()> {
+	let mut stmt = conn.prepare(
+		"SELECT e.id, s.site, e.type, s.fields FROM entries e
+		JOIN entry_sites s ON s.entry_id = e.id
+		WHERE e.deleted_at IS NULL",
+	)?;
+	let rows = stmt
+		.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+		.collect::<rusqlite::Result<Vec<(i64, String, String, String)>>>()?;
+
+	for (id, site, ty, fields) in rows {
+		let fields: Value = serde_json::from_str(&fields)
+			.map_err(|e| Error::Internal(format!("stored content: {e}")))?;
+		reindex(conn, schema, id, &site, &ty, &fields)?;
+	}
+	Ok(())
+}
+
 /// Rewrites the index rows of an entry in a site from its fields.
 pub fn reindex(
 	conn: &Connection,
@@ -394,12 +393,7 @@ pub fn reindex(
 	ty: &str,
 	fields: &Value,
 ) -> Result<()> {
-	for table in [
-		"entry_values",
-		"entry_relations",
-		"asset_relations",
-		"entry_texts",
-	] {
+	for table in super::INDEX_TABLES {
 		conn.execute(
 			&format!("DELETE FROM {table} WHERE entry_id = ?1 AND site = ?2"),
 			params![id, site],

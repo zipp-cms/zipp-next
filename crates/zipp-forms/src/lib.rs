@@ -29,6 +29,7 @@ use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 
+use zipp::schema::humanize;
 use zipp::{Field, Plugin, Schema, Section};
 
 mod routes;
@@ -184,23 +185,6 @@ impl FormField {
 		self.max = chars;
 		self
 	}
-}
-
-/// `phoneNumber` as `Phone number`.
-fn humanize(handle: &str) -> String {
-	let mut out = String::new();
-	for (i, c) in handle.chars().enumerate() {
-		match (i, c) {
-			(0, c) => out.extend(c.to_uppercase()),
-			(_, c) if c.is_uppercase() => {
-				out.push(' ');
-				out.extend(c.to_lowercase());
-			}
-			(_, '_') => out.push(' '),
-			(_, c) => out.push(c),
-		}
-	}
-	out
 }
 
 impl Plugin for Forms {

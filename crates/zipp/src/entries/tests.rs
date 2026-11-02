@@ -1,7 +1,7 @@
 use serde_json::json;
 
 use super::*;
-use crate::db::Db;
+use crate::db::{DAY_MS as DAY, Db};
 use crate::schema::Field;
 use crate::schema::tests::site;
 
@@ -354,7 +354,6 @@ fn live_between_post_and_expiry_date() {
 	let conn = db.conn();
 	let s = site();
 	let now = crate::db::now();
-	const DAY: i64 = 24 * 60 * 60 * 1000;
 	let event = |title: &str, dates: Dates| EntryInput {
 		dates,
 		..input("events", "event", title, json!({}))

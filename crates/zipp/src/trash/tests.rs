@@ -245,3 +245,72 @@ fn a_child_trashed_on_its_own_outlives_its_parent() {
 	assert_eq!(trash.entries.len(), 1);
 	assert_eq!(trash.entries[0].id, jobs);
 }
+
+#[test]
+fn a_rebuild_leaves_the_trash_out_of_the_index() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	let about = save(
+		&conn,
+		&s,
+		None,
+		input("pages", "page", "About", json!({})),
+		None,
+	)
+	.unwrap();
+	let fields = json!({ "page": [about.id] });
+	let event =
+		save(&conn, &s, None, input("events", "event", "E", fields), None)
+			.unwrap();
+	trash_entry(&conn, &s, event.id, None).unwrap();
+
+	// like after a migration
+	crate::entries::reindex_all(&conn, &s).unwrap();
+	for table in INDEX_TABLES {
+		let n: i64 = conn
+			.query_row(
+				&format!("SELECT COUNT(*) FROM {table} WHERE entry_id = ?1"),
+				[event.id],
+				|r| r.get(0),
+			)
+			.unwrap();
+		assert_eq!(n, 0, "{table}");
+	}
+	let texts: i64 = conn
+		.query_row(
+			"SELECT COUNT(*) FROM entry_texts WHERE entry_id = ?1",
+			[about.id],
+			|r| r.get(0),
+		)
+		.unwrap();
+	assert!(texts > 0);
+}
+
+#[test]
+fn a_new_entry_goes_after_the_live_ones() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	let page = |title: &str| {
+		let e = save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", title, json!({})),
+			None,
+		)
+		.unwrap();
+		conn.query_row(
+			"SELECT position FROM entries WHERE id = ?1",
+			[e.id],
+			|r| r.get::<_, i64>(0),
+		)
+		.map(|p| (e.id, p))
+		.unwrap()
+	};
+	assert_eq!(page("A").1, 0);
+	let (b, _) = page("B");
+	trash_entry(&conn, &s, b, None).unwrap();
+	assert_eq!(page("C").1, 1);
+}

@@ -14,8 +14,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::auth::Authed;
-use crate::db::now;
-use crate::entries::{fits_below, levels_of, reindex};
+use crate::db::{DAY_MS, now};
+use crate::entries::{
+	INDEX_TABLES, fits_below, free_uri, levels_of, next_position, reindex,
+};
 use crate::error::{Error, Result};
 use crate::schema::{Access, Schema, SectionKind};
 
@@ -30,8 +32,6 @@ pub use routes::routes;
 
 /// How long something stays in the trash.
 pub const KEEP_DAYS: i64 = 30;
-
-const DAY_MS: i64 = 24 * 60 * 60 * 1000;
 
 /// An entry in the trash, with the children that went with it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -131,14 +131,15 @@ pub fn trash_entry(
 		)?;
 		// its uris are free, nothing links to it or finds it by a value
 		// or its text
-		for sql in [
+		tx.execute(
 			"UPDATE entry_sites SET uri = NULL WHERE entry_id = ?1",
-			"DELETE FROM entry_values WHERE entry_id = ?1",
-			"DELETE FROM entry_relations WHERE entry_id = ?1",
-			"DELETE FROM asset_relations WHERE entry_id = ?1",
-			"DELETE FROM entry_texts WHERE entry_id = ?1",
-		] {
-			tx.execute(sql, [e])?;
+			[e],
+		)?;
+		for table in INDEX_TABLES {
+			tx.execute(
+				&format!("DELETE FROM {table} WHERE entry_id = ?1"),
+				[e],
+			)?;
 		}
 	}
 	tx.commit()?;
@@ -187,12 +188,7 @@ pub fn restore_entry(
 
 	let ids = with_children(conn, id, Some(deleted_at))?;
 	let tx = conn.unchecked_transaction()?;
-	let position: i64 = tx.query_row(
-		"SELECT IFNULL(MAX(position) + 1, 0) FROM entries
-		WHERE section = ?1 AND parent_id IS ?2 AND deleted_at IS NULL",
-		params![section, parent],
-		|r| r.get(0),
-	)?;
+	let position = next_position(&tx, &section, parent)?;
 	tx.execute(
 		"UPDATE entries SET parent_id = ?1, position = ?2 WHERE id = ?3",
 		params![parent, position, id],
@@ -237,56 +233,6 @@ pub fn restore_entry(
 	}
 	tx.commit()?;
 	Ok(section)
-}
-
-/// The slug and uri of a restored entry in a site: its own, or with
-/// `-2`, `-3`, … when another entry has that uri now.
-fn free_uri(
-	conn: &Connection,
-	section: &crate::schema::Section,
-	ty: &str,
-	slug: &str,
-	parent: Option<i64>,
-	site: &str,
-	fields: &Value,
-) -> Result<(String, Option<String>)> {
-	let parent_uri: Option<String> = match parent {
-		Some(p) => conn
-			.query_row(
-				"SELECT uri FROM entry_sites WHERE entry_id = ?1 AND site = ?2",
-				params![p, site],
-				|r| r.get(0),
-			)
-			.optional()?
-			.flatten(),
-		None => None,
-	};
-	for n in 1.. {
-		let candidate = match n {
-			1 => slug.to_string(),
-			n => format!("{slug}-{n}"),
-		};
-		let uri = section.render_uri(
-			ty,
-			&candidate,
-			parent_uri.as_deref(),
-			site,
-			fields,
-		);
-		let Some(u) = &uri else {
-			return Ok((candidate, None));
-		};
-		let taken: bool = conn.query_row(
-			"SELECT EXISTS (SELECT 1 FROM entry_sites
-			WHERE site = ?1 AND uri = ?2)",
-			params![site, u],
-			|r| r.get(0),
-		)?;
-		if !taken {
-			return Ok((candidate, uri));
-		}
-	}
-	unreachable!()
 }
 
 /// Moves an asset to the trash.

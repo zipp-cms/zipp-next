@@ -39,12 +39,22 @@ pub(crate) use routes::viewable_refs;
 pub use save::check;
 pub(crate) use save::check_relations;
 pub use save::reindex;
+pub use save::reindex_all;
 pub use save::save;
 pub use save::write;
 pub use structure::move_entry;
 pub use structure::refresh_uris;
 use structure::*;
-pub(crate) use structure::{fits_below, levels_of};
+pub(crate) use structure::{fits_below, free_uri, levels_of, next_position};
+
+/// The tables that are built from an entry's fields, per entry and site:
+/// whatever is removed or rewritten has to clear them all.
+pub(crate) const INDEX_TABLES: [&str; 4] = [
+	"entry_values",
+	"entry_relations",
+	"asset_relations",
+	"entry_texts",
+];
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

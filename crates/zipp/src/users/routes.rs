@@ -85,10 +85,10 @@ async fn update_route(
 	if own && (password.is_some() || new_email) {
 		let given = req.current_password.as_deref().unwrap_or_default();
 		if !password_matches(&state.db, req.id, given).await? {
-			errors.push(FieldError {
-				path: "currentPassword".into(),
-				message: "That isn't your password".into(),
-			});
+			errors.push(FieldError::new(
+				"currentPassword",
+				"That isn't your password",
+			));
 		}
 	}
 	if !errors.is_empty() {

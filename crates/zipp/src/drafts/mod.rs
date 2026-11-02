@@ -22,8 +22,8 @@ use serde_json::Value;
 
 use crate::AppState;
 use crate::content::{FieldError, convert, share};
-use crate::db::{marks, now};
-use crate::entries::{Dates, EntryInput, check, get_entry, write};
+use crate::db::{DAY_MS, marks, now};
+use crate::entries::{Dates, Entry, EntryInput, check, get_entry, write};
 use crate::error::{Error, Result};
 use crate::schema::Schema;
 
@@ -50,7 +50,7 @@ pub use revisions::revisions;
 pub use routes::routes;
 
 /// How long a preview link works.
-const TOKEN_DURATION_MS: i64 = 1000 * 60 * 60 * 24;
+const TOKEN_DURATION_MS: i64 = DAY_MS;
 
 /// Older revisions are deleted.
 const MAX_REVISIONS: i64 = 50;
@@ -147,6 +147,33 @@ pub fn draft_or_live(conn: &Connection, id: i64) -> Result<(Doc, bool)> {
 		Some(d) => (d.doc, true),
 		None => (live_doc(conn, id)?, false),
 	})
+}
+
+/// The content of an entry in a site as the editor sees it, draft first,
+/// and whether it is a draft.
+pub fn current(
+	conn: &Connection,
+	id: i64,
+	site: &str,
+) -> Result<(SiteDoc, bool)> {
+	let (doc, has_draft) = draft_or_live(conn, id)?;
+	let content = doc
+		.get(site)
+		.cloned()
+		.ok_or_else(|| Error::Request(format!("unknown site {site}")))?;
+	Ok((content, has_draft))
+}
+
+impl Entry {
+	/// Shows the draft of the entry's site instead of the live content,
+	/// as a preview does: its type, title and fields.
+	pub fn show_draft(&mut self, doc: &Doc) {
+		if let Some(sd) = doc.get(&self.site) {
+			self.ty = sd.ty.clone();
+			self.title = sd.title.clone();
+			self.fields = sd.fields.clone();
+		}
+	}
 }
 
 pub fn get_draft(conn: &Connection, id: i64) -> Result<Option<Draft>> {
@@ -321,9 +348,11 @@ pub fn publish(
 			Err(Error::Invalid(errors)) if site != primary => {
 				let errors = errors
 					.into_iter()
-					.map(|e| FieldError {
-						message: format!("{site}: {}", e.message),
-						path: e.path,
+					.map(|e| {
+						FieldError::new(
+							e.path,
+							format!("{site}: {}", e.message),
+						)
 					})
 					.collect();
 				return Err(Error::Invalid(errors));

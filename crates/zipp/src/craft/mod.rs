@@ -24,7 +24,7 @@ use serde_json::{Map, Value, json};
 
 use crate::assets;
 use crate::db::{now, parse_iso};
-use crate::entries::{self, EntryInput};
+use crate::entries::{self, EntryInput, next_position};
 use crate::error::{Error, Result};
 use crate::schema::{Component, Field, FieldKind, Schema, SectionKind};
 
@@ -394,11 +394,11 @@ fn create_empty(
 	parent: Option<i64>,
 ) -> Result<i64> {
 	let now = now();
+	let position = next_position(conn, section, parent)?;
 	conn.execute(
 		"INSERT INTO entries (section, type, parent_id, position, created_at,
-		updated_at) VALUES (?1, ?2, ?3, (SELECT IFNULL(MAX(position) + 1, 0)
-		FROM entries WHERE section = ?1 AND parent_id IS ?3), ?4, ?4)",
-		params![section, ty, parent, now],
+		updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
+		params![section, ty, parent, position, now],
 	)?;
 	let id = conn.last_insert_rowid();
 	for site in &schema.sites {

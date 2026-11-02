@@ -99,12 +99,8 @@ pub fn check(
 	password: Option<&str>,
 ) -> Result<Vec<FieldError>> {
 	let mut errors = vec![];
-	let mut error = |path: &str, message: &str| {
-		errors.push(FieldError {
-			path: path.into(),
-			message: message.into(),
-		})
-	};
+	let mut error =
+		|path: &str, message: &str| errors.push(FieldError::new(path, message));
 	let taken: bool = conn.query_row(
 		"SELECT EXISTS (SELECT 1 FROM users WHERE email = ?1 AND id IS NOT ?2)",
 		params![email, id],

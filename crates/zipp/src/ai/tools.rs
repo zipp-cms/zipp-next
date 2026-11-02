@@ -134,20 +134,6 @@ pub(super) fn page_url(
 	crate::page_url(&state.site_urls, site, uri?)
 }
 
-/// The content of an entry in a site as the editor sees it, draft first.
-pub(super) fn current(
-	conn: &Connection,
-	id: i64,
-	site: &str,
-) -> Result<(SiteDoc, bool)> {
-	let (doc, has_draft) = crate::drafts::draft_or_live(conn, id)?;
-	let content = doc
-		.get(site)
-		.cloned()
-		.ok_or_else(|| Error::Request(format!("unknown site {site}")))?;
-	Ok((content, has_draft))
-}
-
 /// What a tool gives the model and what the studio shows of it.
 type ToolResult = Result<(Value, Option<Action>)>;
 
@@ -180,12 +166,11 @@ pub(super) fn run_tool(
 ) -> ToolResult {
 	let conn = state.db.conn();
 	let schema = &state.schema;
-	let primary = &schema.primary_site().handle;
 	let t = Ctx {
 		state,
 		conn: &conn,
 		schema,
-		site: input["site"].as_str().unwrap_or(primary).to_string(),
+		site: schema.site_or_primary(input["site"].as_str().map(Into::into)),
 		user_id: auth.user_id,
 		auth,
 	};

@@ -12,10 +12,26 @@ use serde_json::Value;
 use crate::content::{convert, defaults};
 use crate::db::{marks, now};
 use crate::drafts::Doc;
-use crate::entries::{refresh_uris, reindex};
+use crate::entries::{INDEX_TABLES, next_position, refresh_uris, reindex_all};
 use crate::error::{Error, Result};
-use crate::migrate::{Migration, Op};
+use crate::migrate::{Migration, Op, unmigrated};
 use crate::schema::{ASSET, Schema, SectionKind};
+
+/// Brings the database up to the code before the server or a command
+/// uses it: refuses when the code changed since the last migration,
+/// applies the migrations that didn't run yet and returns their names.
+pub fn up_to_date(
+	conn: &Connection,
+	migrations: &[Migration],
+	code: &Schema,
+) -> std::result::Result<Vec<String>, String> {
+	if !unmigrated(migrations, code)?.is_empty() {
+		return Err("The schema changed since the last migration, run \
+			`makemigration` first"
+			.into());
+	}
+	apply_migrations(conn, migrations, code).map_err(|e| e.to_string())
+}
 
 /// Applies the migrations that didn't run yet and returns their names.
 /// All of them and the rebuild of the indexes are one transaction: when
@@ -89,13 +105,7 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 			})?;
 		}
 		Op::RemoveSite { site } => {
-			for table in [
-				"entry_sites",
-				"entry_values",
-				"entry_relations",
-				"asset_relations",
-				"entry_texts",
-			] {
+			for table in ["entry_sites"].iter().chain(&INDEX_TABLES) {
 				conn.execute(
 					&format!("DELETE FROM {table} WHERE site = ?1"),
 					[site],
@@ -245,12 +255,7 @@ fn delete_entry(conn: &Connection, id: i64) -> Result<()> {
 	else {
 		return Ok(());
 	};
-	let end: i64 = conn.query_row(
-		"SELECT IFNULL(MAX(position) + 1, 0) FROM entries
-		WHERE section = ?1 AND parent_id IS ?2",
-		params![section, parent],
-		|r| r.get(0),
-	)?;
+	let end = next_position(conn, &section, parent)?;
 	conn.execute(
 		"UPDATE entries SET parent_id = ?1, position = position + ?2
 		WHERE parent_id = ?3",
@@ -417,18 +422,7 @@ pub fn create_singles(conn: &Connection, schema: &Schema) -> Result<()> {
 
 /// Rebuilds the index rows and the uris of all entries.
 fn rebuild(conn: &Connection, schema: &Schema) -> Result<()> {
-	let mut stmt = conn.prepare(
-		"SELECT e.id, s.site, e.type, s.fields FROM entries e
-		JOIN entry_sites s ON s.entry_id = e.id",
-	)?;
-	let rows = stmt
-		.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
-		.collect::<rusqlite::Result<Vec<(i64, String, String, String)>>>()?;
-	for (id, site, ty, fields) in rows {
-		let fields = parse(&fields)?;
-		reindex(conn, schema, id, &site, &ty, &fields)?;
-	}
-
+	reindex_all(conn, schema)?;
 	for section in &schema.sections {
 		refresh_uris(conn, schema, section, None)?;
 	}

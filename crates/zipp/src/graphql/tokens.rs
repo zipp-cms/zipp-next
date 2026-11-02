@@ -96,10 +96,7 @@ pub fn get(conn: &Connection, id: i64) -> Result<GraphqlToken> {
 pub fn check(schema: &Schema, name: &str, scope: &Scope) -> Vec<FieldError> {
 	let mut errors = vec![];
 	let mut error = |path: &str, message: String| {
-		errors.push(FieldError {
-			path: path.into(),
-			message,
-		})
+		errors.push(FieldError::new(path, message))
 	};
 	if name.trim().is_empty() {
 		error("name", "A token needs a name".into());

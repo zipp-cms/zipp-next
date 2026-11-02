@@ -322,17 +322,10 @@ pub(super) fn with_drafts(
 	viewer: &Viewer,
 	mut entries: Vec<Entry>,
 ) -> async_graphql::Result<Vec<Entry>> {
-	let show = |e: &mut Entry, doc: &crate::drafts::Doc| {
-		if let Some(sd) = doc.get(&e.site) {
-			e.ty = sd.ty.clone();
-			e.title = sd.title.clone();
-			e.fields = sd.fields.clone();
-		}
-	};
 	match &viewer.preview {
 		Some(Preview::Entry(id, doc)) => {
 			for e in entries.iter_mut().filter(|e| e.id == *id) {
-				show(e, doc);
+				e.show_draft(doc);
 			}
 		}
 		Some(Preview::All(sections)) => {
@@ -345,7 +338,7 @@ pub(super) fn with_drafts(
 			let drafts = docs_of(conn, &ids)?;
 			for e in entries.iter_mut() {
 				if let Some(doc) = drafts.get(&e.id) {
-					show(e, doc);
+					e.show_draft(doc);
 				}
 			}
 		}

@@ -155,9 +155,7 @@ pub(crate) fn root_fields() -> [GqlField; 2] {
 					.args
 					.get("site")
 					.and_then(|v| v.string().ok().map(String::from));
-				let site = by_handle
-					.or(by_id)
-					.unwrap_or_else(|| schema.primary_site().handle.clone());
+				let site = schema.site_or_primary(by_handle.or(by_id));
 				let v = resolve_seo(&ctx, &site, None)?;
 				Ok(Some(FieldValue::value(GqlValue::from_json(v)?)))
 			})

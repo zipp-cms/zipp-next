@@ -8,9 +8,9 @@ use axum::{Json, Router};
 
 use super::Files;
 use super::api::*;
-use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::auth::Authed;
+use crate::{AppState, origin};
 
 async fn file(State(state): State<AppState>, uri: Uri) -> Response {
 	let path = uri.path().trim_start_matches('/');
@@ -99,18 +99,6 @@ fn csp(state: &AppState) -> String {
 		frame-src {frames}; object-src 'none'; base-uri 'none'; \
 		form-action 'self'; frame-ancestors {ancestors}"
 	)
-}
-
-/// The origin of a url, `https://example.ch` of `https://example.ch/de`;
-/// `None` for a relative one or one that doesn't fit into a header.
-pub(crate) fn origin(url: &str) -> Option<&str> {
-	let (scheme, rest) = url.split_once("://")?;
-	let host = rest.split('/').next()?;
-	let plain = |c: char| c.is_ascii_alphanumeric() || ".-:*[]".contains(c);
-	let fits = matches!(scheme, "http" | "https")
-		&& !host.is_empty()
-		&& host.chars().all(plain);
-	fits.then(|| &url[..scheme.len() + 3 + host.len()])
 }
 
 /// The editor of a field type of another crate, see

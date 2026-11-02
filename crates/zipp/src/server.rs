@@ -40,7 +40,7 @@ pub(super) async fn serve(
 	// they go into a header of the studio
 	if let Some(a) = frame_ancestor
 		.iter()
-		.find(|a| studio::origin(a) != Some(a.as_str()))
+		.find(|a| origin(a) != Some(a.as_str()))
 	{
 		return Err(format!(
 			"--frame-ancestor {a:?}: an origin like https://dash.example.com"
@@ -50,13 +50,7 @@ pub(super) async fn serve(
 	let db = Db::open(db_path).map_err(|e| e.to_string())?;
 
 	let migrations = migrations.load()?;
-	if !migrate::unmigrated(&migrations, &schema)?.is_empty() {
-		return Err("The schema changed since the last migration, run \
-			`makemigration` first"
-			.into());
-	}
-	let applied = apply::apply_migrations(&db.conn(), &migrations, &schema)
-		.map_err(|e| e.to_string())?;
+	let applied = apply::up_to_date(&db.conn(), &migrations, &schema)?;
 	for name in applied {
 		info!("applied migration {name}");
 	}
@@ -186,7 +180,6 @@ async fn empty_trash(state: AppState) {
 /// last one is older and then about the same time each day. A failure
 /// is logged and tried again the next hour.
 async fn backups(db: PathBuf, files: PathBuf, dir: PathBuf, keep: usize) {
-	const HOUR: i64 = 3600 * 1000;
 	let mut tick = tokio::time::interval(std::time::Duration::from_secs(3600));
 	loop {
 		tick.tick().await;
@@ -197,7 +190,7 @@ async fn backups(db: PathBuf, files: PathBuf, dir: PathBuf, keep: usize) {
 			let last = crate::backup::list(&dir)
 				.ok()
 				.and_then(|l| l.last().map(|(t, _)| *t));
-			if last.is_some_and(|t| now - t < 23 * HOUR) {
+			if last.is_some_and(|t| now - t < 23 * crate::db::HOUR_MS) {
 				return Ok(None);
 			}
 			let w = crate::backup::backup(&db, &files, &dir, now)?;

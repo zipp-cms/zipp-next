@@ -9,7 +9,7 @@ use super::api::*;
 use super::*;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::auth::{AssetAccess, Delete, Edit, View};
-use crate::entries::query::MAX_IDS;
+use crate::entries::query::parse_ids;
 use crate::schema::Access;
 
 pub(super) fn transform_by_name(
@@ -280,15 +280,6 @@ pub(super) async fn unzip_route(
 	Ok(Json(unzipped))
 }
 
-/// `1,2,3`, at most [`MAX_IDS`] of them.
-fn id_list(ids: &str) -> Result<Vec<i64>> {
-	let ids: Vec<i64> = ids.split(',').filter_map(|i| i.parse().ok()).collect();
-	if ids.len() > MAX_IDS {
-		return Err(Error::Request(format!("more than {MAX_IDS} ids")));
-	}
-	Ok(ids)
-}
-
 #[derive(Deserialize)]
 pub(super) struct ZipParams {
 	/// `1,2,3`
@@ -308,7 +299,10 @@ pub(super) async fn zip_route(
 		(Some(id), _) => {
 			(ZipOf::Folder(id), folder(&state.db.conn(), id)?.name)
 		}
-		(None, Some(ids)) => (ZipOf::Assets(id_list(&ids)?), "assets".into()),
+		(None, Some(ids)) => (
+			ZipOf::Assets(parse_ids("ids", &ids).map_err(Error::Request)?),
+			"assets".into(),
+		),
 		(None, None) => {
 			return Err(Error::Request("ids or a folder".into()));
 		}
@@ -349,7 +343,7 @@ pub(super) async fn list_route(
 ) -> ApiResult<ListReq> {
 	let conn = state.db.conn();
 	if let Some(ids) = req.ids {
-		let ids = id_list(&ids)?;
+		let ids = parse_ids("ids", &ids).map_err(Error::Request)?;
 		return Ok(Json(get_many(&conn, &ids)?));
 	}
 	let folder = match req.folder.as_deref() {

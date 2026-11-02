@@ -36,11 +36,17 @@ pub struct FieldError {
 	pub message: String,
 }
 
+impl FieldError {
+	pub fn new(path: impl Into<String>, message: impl Into<String>) -> Self {
+		Self {
+			path: path.into(),
+			message: message.into(),
+		}
+	}
+}
+
 fn error(errors: &mut Vec<FieldError>, path: &str, message: &str) {
-	errors.push(FieldError {
-		path: path.into(),
-		message: message.into(),
-	});
+	errors.push(FieldError::new(path, message));
 }
 
 /// The kind of a link value, `{ "type": "entry", "value": 5, … }`.

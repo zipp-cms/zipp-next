@@ -9,11 +9,9 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
 use super::Session;
-use crate::db::{now, random_token, token_hash};
+use crate::db::{DAY_MS, HOUR_MS, now, random_token};
 use crate::error::{Error, Result};
 use crate::mail::Mail;
-
-const HOUR_MS: i64 = 1000 * 60 * 60;
 
 /// What a link does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -45,7 +43,7 @@ impl LinkKind {
 	/// How long it works.
 	pub fn duration_ms(self) -> i64 {
 		match self {
-			Self::Invite => 7 * 24 * HOUR_MS,
+			Self::Invite => 7 * DAY_MS,
 			Self::Reset => HOUR_MS,
 			Self::LoginAs => HOUR_MS / 6,
 		}
@@ -164,25 +162,7 @@ pub fn login_as_session(
 	user_id: i64,
 	by: i64,
 ) -> Result<Session> {
-	let session = Session {
-		token: random_token(),
-		user_id,
-		expires_at: now() + LOGIN_AS_MS,
-		impersonated_by: Some(by),
-	};
-	conn.execute(
-		"INSERT INTO sessions
-		(hash, user_id, created_at, expires_at, impersonated_by)
-		VALUES (?1, ?2, ?3, ?4, ?5)",
-		params![
-			token_hash(&session.token),
-			user_id,
-			now(),
-			session.expires_at,
-			by
-		],
-	)?;
-	Ok(session)
+	super::insert_session(conn, user_id, LOGIN_AS_MS, false, Some(by))
 }
 
 /// The full url of a link, after `serve --public-url`.

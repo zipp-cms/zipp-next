@@ -2,9 +2,8 @@ use std::os::unix::fs::MetadataExt;
 
 use super::*;
 use crate::auth::add_user;
-use crate::db::Db;
+use crate::db::{DAY_MS as DAY, Db};
 
-const DAY: i64 = 86_400_000;
 // 2026-11-01T08:00:00
 const NOW: i64 = 1_793_520_000_000;
 

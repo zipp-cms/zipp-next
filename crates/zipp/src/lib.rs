@@ -77,6 +77,18 @@ pub fn page_url(urls: &SiteUrls, site: &str, uri: &str) -> Option<String> {
 	Some(format!("{base}/{uri}"))
 }
 
+/// The origin of a url, `https://example.ch` of `https://example.ch/de`;
+/// `None` for a relative one or one that doesn't fit into a header.
+pub fn origin(url: &str) -> Option<&str> {
+	let (scheme, rest) = url.split_once("://")?;
+	let host = rest.split('/').next()?;
+	let plain = |c: char| c.is_ascii_alphanumeric() || ".-:*[]".contains(c);
+	let fits = matches!(scheme, "http" | "https")
+		&& !host.is_empty()
+		&& host.chars().all(plain);
+	fits.then(|| &url[..scheme.len() + 3 + host.len()])
+}
+
 /// The `migrations/` directory of the calling crate. Debug builds read it
 /// from disk, release builds contain it.
 #[macro_export]

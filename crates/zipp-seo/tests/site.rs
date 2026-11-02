@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 use zipp::db::Db;
+use zipp::drafts::{SiteDoc, put_draft};
 use zipp::entries::{EntryInput, save};
 use zipp::error::Error;
 use zipp::graphql::{SiteUrls, build, ext};
@@ -33,7 +34,8 @@ fn schema() -> Schema {
 		.site("en", "English", "en")
 		.section(Section::channel("events", ["event"]).uri("events/{slug}"))
 		.section(
-			Section::structure("pages", ["page"]).uri("{parent.uri}/{slug}"),
+			Section::structure("pages", ["page", "landing"])
+				.uri("{parent.uri}/{slug}"),
 		)
 		.entry(
 			"event",
@@ -41,6 +43,7 @@ fn schema() -> Schema {
 			[Field::markdown("notes"), Field::images("image").max(1)],
 		)
 		.entry("page", "Page", [Field::text("intro"), seo_field("seo")])
+		.entry("landing", "Landing page", [Field::text("headline")])
 		.plugin(
 			Seo::new()
 				.section(
@@ -49,7 +52,11 @@ fn schema() -> Schema {
 						.title_pattern("{title} – {sectionName} | {siteName}")
 						.description_from("notes"),
 				)
-				.entry_type("page", SeoDefaults::new().title_from("intro")),
+				.entry_type("page", SeoDefaults::new().title_from("intro"))
+				.entry_type(
+					"landing",
+					SeoDefaults::new().title_from("headline"),
+				),
 		)
 }
 
@@ -225,6 +232,27 @@ async fn defaults_for_the_studio() {
 		.await
 		.unwrap();
 	assert_eq!(defaults["title"], "Unser Team");
+
+	// a draft shows with its own type, which takes the title elsewhere
+	{
+		let conn = ts.state.db.conn();
+		let draft = SiteDoc {
+			ty: "landing".into(),
+			title: "Team".into(),
+			slug: "team".into(),
+			published: true,
+			fields: json!({ "headline": "Willkommen" }),
+			dates: Default::default(),
+		};
+		put_draft(&conn, &ts.state.schema, id, "de", draft, None, None)
+			.unwrap();
+	}
+	let defaults = ts
+		.admin()
+		.call(&DefaultsReq { id, site: None })
+		.await
+		.unwrap();
+	assert_eq!(defaults["title"], "Willkommen");
 
 	let wrong = DefaultsReq {
 		id,

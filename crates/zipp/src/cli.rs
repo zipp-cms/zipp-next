@@ -270,11 +270,7 @@ pub(super) fn add_user(
 	email: &str,
 	role: Option<&str>,
 ) -> Result<(), String> {
-	if let Some(r) = role
-		&& schema.get_role(r).is_none()
-	{
-		return Err(format!("unknown role {r}"));
-	}
+	crate::users::check_role(schema, role).map_err(|e| e.to_string())?;
 	print!("Password: ");
 	io::stdout().flush().ok();
 	let mut password = String::new();
@@ -328,13 +324,7 @@ pub(super) fn import_craft(
 	let files = assets::files_dir(files).map_err(|e| e.to_string())?;
 	let db = Db::open(db_path).map_err(|e| e.to_string())?;
 	let migrations = migrations.load()?;
-	if !migrate::unmigrated(&migrations, schema)?.is_empty() {
-		return Err("The schema changed since the last migration, run \
-			`makemigration` first"
-			.into());
-	}
-	apply::apply_migrations(&db.conn(), &migrations, schema)
-		.map_err(|e| e.to_string())?;
+	apply::up_to_date(&db.conn(), &migrations, schema)?;
 
 	let report = craft::import(&db.conn(), schema, &files, &export, &opts)
 		.map_err(|e| e.to_string())?;

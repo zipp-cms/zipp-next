@@ -11,7 +11,7 @@ use axum::http::request::Parts;
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::AppState;
-use crate::db::{Db, now, random_token, token_hash};
+use crate::db::{DAY_MS, Db, now, random_token, token_hash};
 use crate::error::{Error, Result};
 use crate::schema::{Access, Role, Schema};
 
@@ -32,9 +32,9 @@ pub use throttle::Throttle;
 /// bcrypt's work, small in tests so they stay fast.
 const COST: u32 = if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST };
 /// How long a session lasts without the studio being used.
-const SESSION_DURATION_MS: i64 = 1000 * 60 * 60 * 24 * 30;
+const SESSION_DURATION_MS: i64 = 30 * DAY_MS;
 /// A session with less left is renewed when the studio opens.
-const RENEW_BELOW_MS: i64 = 1000 * 60 * 60 * 24 * 10;
+const RENEW_BELOW_MS: i64 = 10 * DAY_MS;
 /// A hash to verify against for unknown emails, so they take as long.
 static DUMMY_HASH: OnceLock<String> = OnceLock::new();
 
@@ -301,7 +301,7 @@ pub fn renew_session(conn: &Connection, token: &str) -> Result<Session> {
 		.filter(|s| s.expires_at > now())
 		.ok_or(Error::InvalidSessionToken)?;
 	// logging in as someone ends when it ends, a short session too
-	if s.expires_at - now() < RENEW_BELOW_MS && s.impersonated_by.is_none() {
+	if s.expires_at - now() < RENEW_BELOW_MS {
 		let expires_at = now() + SESSION_DURATION_MS;
 		let n = conn.execute(
 			"UPDATE sessions SET expires_at = ?1 WHERE hash = ?2 AND renews",
@@ -390,30 +390,13 @@ pub async fn login(
 	Ok(user_id)
 }
 
-/// A new session of a user, a login. Ended sessions go.
+/// A new session of a user, a login.
 pub fn new_session(conn: &Connection, user_id: i64) -> Result<Session> {
-	conn.execute("DELETE FROM sessions WHERE expires_at < ?1", [now()])?;
 	conn.execute(
 		"UPDATE users SET last_login_at = ?1 WHERE id = ?2",
 		params![now(), user_id],
 	)?;
-	let session = Session {
-		token: random_token(),
-		user_id,
-		expires_at: now() + SESSION_DURATION_MS,
-		impersonated_by: None,
-	};
-	conn.execute(
-		"INSERT INTO sessions (hash, user_id, created_at, expires_at)
-		VALUES (?1, ?2, ?3, ?4)",
-		params![
-			token_hash(&session.token),
-			user_id,
-			now(),
-			session.expires_at
-		],
-	)?;
-	Ok(session)
+	insert_session(conn, user_id, SESSION_DURATION_MS, true, None)
 }
 
 /// A session of a user for a tool that acts as them, like the coding
@@ -424,21 +407,35 @@ pub fn short_session(
 	user_id: i64,
 	ms: i64,
 ) -> Result<Session> {
+	insert_session(conn, user_id, ms, false, None)
+}
+
+/// Stores a new session that ends in `ms`. Ended sessions go.
+fn insert_session(
+	conn: &Connection,
+	user_id: i64,
+	ms: i64,
+	renews: bool,
+	impersonated_by: Option<i64>,
+) -> Result<Session> {
 	conn.execute("DELETE FROM sessions WHERE expires_at < ?1", [now()])?;
 	let session = Session {
 		token: random_token(),
 		user_id,
 		expires_at: now() + ms,
-		impersonated_by: None,
+		impersonated_by,
 	};
 	conn.execute(
-		"INSERT INTO sessions (hash, user_id, created_at, expires_at, renews)
-		VALUES (?1, ?2, ?3, ?4, 0)",
+		"INSERT INTO sessions
+		(hash, user_id, created_at, expires_at, renews, impersonated_by)
+		VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
 		params![
 			token_hash(&session.token),
 			user_id,
 			now(),
-			session.expires_at
+			session.expires_at,
+			renews,
+			impersonated_by
 		],
 	)?;
 	Ok(session)

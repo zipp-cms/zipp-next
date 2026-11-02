@@ -11,12 +11,12 @@ use zipp::axum::http::{StatusCode, header};
 use zipp::axum::response::{IntoResponse, Response};
 use zipp::axum::routing::get;
 
-use zipp::AppState;
 use zipp::db::iso;
 use zipp::entries::{Entry, list};
 use zipp::error::{Error, Result};
 use zipp::query::Query;
 use zipp::schema::{Schema, Site};
+use zipp::{AppState, origin};
 
 use crate::resolve::{Globals, globals, in_sitemap, section_in_sitemap};
 use crate::{SEO_SETTINGS, Seo};
@@ -55,14 +55,6 @@ pub fn load_globals(
 	Ok(globals(site, &fields(&site.handle)?, &fields(&primary)?))
 }
 
-fn origin(url: &str) -> &str {
-	let after = url.find("://").map_or(0, |i| i + 3);
-	match url[after..].find('/') {
-		Some(i) => &url[..after + i],
-		None => url,
-	}
-}
-
 /// The sites on the frontend's domain, all if none is.
 fn sites_for<'a>(state: &'a AppState, origin_: &str) -> Vec<&'a Site> {
 	let with_url: Vec<&Site> = state
@@ -76,7 +68,8 @@ fn sites_for<'a>(state: &'a AppState, origin_: &str) -> Vec<&'a Site> {
 		.iter()
 		.copied()
 		.filter(|s| {
-			origin(&state.site_urls[&s.handle]) == origin_.trim_end_matches('/')
+			origin(&state.site_urls[&s.handle])
+				== Some(origin_.trim_end_matches('/'))
 		})
 		.collect();
 	if matching.is_empty() {
@@ -141,15 +134,12 @@ pub(crate) fn frontend_of(
 	given: Option<&str>,
 ) -> String {
 	let given = given.map(|o| o.trim_end_matches('/'));
-	let known = given.filter(|o| {
-		(o.starts_with("https://") || o.starts_with("http://"))
-			&& urls.values().any(|u| origin(u) == *o)
-	});
+	let known = given.filter(|o| urls.values().any(|u| origin(u) == Some(*o)));
 	match known {
 		Some(o) => o.to_string(),
 		None => {
 			let url = urls.get(primary).cloned().unwrap_or_default();
-			origin(&url).to_string()
+			origin(&url).unwrap_or_default().to_string()
 		}
 	}
 }

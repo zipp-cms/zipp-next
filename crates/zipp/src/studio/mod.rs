@@ -6,8 +6,8 @@ pub mod api;
 mod api_tests;
 mod routes;
 
+pub(crate) use routes::graphiql;
 pub use routes::{api_routes, routes};
-pub(crate) use routes::{graphiql, origin};
 
 use std::collections::BTreeMap;
 

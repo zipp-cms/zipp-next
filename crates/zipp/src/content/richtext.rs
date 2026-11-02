@@ -89,12 +89,7 @@ pub(crate) fn validate_in(
 	hidden: bool,
 	errors: &mut Vec<FieldError>,
 ) -> Value {
-	let mut err = |message: String| {
-		errors.push(FieldError {
-			path: path.into(),
-			message,
-		})
-	};
+	let mut err = |message: String| errors.push(FieldError::new(path, message));
 	if doc["type"] != "doc" {
 		err("must be a rich text document".into());
 		return Value::Null;

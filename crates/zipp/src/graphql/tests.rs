@@ -1266,7 +1266,7 @@ async fn switched_off_blocks_and_dates() {
 	let s = Arc::new(site());
 	let gql =
 		build(s.clone(), db.clone(), String::new(), SiteUrls::new()).unwrap();
-	let expiry = crate::db::now() + 24 * 60 * 60 * 1000;
+	let expiry = crate::db::now() + crate::db::DAY_MS;
 	{
 		let conn = db.conn();
 		let body = json!({ "body": [

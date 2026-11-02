@@ -10,7 +10,7 @@ use super::*;
 use crate::schema::tests::site;
 use crate::testing::{Client, TestServer};
 
-const DAY: i64 = 1000 * 60 * 60 * 24;
+use crate::db::DAY_MS as DAY;
 
 fn login(email: &str, password: &str) -> LoginReq {
 	LoginReq {

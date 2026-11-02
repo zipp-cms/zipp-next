@@ -8,6 +8,8 @@
 use std::collections::BTreeMap;
 use std::sync::{Mutex, PoisonError};
 
+use crate::db::MINUTE_MS;
+
 /// Wrong passwords of an email from one address before it has to wait.
 pub(super) const MAX_FAILS: u32 = 10;
 /// Of one address, any emails.
@@ -15,7 +17,7 @@ const MAX_PER_ADDRESS: u32 = 50;
 /// Of one email, any addresses.
 const MAX_PER_EMAIL: u32 = 100;
 /// How long a count lasts from the first attempt, then it starts anew.
-pub(super) const FAIL_WINDOW_MS: i64 = 1000 * 60 * 15;
+pub(super) const FAIL_WINDOW_MS: i64 = 15 * MINUTE_MS;
 /// The counts it keeps; when full, attempts that aren't counted yet wait
 /// too, the memory stays small.
 const MAX_ENTRIES: usize = 10_000;

@@ -88,6 +88,7 @@ fn site_is_valid() {
 #[test]
 fn humanizes_handles() {
 	assert_eq!(humanize("eventDate"), "Event date");
+	assert_eq!(humanize("first_name"), "First name");
 	assert_eq!(Field::text("intro").label, "Intro");
 }
 

@@ -40,7 +40,7 @@ pub use field::Field;
 pub use field::FieldKind;
 pub use field::Holds;
 pub use field::LinkKind;
-use field::*;
+pub use field::humanize;
 pub use field::{Column, ColumnKind, Style, VIDEOS};
 
 /// The single of the texts of the frontend, see [`Schema::translations`].
@@ -633,6 +633,12 @@ impl Schema {
 
 	pub fn primary_site(&self) -> &Site {
 		&self.sites[0]
+	}
+
+	/// The handle of the site a request asks for, the primary site's if
+	/// it asks for none.
+	pub fn site_or_primary(&self, site: Option<String>) -> String {
+		site.unwrap_or_else(|| self.primary_site().handle.clone())
 	}
 
 	/// The number of a site, its position from 1 like Craft's site ids;

@@ -23,7 +23,7 @@ use tokio_stream::wrappers::ReceiverStream;
 
 use crate::AppState;
 use crate::auth::{AiAccess, Authed};
-use crate::drafts::{SiteDoc, get_draft, put_draft};
+use crate::drafts::{current, get_draft, put_draft};
 use crate::entries::{EntryInput, get_entry, save, select};
 use crate::error::{Error, Result};
 use crate::query::Query;

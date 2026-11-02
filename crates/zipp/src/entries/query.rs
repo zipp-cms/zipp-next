@@ -25,6 +25,23 @@ pub const MAX_LIMIT: i64 = 1000;
 /// The most ids of a list in a query, `ids=1,2,3`.
 pub const MAX_IDS: usize = 1000;
 
+/// The ids of a list `1,2,3` in the parameter `key`, at most
+/// [`MAX_IDS`]; anything that isn't an id is an error.
+pub fn parse_ids(key: &str, list: &str) -> Result<Vec<i64>, String> {
+	let ids: Vec<i64> = list
+		.split(',')
+		.filter(|s| !s.is_empty())
+		.map(|s| {
+			s.parse()
+				.map_err(|_| format!("{key} must be ids like 1,2,3"))
+		})
+		.collect::<Result<_, _>>()?;
+	if ids.len() > MAX_IDS {
+		return Err(format!("{key} has more than {MAX_IDS} ids"));
+	}
+	Ok(ids)
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Query {
 	pub site: String,
@@ -148,17 +165,6 @@ impl Query {
 			v.parse::<i64>()
 				.map_err(|_| format!("{k} must be a number"))
 		};
-		let ints = |k: &str, v: &str| {
-			let ids: Vec<i64> = v
-				.split(',')
-				.filter(|s| !s.is_empty())
-				.map(|s| int(k, s))
-				.collect::<Result<_, _>>()?;
-			if ids.len() > MAX_IDS {
-				return Err(format!("{k} has more than {MAX_IDS} ids"));
-			}
-			Ok(ids)
-		};
 
 		// type first, filters need it
 		if let Some((_, types)) = params.iter().find(|(k, _)| k == "type") {
@@ -210,14 +216,14 @@ impl Query {
 					match value.as_str() {
 						":notempty:" => f.any = true,
 						":empty:" => f.none = true,
-						v => f.ids = ints(key, v)?,
+						v => f.ids = parse_ids(key, v)?,
 					}
 					q.relations.push(f);
 				}
 				"limit" => q.limit = int(key, value)?.clamp(1, MAX_LIMIT),
 				"offset" => q.offset = int(key, value)?.max(0),
 				"ids" | "notIds" => {
-					let ids = ints(key, value)?;
+					let ids = parse_ids(key, value)?;
 					match key.as_str() {
 						"ids" => q.ids = Some(ids),
 						_ => q.not_ids = ids,

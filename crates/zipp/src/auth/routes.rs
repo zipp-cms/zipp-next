@@ -17,7 +17,7 @@ use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::client::ClientAddr;
 use crate::content::FieldError;
-use crate::db::now;
+use crate::db::{MINUTE_MS, now};
 use crate::error::Error;
 use crate::users::{password_error, user};
 
@@ -79,7 +79,7 @@ async fn logout_route(
 }
 
 /// A reset mail at most every few minutes, the form sends no flood.
-const FORGOT_EVERY_MS: i64 = 1000 * 60 * 2;
+const FORGOT_EVERY_MS: i64 = 2 * MINUTE_MS;
 
 async fn forgot_route(
 	State(state): State<AppState>,
@@ -145,10 +145,7 @@ async fn set_password_route(
 	}
 	// a wrong password keeps the link
 	if let Some(message) = password_error(&req.password) {
-		return Err(Error::Invalid(vec![FieldError {
-			path: "password".into(),
-			message: message.into(),
-		}]));
+		return Err(Error::Invalid(vec![FieldError::new("password", message)]));
 	}
 	let hash = hash_password(req.password).await?;
 	let conn = state.db.conn();

@@ -11,9 +11,7 @@ async fn get_route(
 ) -> ApiResult<GetReq> {
 	let conn = state.db.conn();
 	let draft = get_draft(&conn, req.id)?;
-	let site = req
-		.site
-		.unwrap_or_else(|| state.schema.primary_site().handle.clone());
+	let site = state.schema.site_or_primary(req.site);
 	let mut relations = match &draft {
 		Some(d) => draft_refs(&conn, &state.schema, d, &site)?,
 		None => Default::default(),

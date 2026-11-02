@@ -907,17 +907,19 @@ impl Field {
 	}
 }
 
-/// `eventDate` becomes `Event date`.
-pub(super) fn humanize(handle: &str) -> String {
+/// A label for a handle: `eventDate` becomes `Event date`, `first_name`
+/// `First name`.
+pub fn humanize(handle: &str) -> String {
 	let mut s = String::new();
 	for (i, c) in handle.chars().enumerate() {
-		if i == 0 {
-			s.push(c.to_ascii_uppercase());
-		} else if c.is_ascii_uppercase() {
-			s.push(' ');
-			s.push(c.to_ascii_lowercase());
-		} else {
-			s.push(c);
+		match (i, c) {
+			(0, c) => s.extend(c.to_uppercase()),
+			(_, c) if c.is_uppercase() => {
+				s.push(' ');
+				s.extend(c.to_lowercase());
+			}
+			(_, '_') => s.push(' '),
+			(_, c) => s.push(c),
 		}
 	}
 	s

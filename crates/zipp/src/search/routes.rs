@@ -14,9 +14,7 @@ async fn search_route(
 	Req(req): Req<SearchReq>,
 ) -> ApiResult<SearchReq> {
 	let schema = &state.schema;
-	let site = req
-		.site
-		.unwrap_or_else(|| schema.primary_site().handle.clone());
+	let site = schema.site_or_primary(req.site);
 	let found = search(&state.db.conn(), schema, &auth, &site, &req.q)?;
 	Ok(Json(found))
 }

@@ -640,6 +640,10 @@ async fn downloads_a_folder_as_zip() {
 	let (status, body) = get(&media, &ids).await;
 	assert_eq!(status, StatusCode::OK);
 	assert_eq!(paths(&unpacked(&body)), ["a.png", "top.txt"]);
+	// an id that isn't one is an error, like in a query of entries
+	let bad = format!("/api/assets/zip?ids={},x", a.id);
+	let (status, _) = get(&media, &bad).await;
+	assert_eq!(status, StatusCode::BAD_REQUEST);
 
 	let (status, _) = get(&media, "/api/assets/zip?folder=999").await;
 	assert_eq!(status, StatusCode::NOT_FOUND);

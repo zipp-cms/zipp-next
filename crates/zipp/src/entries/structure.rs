@@ -111,6 +111,72 @@ pub(super) fn uri_for(
 	Ok(section.render_uri(ty, slug, parent_uri.as_deref(), site, fields))
 }
 
+/// The slug and uri of a restored entry in a site: its own, or with
+/// `-2`, `-3`, … when another entry has that uri now.
+pub(crate) fn free_uri(
+	conn: &Connection,
+	section: &Section,
+	ty: &str,
+	slug: &str,
+	parent_id: Option<i64>,
+	site: &str,
+	fields: &Value,
+) -> Result<(String, Option<String>)> {
+	let parent_uri = match parent_id {
+		Some(p) => stored_uri(conn, p, site)?,
+		None => None,
+	};
+	for n in 1.. {
+		let candidate = match n {
+			1 => slug.to_string(),
+			n => format!("{slug}-{n}"),
+		};
+		let uri = section.render_uri(
+			ty,
+			&candidate,
+			parent_uri.as_deref(),
+			site,
+			fields,
+		);
+		match &uri {
+			Some(u) if uri_taken(conn, site, u, None)? => {}
+			_ => return Ok((candidate, uri)),
+		}
+	}
+	unreachable!()
+}
+
+/// Whether an entry other than `except` has the uri in a site.
+pub(super) fn uri_taken(
+	conn: &Connection,
+	site: &str,
+	uri: &str,
+	except: Option<i64>,
+) -> Result<bool> {
+	Ok(conn.query_row(
+		"SELECT EXISTS (SELECT 1 FROM entry_sites
+		WHERE site = ?1 AND uri = ?2 AND entry_id IS NOT ?3)",
+		params![site, uri, except],
+		|r| r.get(0),
+	)?)
+}
+
+/// The position at the end of the entries under a parent (`None`: the
+/// top) of a section; the trash doesn't count, it gets a new position
+/// when it is restored.
+pub(crate) fn next_position(
+	conn: &Connection,
+	section: &str,
+	parent_id: Option<i64>,
+) -> Result<i64> {
+	Ok(conn.query_row(
+		"SELECT IFNULL(MAX(position) + 1, 0) FROM entries
+		WHERE section = ?1 AND parent_id IS ?2 AND deleted_at IS NULL",
+		params![section, parent_id],
+		|r| r.get(0),
+	)?)
+}
+
 /// The uri an entry has in a site.
 fn stored_uri(
 	conn: &Connection,

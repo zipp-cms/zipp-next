@@ -20,19 +20,14 @@ async fn defaults_route(
 	Req(req): Req<DefaultsReq>,
 ) -> ApiResult<DefaultsReq> {
 	let (schema, id) = (&state.schema, req.id);
-	let site = req
-		.site
-		.unwrap_or_else(|| schema.primary_site().handle.clone());
+	let site = schema.site_or_primary(req.site);
 	let site_def = schema
 		.get_site(&site)
 		.ok_or_else(|| Error::Request(format!("unknown site {site}")))?;
 	let conn = state.db.conn();
 	let mut entry = get_entry(&conn, id, &site)?;
-	if let (doc, true) = draft_or_live(&conn, id)?
-		&& let Some(sd) = doc.get(&site)
-	{
-		entry.title = sd.title.clone();
-		entry.fields = sd.fields.clone();
+	if let (doc, true) = draft_or_live(&conn, id)? {
+		entry.show_draft(&doc);
 	}
 	let globals = load_globals(&conn, schema, site_def)?;
 

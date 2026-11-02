@@ -12,13 +12,13 @@ use zipp::axum::response::IntoResponse;
 use zipp::axum::response::sse::{Event, KeepAlive, Sse};
 use zipp::axum::routing::get;
 use zipp::axum::{Json, Router};
-use zipp::db::random_token;
+use zipp::db::{HOUR_MS, random_token};
 use zipp::error::{Error, Result};
 
 use crate::api::*;
 
 /// How long the session of a run lasts at most.
-const RUN_SESSION_MS: i64 = 1000 * 60 * 60 * 2;
+const RUN_SESSION_MS: i64 = 2 * HOUR_MS;
 use crate::{agent, finish, run_file, session_file, system_prompt};
 
 async fn start(

@@ -472,18 +472,5 @@ pub fn index_usage(
 	if known > 0 {
 		return Ok(());
 	}
-	let mut stmt = conn.prepare(
-		"SELECT e.id, s.site, e.type, s.fields FROM entries e
-		JOIN entry_sites s ON s.entry_id = e.id",
-	)?;
-	let rows = stmt
-		.query_map([], |r| {
-			Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get::<_, String>(3)?))
-		})?
-		.collect::<rusqlite::Result<Vec<(i64, String, String, String)>>>()?;
-	for (id, site, ty, fields) in rows {
-		let fields = serde_json::from_str(&fields).unwrap_or_default();
-		crate::entries::reindex(conn, schema, id, &site, &ty, &fields)?;
-	}
-	Ok(())
+	crate::entries::reindex_all(conn, schema)
 }

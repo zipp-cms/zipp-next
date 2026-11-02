@@ -15,7 +15,7 @@ use zipp::axum::response::{IntoResponse, Response};
 use zipp::axum::routing::post;
 use zipp::client::ClientAddr;
 use zipp::content::valid_email;
-use zipp::db::now;
+use zipp::db::{MINUTE_MS, now};
 use zipp::mail::Mail;
 
 use crate::{FORM_SETTINGS, Form, FormFieldKind, Forms};
@@ -26,7 +26,7 @@ const MAX_PER_ADDRESS: usize = 5;
 /// addresses can't send a flood of mails either. It also keeps the
 /// limits small, only what is counted is kept.
 const MAX_PER_FORM: usize = 50;
-const WINDOW_MS: i64 = 1000 * 60 * 10;
+const WINDOW_MS: i64 = 10 * MINUTE_MS;
 
 #[derive(Deserialize)]
 struct SiteParam {
@@ -75,10 +75,9 @@ async fn submit(
 			json!({ "success": false, "message": message }),
 		);
 	};
-	let site = q
-		.site
-		.filter(|s| state.schema.get_site(s).is_some())
-		.unwrap_or_else(|| state.schema.primary_site().handle.clone());
+	let site = state
+		.schema
+		.site_or_primary(q.site.filter(|s| state.schema.get_site(s).is_some()));
 	let settings = match settings(&state, &site, &handle) {
 		Ok(s) => s,
 		Err(e) => return unavailable(&e),

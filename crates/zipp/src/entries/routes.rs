@@ -61,9 +61,7 @@ async fn choices_route(
 	if let Some(t) = types.iter().find(|t| schema.entry_type(t).is_none()) {
 		return Err(Error::Request(format!("unknown entry type {t}")));
 	}
-	let site = req
-		.site
-		.unwrap_or_else(|| schema.primary_site().handle.clone());
+	let site = schema.site_or_primary(req.site);
 
 	// the sections that have one of the types, of those the role sees
 	let sections: Vec<&str> = schema
@@ -83,9 +81,7 @@ async fn get_route(
 	Req(req): Req<GetReq>,
 ) -> ApiResult<GetReq> {
 	let conn = state.db.conn();
-	let site = req
-		.site
-		.unwrap_or_else(|| state.schema.primary_site().handle.clone());
+	let site = state.schema.site_or_primary(req.site);
 
 	let entry = get_entry(&conn, req.id, &site)?;
 	let mut relations = refs(&conn, &[req.id], &site, false)?;

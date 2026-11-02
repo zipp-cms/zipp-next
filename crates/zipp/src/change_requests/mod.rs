@@ -68,16 +68,16 @@ pub fn create(
 	text: &str,
 ) -> Result<ChangeRequest> {
 	if !studio_path(page) {
-		return Err(Error::Invalid(vec![FieldError {
-			path: "page".into(),
-			message: "Not a page of the studio".into(),
-		}]));
+		return Err(Error::Invalid(vec![FieldError::new(
+			"page",
+			"Not a page of the studio",
+		)]));
 	}
 	if text.trim().is_empty() {
-		return Err(Error::Invalid(vec![FieldError {
-			path: "text".into(),
-			message: "Write what you need".into(),
-		}]));
+		return Err(Error::Invalid(vec![FieldError::new(
+			"text",
+			"Write what you need",
+		)]));
 	}
 	conn.execute(
 		"INSERT INTO change_requests (user_id, page, context, text, created_at)

@@ -175,7 +175,7 @@ async fn the_studio_frames_the_sites_and_its_ancestors_frame_it() {
 
 #[test]
 fn origins_of_urls() {
-	use super::origin;
+	use crate::origin;
 	assert_eq!(origin("https://example.ch/de"), Some("https://example.ch"));
 	assert_eq!(
 		origin("http://localhost:5173"),
