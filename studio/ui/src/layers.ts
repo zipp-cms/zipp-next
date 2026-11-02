@@ -6,6 +6,9 @@ const layers: (() => void)[] = [];
 
 function onkeydown(e: KeyboardEvent) {
 	if (e.key !== 'Escape' || !layers.length) return;
+	// a modal dialog (the session ended) is above every layer, the
+	// layers under it stay as they are
+	if (document.querySelector('dialog:modal')) return;
 	e.preventDefault();
 	layers[layers.length - 1]();
 }

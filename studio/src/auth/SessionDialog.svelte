@@ -43,11 +43,15 @@
 	}
 </script>
 
-<!-- Escape doesn't close it, the session is still gone -->
+<!-- Escape doesn't close it, the session is still gone. Chrome lets a
+second Escape through the cancel event, so closedby and a close opens
+it again. -->
 <dialog
 	bind:this={dialog}
 	aria-labelledby="session-ended"
+	closedby="none"
 	oncancel={e => e.preventDefault()}
+	onclose={() => dialog.isConnected && dialog.showModal()}
 >
 	{#if session.impersonatedBy && session.user}
 		<div class="form">

@@ -179,6 +179,10 @@ function svelteView(component: Component<any>, options: Options) {
 			},
 		});
 		const app = mount(component, { target: dom, props });
+		// read only can change later (a conflict, publishing): the field
+		// sends a transaction after setEditable
+		const follow = () => (props.editable = editor.isEditable);
+		editor.on('transaction', follow);
 
 		return {
 			dom,
@@ -188,7 +192,10 @@ function svelteView(component: Component<any>, options: Options) {
 				props.attrs = n.attrs;
 				return true;
 			},
-			destroy: () => unmount(app),
+			destroy: () => {
+				editor.off('transaction', follow);
+				unmount(app);
+			},
 			// the inputs inside belong to the component, not to the text
 			stopEvent: () => true,
 			ignoreMutation: () => true,

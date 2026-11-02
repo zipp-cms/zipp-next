@@ -180,6 +180,7 @@ export class EntryEditor {
 		const sec = schema.sections.find(s => s.handle === section);
 		ed.ty = sec?.types[0] ?? '';
 		ed.fields = defaults(schema, ed.ty);
+		ed.lastSaved = ed.snapshot();
 		if (sec?.kind === 'structure') await ed.loadParents();
 		return ed;
 	}
@@ -313,6 +314,14 @@ export class EntryEditor {
 		return true;
 	}
 
+	/**
+	 * A new entry with content: it has no draft, leaving or closing the
+	 * tab would lose it.
+	 */
+	get unsaved(): boolean {
+		return this.id === null && this.snapshot() !== this.lastSaved;
+	}
+
 	/** Called on every change: the draft is saved a moment later. */
 	changedNow(canEdit: boolean) {
 		const snap = this.snapshot();
@@ -425,6 +434,8 @@ export class EntryEditor {
 					fields: $state.snapshot(this.fields),
 					...$state.snapshot(this.dates),
 				});
+				// saved, the page of the entry may open
+				this.lastSaved = this.snapshot();
 				return entry.id;
 			}
 			// what isn't saved can't be published: the conflict or error shows

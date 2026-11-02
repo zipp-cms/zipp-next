@@ -25,6 +25,7 @@
 	import { setEditing } from '../../core/editing';
 	import { flyout } from '../../core/flyout.svelte';
 	import { session } from '../../core/session.svelte';
+	import { guardLeave } from '../../core/leave';
 	import { componentOf, sectionOf } from '../../core/schema';
 	import ConflictBanner from './ConflictBanner.svelte';
 	import EditHeader from './EditHeader.svelte';
@@ -167,8 +168,25 @@
 			ed.copyFrom(other);
 	}
 
+	// the fields are read only while an action runs: publishing,
+	// discarding and restoring load them new, what is typed meanwhile
+	// would be lost; the field that had the focus gets it back
+	let focused: HTMLElement | null = null;
+	$effect.pre(() => {
+		if (ed.busy) {
+			focused = document.activeElement as HTMLElement | null;
+			return;
+		}
+		const el = focused;
+		focused = null;
+		// after the rich text is editable again, see RichTextField
+		if (el) setTimeout(() => el.isConnected && el.focus());
+	});
+
 	// what was typed last is saved, the next editor waits for it
 	onDestroy(() => ed.flush());
+	// a new entry has no draft: leaving asks first
+	onDestroy(guardLeave(() => ed.unsaved));
 	// the session ended while typing: saved after the new login
 	onDestroy(session.onRenewed(() => ed.retry()));
 
@@ -248,10 +266,11 @@
 							/>
 						</div>
 					{:else}
-						<!-- read only for a role that may only look -->
+						<!-- read only for a role that may only look, and while
+						publishing, discarding or restoring (see focused) -->
 						<!-- a global has no title, the bar names it -->
 						{#if !global}
-							<fieldset disabled={!canEdit}>
+							<fieldset disabled={!canEdit || ed.busy}>
 								<EntryHead
 									bind:title={ed.title}
 									changed={ed.changed}
@@ -296,7 +315,7 @@
 								{/if}
 							</div>
 						{/if}
-						<fieldset disabled={!canEdit}>
+						<fieldset disabled={!canEdit || ed.busy}>
 							<Fields
 								{schema}
 								component={comp}

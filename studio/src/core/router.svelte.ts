@@ -2,6 +2,7 @@ import { Router, type Request, type Route } from 'chuchi';
 import type { Component } from 'svelte';
 import { onSessionLost } from './client';
 import { flyout } from './flyout.svelte';
+import { mayLeave } from './leave';
 import { session, type Session } from './session.svelte';
 import { getSchema, type Schema } from './schema';
 
@@ -275,6 +276,13 @@ export function startRouter(pages: Fallbacks, onfirst: () => void) {
 	// the newest request, an older one doesn't redirect anymore
 	let newest = 0;
 	router.onRoute(async (req, route, routing) => {
+		// unsaved changes stay when the editor wants them: the request
+		// never gets ready, Back gets the page's url again
+		if (!mayLeave()) {
+			if (req.origin === 'pop')
+				router.pushReq(router.currentRequest.get());
+			return;
+		}
 		const mine = ++newest;
 		view.loading++;
 		try {

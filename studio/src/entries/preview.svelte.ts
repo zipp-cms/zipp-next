@@ -77,7 +77,7 @@ export class SitePreview {
 	open(url: string) {
 		if (!this.ofSite(url)) return;
 		this.view = url;
-		if (!this.bridge) return this.load(url);
+		if (!this.bridge || this.stale()) return this.load(url);
 		// to the website only, the url has the token
 		this.frame?.contentWindow?.postMessage(
 			{ type: 'zipp:open', url: this.withToken(url) },
@@ -98,8 +98,12 @@ export class SitePreview {
 	update() {
 		// the first load comes with the token
 		if (!this.token) return;
-		if (Date.now() - this.tokenAt > TOKEN_FOR_MS) return this.newToken();
 		this.load(this.view);
+	}
+
+	/** Whether the token is old: the studio may be open for days. */
+	private stale() {
+		return !!this.token && Date.now() - this.tokenAt > TOKEN_FOR_MS;
 	}
 
 	private newToken() {
@@ -120,6 +124,8 @@ export class SitePreview {
 	 * have no bridge, until it says so.
 	 */
 	private load(url: string) {
+		// a new token first, it loads the page then
+		if (this.stale()) return this.newToken();
 		const src = this.withToken(url);
 		const win = this.frame?.contentWindow;
 		if (!win || !src) return;

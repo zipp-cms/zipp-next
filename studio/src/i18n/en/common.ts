@@ -8,6 +8,7 @@ export default {
 	'common.change': 'Change',
 	'common.choose': 'Choose',
 	'common.close': 'Close',
+	'common.confirmLeave': 'Leave without saving the changes?',
 	'common.copied': 'Copied',
 	'common.copy': 'Copy',
 	'common.create': 'Create',

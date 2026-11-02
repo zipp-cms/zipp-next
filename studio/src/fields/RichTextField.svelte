@@ -37,6 +37,11 @@
 
 	let el: HTMLDivElement;
 	let editor = $state<Editor | null>(null);
+	// the editor's, as state
+	let editable = $state(false);
+	// once editable the toolbar stays, disabled while publishing: the
+	// text doesn't jump
+	let toolbar = $state(false);
 	// the toolbar follows the selection
 	let tick = $state(0);
 	// the content as last sent or received, to not send it back
@@ -77,13 +82,22 @@
 			onTransaction: () => queueMicrotask(() => tick++),
 		});
 		last.changed(trimmed(editor.getJSON()));
+		editable = toolbar = editor.isEditable;
 
 		// read only as long as a fieldset around it is disabled (a
-		// conflict, a role), a fieldset can change after the start
+		// conflict, a role, publishing), a fieldset can change after the
+		// start; without an update, else it would write a draft, and with
+		// a transaction, so the cards in the text follow
 		const readonly = () => !!el.closest('fieldset[disabled]');
-		const watch = new MutationObserver(() =>
-			editor?.setEditable(!readonly()),
-		);
+		const watch = new MutationObserver(() => {
+			if (!editor || editable === !readonly()) return;
+			editable = !readonly();
+			toolbar ||= editable;
+			editor.setEditable(editable, false);
+			editor.view.dispatch(
+				editor.state.tr.setMeta('addToHistory', false),
+			);
+		});
 		for (
 			let f = el.closest('fieldset');
 			f;
@@ -101,13 +115,16 @@
 		const doc = valueOf(values, field) ?? EMPTY;
 		if (!editor || !last.changed(trimmed(doc))) return;
 		editor.commands.setContent($state.snapshot(doc), { emitUpdate: false });
+		// as the editor has it, else its first update would differ from
+		// the value without an edit
+		last.changed(trimmed(editor.getJSON()));
 	});
 
 	onDestroy(() => editor?.destroy());
 </script>
 
-<div class="rich" class:readonly={editor && !editor.isEditable}>
-	{#if editor?.isEditable}
+<div class="rich" class:readonly={editor && !editable}>
+	{#if editor && toolbar}
 		<Toolbar {editor} {tick} {opts} {blockTypes} {schema} {refs} />
 	{/if}
 	<div class="editor" bind:this={el}><SortLine sortable={sort} /></div>

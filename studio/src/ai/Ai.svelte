@@ -83,8 +83,8 @@
 		if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) send(e);
 	}
 
-	// leaving the page stops the answer
-	onDestroy(() => chat.stop());
+	// leaving the page stops the answer, what came is kept
+	onDestroy(() => chat.stop(preview.view));
 </script>
 
 <div class="split" style:--chat="{width}px">

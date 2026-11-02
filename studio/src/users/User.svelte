@@ -11,7 +11,7 @@
 </script>
 
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import type { Schema } from '../core/schema';
 	import type { Account } from './api';
 	import { displayName } from './api';
@@ -21,6 +21,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
 	import { go } from '../core/router.svelte';
+	import { guardLeave } from '../core/leave';
 	import { isAdmin, roleNameOf } from '../core/access';
 	import { time } from '../core/format';
 	import { browserLang, LANGUAGES, t, type Lang } from '../i18n/index.svelte';
@@ -40,6 +41,8 @@
 		untrack(() => account),
 		untrack(() => schema.roles[0]?.handle ?? null),
 	);
+	// leaving the page and closing the tab ask while it isn't saved
+	onDestroy(guardLeave(() => form.changed));
 	const admin = $derived(isAdmin(schema));
 	const isNew = $derived(form.account === null);
 	const title = $derived(

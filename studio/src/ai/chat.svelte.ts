@@ -95,6 +95,7 @@ export class Chat {
 			{ kind: 'user', text } as AiMessage,
 		];
 		const actions: AiAction[] = [];
+		this.turn = { sent, from: this.lines.length };
 		const added = await aiChat(
 			model,
 			sent,
@@ -116,6 +117,7 @@ export class Chat {
 			},
 			this.abort.signal,
 		);
+		this.turn = null;
 		this.messages = [...sent, ...added];
 		// the AI opens a page where the change shows, else this one reloads
 		const nav = actions.findLast(a => a.navigate && a.url);
@@ -173,9 +175,24 @@ export class Chat {
 
 	/** Leaving the page: the stream stops. */
 	private abort = new AbortController();
+	/** the model's answer that is coming: what was sent, its first line */
+	private turn: { sent: AiMessage[]; from: number } | null = null;
 
-	stop() {
+	/**
+	 * Leaving the page: the stream stops, the answer so far is kept; the
+	 * model gets it with the next message. The agent keeps its own.
+	 */
+	stop(view: string) {
 		this.abort.abort();
+		if (!this.busy) return;
+		const text = this.lines
+			.slice(this.turn?.from ?? this.lines.length)
+			.flatMap(l => (l.who === 'ai' ? [l.text] : []))
+			.join('\n\n');
+		// without an answer the question stays only in the log
+		if (this.turn && text)
+			this.messages = [...this.turn.sent, { kind: 'assistant', text }];
+		this.save(view);
 	}
 
 	clear() {

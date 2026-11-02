@@ -10,6 +10,7 @@ export default {
 	'common.change': 'Ändern',
 	'common.choose': 'Auswählen',
 	'common.close': 'Schliessen',
+	'common.confirmLeave': 'Verlassen, ohne die Änderungen zu speichern?',
 	'common.copied': 'Kopiert',
 	'common.copy': 'Kopieren',
 	'common.create': 'Erstellen',

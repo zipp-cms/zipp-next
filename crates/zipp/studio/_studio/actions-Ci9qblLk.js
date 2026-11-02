@@ -1,0 +1,1 @@
+import{z as c,w as o,b1 as i,aG as d,b2 as b}from"./index-CPNw9lHo.js";function u(e,n,f){c(()=>{var r=o(()=>n(e,f==null?void 0:f())||{});if(f&&(r!=null&&r.update)){var a=!1,t={};i(()=>{var s=f();d(s),a&&b(t,s)&&(t=s,r.update(s))}),a=!0}if(r!=null&&r.destroy)return()=>r.destroy()})}export{u as a};

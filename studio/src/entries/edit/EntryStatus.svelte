@@ -41,10 +41,11 @@
 	const waiting = $derived(dateState(ed.dates));
 </script>
 
-<!-- read only for a role that may only look -->
+<!-- read only for a role that may only look, and while publishing,
+discarding or restoring: what is typed then would be lost -->
 <div class="card status" class:compact>
 	<div class="part">
-		<fieldset class="inline" disabled={!may.edit}>
+		<fieldset class="inline" disabled={!may.edit || ed.busy}>
 			<Switch bind:checked={ed.published} disabled={!may.publish}>
 				<span class="published">
 					{#if ed.changed.has('published')}<span
@@ -77,7 +78,7 @@
 
 	<!-- in every site, like Craft's -->
 	{#if !single}
-		<fieldset class="part" disabled={!may.edit}>
+		<fieldset class="part" disabled={!may.edit || ed.busy}>
 			<label class="date">
 				<span>
 					{#if ed.changed.has('postDate')}<span
@@ -110,7 +111,7 @@
 		</fieldset>
 	{/if}
 
-	<fieldset class="part" disabled={!may.edit}>
+	<fieldset class="part" disabled={!may.edit || ed.busy}>
 		<label>
 			<span>
 				{#if ed.changed.has('type')}<span

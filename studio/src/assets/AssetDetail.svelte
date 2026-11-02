@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import {
 		ASSET_FIELDS,
 		assetUrl,
@@ -17,6 +17,7 @@
 	import { AssetForm } from './assetForm.svelte';
 	import Flyout from 'zipp-ui/Flyout.svelte';
 	import { closeFlyout } from '../core/flyout.svelte';
+	import { guardLeave, mayLeave as mayLeavePage } from '../core/leave';
 	import { fileSize, time } from '../core/format';
 	import { confirmDelete, copyUrl as copyAssetUrl } from './actions';
 	import Icon from 'zipp-ui/Icon.svelte';
@@ -72,6 +73,9 @@
 
 	/** Whether the changes may go: none, or the editor says so. */
 	const mayLeave = () => !form.dirty || confirm(t('assets.confirmDiscard'));
+
+	// leaving the page (a link, Back) and closing the tab ask too
+	onDestroy(guardLeave(() => form.dirty));
 
 	function cancel() {
 		if (mayLeave()) onclose();
@@ -265,7 +269,8 @@
 								<a
 									href={entryPath(u.section, u.id)}
 									onclick={e => {
-										if (mayLeave()) closeFlyout();
+										// asks once, the page then doesn't
+										if (mayLeavePage()) closeFlyout();
 										else e.preventDefault();
 									}}
 								>

@@ -38,6 +38,7 @@ export class UserForm extends Busy {
 		super();
 		this.reset(account);
 		if (!account) this.role = role;
+		this.initial = this.snapshot();
 	}
 
 	/** Whether it is the account of who is logged in. */

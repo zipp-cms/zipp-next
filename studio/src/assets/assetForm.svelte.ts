@@ -113,7 +113,7 @@ export class AssetForm extends Busy {
 
 	/**
 	 * Another file; the title, alt text and asset fields stay, the rest
-	 * starts new.
+	 * starts new. What was typed and not saved stays unsaved.
 	 */
 	replace(file: File) {
 		return this.run(async () => {
@@ -123,7 +123,6 @@ export class AssetForm extends Busy {
 			this.title = title;
 			this.alt = alt;
 			this.values = values;
-			this.initial = this.form();
 		});
 	}
 
