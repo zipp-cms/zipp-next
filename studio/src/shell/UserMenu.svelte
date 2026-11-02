@@ -4,6 +4,7 @@
 	import { session } from '../core/session.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { displayName } from '../users/api';
+	import Avatar from '../users/Avatar.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/** Who is logged in, with the role, and the logout. */
@@ -15,7 +16,7 @@
 
 <div class="me">
 	<a href="/admin/users/{session.user?.id}" title={t('common.yourAccount')}>
-		<span class="avatar">{name[0].toUpperCase()}</span>
+		{#if session.user}<Avatar user={session.user} small />{/if}
 		<span class="who">
 			<strong class="truncate">{name}</strong>
 			<small>{roleName(schema)}</small>
@@ -52,19 +53,6 @@
 		a:hover {
 			background: var(--hover);
 		}
-	}
-
-	.avatar {
-		display: grid;
-		place-items: center;
-		width: 1.75rem;
-		height: 1.75rem;
-		flex-shrink: 0;
-		border-radius: 50%;
-		background: var(--accent-soft);
-		color: var(--accent);
-		font-size: var(--fs-sm);
-		font-weight: 700;
 	}
 
 	.who {

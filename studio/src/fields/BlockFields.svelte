@@ -3,7 +3,7 @@
 	import type { Component, Schema, Values } from '../core/schema';
 	import type { Refs } from '../entries/api';
 	import TabBar from './TabBar.svelte';
-	import { tabShown } from './conditions';
+	import { Tabs } from './tabs.svelte';
 	import Fields from './Fields.svelte';
 	import { lastTab, rememberTab } from './opened';
 
@@ -32,15 +32,12 @@
 		id?: string | null;
 	} = $props();
 
-	// the tabs whose conditions hold, the first one open
-	const tabs = $derived(
-		(component.tabs ?? []).filter(t => tabShown(component, t, values)),
+	// the tab it showed last in this browser
+	const tabs = new Tabs(
+		() => component,
+		() => values,
+		untrack(() => lastTab(id)),
 	);
-	let tab = $state(untrack(() => lastTab(id)) ?? '');
-	$effect(() => {
-		if (tabs.length && !tabs.some(t => t.name === tab)) tab = tabs[0].name;
-	});
-	const only = $derived(tabs.find(t => t.name === tab)?.fields ?? null);
 
 	// the bar counts by the field's handle, without the block's path
 	const inBlock = (p: string) => p.startsWith(prefix);
@@ -57,14 +54,14 @@
 	);
 </script>
 
-{#if tabs.length}
+{#if tabs.shown.length}
 	<div class="tabs">
 		<TabBar
-			{tabs}
+			tabs={tabs.shown}
 			bind:current={
-				() => tab,
+				() => tabs.current,
 				v => {
-					tab = v;
+					tabs.current = v;
 					rememberTab(id, v);
 				}
 			}
@@ -81,7 +78,7 @@
 	{refs}
 	{prefix}
 	{changed}
-	{only}
+	only={tabs.fields}
 />
 
 <style lang="scss">

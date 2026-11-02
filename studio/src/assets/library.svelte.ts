@@ -1,4 +1,4 @@
-import { SEARCH_DELAY_MS } from 'zipp-ui/SearchInput.svelte';
+import { Latest } from '../core/latest.svelte';
 import { t } from '../i18n/index.svelte';
 import {
 	root,
@@ -27,12 +27,9 @@ export class Library {
 	kind = $state<AssetKind | ''>('');
 	assets = $state<Asset[]>([]);
 	loaded = $state(false);
-	private assetsError = $state('');
-	private foldersError = $state('');
-	error = $derived(this.assetsError || this.foldersError);
-	private wait: ReturnType<typeof setTimeout> | undefined;
-	private asked = 0;
-	private askedFolders = 0;
+	private loadingAssets = new Latest();
+	private loadingFolders = new Latest();
+	error = $derived(this.loadingAssets.error || this.loadingFolders.error);
 
 	/** only images, only files that end so */
 	constructor(
@@ -60,41 +57,33 @@ export class Library {
 	);
 
 	/** The assets of the open folder, of all with a search. */
-	async load() {
-		const n = ++this.asked;
-		try {
-			const assets = await listAssets({
-				search: this.search,
-				folder: this.search ? undefined : this.folder,
-				kind: this.kind || undefined,
-				...this.only,
-			});
-			if (n !== this.asked) return;
-			this.assets = assets;
-			this.loaded = true;
-			this.assetsError = '';
-		} catch (e: any) {
-			if (n === this.asked) this.assetsError = e.message;
-		}
+	load() {
+		return this.loadingAssets.run(this.ask, assets => this.show(assets));
+	}
+
+	private ask = () =>
+		listAssets({
+			search: this.search,
+			folder: this.search ? undefined : this.folder,
+			kind: this.kind || undefined,
+			...this.only,
+		});
+
+	private show(assets: Asset[]) {
+		this.assets = assets;
+		this.loaded = true;
 	}
 
 	/** The folders with their counts. */
-	async loadFolders() {
-		const n = ++this.askedFolders;
-		try {
-			const { folders, top } = await listFolders();
-			if (n !== this.askedFolders) return;
+	loadFolders() {
+		return this.loadingFolders.run(listFolders, ({ folders, top }) => {
 			this.folders = folders;
 			this.top = top;
-			this.foldersError = '';
-		} catch (e: any) {
-			if (n === this.askedFolders) this.foldersError = e.message;
-		}
+		});
 	}
 
 	/** Another folder, the search ends. */
 	select(id: number | null) {
-		clearTimeout(this.wait);
 		this.folder = id;
 		this.search = '';
 		this.load();
@@ -109,7 +98,6 @@ export class Library {
 	/** What was typed, searched a moment after the last key. */
 	type(search: string) {
 		this.search = search;
-		clearTimeout(this.wait);
-		this.wait = setTimeout(() => this.load(), SEARCH_DELAY_MS);
+		this.loadingAssets.later(this.ask, assets => this.show(assets));
 	}
 }

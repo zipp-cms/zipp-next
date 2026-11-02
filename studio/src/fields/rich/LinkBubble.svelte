@@ -5,9 +5,8 @@
 	import type { Link, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
 	import { openAsset, openEntry } from '../../core/flyout.svelte';
-	import LinkEditor from '../link/LinkEditor.svelte';
 	import LinkRow from '../link/LinkRow.svelte';
-	import { BUTTON_LINKS, opensInNewTab } from '../link/link';
+	import RichLinkEditor from './RichLinkEditor.svelte';
 	import { setLink } from './editor';
 	import { t } from '../../i18n/index.svelte';
 
@@ -29,7 +28,8 @@
 	} = $props();
 
 	let editing = $state(false);
-	let draft = $state<Link>({ type: 'url', value: '' });
+	// the link when editing started, the editor changes a copy
+	let start = $state<Link>({ type: 'url', value: '' });
 	let bubble = $state<HTMLElement>();
 
 	// only while the text or the bubble has the focus: a click into
@@ -68,7 +68,7 @@
 		if (!editor.isEditable || !editor.isActive('link')) return null;
 		return editor.getAttributes('link').link ?? null;
 	});
-	const shown = $derived(editing ? draft : focused ? link : null);
+	const shown = $derived(editing ? start : focused ? link : null);
 
 	// under the start of the selection, in the rich text's box
 	const place = $derived.by(() => {
@@ -85,7 +85,7 @@
 	});
 
 	function edit() {
-		draft = $state.snapshot(link) as Link;
+		start = $state.snapshot(link) as Link;
 		editing = true;
 	}
 
@@ -141,15 +141,12 @@
 		{onfocusout}
 	>
 		{#if editing}
-			<LinkEditor
+			<RichLinkEditor
+				{editor}
 				{schema}
 				{refs}
-				link={draft}
-				to={BUTTON_LINKS}
-				newTab={opensInNewTab(schema, draft, true)}
-				onchange={l => (draft = l)}
-				ondone={() => apply($state.snapshot(draft) as Link)}
-				onremove={() => apply({ type: 'url', value: null })}
+				link={start}
+				onclose={() => (editing = false)}
 			/>
 		{:else}
 			<LinkRow

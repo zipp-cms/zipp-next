@@ -8,7 +8,7 @@
 	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
-	import { Sortable, moved } from 'zipp-ui/sortable';
+	import { listSortable } from 'zipp-ui/sortable';
 	import { inserted, isFull, removed } from '../core/list';
 
 	/** Entries in an order, each a chip that opens it. */
@@ -30,11 +30,11 @@
 	const set = (next: number[]) => (values[field.handle] = next);
 
 	let list = $state<HTMLElement>();
-	const sort = new Sortable({
-		container: () => list,
-		depths: () => ids.map(() => 0),
-		onmove: (from, drop) => set(moved(ids, from, drop)),
-	});
+	const sort = listSortable(
+		() => list,
+		() => ids,
+		set,
+	);
 
 	function add(e: EntryRef) {
 		refs[e.id] = e;
@@ -44,7 +44,7 @@
 
 <div class="relation" bind:this={list}>
 	{#each ids as id, i (id)}
-		<div data-sort class="item" class:sort-dragging={sort.dragging === i}>
+		<div data-sort class="item" class:sort-dragging={sort.moving(i)}>
 			<DragHandle
 				sortable={sort}
 				index={i}

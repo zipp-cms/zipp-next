@@ -11,6 +11,14 @@ export function slugify(s: string): string {
 		.replace(/^-+|-+$/g, '');
 }
 
+/** Lower case without accents, for searches: "uber" finds "Über". */
+export function plain(s: string): string {
+	return s
+		.normalize('NFD')
+		.replace(/\p{Diacritic}/gu, '')
+		.toLowerCase();
+}
+
 /** A date and time in the user's language. */
 export function time(ms: number): string {
 	return new Date(ms).toLocaleString(locale());

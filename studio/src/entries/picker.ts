@@ -1,6 +1,7 @@
 import type { Schema, Section } from '../core/schema';
 import type { Choice } from './api';
 import { ancestors } from '../core/tree';
+import { plain } from '../core/format';
 
 /**
  * What the entry picker shows: the sections of the types, a structure as
@@ -90,14 +91,6 @@ export function initiallyClosed(groups: Group[], chosen: number[]) {
 	}
 	for (const id of open) closed.delete(id);
 	return closed;
-}
-
-/** Lower case without accents: "uber" finds "Über". */
-function plain(s: string): string {
-	return s
-		.normalize('NFD')
-		.replace(/\p{Diacritic}/gu, '')
-		.toLowerCase();
 }
 
 /** The rows of all groups whose title or slug has every word of `q`. */

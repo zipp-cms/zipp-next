@@ -7,8 +7,8 @@
 	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
-	import { Sortable, moved } from 'zipp-ui/sortable';
-	import { inserted, removed, replaced } from '../core/list';
+	import { listSortable } from 'zipp-ui/sortable';
+	import { inserted, removed, replaced, rowKeys } from '../core/list';
 	import TableCell from './TableCell.svelte';
 
 	/**
@@ -35,25 +35,20 @@
 	}
 
 	let list = $state<HTMLElement>();
-	const sort = new Sortable({
-		container: () => list,
-		depths: () => rows.map(() => 0),
-		onmove: (from, drop) => set(moved(rows, from, drop)),
-	});
+	const sort = listSortable(
+		() => list,
+		() => rows,
+		set,
+	);
 
 	// rows have no id; a key per row, so a moved or removed row takes
 	// its cells' editors along (an edit makes a new row, it keeps the key)
-	let keys = new WeakMap<Values, number>();
-	let nextKey = 0;
-	function key(row: Values) {
-		if (!keys.has(row)) keys.set(row, nextKey++);
-		return keys.get(row)!;
-	}
+	const { key, keep } = rowKeys<Values>();
 
 	// nothing leaves the row, so an empty row is one
 	function cell(i: number, column: string, value: unknown) {
-		const k = key(rows[i]);
-		const { [column]: _, ...row } = rows[i];
+		const old = rows[i];
+		const { [column]: _, ...row } = old;
 		set(
 			replaced(
 				rows,
@@ -62,7 +57,7 @@
 			),
 		);
 		// the one in the state, a proxy
-		keys.set(rows[i], k);
+		keep(old, rows[i]);
 	}
 </script>
 
@@ -77,7 +72,7 @@
 		</thead>
 		<tbody>
 			{#each rows as row, i (key(row))}
-				<tr data-sort class:sort-dragging={sort.dragging === i}>
+				<tr data-sort class:sort-dragging={sort.moving(i)}>
 					<td class="handle">
 						<DragHandle
 							sortable={sort}

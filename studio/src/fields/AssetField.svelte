@@ -8,7 +8,7 @@
 	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
-	import { Sortable, moved } from 'zipp-ui/sortable';
+	import { listSortable } from 'zipp-ui/sortable';
 	import AssetCard from '../assets/AssetCard.svelte';
 	import { linkItems } from '../assets/actions';
 	import { chosenAssets } from '../assets/chosen.svelte';
@@ -49,12 +49,12 @@
 
 	// cards side by side, files one under the other
 	let list = $state<HTMLElement>();
-	const sort = new Sortable({
-		container: () => list,
-		depths: () => ids.map(() => 0),
-		grid: () => cards,
-		onmove: (from, drop) => set(moved(ids, from, drop)),
-	});
+	const sort = listSortable(
+		() => list,
+		() => ids,
+		set,
+		{ grid: () => cards },
+	);
 
 	function toggle(a: Asset) {
 		const i = ids.indexOf(a.id);
@@ -116,7 +116,7 @@
 	<!-- by the ids of the field: its order, also while loading -->
 	{#each ids as id, i (id)}
 		{@const a = chosen.get(id)}
-		<div data-sort class="item" class:sort-dragging={sort.dragging === i}>
+		<div data-sort class="item" class:sort-dragging={sort.moving(i)}>
 			{#if !cards}{@render handle(i)}{/if}
 			{#if a === null}
 				<div class="chip box gone">

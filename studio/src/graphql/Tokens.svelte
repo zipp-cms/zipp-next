@@ -16,6 +16,7 @@
 	import { go } from '../core/router.svelte';
 	import { date, time } from '../core/format';
 	import { deleteToken, openGraphiql, type GraphqlToken } from './api';
+	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -31,8 +32,6 @@
 
 	let tokens = $state(untrack(() => loaded));
 	const action = new Busy();
-	// the intro around its two code bits
-	const intro = $derived(t('graphql.intro').split(/\s*\{\w+\}\s*/));
 
 	/** The names of some handles, or all. */
 	function names(
@@ -71,16 +70,18 @@
 
 <div class="card">
 	<p class="muted">
-		{intro[0]}
-		<code>Authorization: Bearer …</code>
-		{intro[1]}
-		<code>/api/graphql</code>
-		{intro[2]}
+		<Sentence
+			key="graphql.intro"
+			params={{
+				header: 'Authorization: Bearer …',
+				path: '/api/graphql',
+			}}
+		/>
 		{#if envToken}
-			{@const [a, b] = t('graphql.envToken').split(/\s*\{env\}\s*/)}
-			{a}
-			<code>ZIPP_GRAPHQL_TOKEN</code>
-			{b}
+			<Sentence
+				key="graphql.envToken"
+				params={{ env: 'ZIPP_GRAPHQL_TOKEN' }}
+			/>
 		{/if}
 	</p>
 	<Table

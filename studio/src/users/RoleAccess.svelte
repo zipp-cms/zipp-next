@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
 	import { accessText } from '../core/access';
+	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/** What a role may do, from the code: per section, assets, AI. */
@@ -25,11 +26,12 @@
 		<dt>{t('users.ai')}</dt>
 		<dd>{def.ai ? t('common.yes') : '–'}</dd>
 	</dl>
-	{@const [before, after] = t('users.levels').split('{setup}')}
 	<p class="note">
-		{before}
-		<a href="/admin/setup/sites#roles">{t('users.setup')}</a>
-		{after}
+		<Sentence key="users.levels" params={{ setup: t('users.setup') }}>
+			{#snippet param(p)}
+				<a href="/admin/setup/sites#roles">{p.text}</a>
+			{/snippet}
+		</Sentence>
 	</p>
 {/if}
 

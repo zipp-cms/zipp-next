@@ -14,7 +14,7 @@
 		"./date": "./src/date.ts",
 		"./field": "./src/field.svelte.ts",
 		"./layers": "./src/layers.ts",
-		"./pageLead": "./src/pageLead.ts",
+		"./slots": "./src/slots.ts",
 		"./sortable": "./src/sortable.svelte.ts",
 		"./texts": "./src/texts.svelte.ts",
 		"./vite": "./vite.js",

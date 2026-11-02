@@ -56,6 +56,32 @@
 	/** Whether a range of days ending on `to` is all before `min`. */
 	const before = (to: Date) => !!first && to < first;
 
+	/**
+	 * The months of the shown year or the twelve years around it: picking
+	 * one shows its months or days.
+	 */
+	const options = $derived.by(() => {
+		const y = shown.getFullYear();
+		if (view === 'months')
+			return months.map((label, m) => ({
+				label,
+				on: chosen?.getFullYear() === y && chosen.getMonth() === m,
+				disabled: before(new Date(y, m + 1, 0)),
+				pick: () => show(new Date(y, m, 1), 'days'),
+			}));
+		return Array.from({ length: 12 }, (_, i) => decade + i).map(year => ({
+			label: String(year),
+			on: chosen?.getFullYear() === year,
+			disabled: before(new Date(year, 11, 31)),
+			pick: () => show(new Date(year, shown.getMonth(), 1), 'months'),
+		}));
+	});
+
+	function show(month: Date, next: typeof view) {
+		shown = month;
+		view = next;
+	}
+
 	/** Back or forth a month, a year or twelve years, as the view shows. */
 	function move(by: number) {
 		const [y, m] = [shown.getFullYear(), shown.getMonth()];
@@ -123,39 +149,17 @@
 				{/if}
 			{/each}
 		</div>
-	{:else if view === 'months'}
-		<div class="options">
-			{#each months as name, m (m)}
-				{@const y = shown.getFullYear()}
-				<button
-					type="button"
-					class="option"
-					class:on={chosen?.getFullYear() === y &&
-						chosen.getMonth() === m}
-					disabled={before(new Date(y, m + 1, 0))}
-					onclick={() => {
-						shown = new Date(y, m, 1);
-						view = 'days';
-					}}
-				>
-					{name}
-				</button>
-			{/each}
-		</div>
 	{:else}
 		<div class="options">
-			{#each Array.from({ length: 12 }, (_, i) => decade + i) as y (y)}
+			{#each options as o (o.label)}
 				<button
 					type="button"
 					class="option"
-					class:on={chosen?.getFullYear() === y}
-					disabled={before(new Date(y, 11, 31))}
-					onclick={() => {
-						shown = new Date(y, shown.getMonth(), 1);
-						view = 'months';
-					}}
+					class:on={o.on}
+					disabled={o.disabled}
+					onclick={o.pick}
 				>
-					{y}
+					{o.label}
 				</button>
 			{/each}
 		</div>

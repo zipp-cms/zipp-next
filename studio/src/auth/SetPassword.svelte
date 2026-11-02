@@ -19,8 +19,9 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { session } from '../core/session.svelte';
 	import { setPassword, type LinkInfo } from './api';
-	import { ApiError } from '../core/client';
+	import { Busy } from '../core/busy.svelte';
 	import AuthLayout from './AuthLayout.svelte';
+	import PasswordInput from './PasswordInput.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -36,15 +37,13 @@
 	const invite = $derived(link?.kind === 'invite');
 	let name = $state('');
 	let password = $state('');
-	let showPassword = $state(false);
-	let error = $state('');
-	let busy = $state(false);
+	const action = new Busy();
+	// "At least 8 characters" rather than "Some fields are invalid"
+	const error = $derived(Object.values(action.fields)[0] ?? action.error);
 
-	async function onsubmit(e: SubmitEvent) {
+	function onsubmit(e: SubmitEvent) {
 		e.preventDefault();
-		error = '';
-		busy = true;
-		try {
+		action.run(async () => {
 			const auth = await setPassword(
 				token,
 				password,
@@ -52,13 +51,7 @@
 			);
 			session.use(auth);
 			location.assign('/admin');
-		} catch (e: any) {
-			// "At least 8 characters" rather than "Some fields are invalid"
-			const field = e instanceof ApiError ? e.fields[0] : undefined;
-			error = field?.message ?? e.message;
-		} finally {
-			busy = false;
-		}
+		});
 	}
 </script>
 
@@ -89,30 +82,16 @@
 
 			<label class="stacked">
 				{t('common.password')}
-				<span class="password">
-					<input
-						type={showPassword ? 'text' : 'password'}
-						autocomplete="new-password"
-						placeholder={t('common.passwordPlaceholder')}
-						bind:value={password}
-						required
-					/>
-					<button
-						type="button"
-						class="icon"
-						title={showPassword
-							? t('auth.hidePassword')
-							: t('auth.showPassword')}
-						onclick={() => (showPassword = !showPassword)}
-					>
-						<Icon name={showPassword ? 'hide' : 'view'} />
-					</button>
-				</span>
+				<PasswordInput
+					autocomplete="new-password"
+					placeholder={t('common.passwordPlaceholder')}
+					bind:value={password}
+				/>
 			</label>
 
 			{#if error}<p class="error">{error}</p>{/if}
 
-			<button class="primary submit" disabled={busy}>
+			<button class="primary submit" disabled={action.busy}>
 				{invite ? t('auth.setAndLogIn') : t('auth.saveAndLogIn')}
 				<Icon name="arrow-right" />
 			</button>

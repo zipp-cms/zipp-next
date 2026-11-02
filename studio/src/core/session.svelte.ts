@@ -166,6 +166,17 @@ export class Session {
 		return this.loggedIn;
 	}
 
+	/**
+	 * From the user an admin is logged in as back to the admin's account,
+	 * on that user's page; the studio loads new, the rights differ. The
+	 * login when the admin's session is gone too.
+	 */
+	async backToOwnAccount() {
+		const id = this.user?.id;
+		const ok = await this.endLoginAs();
+		location.assign(ok ? `/admin/users/${id}` : '/admin/login');
+	}
+
 	async logout() {
 		await request('POST', '/auth/logout').catch(() => {});
 		this.invalidate();

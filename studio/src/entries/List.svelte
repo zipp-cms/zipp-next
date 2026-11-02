@@ -36,7 +36,8 @@
 
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import SearchInput, { SEARCH_DELAY_MS } from 'zipp-ui/SearchInput.svelte';
+	import SearchInput from 'zipp-ui/SearchInput.svelte';
+	import { Latest } from '../core/latest.svelte';
 	import SiteBadges from './SiteBadges.svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import { can } from '../core/access';
@@ -87,34 +88,26 @@
 	 * Loads the list again: after a search, a move, a delete. Only the
 	 * last one counts, an older answer would show an old order.
 	 */
-	let loads = 0;
-	async function load() {
-		const n = ++loads;
-		try {
-			const r = await listEntries(
-				listParams(sec.kind, section, site.current, search),
-			);
-			if (n !== loads) return;
-			entries = r.entries;
-			total = r.total;
-			published = r.published;
-			drafts = r.drafts;
-			error = '';
-		} catch (e: any) {
-			if (n === loads) error = e.message;
-		}
+	const loads = new Latest();
+	const ask = () =>
+		listEntries(listParams(sec.kind, section, site.current, search));
+	function show(r: EntryList) {
+		entries = r.entries;
+		total = r.total;
+		published = r.published;
+		drafts = r.drafts;
+		error = '';
 	}
+	const load = () => loads.run(ask, show);
 
 	// the first list came with the page
 	let searched = '';
 	// a moment after the last key, not with every one
 	$effect(() => {
 		if (search === searched) return;
-		const wait = setTimeout(() => {
-			searched = search;
-			load();
-		}, SEARCH_DELAY_MS);
-		return () => clearTimeout(wait);
+		searched = search;
+		loads.later(ask, show);
+		return () => loads.stop();
 	});
 
 	// moving in a structure: dragging up and down, left and right for the
@@ -200,7 +193,7 @@
 	{/snippet}
 </PageTop>
 
-{#if error}<p class="error">{error}</p>{/if}
+{#if loads.error || error}<p class="error">{loads.error || error}</p>{/if}
 
 <div class="card list" bind:this={rows}>
 	<div class="search">

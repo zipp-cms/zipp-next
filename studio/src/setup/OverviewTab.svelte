@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Links from './Links.svelte';
 	import type { Component, Schema } from '../core/schema';
 	import { componentOf } from '../core/schema';
 	import { isAdmin } from '../core/access';
@@ -10,6 +11,7 @@
 		usedIn,
 		visibleEntryTypes,
 		visibleSections,
+		componentLink,
 	} from './setup';
 	import { componentPath, fieldPath, setupPath } from '../core/paths';
 	import { t } from '../i18n/index.svelte';
@@ -119,10 +121,7 @@
 					<a class="field" href={fieldPath(c, h.field.handle)}>
 						<code>{h.field.handle}</code>
 					</a>
-					{#each h.parts as p, i (p.handle)}
-						{i ? ', ' : ''}
-						<a href={componentPath(p)}>{p.name}</a>
-					{/each}
+					<Links links={h.parts.map(componentLink)} />
 					{#each h.parts.filter(p => !seen.includes(p.handle)) as p (p.handle)}
 						{#if holders(schema, p).length}
 							<div class="deeper">
@@ -199,10 +198,7 @@
 			<div class="card">
 				<h2>{t('setup.unusedBlocks')}</h2>
 				<p>
-					{#each unused as b, i (b.handle)}
-						{i ? ', ' : ''}
-						<a href={componentPath(b)}>{b.name}</a>
-					{/each}
+					<Links links={unused.map(componentLink)} />
 				</p>
 			</div>
 		{/if}
@@ -221,14 +217,7 @@
 								{#each added as a (a.name)}
 									<dt class="muted">{a.name}</dt>
 									<dd>
-										{#each a.links as l, i (l.text)}
-											{i ? ', ' : ''}
-											{#if l.href}
-												<a href={l.href}>{l.text}</a>
-											{:else}
-												{l.text}
-											{/if}
-										{/each}
+										<Links links={a.links} />
 									</dd>
 								{/each}
 							</dl>

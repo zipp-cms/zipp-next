@@ -17,6 +17,7 @@
 	import { displayName } from './api';
 	import { UserForm } from './userForm.svelte';
 	import RoleAccess from './RoleAccess.svelte';
+	import Avatar from './Avatar.svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
@@ -95,16 +96,6 @@
 			save();
 		}
 	}
-
-	// of the name's first two words, else the email's first letter
-	const initials = $derived(
-		(form.name.trim()
-			? form.name.trim().split(/\s+/).slice(0, 2)
-			: [form.email || '?']
-		)
-			.map(w => w[0].toUpperCase())
-			.join(''),
-	);
 </script>
 
 <svelte:window {onkeydown} />
@@ -242,7 +233,7 @@
 
 	<aside class="card">
 		<div class="who">
-			<span class="avatar">{initials}</span>
+			<Avatar user={form} />
 			<div class="truncate">
 				<strong class="truncate">
 					{form.name || form.email || t('users.new')}
@@ -377,18 +368,6 @@
 			display: flex;
 			flex-direction: column;
 		}
-	}
-
-	.avatar {
-		display: grid;
-		place-items: center;
-		width: 2.75rem;
-		height: 2.75rem;
-		flex-shrink: 0;
-		border-radius: 50%;
-		background: var(--accent-soft);
-		color: var(--accent);
-		font-weight: 600;
 	}
 
 	dl {

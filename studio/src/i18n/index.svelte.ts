@@ -56,17 +56,42 @@ export function locale(): string {
 	return own.slice(0, 2).toLowerCase() === l ? own : l;
 }
 
-export function t(key: Key, params: Record<string, string | number> = {}) {
+type Params = Record<string, string | number>;
+
+/** The text of `key` in the language, the plural by `params.n`. */
+function raw(key: Key, params: Params): string {
 	const l = lang();
-	let text: Text = texts[l][key] ?? en[key];
-	if (typeof text !== 'string') {
-		const n = Number(params.n);
-		const rule = new Intl.PluralRules(l).select(n);
-		text = rule === 'one' ? text.one : text.other;
-	}
-	return text.replace(/\{(\w+)\}/g, (all, name) =>
+	const text: Text = texts[l][key] ?? en[key];
+	if (typeof text === 'string') return text;
+	const rule = new Intl.PluralRules(l).select(Number(params.n));
+	return rule === 'one' ? text.one : text.other;
+}
+
+export function t(key: Key, params: Params = {}) {
+	return raw(key, params).replace(/\{(\w+)\}/g, (all, name) =>
 		name in params ? String(params[name]) : all,
 	);
+}
+
+/** A part of a text: a param has its `name`, the text between none. */
+export type Part = { text: string; name?: string };
+
+/**
+ * A text in parts, for markup around its params (a link, code), which
+ * `Sentence.svelte` renders.
+ */
+export function tParts(key: Key, params: Params): Part[] {
+	return raw(key, params)
+		.split(/\{(\w+)\}/)
+		.map((text, i) => {
+			// the names are the odd parts of the split
+			if (i % 2 === 0) return { text };
+			const name = text;
+			return name in params
+				? { text: String(params[name]), name }
+				: { text: `{${name}}` };
+		})
+		.filter(p => p.text);
 }
 
 /** The texts of zipp-ui's components in the language, for `ui.texts`. */

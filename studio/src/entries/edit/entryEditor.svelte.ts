@@ -35,6 +35,7 @@ import { site } from '../../core/router.svelte';
 import { changedPaths } from './diff';
 import { clean } from '../../core/values';
 import { slugify } from '../../core/format';
+import { guardUnload } from '../../core/leave';
 import { depths } from '../../core/tree';
 import { t } from '../../i18n/index.svelte';
 
@@ -58,11 +59,7 @@ function track(p: Promise<unknown>) {
 
 /** Whether a draft still waits for its save, the tab asks before closing. */
 let waiting = 0;
-if (typeof window !== 'undefined') {
-	window.addEventListener('beforeunload', e => {
-		if (waiting || unsaved.size) e.preventDefault();
-	});
-}
+guardUnload(() => waiting > 0 || unsaved.size > 0);
 
 /**
  * The state of the entry editor and what it does: loading, saving drafts

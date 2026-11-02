@@ -9,6 +9,7 @@
 	import PluginCards from './PluginCards.svelte';
 	import Table from 'zipp-ui/Table.svelte';
 	import { componentOf, sectionOf } from '../core/schema';
+	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -90,13 +91,12 @@
 						</dd>
 					{/if}
 					{#if section.uri_if}
-						{@const [before, after] =
-							t('setup.pagesIf').split('{field}')}
 						<dt>{t('setup.pages')}</dt>
 						<dd>
-							{before}
-							<code>{section.uri_if}</code>
-							{after}
+							<Sentence
+								key="setup.pagesIf"
+								params={{ field: section.uri_if }}
+							/>
 						</dd>
 					{/if}
 					<dt>{t('setup.navigation')}</dt>

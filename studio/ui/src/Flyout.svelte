@@ -3,7 +3,7 @@
 	import type { Snippet } from 'svelte';
 	import Icon from './Icon.svelte';
 	import { layer, trapTab } from './layers';
-	import { provideFlyoutBar, type FlyoutBar } from './flyoutBar';
+	import { flyoutBar, type Slot } from './slots';
 
 	/**
 	 * The panel from the right over the page, for an entry, an asset or
@@ -23,8 +23,8 @@
 		children: Snippet;
 	} = $props();
 
-	const bar: FlyoutBar = $state({ content: null });
-	provideFlyoutBar(bar);
+	const bar: Slot = $state({ content: null });
+	flyoutBar.provide(bar);
 
 	let panel = $state<HTMLElement>();
 	$effect(() => panel?.focus());

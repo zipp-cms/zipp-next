@@ -15,6 +15,7 @@
 	} from './uploads.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
+	import NameInput from './NameInput.svelte';
 	import { root } from './api';
 	import { t } from '../i18n/index.svelte';
 
@@ -85,58 +86,43 @@
 	let editing = $state<{ parent: number | null } | { id: number } | null>(
 		null,
 	);
-	let name = $state('');
 	let error = $state('');
 
 	function startNew(parent: number | null) {
 		if (parent !== null) open = new Set(open).add(parent);
 		editing = { parent };
-		name = '';
 		error = '';
 	}
 
 	function startRename(f: Folder) {
 		editing = { id: f.id };
-		name = f.name;
 		error = '';
 	}
 
-	let saving = false;
-	async function save() {
+	/** The name of the folder being renamed, empty for a new one. */
+	const editedName = $derived.by(() => {
 		const e = editing;
-		if (!e || saving) return;
-		if (!name.trim()) {
-			editing = null;
-			return;
-		}
-		saving = true;
+		return e && 'id' in e
+			? (folders.find(f => f.id === e.id)?.name ?? '')
+			: '';
+	});
+
+	async function save(name: string): Promise<boolean> {
+		const e = editing;
+		if (!e) return true;
 		try {
 			if ('id' in e) {
 				const f = folders.find(f => f.id === e.id)!;
-				if (name.trim() === f.name) {
-					editing = null;
-					return;
-				}
 				await updateFolder(f.id, f.parentId, name);
 			} else {
 				await createFolder(e.parent, name);
 			}
 			editing = null;
 			onchange?.();
+			return true;
 		} catch (err) {
 			error = (err as Error).message;
-		} finally {
-			saving = false;
-		}
-	}
-
-	function onkeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			save();
-		} else if (e.key === 'Escape') {
-			e.preventDefault();
-			editing = null;
+			return false;
 		}
 	}
 
@@ -216,25 +202,18 @@
 					),
 				);
 	}
-
-	function focus(el: HTMLInputElement) {
-		el.focus();
-		el.select();
-	}
 </script>
 
 {#snippet input(depth: number)}
 	<div class="row editing" style:--depth={depth}>
 		<span class="chevron"></span>
 		<Icon name="folder" size={15} />
-		<input
-			class="name-input"
-			bind:value={name}
+		<NameInput
+			value={editedName}
+			label={t('assets.folderName')}
 			placeholder={t('assets.folderName')}
-			aria-label={t('assets.folderName')}
-			use:focus
-			{onkeydown}
-			onblur={save}
+			onsave={save}
+			oncancel={() => (editing = null)}
 		/>
 	</div>
 	{#if error}<p class="error" style:--depth={depth}>{error}</p>{/if}
@@ -458,12 +437,6 @@
 	.editing {
 		gap: 0.5rem;
 		padding-right: 0.25rem;
-
-		.name-input {
-			flex: 1;
-			min-width: 0;
-			padding: 0.25rem 0.375rem;
-		}
 	}
 
 	.error {

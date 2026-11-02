@@ -1,7 +1,7 @@
 export default {
 	'graphql.newToken': 'New token',
 	'graphql.copyNow':
-		"Copy the token now, it doesn't show again. A frontend sends it as {header} ; crelte reads it as {env} .",
+		"Copy the token now, it doesn't show again. A frontend sends it as {header}; crelte reads it as {env}.",
 	'graphql.theToken': 'The token',
 	'graphql.namePlaceholder': 'Website',
 	'graphql.expires': 'Expires',
@@ -19,7 +19,7 @@ export default {
 	'graphql.graphiqlTitle': 'GraphiQL with your session',
 	'graphql.tryIt': 'Try it',
 	'graphql.intro':
-		'Frontends send a token as {header} to {path} . Each reads only its sections and sites.',
+		'Frontends send a token as {header} to {path}. Each reads only its sections and sites.',
 	'graphql.envToken': 'The token of {env} reads everything.',
 	'graphql.token': 'Token',
 	'graphql.lastUsed': 'Last used',

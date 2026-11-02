@@ -8,32 +8,26 @@
 	import { router } from '../core/router.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import AuthLayout from './AuthLayout.svelte';
+	import PasswordInput from './PasswordInput.svelte';
+	import { Busy } from '../core/busy.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/** The login, a link to a new password if it is forgotten. */
 	let email = $state('');
 	let password = $state('');
 	let remember = $state(true);
-	let showPassword = $state(false);
-	let error = $state('');
-	let busy = $state(false);
+	const action = new Busy();
 
-	async function onsubmit(e: SubmitEvent) {
+	function onsubmit(e: SubmitEvent) {
 		e.preventDefault();
-		error = '';
-		busy = true;
-		try {
+		action.run(async () => {
 			await session.login(email, password, remember);
 			// back to the page that wanted the login
 			const url = new URLSearchParams(location.search).get('url');
 			const back =
 				url?.startsWith('/admin') && !url.startsWith('/admin/login');
 			router.open(back ? url! : '/admin', {}, { history: 'replace' });
-		} catch (e: any) {
-			error = e.message;
-		} finally {
-			busy = false;
-		}
+		});
 	}
 </script>
 
@@ -57,24 +51,10 @@
 
 		<label class="stacked">
 			{t('common.password')}
-			<span class="password">
-				<input
-					type={showPassword ? 'text' : 'password'}
-					autocomplete="current-password"
-					bind:value={password}
-					required
-				/>
-				<button
-					type="button"
-					class="icon"
-					title={showPassword
-						? t('auth.hidePassword')
-						: t('auth.showPassword')}
-					onclick={() => (showPassword = !showPassword)}
-				>
-					<Icon name={showPassword ? 'hide' : 'view'} />
-				</button>
-			</span>
+			<PasswordInput
+				autocomplete="current-password"
+				bind:value={password}
+			/>
 		</label>
 
 		<label class="check">
@@ -82,9 +62,9 @@
 			{t('auth.stayLoggedIn')}
 		</label>
 
-		{#if error}<p class="error">{error}</p>{/if}
+		{#if action.error}<p class="error">{action.error}</p>{/if}
 
-		<button class="primary submit" disabled={busy}>
+		<button class="primary submit" disabled={action.busy}>
 			{t('auth.logIn')}
 			<Icon name="arrow-right" />
 		</button>

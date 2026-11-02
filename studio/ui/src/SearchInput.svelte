@@ -1,8 +1,3 @@
-<script module lang="ts">
-	/** How long a list waits after the last key before it searches. */
-	export const SEARCH_DELAY_MS = 250;
-</script>
-
 <script lang="ts">
 	import { ui } from './texts.svelte';
 	import Icon from './Icon.svelte';

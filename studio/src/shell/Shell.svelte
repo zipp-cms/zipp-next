@@ -10,7 +10,7 @@
 <script lang="ts">
 	import { tick, type Snippet } from 'svelte';
 	import { session } from '../core/session.svelte';
-	import { current, go } from '../core/router.svelte';
+	import { current } from '../core/router.svelte';
 	import { endSession } from '../core/router.svelte';
 	import type { Schema } from '../core/schema';
 	import FlyoutHost from './FlyoutHost.svelte';
@@ -19,7 +19,7 @@
 	import LoginAsBar from './LoginAsBar.svelte';
 	import { sideNav } from './sideNav.svelte';
 	import { layer, trapTab } from 'zipp-ui/layers';
-	import { providePageLead } from 'zipp-ui/pageLead';
+	import { pageLead } from 'zipp-ui/slots';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import SearchBox from '../search/SearchBox.svelte';
 	import { searchBox } from '../search/search.svelte';
@@ -37,7 +37,7 @@
 
 	const wide = $derived(current.path === '/admin/ai');
 	const hidden = $derived(wide || sideNav.hidden);
-	providePageLead({ content: menu });
+	pageLead.provide({ content: menu });
 
 	$effect(() => {
 		// a new page closes it
@@ -65,10 +65,7 @@
 
 	async function onlogout() {
 		// logged in as someone: back to the own account
-		if (session.impersonatedBy) {
-			const ok = await session.endLoginAs();
-			return location.assign(ok ? '/admin/users' : '/admin/login');
-		}
+		if (session.impersonatedBy) return session.backToOwnAccount();
 		await session.logout();
 		endSession();
 	}

@@ -1,30 +1,29 @@
 <script lang="ts">
 	import { session } from '../core/session.svelte';
 	import { displayName } from '../users/api';
+	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
 
-	/**
-	 * While an admin is logged in as someone else: who, and the way back
-	 * to the own account. The page reloads, the schema is the role's.
-	 */
-	async function back() {
-		const id = session.user?.id;
-		const ok = await session.endLoginAs();
-		location.assign(ok ? `/admin/users/${id}` : '/admin/login');
-	}
+	// While an admin is logged in as someone else: who, and the way back
+	// to the own account.
 </script>
 
 {#if session.impersonatedBy && session.user}
-	{@const [before, after] = t('shell.loggedInAs', {
+	{@const params = {
+		name: displayName(session.user),
 		by: session.impersonatedBy,
-	}).split('{name}')}
+	}}
 	<div class="login-as" role="status">
 		<span>
-			{before}
-			<strong>{displayName(session.user)}</strong>
-			{after}
+			<Sentence key="shell.loggedInAs" {params}>
+				{#snippet param(p)}
+					{#if p.name === 'name'}<strong>
+							{p.text}
+						</strong>{:else}{p.text}{/if}
+				{/snippet}
+			</Sentence>
 		</span>
-		<button class="light" onclick={back}>
+		<button class="light" onclick={() => session.backToOwnAccount()}>
 			{t('common.backToAccount')}
 		</button>
 	</div>

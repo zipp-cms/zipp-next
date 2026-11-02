@@ -9,7 +9,7 @@
 	import ItemCard from 'zipp-ui/ItemCard.svelte';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
-	import { Sortable, moved } from 'zipp-ui/sortable';
+	import { listSortable } from 'zipp-ui/sortable';
 	import {
 		blockMissing,
 		blockSummary,
@@ -17,7 +17,7 @@
 		withoutIds,
 	} from './blocks.svelte';
 	import { rememberOpen, wasOpen } from './opened';
-	import { inserted, isFull, removed } from '../core/list';
+	import { inserted, isFull, removed, rowKeys } from '../core/list';
 	import { componentOf, defaults } from '../core/schema';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import { t } from '../i18n/index.svelte';
@@ -53,12 +53,7 @@
 	const set = (next: Block[]) => (values[field.handle] = next);
 
 	// blocks without an id are new, they get one on save
-	let keys = new WeakMap<Block, number>();
-	let nextKey = 0;
-	function key(b: Block) {
-		if (!keys.has(b)) keys.set(b, nextKey++);
-		return keys.get(b)!;
-	}
+	const { key } = rowKeys<Block>();
 
 	// as it was in this browser, else a long list starts closed; a new
 	// block opens
@@ -121,11 +116,11 @@
 
 	// dragging a block, or its handle's menu and arrow keys
 	let list = $state<HTMLElement>();
-	const sort = new Sortable({
-		container: () => list,
-		depths: () => blocks.map(() => 0),
-		onmove: (from, drop) => set(moved(blocks, from, drop)),
-	});
+	const sort = listSortable(
+		() => list,
+		() => blocks,
+		set,
+	);
 </script>
 
 <div class="blocks" bind:this={list}>
@@ -146,7 +141,7 @@
 		{#if i > 0 && !full}
 			<BlockMenu {types} inline onpick={type => add(type, i)} />
 		{/if}
-		<div class="block" data-sort class:sort-dragging={sort.dragging === i}>
+		<div class="block" data-sort class:sort-dragging={sort.moving(i)}>
 			{#snippet kindIcon()}<SchemaIcon
 					icon={comp?.icon}
 					size={12}

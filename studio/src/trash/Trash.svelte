@@ -7,6 +7,7 @@
 </script>
 
 <script lang="ts">
+	import Links from '../setup/Links.svelte';
 	import { untrack } from 'svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
@@ -93,10 +94,42 @@
 {#if restored.length}
 	<p class="note restored">
 		{t('trash.restored')}
-		{#each restored as e, i (e.id)}{i ? ', ' : ''}
-			<a href={entryPath(e.section, e.id)}>{e.title}</a>{/each}
+		<Links
+			links={restored.map(e => ({
+				text: e.title,
+				href: entryPath(e.section, e.id),
+			}))}
+		/>
 	</p>
 {/if}
+
+{#snippet deleted(item: { deletedAt: number; deletedBy: string | null })}
+	<td class="muted">
+		{time(item.deletedAt)}
+		{#if item.deletedBy}<span class="by">
+				{t('trash.by', { email: item.deletedBy })}
+			</span>{/if}
+	</td>
+{/snippet}
+
+<!-- restore, delete for good -->
+{#snippet actions(name: string, onrestore: () => void, onpurge: () => void)}
+	<td class="actions">
+		<button class="light" disabled={action.busy} onclick={onrestore}>
+			<Icon name="reset" />
+			{t('common.restore')}
+		</button>
+		<button
+			class="icon danger"
+			aria-label={t('trash.deleteNameForGood', { name })}
+			title={t('trash.deleteForGood')}
+			disabled={action.busy}
+			onclick={onpurge}
+		>
+			<Icon name="delete" />
+		</button>
+	</td>
+{/snippet}
 
 {#if empty}
 	<p class="card empty">{t('trash.isEmpty')}</p>
@@ -126,33 +159,12 @@
 					{/if}
 				</td>
 				<td>{sectionName(schema, e.section)}</td>
-				<td class="muted">
-					{time(e.deletedAt)}
-					{#if e.deletedBy}<span class="by">
-							{t('trash.by', { email: e.deletedBy })}
-						</span>{/if}
-				</td>
-				<td class="actions">
-					<button
-						class="light"
-						disabled={action.busy}
-						onclick={() => restoreEntry(e)}
-					>
-						<Icon name="reset" />
-						{t('common.restore')}
-					</button>
-					<button
-						class="icon danger"
-						aria-label={t('trash.deleteNameForGood', {
-							name: e.title,
-						})}
-						title={t('trash.deleteForGood')}
-						disabled={action.busy}
-						onclick={() => purgeEntry(e)}
-					>
-						<Icon name="delete" />
-					</button>
-				</td>
+				{@render deleted(e)}
+				{@render actions(
+					e.title,
+					() => restoreEntry(e),
+					() => purgeEntry(e),
+				)}
 			{/snippet}
 		</Table>
 	</div>
@@ -178,33 +190,12 @@
 					<span class="title">{a.filename}</span>
 				</td>
 				<td class="muted">{fileSize(a.size)}</td>
-				<td class="muted">
-					{time(a.deletedAt)}
-					{#if a.deletedBy}<span class="by">
-							{t('trash.by', { email: a.deletedBy })}
-						</span>{/if}
-				</td>
-				<td class="actions">
-					<button
-						class="light"
-						disabled={action.busy}
-						onclick={() => run(() => restore('assets', a.id))}
-					>
-						<Icon name="reset" />
-						{t('common.restore')}
-					</button>
-					<button
-						class="icon danger"
-						aria-label={t('trash.deleteNameForGood', {
-							name: a.filename,
-						})}
-						title={t('trash.deleteForGood')}
-						disabled={action.busy}
-						onclick={() => purgeAsset(a)}
-					>
-						<Icon name="delete" />
-					</button>
-				</td>
+				{@render deleted(a)}
+				{@render actions(
+					a.filename,
+					() => run(() => restore('assets', a.id)),
+					() => purgeAsset(a),
+				)}
 			{/snippet}
 		</Table>
 	</div>

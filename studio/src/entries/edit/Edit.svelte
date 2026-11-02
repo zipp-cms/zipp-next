@@ -23,7 +23,8 @@
 	} from '../../core/schema';
 	import { go } from '../../core/router.svelte';
 	import Fields from '../../fields/Fields.svelte';
-	import { pathShown, tabShown } from '../../fields/conditions';
+	import { pathShown } from '../../fields/conditions';
+	import { Tabs } from '../../fields/tabs.svelte';
 	import { can, isAdmin } from '../../core/access';
 	import {
 		entryPath,
@@ -72,9 +73,9 @@
 	const secDef = $derived(sectionOf(schema, ed.sec));
 	const comp = $derived(componentOf(schema, ed.ty));
 	const single = $derived(secDef?.kind === 'single');
-	// the tabs of the entry type whose conditions hold, the first one open
-	const tabs = $derived(
-		(comp?.tabs ?? []).filter(t => tabShown(comp!, t, ed.fields)),
+	const tabs = new Tabs(
+		() => comp,
+		() => ed.fields,
 	);
 	// a hidden field's errors don't show, also not in the tab's count
 	const errors = $derived(
@@ -84,13 +85,7 @@
 			),
 		),
 	);
-	let tab = $state('');
-	$effect(() => {
-		if (tabs.length && !tabs.some(t => t.name === tab)) tab = tabs[0].name;
-	});
-	const shownTab = $derived(tabs.find(t => t.name === tab));
-	const shownFields = $derived(shownTab?.fields ?? null);
-	const card = $derived(!!(comp?.card || shownTab?.card));
+	const card = $derived(!!(comp?.card || tabs.card));
 	// a global: a single without a page, its title is the section's name
 	const global = $derived(
 		single && secDef !== undefined && !hasPages(secDef),
@@ -302,12 +297,12 @@
 								</aside>
 							{/if}
 						{/if}
-						{#if tabs.length || isAdmin(schema)}
+						{#if tabs.shown.length || isAdmin(schema)}
 							<div class="tabs-row">
-								{#if tabs.length}
+								{#if tabs.shown.length}
 									<TabBar
-										{tabs}
-										bind:current={tab}
+										tabs={tabs.shown}
+										bind:current={tabs.current}
 										changed={ed.changed}
 										{errors}
 									/>
@@ -332,7 +327,7 @@
 								{errors}
 								refs={ed.refs}
 								changed={ed.changed}
-								only={shownFields}
+								only={tabs.fields}
 								{card}
 							/>
 						</fieldset>
@@ -346,7 +341,7 @@
 					{comp}
 					{global}
 					{may}
-					{shownFields}
+					shownFields={tabs.fields}
 					{narrow}
 					oncopy={copyFrom}
 					onview={view}

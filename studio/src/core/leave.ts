@@ -24,8 +24,12 @@ export function mayLeave(): boolean {
 	return true;
 }
 
-if (typeof window !== 'undefined') {
+/** Closing the tab asks while `unsaved` says so. */
+export function guardUnload(unsaved: () => boolean) {
+	if (typeof window === 'undefined') return;
 	window.addEventListener('beforeunload', e => {
-		if (anyUnsaved()) e.preventDefault();
+		if (unsaved()) e.preventDefault();
 	});
 }
+
+guardUnload(anyUnsaved);

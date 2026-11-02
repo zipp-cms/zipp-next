@@ -1,10 +1,12 @@
 <script lang="ts">
+	import Links from './Links.svelte';
 	import type { Schema } from '../core/schema';
 	import { componentOf } from '../core/schema';
 	import SearchInput from 'zipp-ui/SearchInput.svelte';
 	import Table from 'zipp-ui/Table.svelte';
-	import { fieldUsage, heldBy, type FieldUse } from './setup';
-	import { componentPath, fieldPath } from '../core/paths';
+	import { fieldUsage, heldBy, type FieldUse, componentLink } from './setup';
+	import { fieldPath } from '../core/paths';
+	import { plain } from '../core/format';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -28,7 +30,7 @@
 	}
 
 	const shown = $derived.by(() => {
-		const q = search.trim().toLowerCase();
+		const q = plain(search.trim());
 		if (!q) return all;
 		return all.filter(u =>
 			[
@@ -36,7 +38,7 @@
 				...u.labels,
 				...u.kinds,
 				...held(u).flatMap(c => [c.handle, c.name]),
-			].some(w => w.toLowerCase().includes(q)),
+			].some(w => plain(w).includes(q)),
 		);
 	});
 </script>
@@ -65,18 +67,15 @@
 			<td>{u.labels.join(', ')}</td>
 			<td>{u.kinds.join('; ')}</td>
 			<td>
-				{#each held(u) as c, i (c.handle)}
-					{i ? ', ' : ''}
-					<a href={componentPath(c)}>{c.name}</a>
-				{/each}
+				<Links links={held(u).map(componentLink)} />
 			</td>
 			<td>
-				{#each u.places as p, i (p.component.handle)}
-					{i ? ', ' : ''}
-					<a href={fieldPath(p.component, u.handle)}>
-						{p.component.name}
-					</a>
-				{/each}
+				<Links
+					links={u.places.map(p => ({
+						text: p.component.name,
+						href: fieldPath(p.component, u.handle),
+					}))}
+				/>
 			</td>
 		{/snippet}
 	</Table>

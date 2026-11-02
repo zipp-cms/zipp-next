@@ -86,3 +86,11 @@ export function loginAsLink(id: number): Promise<UserLink> {
 export function displayName(user: Pick<User, 'name' | 'email'>): string {
 	return user.name || user.email;
 }
+
+/** Of the name's first two words, else the email's first letter. */
+export function initials(user: Pick<User, 'name' | 'email'>): string {
+	const name = user.name.trim();
+	return (name ? name.split(/\s+/).slice(0, 2) : [user.email || '?'])
+		.map(w => w[0].toUpperCase())
+		.join('');
+}

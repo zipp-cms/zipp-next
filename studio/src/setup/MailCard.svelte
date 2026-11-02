@@ -3,6 +3,7 @@
 	import { mailStatus, sendTestMail, type MailStatus } from './api';
 	import { Busy } from '../core/busy.svelte';
 	import { session } from '../core/session.svelte';
+	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -32,13 +33,11 @@
 <div class="card" id="mail">
 	<h2>{t('setup.mail')}</h2>
 	{#if status?.configured}
-		{@const [a, b, c] = t('setup.mailsGoTo').split(/\s*\{\w+\}\s*/)}
 		<p>
-			{a}
-			<code>{status.server}</code>
-			{b}
-			<code>{status.from}</code>
-			{c}
+			<Sentence
+				key="setup.mailsGoTo"
+				params={{ server: status.server ?? '', from: status.from }}
+			/>
 		</p>
 		<button class="light" disabled={action.busy} onclick={test}>
 			{t('setup.sendTest')}
@@ -49,13 +48,11 @@
 			</span>
 		{/if}
 	{:else if status}
-		{@const [a, b, c] = t('setup.noSmtp').split(/\s*\{\w+\}\s*/)}
 		<p class="muted">
-			{a}
-			<code>serve --smtp-url</code>
-			{b}
-			<code>--mail-from</code>
-			{c}
+			<Sentence
+				key="setup.noSmtp"
+				params={{ smtp: 'serve --smtp-url', from: '--mail-from' }}
+			/>
 		</p>
 	{/if}
 	{#if action.error}<p class="error">{action.error}</p>{/if}

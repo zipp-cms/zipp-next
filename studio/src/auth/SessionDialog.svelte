@@ -2,7 +2,8 @@
 	import { session } from '../core/session.svelte';
 	import { endSession } from '../core/router.svelte';
 	import { displayName } from '../users/api';
-	import Icon from 'zipp-ui/Icon.svelte';
+	import PasswordInput from './PasswordInput.svelte';
+	import { Busy } from '../core/busy.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -14,33 +15,22 @@
 	 */
 	let email = $state(session.user?.email ?? '');
 	let password = $state('');
-	let showPassword = $state(false);
-	let error = $state('');
-	let busy = $state(false);
+	const action = new Busy();
 
 	let dialog: HTMLDialogElement;
 	// modal: the page under it can't be used, Tab stays in it
 	$effect(() => dialog.showModal());
 
-	async function onsubmit(e: SubmitEvent) {
+	function onsubmit(e: SubmitEvent) {
 		e.preventDefault();
-		error = '';
-		busy = true;
-		try {
+		action.run(async () => {
 			if (!(await session.renew(email, password)))
 				location.assign('/admin');
-		} catch (e: any) {
-			error = e.message;
-		} finally {
-			busy = false;
-		}
+		});
 	}
 
-	async function back() {
-		busy = true;
-		const ok = await session.endLoginAs();
-		location.assign(ok ? '/admin/users' : '/admin/login');
-	}
+	// the page loads new, it stays busy until then
+	const back = () => action.run(() => session.backToOwnAccount());
 </script>
 
 <!-- Escape doesn't close it, the session is still gone. Chrome lets a
@@ -67,7 +57,7 @@ it again. -->
 				<button type="button" onclick={() => endSession()}>
 					{t('auth.logIn')}
 				</button>
-				<button class="primary" onclick={back} disabled={busy}>
+				<button class="primary" onclick={back} disabled={action.busy}>
 					{t('common.backToAccount')}
 				</button>
 			</div>
@@ -91,35 +81,20 @@ it again. -->
 
 			<label class="stacked">
 				{t('common.password')}
-				<span class="password">
-					<!-- svelte-ignore a11y_autofocus -->
-					<input
-						type={showPassword ? 'text' : 'password'}
-						autocomplete="current-password"
-						bind:value={password}
-						required
-						autofocus
-					/>
-					<button
-						type="button"
-						class="icon"
-						title={showPassword
-							? t('auth.hidePassword')
-							: t('auth.showPassword')}
-						onclick={() => (showPassword = !showPassword)}
-					>
-						<Icon name={showPassword ? 'hide' : 'view'} />
-					</button>
-				</span>
+				<PasswordInput
+					autocomplete="current-password"
+					bind:value={password}
+					autofocus
+				/>
 			</label>
 
-			{#if error}<p class="error">{error}</p>{/if}
+			{#if action.error}<p class="error">{action.error}</p>{/if}
 
 			<div class="actions">
 				<button type="button" onclick={() => endSession()}>
 					{t('common.logOut')}
 				</button>
-				<button class="primary" disabled={busy}>
+				<button class="primary" disabled={action.busy}>
 					{t('auth.logIn')}
 				</button>
 			</div>
@@ -161,24 +136,6 @@ it again. -->
 
 		p {
 			margin: 0;
-		}
-	}
-
-	// the eye inside the input, on its right
-	.password {
-		position: relative;
-		display: block;
-
-		input {
-			width: 100%;
-			padding-right: 2.75rem;
-		}
-
-		button {
-			position: absolute;
-			top: 50%;
-			right: 0.375rem;
-			transform: translateY(-50%);
 		}
 	}
 

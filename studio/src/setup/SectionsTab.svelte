@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Links from './Links.svelte';
 	import { type Schema } from '../core/schema';
 	import { accessOf, accessText } from '../core/access';
 	import { visibleSections } from './setup';
@@ -41,10 +42,12 @@
 			<td><code>{s.handle}</code></td>
 			<td>{s.kind}</td>
 			<td>
-				{#each s.types as type, i (type)}
-					{i ? ', ' : ''}
-					<a href={setupPath('types', type)}>{type}</a>
-				{/each}
+				<Links
+					links={s.types.map(type => ({
+						text: type,
+						href: setupPath('types', type),
+					}))}
+				/>
 			</td>
 			<td>
 				<code>{s.uri ?? '–'}</code>

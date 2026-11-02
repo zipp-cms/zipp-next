@@ -91,23 +91,6 @@
 			font-size: var(--fs-lg);
 		}
 
-		// the eye inside the input, on its right
-		:global(.password) {
-			position: relative;
-			display: block;
-		}
-
-		:global(.password input) {
-			padding-right: 2.75rem;
-		}
-
-		:global(.password button) {
-			position: absolute;
-			top: 50%;
-			right: 0.375rem;
-			transform: translateY(-50%);
-		}
-
 		:global(.check) {
 			font-size: var(--fs-lg);
 		}

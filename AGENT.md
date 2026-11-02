@@ -66,8 +66,9 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   too), `core/` (`client.ts` sends requests and reads
   streams, `schema.ts` the schema's types and lookups, `router` the
   pages, the path and the site, `paths` the paths of the pages, `values`
-  field values (`clean`), `access`, `tree` (depths and parents), `format`, `list`, `busy`, `flyout`,
-  `synced`), `shell/`
+  field values (`clean`), `access`, `tree` (depths and parents),
+  `format`, `list`, `busy`, `latest` (the newest of overlapping loads,
+  searches as you type), `flyout`, `synced`), `shell/`
   (the app with its pages, the sidebar). An area imports from `zipp-ui`,
   `core/` and other areas' `api.ts` and components; `core/` imports no
   area, `zipp-ui` nothing of the studio (plugins bundle it). Tokens and

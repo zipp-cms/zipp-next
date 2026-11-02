@@ -1,5 +1,5 @@
-import { SEARCH_DELAY_MS } from 'zipp-ui/SearchInput.svelte';
 import type { Asset } from '../assets/api';
+import { Latest } from '../core/latest.svelte';
 import { sectionName, type Schema } from '../core/schema';
 import { search, type EntryHit, type Found } from './api';
 import { t } from '../i18n/index.svelte';
@@ -21,18 +21,24 @@ type HitGroup = { name: string; hits: Hit[] };
  */
 export class Search {
 	q = $state('');
-	loading = $state(false);
-	error = $state('');
+	#latest = new Latest();
 	/** the chosen line, an index of `hits` */
 	selected = $state(0);
 	/** entries by section, in the order of their best one, then files */
 	groups = $state.raw<HitGroup[]>([]);
 
 	#schema: Schema;
-	#timer: ReturnType<typeof setTimeout> | undefined;
 
 	constructor(schema: Schema) {
 		this.#schema = schema;
+	}
+
+	get loading(): boolean {
+		return this.#latest.loading;
+	}
+
+	get error(): string {
+		return this.#latest.error;
 	}
 
 	/** The lines of all groups, in their order. */
@@ -43,28 +49,18 @@ export class Search {
 	/** Searches the words in a site after a moment. */
 	type(q: string, site: string) {
 		this.q = q;
-		clearTimeout(this.#timer);
 		if (!q.trim()) {
+			this.#latest.stop();
 			this.groups = [];
-			this.loading = false;
 			return;
 		}
-		this.loading = true;
-		this.#timer = setTimeout(() => this.load(q, site), SEARCH_DELAY_MS);
-	}
-
-	private async load(q: string, site: string) {
-		try {
-			const found = await search(q, site);
-			if (q !== this.q) return;
-			this.groups = group(this.#schema, found);
-			this.error = '';
-			this.selected = 0;
-		} catch (e) {
-			if (q === this.q) this.error = (e as Error).message;
-		} finally {
-			if (q === this.q) this.loading = false;
-		}
+		this.#latest.later(
+			() => search(q, site),
+			found => {
+				this.groups = group(this.#schema, found);
+				this.selected = 0;
+			},
+		);
 	}
 
 	/** Moves the chosen line up or down, around at the ends. */
@@ -74,7 +70,7 @@ export class Search {
 	}
 
 	stop() {
-		clearTimeout(this.#timer);
+		this.#latest.stop();
 	}
 }
 

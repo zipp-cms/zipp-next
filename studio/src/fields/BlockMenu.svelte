@@ -1,10 +1,9 @@
 <script lang="ts">
 	import type { Component } from '../core/schema';
-	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import AddGroup from 'zipp-ui/AddGroup.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Popover from 'zipp-ui/Popover.svelte';
-	import SearchList from 'zipp-ui/SearchList.svelte';
+	import BlockTypeList from './BlockTypeList.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -27,16 +26,10 @@
 	const rest = $derived(inline ? types : types.slice(SHOWN));
 
 	let open = $state(false);
-	let search = $state('');
-
-	const found = $derived(
-		rest.filter(c => c.name.toLowerCase().includes(search.toLowerCase())),
-	);
 
 	function toggle(popover: () => void) {
 		// with a single type there is nothing to choose
 		if (inline && types.length === 1) return onpick(types[0].handle);
-		search = '';
 		popover();
 	}
 
@@ -45,33 +38,6 @@
 		onpick(handle);
 	}
 </script>
-
-{#snippet list()}
-	{#if rest.length > 5}
-		<SearchList
-			items={found}
-			bind:search
-			placeholder={t('fields.searchBlocks')}
-			key={c => c.handle}
-			onpick={c => pick(c.handle)}
-		>
-			{#snippet item(c)}
-				<SchemaIcon icon={c.icon} size={14} />{c.name}
-			{/snippet}
-		</SearchList>
-	{:else}
-		{#each found as c (c.handle)}
-			<button
-				type="button"
-				class="popup-item"
-				onclick={() => pick(c.handle)}
-			>
-				<SchemaIcon icon={c.icon} size={14} />
-				{c.name}
-			</button>
-		{/each}
-	{/if}
-{/snippet}
 
 {#if inline}
 	<div class="inline" class:open>
@@ -91,7 +57,7 @@
 					<Icon name="add" size={14} />
 				</button>
 			{/snippet}
-			{@render list()}
+			<BlockTypeList types={rest} onpick={pick} />
 		</Popover>
 	</div>
 {:else}
@@ -113,7 +79,7 @@
 								<Icon name="chevron-down" size={14} />
 							</button>
 						{/snippet}
-						{@render list()}
+						<BlockTypeList types={rest} onpick={pick} />
 					</Popover>
 				{/if}
 			{/snippet}

@@ -19,3 +19,17 @@ export function replaced<T>(list: T[], i: number, item: T): T[] {
 export function isFull(count: number, max: number | null): boolean {
 	return max !== null && count >= max;
 }
+
+/**
+ * Keys for `{#each}` of items without an id: an item keeps its key while
+ * it moves, `keep` gives a changed copy the key of the old one.
+ */
+export function rowKeys<T extends object>() {
+	const keys = new WeakMap<T, number>();
+	let next = 0;
+	const key = (item: T) => {
+		if (!keys.has(item)) keys.set(item, next++);
+		return keys.get(item)!;
+	};
+	return { key, keep: (old: T, now: T) => keys.set(now, key(old)) };
+}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Links from './Links.svelte';
 	import type { Schema } from '../core/schema';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import { gqlType, usedIn, visibleEntryTypes } from './setup';
@@ -42,12 +43,7 @@
 			<td><code>{c.handle}</code></td>
 			<td>{c.fields.length}</td>
 			<td>
-				{#each usedIn(schema, c) as u, i (u.text)}
-					{i ? ', ' : ''}
-					<a href={u.href}>{u.text}</a>
-				{:else}
-					–
-				{/each}
+				<Links links={usedIn(schema, c)} empty="–" />
 			</td>
 			<td><code>{gqlType(c)}</code></td>
 		{/snippet}

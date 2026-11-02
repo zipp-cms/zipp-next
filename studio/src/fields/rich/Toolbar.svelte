@@ -1,18 +1,16 @@
 <script lang="ts">
 	import type { Editor } from '@tiptap/core';
 	import type { Component, Link, Schema } from '../../core/schema';
-	import SchemaIcon from '../../core/SchemaIcon.svelte';
 	import type { Refs } from '../../entries/api';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Popover from 'zipp-ui/Popover.svelte';
-	import LinkEditor from '../link/LinkEditor.svelte';
-	import { BUTTON_LINKS, opensInNewTab } from '../link/link';
+	import BlockTypeList from '../BlockTypeList.svelte';
+	import RichLinkEditor from './RichLinkEditor.svelte';
 	import {
 		hasStyle,
 		insertBlock,
 		insertButton,
 		setFormat,
-		setLink,
 		toggleStyle,
 		type RichOptions,
 	} from './editor';
@@ -43,6 +41,38 @@
 
 	const chain = () => editor.chain().focus();
 
+	// the marks and lists to switch on and off, by their node or mark name
+	const toggles = $derived([
+		{
+			name: 'bold',
+			icon: 'bold',
+			title: t('fields.bold'),
+			run: () => chain().toggleBold().run(),
+		},
+		{
+			name: 'italic',
+			icon: 'italic',
+			title: t('fields.italic'),
+			run: () => chain().toggleItalic().run(),
+		},
+		...(opts.lists
+			? [
+					{
+						name: 'bulletList',
+						icon: 'channel',
+						title: t('fields.list'),
+						run: () => chain().toggleBulletList().run(),
+					},
+					{
+						name: 'orderedList',
+						icon: 'numbered',
+						title: t('fields.numberedList'),
+						run: () => chain().toggleOrderedList().run(),
+					},
+				]
+			: []),
+	]);
+
 	// the link of the selection, without a label
 	let linking = $state(false);
 	let link = $state<Link>({ type: 'url', value: '' });
@@ -51,11 +81,6 @@
 		const current = editor.getAttributes('link').link;
 		link = current ?? { type: 'url', value: '' };
 		toggle();
-	}
-
-	function applyLink(to: Link) {
-		linking = false;
-		setLink(editor, to);
 	}
 
 	// the styles of the selection; the button shows the first
@@ -129,44 +154,17 @@
 		</Popover>
 		<span class="toolbar-sep"></span>
 	{/if}
-	<button
-		type="button"
-		class:on={active('bold')}
-		aria-pressed={active('bold')}
-		title={t('fields.bold')}
-		onclick={() => chain().toggleBold().run()}
-	>
-		<Icon name="bold" size={16} />
-	</button>
-	<button
-		type="button"
-		class:on={active('italic')}
-		aria-pressed={active('italic')}
-		title={t('fields.italic')}
-		onclick={() => chain().toggleItalic().run()}
-	>
-		<Icon name="italic" size={16} />
-	</button>
-	{#if opts.lists}
+	{#each toggles as b (b.name)}
 		<button
 			type="button"
-			class:on={active('bulletList')}
-			aria-pressed={active('bulletList')}
-			title={t('fields.list')}
-			onclick={() => chain().toggleBulletList().run()}
+			class:on={active(b.name)}
+			aria-pressed={active(b.name)}
+			title={b.title}
+			onclick={b.run}
 		>
-			<Icon name="channel" size={16} />
+			<Icon name={b.icon} size={16} />
 		</button>
-		<button
-			type="button"
-			class:on={active('orderedList')}
-			aria-pressed={active('orderedList')}
-			title={t('fields.numberedList')}
-			onclick={() => chain().toggleOrderedList().run()}
-		>
-			<Icon name="numbered" size={16} />
-		</button>
-	{/if}
+	{/each}
 	{#if opts.links}
 		<Popover bind:open={linking} width="34rem" label={t('fields.link')}>
 			{#snippet trigger({ toggle })}
@@ -180,15 +178,12 @@
 				</button>
 			{/snippet}
 			<div class="link">
-				<LinkEditor
+				<RichLinkEditor
+					{editor}
 					{schema}
 					{refs}
 					{link}
-					to={BUTTON_LINKS}
-					newTab={opensInNewTab(schema, link, true)}
-					onchange={l => (link = l)}
-					ondone={() => applyLink($state.snapshot(link))}
-					onremove={() => applyLink({ type: 'url', value: null })}
+					onclose={() => (linking = false)}
 				/>
 			</div>
 		</Popover>
@@ -216,17 +211,10 @@
 					{t('fields.button')}
 				</button>
 			{/if}
-			{#each blockTypes as b (b.handle)}
-				<button
-					type="button"
-					class="popup-item"
-					onclick={() =>
-						insert(() => insertBlock(editor, schema, b.handle))}
-				>
-					<SchemaIcon icon={b.icon} size={14} />
-					{b.name}
-				</button>
-			{/each}
+			<BlockTypeList
+				types={blockTypes}
+				onpick={h => insert(() => insertBlock(editor, schema, h))}
+			/>
 		</Popover>
 	{/if}
 </div>

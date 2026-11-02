@@ -8,6 +8,7 @@
 	import type { Schema } from '../core/schema';
 	import { go } from '../core/router.svelte';
 	import { TokenForm } from './tokenForm.svelte';
+	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -51,15 +52,16 @@
 {/if}
 
 {#if form.created}
-	{@const [a, b, c] = t('graphql.copyNow').split(/\s*\{\w+\}\s*/)}
 	<div class="card">
 		<h2>{form.name}</h2>
 		<p>
-			{a}
-			<code>Authorization: Bearer …</code>
-			{b}
-			<code>ENDPOINT_TOKEN</code>
-			{c}
+			<Sentence
+				key="graphql.copyNow"
+				params={{
+					header: 'Authorization: Bearer …',
+					env: 'ENDPOINT_TOKEN',
+				}}
+			/>
 		</p>
 		<div class="token">
 			<input

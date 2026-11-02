@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Asset } from './api';
 	import AssetCard from './AssetCard.svelte';
+	import NameInput from './NameInput.svelte';
 	import type { MenuItem } from 'zipp-ui/Menu.svelte';
 	import { ASSETS_DRAG } from './uploads.svelte';
 	import { t } from '../i18n/index.svelte';
@@ -37,42 +38,6 @@
 	}
 
 	let renaming = $state<number | null>(null);
-	let name = $state('');
-
-	function rename(a: Asset) {
-		renaming = a.id;
-		name = a.filename;
-	}
-
-	let saving = false;
-	async function save(a: Asset) {
-		if (saving || renaming !== a.id) return;
-		const n = name.trim();
-		if (!n || n === a.filename || !onrename) {
-			renaming = null;
-			return;
-		}
-		saving = true;
-		if (await onrename(a, n)) renaming = null;
-		saving = false;
-	}
-
-	function onkeydown(e: KeyboardEvent, a: Asset) {
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			save(a);
-		} else if (e.key === 'Escape') {
-			e.preventDefault();
-			renaming = null;
-		}
-	}
-
-	/** The name without its extension selected, like a file manager. */
-	function focus(el: HTMLInputElement) {
-		el.focus();
-		const dot = el.value.lastIndexOf('.');
-		el.setSelectionRange(0, dot > 0 ? dot : el.value.length);
-	}
 </script>
 
 <div class="grid">
@@ -83,17 +48,21 @@
 			selected={selected.includes(a.id)}
 			{draggable}
 			ondragstart={e => draggable && ondragstart(e, a)}
-			menu={menu?.(a, () => rename(a))}
+			menu={menu?.(a, () => (renaming = a.id))}
 			caption={renaming === a.id ? renameInput : undefined}
 		/>
 		{#snippet renameInput()}
-			<input
-				class="rename"
-				bind:value={name}
-				aria-label={t('assets.filename')}
-				use:focus
-				onkeydown={e => onkeydown(e, a)}
-				onblur={() => save(a)}
+			<NameInput
+				value={a.filename}
+				label={t('assets.filename')}
+				selectStem
+				small
+				onsave={async n => {
+					const ok = !onrename || (await onrename(a, n));
+					if (ok) renaming = null;
+					return ok;
+				}}
+				oncancel={() => (renaming = null)}
 			/>
 		{/snippet}
 	{:else}
@@ -113,12 +82,5 @@
 	// the whole row, not one card's column
 	.empty {
 		grid-column: 1 / -1;
-	}
-
-	.rename {
-		flex: 1;
-		min-width: 0;
-		padding: 0.125rem 0.375rem;
-		font-size: var(--fs-sm);
 	}
 </style>

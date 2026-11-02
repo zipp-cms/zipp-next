@@ -6,7 +6,7 @@ import { describeField } from './fieldKind';
 import { session } from '../core/session.svelte';
 import { t } from '../i18n/index.svelte';
 import { ASSET_FIELDS } from '../assets/api';
-import { fieldPath, setupPath } from '../core/paths';
+import { componentPath, fieldPath, setupPath } from '../core/paths';
 
 /** What Setup shows of the schema: only what the role may see. */
 
@@ -34,6 +34,11 @@ export function visibleEntryTypes(schema: Schema): Component[] {
 export function gqlType(c: Pick<Component, 'handle' | 'entry'>): string {
 	if (!c.entry && c.handle === ASSET_FIELDS) return 'Asset';
 	return `${c.handle}_${c.entry ? 'Entry' : 'Block'}`;
+}
+
+/** A link to an entry type or block, for `Links`. */
+export function componentLink(c: Pick<Component, 'handle' | 'name' | 'entry'>) {
+	return { text: c.name, href: componentPath(c) };
 }
 
 /** Where a component is used: sections and fields, as links of Setup. */

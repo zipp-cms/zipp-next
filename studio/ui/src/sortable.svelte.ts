@@ -293,6 +293,24 @@ function scroller(el: HTMLElement | undefined): HTMLElement | null {
 	return null;
 }
 
+/**
+ * Moving the items of a flat list: rows with `data-sort` in `container`,
+ * a move sets the list with the item at its new place.
+ */
+export function listSortable<T>(
+	container: () => HTMLElement | undefined,
+	items: () => T[],
+	set: (next: T[]) => void,
+	more: Pick<SortableOptions, 'grid'> = {},
+): Sortable {
+	return new Sortable({
+		container,
+		depths: () => items().map(() => 0),
+		onmove: (from, drop) => set(moved(items(), from, drop)),
+		...more,
+	});
+}
+
 /** A list with the item `from` dropped at `drop.index`. */
 export function moved<T>(list: T[], from: number, drop: Drop): T[] {
 	const next = [...list];

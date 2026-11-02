@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Crumbs from './Crumbs.svelte';
-	import { flyoutBar } from './flyoutBar';
-	import { pageLead } from './pageLead';
+	import { flyoutBar, pageLead } from './slots';
 
 	/**
 	 * The bar at the top of every page: where it is (crumbs or a title), a
@@ -27,9 +26,9 @@
 	} = $props();
 
 	// in a flyout it is the flyout's bar
-	const host = flyoutBar();
+	const host = flyoutBar.get();
 	// the frame's menu button, not in a flyout
-	const frame = pageLead();
+	const frame = pageLead.get();
 	$effect(() => {
 		if (!host) return;
 		host.content = inner;

@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import type { Schema, Values } from '../../core/schema';
-	import type { Refs } from '../../entries/api';
+	import type { Values } from '../../core/schema';
+	import type { NodeProps } from './extensions.svelte';
 	import BlockFields from '../BlockFields.svelte';
 	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import ItemCard from 'zipp-ui/ItemCard.svelte';
 	import NodeFrame from './NodeFrame.svelte';
 	import { rememberOpen, wasOpen } from '../opened';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
-	import type { Sortable } from 'zipp-ui/sortable';
 	import { blockSummary } from '../blocks.svelte';
 	import { synced } from '../../core/synced.svelte';
 	import { componentOf } from '../../core/schema';
@@ -28,17 +27,8 @@
 		insertLine,
 		sortable,
 		index,
-	}: {
-		attrs: { id: string | null; type: string; fields: Values };
-		schema: Schema;
-		refs: Refs;
-		editable: boolean;
-		update: (attrs: Record<string, unknown>) => void;
-		remove: () => void;
-		insertLine: (where: 'before' | 'after') => void;
-		sortable: Sortable;
-		index: () => number;
-	} = $props();
+	}: NodeProps<{ id: string | null; type: string; fields: Values }> =
+		$props();
 
 	const comp = $derived(componentOf(schema, attrs.type));
 	// the ids of its inputs, unique with several blocks in the text

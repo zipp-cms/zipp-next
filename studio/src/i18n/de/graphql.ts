@@ -4,7 +4,7 @@ import type en from '../en/graphql';
 export default {
 	'graphql.newToken': 'Neuer Token',
 	'graphql.copyNow':
-		'Kopieren Sie den Token jetzt, er wird nicht mehr angezeigt. Ein Frontend sendet ihn als {header} ; crelte liest ihn als {env} .',
+		'Kopieren Sie den Token jetzt, er wird nicht mehr angezeigt. Ein Frontend sendet ihn als {header}; crelte liest ihn als {env}.',
 	'graphql.theToken': 'Der Token',
 	'graphql.namePlaceholder': 'Website',
 	'graphql.expires': 'Läuft ab',
@@ -22,7 +22,7 @@ export default {
 	'graphql.graphiqlTitle': 'GraphiQL mit Ihrer Sitzung',
 	'graphql.tryIt': 'Ausprobieren',
 	'graphql.intro':
-		'Frontends senden einen Token als {header} an {path} . Jeder liest nur seine Abschnitte und Websites.',
+		'Frontends senden einen Token als {header} an {path}. Jeder liest nur seine Abschnitte und Websites.',
 	'graphql.envToken': 'Der Token von {env} liest alles.',
 	'graphql.token': 'Token',
 	'graphql.lastUsed': 'Zuletzt verwendet',

@@ -1,10 +1,9 @@
 <script lang="ts">
-	import type { Link, Schema } from '../../core/schema';
-	import type { Refs } from '../../entries/api';
+	import type { Link } from '../../core/schema';
+	import type { NodeProps } from './extensions.svelte';
 	import LinkInput from '../link/LinkInput.svelte';
 	import NodeFrame from './NodeFrame.svelte';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
-	import type { Sortable } from 'zipp-ui/sortable';
 	import { BUTTON_LINKS } from '../link/link';
 	import { t } from '../../i18n/index.svelte';
 
@@ -22,17 +21,7 @@
 		insertLine,
 		sortable,
 		index,
-	}: {
-		attrs: { link: Link };
-		schema: Schema;
-		refs: Refs;
-		editable: boolean;
-		update: (attrs: Record<string, unknown>) => void;
-		remove: () => void;
-		insertLine: (where: 'before' | 'after') => void;
-		sortable: Sortable;
-		index: () => number;
-	} = $props();
+	}: NodeProps<{ link: Link }> = $props();
 </script>
 
 <NodeFrame {editable} oninsert={insertLine}>

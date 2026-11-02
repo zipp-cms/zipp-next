@@ -133,12 +133,26 @@ type Options = {
 	sortable: () => Sortable;
 };
 
+/** What `svelteView` gives the component of a node with attrs `A`. */
+export type NodeProps<A> = {
+	attrs: A;
+	schema: Schema;
+	refs: Refs;
+	editable: boolean;
+	update: (attrs: Record<string, unknown>) => void;
+	remove: () => void;
+	insertLine: (where: 'before' | 'after') => void;
+	sortable: Sortable;
+	/** its place among the nodes of the text */
+	index: () => number;
+};
+
 /**
  * A node edited by a Svelte component outside of the text: it gets the
  * attrs, `update` to change them, `remove`, and `insertLine` for an empty
  * line before or after it with the cursor in it.
  */
-function svelteView(component: Component<any>, options: Options) {
+function svelteView(component: Component<NodeProps<any>>, options: Options) {
 	return ({ node, getPos, editor }: NodeViewRendererProps) => {
 		const dom = document.createElement('div');
 		dom.contentEditable = 'false';
