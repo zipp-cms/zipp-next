@@ -1,22 +1,19 @@
 import { tick } from 'svelte';
+import { moved, stepDrop, subtree, type Drop, type Step } from './sortTree';
+
+export { moved, placeIn, type Drop, type Step } from './sortTree';
 
 /**
  * Moving the items of a list or a tree: dragging a handle with the pointer
  * (also on touch), its menu and the arrow keys (see DragHandle.svelte).
  *
  * The rows are flat, in order, each with its depth (0 in a list); an item
- * moves with the rows under it. A move is a `Drop`: before the row
- * `index` of the rows without the moved ones (their count: at the end),
- * at `depth`. The list turns it into its own data, `moved` and `placeIn`
- * help.
+ * moves with the rows under it. A move is a `Drop` (sortTree.ts), the
+ * list turns it into its own data, `moved` and `placeIn` help.
  *
  * Dragging up and down picks the place, left and right the depth: a step
  * of `indent` pixels is a level, as deep as the row above allows.
  */
-
-export type Drop = { index: number; depth: number };
-
-export type Step = 'up' | 'down' | 'out' | 'in';
 
 type Line = { top: number; left: number; width: number; height: number };
 
@@ -40,13 +37,6 @@ export type SortableOptions = {
 	/** a list that saves first returns the promise, see `step` */
 	onmove: (from: number, drop: Drop) => unknown;
 };
-
-/** The rows of `from` with the ones under it: their count. */
-function subtree(depths: number[], from: number): number {
-	let n = 1;
-	while (from + n < depths.length && depths[from + n] > depths[from]) n++;
-	return n;
-}
 
 export class Sortable {
 	/** the row that is dragged */
@@ -138,37 +128,50 @@ export class Sortable {
 		if (!box || all.length !== depths.length) return;
 		const n = subtree(depths, from);
 		const others = all.filter((_, i) => i < from || i >= from + n);
+		if (this.o.grid?.()) this.overGrid(e, box, others);
+		else this.overList(e, box, others, depths, from, dx);
+	}
+
+	/** Rows side by side: before or after the nearest one. */
+	private overGrid(e: PointerEvent, box: DOMRect, others: HTMLElement[]) {
+		let best = -1;
+		let dist = Infinity;
+		others.forEach((el, i) => {
+			const r = el.getBoundingClientRect();
+			const d = Math.hypot(
+				e.clientX - (r.left + r.width / 2),
+				e.clientY - (r.top + r.height / 2),
+			);
+			if (d < dist) [best, dist] = [i, d];
+		});
+		if (best < 0) return;
+		const r = others[best].getBoundingClientRect();
+		const after = e.clientX > r.left + r.width / 2;
+		const last = others.length - (this.o.keepLast?.() ?? 0);
+		this.drop = {
+			index: Math.min(best + (after ? 1 : 0), last),
+			depth: 0,
+		};
+		this.line = {
+			top: r.top - box.top,
+			left: (after ? r.right + 3 : r.left - 5) - box.left,
+			width: 2,
+			height: r.height,
+		};
+	}
+
+	/** Rows under each other: the place by y, the depth by `dx`. */
+	private overList(
+		e: PointerEvent,
+		box: DOMRect,
+		others: HTMLElement[],
+		depths: number[],
+		from: number,
+		dx: number,
+	) {
+		const n = subtree(depths, from);
 		const odepths = depths.filter((_, i) => i < from || i >= from + n);
 		const rect = (el: HTMLElement) => el.getBoundingClientRect();
-
-		if (this.o.grid?.()) {
-			// the nearest one, before or after it
-			let best = -1;
-			let dist = Infinity;
-			others.forEach((el, i) => {
-				const r = rect(el);
-				const d = Math.hypot(
-					e.clientX - (r.left + r.width / 2),
-					e.clientY - (r.top + r.height / 2),
-				);
-				if (d < dist) [best, dist] = [i, d];
-			});
-			if (best < 0) return;
-			const r = rect(others[best]);
-			const after = e.clientX > r.left + r.width / 2;
-			const last = others.length - (this.o.keepLast?.() ?? 0);
-			this.drop = {
-				index: Math.min(best + (after ? 1 : 0), last),
-				depth: 0,
-			};
-			this.line = {
-				top: r.top - box.top,
-				left: (after ? r.right + 3 : r.left - 5) - box.left,
-				width: 2,
-				height: r.height,
-			};
-			return;
-		}
 
 		// before the first row whose middle is below the pointer
 		let k = others.findIndex(el => {
@@ -207,43 +210,13 @@ export class Sortable {
 
 	/** The drop of a step with the keyboard or the menu, null if none. */
 	stepDrop(from: number, step: Step): Drop | null {
-		const depths = this.o.depths();
-		const d = depths[from];
-		const n = subtree(depths, from);
-		// positions in the rows without the moved ones
-		const at = (i: number) => (i < from ? i : i - n);
-		const end = (i: number) => i + subtree(depths, i);
-		let prev = from - 1;
-		while (prev >= 0 && depths[prev] > d) prev--;
-		const sibBefore = prev >= 0 && depths[prev] === d ? prev : -1;
-		const next = from + n;
-		const sibAfter = next < depths.length && depths[next] === d ? next : -1;
-		let parent = from - 1;
-		while (parent >= 0 && depths[parent] >= d) parent--;
-		const below = Math.max(...depths.slice(from, from + n)) - d;
-
-		switch (step) {
-			case 'up':
-				return sibBefore < 0
-					? null
-					: { index: at(sibBefore), depth: d };
-			case 'down': {
-				// not below the rows that stay last
-				const max = depths.length - n - (this.o.keepLast?.() ?? 0);
-				const index = sibAfter < 0 ? -1 : at(end(sibAfter));
-				return index < 0 || index > max ? null : { index, depth: d };
-			}
-			case 'out':
-				return d === 0 || parent < 0
-					? null
-					: { index: at(end(parent)), depth: d - 1 };
-			case 'in':
-				return sibBefore < 0 ||
-					d + 1 + below > (this.o.maxDepth?.() ?? 0)
-					? null
-					: // where it is, the rows before it stay
-						{ index: from, depth: d + 1 };
-		}
+		return stepDrop(
+			this.o.depths(),
+			from,
+			step,
+			this.o.maxDepth?.() ?? 0,
+			this.o.keepLast?.() ?? 0,
+		);
 	}
 
 	/**
@@ -257,11 +230,10 @@ export class Sortable {
 		await tick();
 		// a moved row is at the drop's index
 		const row = this.rows()[drop.index];
-		row?.querySelector<HTMLElement>('.drag-handle')?.focus();
+		row?.querySelector<HTMLElement>('[data-drag-handle]')?.focus();
 	}
 }
 
-/** Scrolls the page when the pointer is near its top or bottom. */
 /** How near the edge a drag scrolls, and how far each move. */
 const SCROLL_EDGE = 48;
 const SCROLL_STEP = 12;
@@ -309,42 +281,4 @@ export function listSortable<T>(
 		onmove: (from, drop) => set(moved(items(), from, drop)),
 		...more,
 	});
-}
-
-/** A list with the item `from` dropped at `drop.index`. */
-export function moved<T>(list: T[], from: number, drop: Drop): T[] {
-	const next = [...list];
-	const [item] = next.splice(from, 1);
-	next.splice(drop.index, 0, item);
-	return next;
-}
-
-/**
- * Where a drop puts an item in a tree: its new parent (its row in
- * `depths`, null on the top) and its place among the parent's children,
- * not counting itself.
- */
-export function placeIn(
-	depths: number[],
-	from: number,
-	drop: Drop,
-): { parent: number | null; index: number } {
-	const n = subtree(depths, from);
-	const rows = depths
-		.map((depth, i) => ({ depth, i }))
-		.filter(r => r.i < from || r.i >= from + n);
-	let parent: number | null = null;
-	for (let k = drop.index - 1; k >= 0; k--) {
-		if (rows[k].depth === drop.depth - 1) {
-			parent = rows[k].i;
-			break;
-		}
-		if (rows[k].depth < drop.depth) break;
-	}
-	let index = 0;
-	for (let k = drop.index - 1; k >= 0; k--) {
-		if (rows[k].depth < drop.depth) break;
-		if (rows[k].depth === drop.depth) index++;
-	}
-	return { parent, index };
 }

@@ -16,15 +16,14 @@
 	import { inserted, isFull, removed } from '../core/list';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
+	import { FileDrag, uploads } from '../assets/uploads.svelte';
 	import {
-		FileDrag,
 		acceptOf,
 		prepare,
 		pathDirs,
 		fromInput,
-		uploads,
 		type Upload,
-	} from '../assets/uploads.svelte';
+	} from '../assets/files';
 	import { t } from '../i18n/index.svelte';
 
 	/**

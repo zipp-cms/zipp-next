@@ -75,35 +75,6 @@ export type Edits = {
 	background: string | null;
 };
 
-export const NO_EDITS: Edits = {
-	rotate: 0,
-	flipH: false,
-	flipV: false,
-	crop: null,
-	resize: null,
-	canvas: null,
-	background: null,
-};
-
-/** Whether the crop reaches past the image. */
-export function cropsOutside(e: Edits): boolean {
-	const c = e.crop;
-	return !!c && (c.x < 0 || c.y < 0 || c.x + c.w > 1 || c.y + c.h > 1);
-}
-
-/** Whether the edits leave the image as uploaded. */
-export function noEdits(e: Edits): boolean {
-	return (
-		!e.rotate && !e.flipH && !e.flipV && !e.crop && !e.resize && !e.canvas
-	);
-}
-
-/** Whether the edited image has transparent parts around it. */
-export function transparentEdges(e: Edits): boolean {
-	const transparent = (e.background ?? 'transparent') === 'transparent';
-	return transparent && (!!e.canvas || cropsOutside(e));
-}
-
 /**
  * The image with its edits, its thumbnail, or the file as uploaded; with
  * the version, a replaced file gets a new url.
@@ -228,11 +199,6 @@ export type Folder = {
 	assets: number;
 };
 
-/** The name of the top, where all folders are and the assets in none. */
-export function root(): string {
-	return t('assets.library');
-}
-
 /** The folders, and how many assets are in none. */
 export function listFolders(): Promise<{ folders: Folder[]; top: number }> {
 	return request('GET', '/asset-folders');
@@ -272,62 +238,4 @@ export type Unzipped = { assets: Asset[]; skipped: string[] };
 /** Into a folder, or null for the top. */
 export function moveAssets(ids: number[], folderId: number | null) {
 	return request<void>('POST', '/assets/move', { ids, folderId });
-}
-
-/** The folder of a path like `Photos/Events`, if it exists. */
-export function folderByPath(
-	folders: Folder[],
-	path: string | undefined,
-): Folder | undefined {
-	let parent: number | null = null;
-	let found: Folder | undefined;
-	for (const name of (path ?? '').split('/').filter(n => n.trim())) {
-		found = childFolder(folders, parent, name);
-		if (!found) return undefined;
-		parent = found.id;
-	}
-	return found;
-}
-
-/**
- * The folder of a name in `parent` (null: the top); the server trims
- * names and compares them without case.
- */
-export function childFolder(
-	folders: Folder[],
-	parent: number | null,
-	name: string,
-): Folder | undefined {
-	const want = name.trim().toLowerCase();
-	return folders.find(
-		f => f.parentId === parent && f.name.toLowerCase() === want,
-	);
-}
-
-export type FolderRow = {
-	folder: Folder;
-	depth: number;
-	/** the names from the top, `Photos / Events` */
-	path: string;
-	/** the ids of the folders above it, the top first */
-	parents: number[];
-};
-
-/** The folders in the order of the tree, with where each is. */
-export function folderRows(folders: Folder[]): FolderRow[] {
-	const rows: FolderRow[] = [];
-	const add = (parent: number | null, parents: number[], path: string) => {
-		for (const f of folders.filter(f => f.parentId === parent)) {
-			const here = path ? `${path} / ${f.name}` : f.name;
-			rows.push({
-				folder: f,
-				depth: parents.length,
-				path: here,
-				parents,
-			});
-			add(f.id, [...parents, f.id], here);
-		}
-	};
-	add(null, [], '');
-	return rows;
 }

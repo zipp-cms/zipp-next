@@ -1,10 +1,10 @@
 <script lang="ts">
 	import BlockOutline from './BlockOutline.svelte';
 	import EntryStatus from './EntryStatus.svelte';
-	import type { Block, Component, Schema, Section } from '../../core/schema';
+	import type { Block, Schema } from '../../core/schema';
 	import type { Revision } from '../drafts';
 	import RevisionList from './RevisionList.svelte';
-	import type { EntryEditor, May } from './entryEditor.svelte';
+	import type { EntryEditor } from './entryEditor.svelte';
 	import { t } from '../../i18n/index.svelte';
 
 	/**
@@ -18,21 +18,14 @@
 	let {
 		schema,
 		ed,
-		secDef,
-		comp,
-		global,
-		may,
 		shownFields,
 		narrow,
 		oncopy,
 		onview,
 	}: {
 		schema: Schema;
+		/** with its section and type, see Edit */
 		ed: EntryEditor;
-		secDef: Section;
-		comp: Component;
-		global: boolean;
-		may: May;
 		/** the fields of the open tab, all without tabs */
 		shownFields: string[] | null;
 		/** the editor is too narrow for a column on the side */
@@ -41,6 +34,7 @@
 		onview: (rev: Revision) => void;
 	} = $props();
 
+	const comp = $derived(ed.comp!);
 	const isNew = $derived(ed.id === null);
 	const multiSite = $derived(schema.sites.length > 1);
 
@@ -58,8 +52,8 @@
 </script>
 
 <aside class:narrow>
-	{#if !global && !narrow}
-		<EntryStatus {schema} {ed} {secDef} {comp} {may} />
+	{#if !ed.global && !narrow}
+		<EntryStatus {schema} {ed} />
 	{/if}
 
 	{#each outlines as o (o.field.handle)}
@@ -71,7 +65,7 @@
 		/>
 	{/each}
 
-	{#if !isNew && multiSite && may.edit}
+	{#if !isNew && multiSite && ed.may.edit}
 		<div class="card">
 			<label>
 				<span>{t('entries.copyContent')}</span>
@@ -100,7 +94,7 @@
 			{comp}
 			{multiSite}
 			{onview}
-			onrestore={may.edit ? rev => ed.restore(rev) : null}
+			onrestore={ed.may.edit ? rev => ed.restore(rev) : null}
 		/>
 	{/snippet}
 	{#if ed.revisions.length && narrow}

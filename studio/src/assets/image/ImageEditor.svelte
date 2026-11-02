@@ -1,11 +1,6 @@
 <script lang="ts">
-	import {
-		NO_EDITS,
-		cropsOutside,
-		noEdits,
-		transparentEdges,
-		type Edits,
-	} from '../api';
+	import { type Edits } from '../api';
+	import { NO_EDITS, cropsOutside, noEdits, transparentEdges } from './edits';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
 	import BackgroundPicker from './BackgroundPicker.svelte';

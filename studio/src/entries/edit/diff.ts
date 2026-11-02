@@ -1,4 +1,5 @@
 import type { Values } from '../../core/schema';
+import type { SiteDoc } from '../drafts';
 import { clean, isBlocks, isObject } from '../../core/values';
 
 /**
@@ -39,4 +40,18 @@ export function changedPaths(
 		});
 	}
 	return out;
+}
+
+/**
+ * What changed between two contents of a site: the paths of the fields
+ * and `type`, `title`, `slug`, `published`, `postDate`, `expiryDate`.
+ */
+export function docChanges(old: SiteDoc, now: SiteDoc): Set<string> {
+	const set = changedPaths(old.fields, now.fields);
+	for (const key of ['type', 'title', 'slug', 'published'] as const)
+		if (old[key] !== now[key]) set.add(key);
+	// an older draft has no dates
+	for (const key of ['postDate', 'expiryDate'] as const)
+		if ((old[key] ?? null) !== (now[key] ?? null)) set.add(key);
+	return set;
 }

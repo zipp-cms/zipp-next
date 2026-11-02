@@ -27,7 +27,6 @@
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import {
 		kinds,
-		root,
 		assetUsage,
 		deleteAsset,
 		moveAssets,
@@ -35,6 +34,7 @@
 		type Asset,
 		type Folder,
 	} from './api';
+	import { root } from './folders';
 	import FolderTree from './FolderTree.svelte';
 	import { type Schema } from '../core/schema';
 	import { canAssets } from '../core/access';
@@ -54,12 +54,8 @@
 		isZip,
 		linkItems,
 	} from './actions';
-	import {
-		FileDrag,
-		fromInput,
-		uploads,
-		type Upload,
-	} from './uploads.svelte';
+	import { FileDrag, uploads } from './uploads.svelte';
+	import { fromInput, type Upload } from './files';
 
 	let {
 		schema,

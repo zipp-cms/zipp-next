@@ -60,6 +60,7 @@
 			<button
 				type="button"
 				class="icon drag-handle"
+				data-drag-handle
 				title="{label}: {ui.texts.dragOrClick}"
 				aria-label={label}
 				aria-expanded={open}

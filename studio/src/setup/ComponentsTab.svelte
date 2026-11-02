@@ -2,7 +2,7 @@
 	import Links from './Links.svelte';
 	import type { Schema } from '../core/schema';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
-	import { gqlType, usedIn, visibleEntryTypes } from './setup';
+	import { blocksOf, gqlType, usedIn, visibleEntryTypes } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
 	import { componentPath } from '../core/paths';
 	import { t } from '../i18n/index.svelte';
@@ -14,9 +14,7 @@
 	let { schema, tab }: { schema: Schema; tab: 'types' | 'blocks' } = $props();
 
 	const components = $derived(
-		tab === 'types'
-			? visibleEntryTypes(schema)
-			: schema.components.filter(c => !c.entry && !c.part_of),
+		tab === 'types' ? visibleEntryTypes(schema) : blocksOf(schema),
 	);
 </script>
 

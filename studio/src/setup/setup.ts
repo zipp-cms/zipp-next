@@ -22,6 +22,11 @@ export function visibleRoles(schema: Schema): Role[] {
 		: schema.roles.filter(r => r.handle === session.user?.role);
 }
 
+/** The blocks; inline groups are part of their parent, no blocks. */
+export function blocksOf(schema: Schema): Component[] {
+	return schema.components.filter(c => !c.entry && !c.part_of);
+}
+
 /** The entry types of the sections the role sees. */
 export function visibleEntryTypes(schema: Schema): Component[] {
 	const sections = visibleSections(schema);
@@ -177,4 +182,87 @@ export function fieldUsage(schema: Schema): FieldUse[] {
 	return [...byHandle.values()].sort((a, b) =>
 		a.handle.localeCompare(b.handle),
 	);
+}
+
+/** The counts on top of the overview, each with its tab. */
+export function overviewStats(
+	schema: Schema,
+	counts: Record<string, number>,
+): { n: number; label: string; href: string }[] {
+	return [
+		{
+			n: visibleSections(schema).length,
+			label: t('shell.setupSections'),
+			href: 'sections',
+		},
+		{
+			n: visibleEntryTypes(schema).length,
+			label: t('setup.entryTypes'),
+			href: 'types',
+		},
+		{
+			n: blocksOf(schema).length,
+			label: t('shell.setupBlocks'),
+			href: 'blocks',
+		},
+		{
+			n: fieldUsage(schema).length,
+			label: t('setup.fields'),
+			href: 'fields',
+		},
+		{
+			n: Object.values(counts).reduce((a, b) => a + b, 0),
+			label: t('setup.entries'),
+			href: 'sections',
+		},
+		{ n: schema.sites.length, label: t('setup.sites'), href: 'sites' },
+	];
+}
+
+/** What a plugin added, its handles as links of Setup, by kind. */
+export function pluginParts(
+	schema: Schema,
+	p: Schema['pluginsAdded'][number],
+): { name: string; links: { text: string; href?: string }[] }[] {
+	const comps = p.components
+		.map(h => componentOf(schema, h))
+		.filter(c => c !== undefined);
+	return [
+		{
+			name: t('shell.setupSections'),
+			links: visibleSections(schema)
+				.filter(s => p.sections.includes(s.handle))
+				.map(s => ({
+					text: s.name,
+					href: setupPath('sections', s.handle),
+				})),
+		},
+		{
+			name: t('setup.typesAndBlocks'),
+			links: comps.map(c => ({
+				text: c.name,
+				href: componentPath(c),
+			})),
+		},
+		{
+			name: t('setup.fields'),
+			links: p.fields.map(f => {
+				const [c, field] = f.split('.');
+				const comp = componentOf(schema, c);
+				const href = comp ? fieldPath(comp, field) : undefined;
+				return { text: f, href };
+			}),
+		},
+		{
+			name: t('setup.fieldTypes'),
+			links: p.fieldTypes.map(f => ({ text: f })),
+		},
+		{
+			name: t('setup.transformsShort'),
+			links: p.transforms.map(tr => ({
+				text: tr,
+				href: '/admin/setup/sites',
+			})),
+		},
+	].filter(x => x.links.length);
 }

@@ -13,6 +13,35 @@ export type Corner = 'nw' | 'ne' | 'sw' | 'se';
 
 export const WHOLE: Rect = { x: 0, y: 0, w: 1, h: 1 };
 
+export const NO_EDITS: Edits = {
+	rotate: 0,
+	flipH: false,
+	flipV: false,
+	crop: null,
+	resize: null,
+	canvas: null,
+	background: null,
+};
+
+/** Whether the crop reaches past the image. */
+export function cropsOutside(e: Edits): boolean {
+	const c = e.crop;
+	return !!c && (c.x < 0 || c.y < 0 || c.x + c.w > 1 || c.y + c.h > 1);
+}
+
+/** Whether the edits leave the image as uploaded. */
+export function noEdits(e: Edits): boolean {
+	return (
+		!e.rotate && !e.flipH && !e.flipV && !e.crop && !e.resize && !e.canvas
+	);
+}
+
+/** Whether the edited image has transparent parts around it. */
+export function transparentEdges(e: Edits): boolean {
+	const transparent = (e.background ?? 'transparent') === 'transparent';
+	return transparent && (!!e.canvas || cropsOutside(e));
+}
+
 /** The sizes of an image after each step of its edits. */
 export function sizes(natural: Size, edits: Edits) {
 	const turned: Size =

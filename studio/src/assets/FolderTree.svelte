@@ -1,29 +1,20 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
-	import {
-		createFolder,
-		deleteFolder,
-		folderRows,
-		updateFolder,
-		type Folder,
-	} from './api';
-	import {
-		ASSETS_DRAG,
-		fromDrop,
-		uploads,
-		type Upload,
-	} from './uploads.svelte';
+	import type { Folder } from './api';
+	import { root } from './folders';
+	import { FolderTreeState } from './folderTree.svelte';
+	import { ASSETS_DRAG, uploads } from './uploads.svelte';
+	import { fromDrop, type Upload } from './files';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import NameInput from './NameInput.svelte';
-	import { root } from './api';
 	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The folders of the asset library as a tree below its top (`root()`),
-	 * which holds the assets in no folder. Opens one with `onselect`; with `editable` it adds,
-	 * renames and deletes (only empty ones) folders, and assets dragged
-	 * from the grid or files from the computer drop onto a folder.
+	 * which holds the assets in no folder. Opens one with `onselect`; with
+	 * `editable` it adds, renames and deletes (only empty ones) folders
+	 * (folderTree.svelte.ts), and assets dragged from the grid or files
+	 * from the computer drop onto a folder.
 	 */
 	let {
 		folders,
@@ -56,86 +47,13 @@
 		top?: number;
 	} = $props();
 
-	const all = $derived(folderRows(folders));
-
-	// the folders around the current one open, also when the folders
-	// come after the tree (the picker loads them) or another one opens
-	let open = $state(new Set<number>());
-	let openedFor: number | null = null;
-	$effect(() => {
-		const id = current;
-		if (id === null || id === openedFor) return;
-		const row = all.find(r => r.folder.id === id);
-		if (!row) return;
-		openedFor = id;
-		untrack(() => (open = new Set([...open, ...row.parents])));
+	const tree = new FolderTreeState({
+		folders: () => folders,
+		current: () => current,
+		onselect: id => onselect(id),
+		onchange: () => onchange?.(),
 	});
-
-	const hasChildren = (id: number) => folders.some(f => f.parentId === id);
-
-	/** The rows whose parents are all open. */
-	const rows = $derived(all.filter(r => r.parents.every(p => open.has(p))));
-
-	function toggle(id: number) {
-		const next = new Set(open);
-		if (!next.delete(id)) next.add(id);
-		open = next;
-	}
-
-	/** A new folder in `parent`, or a folder being renamed. */
-	let editing = $state<{ parent: number | null } | { id: number } | null>(
-		null,
-	);
-	let error = $state('');
-
-	function startNew(parent: number | null) {
-		if (parent !== null) open = new Set(open).add(parent);
-		editing = { parent };
-		error = '';
-	}
-
-	function startRename(f: Folder) {
-		editing = { id: f.id };
-		error = '';
-	}
-
-	/** The name of the folder being renamed, empty for a new one. */
-	const editedName = $derived.by(() => {
-		const e = editing;
-		return e && 'id' in e
-			? (folders.find(f => f.id === e.id)?.name ?? '')
-			: '';
-	});
-
-	async function save(name: string): Promise<boolean> {
-		const e = editing;
-		if (!e) return true;
-		try {
-			if ('id' in e) {
-				const f = folders.find(f => f.id === e.id)!;
-				await updateFolder(f.id, f.parentId, name);
-			} else {
-				await createFolder(e.parent, name);
-			}
-			editing = null;
-			onchange?.();
-			return true;
-		} catch (err) {
-			error = (err as Error).message;
-			return false;
-		}
-	}
-
-	async function remove(f: Folder) {
-		if (!confirm(t('assets.confirmDeleteFolder', { name: f.name }))) return;
-		try {
-			await deleteFolder(f.id);
-			if (current === f.id) onselect(f.parentId);
-			onchange?.();
-		} catch (err) {
-			alert((err as Error).message);
-		}
-	}
+	$effect(() => tree.reveal());
 
 	function items(f: Folder): MenuItem[] {
 		const list: MenuItem[] = [];
@@ -144,12 +62,12 @@
 				{
 					label: t('common.rename'),
 					icon: 'edit',
-					onclick: () => startRename(f),
+					onclick: () => tree.startRename(f),
 				},
 				{
 					label: t('assets.newFolder'),
 					icon: 'folder-plus',
-					onclick: () => startNew(f.id),
+					onclick: () => tree.startNew(f.id),
 				},
 			);
 		}
@@ -164,7 +82,7 @@
 				label: t('common.delete'),
 				icon: 'delete',
 				danger: true,
-				onclick: () => remove(f),
+				onclick: () => tree.remove(f),
 			});
 		}
 		return list;
@@ -209,14 +127,16 @@
 		<span class="chevron"></span>
 		<Icon name="folder" size={15} />
 		<NameInput
-			value={editedName}
+			value={tree.editedName}
 			label={t('assets.folderName')}
 			placeholder={t('assets.folderName')}
-			onsave={save}
-			oncancel={() => (editing = null)}
+			onsave={name => tree.save(name)}
+			oncancel={() => (tree.editing = null)}
 		/>
 	</div>
-	{#if error}<p class="error" style:--depth={depth}>{error}</p>{/if}
+	{#if tree.error}
+		<p class="error" style:--depth={depth}>{tree.error}</p>
+	{/if}
 {/snippet}
 
 <nav class="tree" aria-label={t('assets.folders')}>
@@ -228,7 +148,7 @@
 				class="icon"
 				title={t('assets.newFolder')}
 				aria-label={t('assets.newFolder')}
-				onclick={() => startNew(current)}
+				onclick={() => tree.startNew(current)}
 			>
 				<Icon name="folder-plus" size={16} />
 			</button>
@@ -252,14 +172,14 @@
 		</button>
 		{#if editable || deletable}<span class="menu-space"></span>{/if}
 	</div>
-	{#if editing && 'parent' in editing && editing.parent === null}
+	{#if tree.editing && 'parent' in tree.editing && tree.editing.parent === null}
 		{@render input(1)}
 	{/if}
 
 	<!-- all folders are in the library, one step in -->
-	{#each rows as { folder: f, depth: d } (f.id)}
+	{#each tree.rows as { folder: f, depth: d } (f.id)}
 		{@const depth = d + 1}
-		{#if editing && 'id' in editing && editing.id === f.id}
+		{#if tree.editing && 'id' in tree.editing && tree.editing.id === f.id}
 			{@render input(depth)}
 		{:else}
 			<div
@@ -274,18 +194,18 @@
 				ondragleave={() => (over = null)}
 				ondrop={e => drop(e, f.id)}
 			>
-				{#if hasChildren(f.id)}
+				{#if tree.hasChildren(f.id)}
 					<button
 						type="button"
 						class="chevron"
-						aria-label={open.has(f.id)
+						aria-label={tree.open.has(f.id)
 							? t('assets.collapse')
 							: t('assets.expand')}
-						aria-expanded={open.has(f.id)}
-						onclick={() => toggle(f.id)}
+						aria-expanded={tree.open.has(f.id)}
+						onclick={() => tree.toggle(f.id)}
 					>
 						<Icon
-							name={open.has(f.id)
+							name={tree.open.has(f.id)
 								? 'chevron-down'
 								: 'chevron-right'}
 							size={14}
@@ -297,11 +217,7 @@
 				<button
 					type="button"
 					class="name"
-					onclick={() => {
-						// a click shows its subfolders too
-						open = new Set(open).add(f.id);
-						onselect(f.id);
-					}}
+					onclick={() => tree.select(f.id)}
 				>
 					<Icon name="folder" size={15} />
 					<span class="label">{f.name}</span>
@@ -310,7 +226,7 @@
 				<span class="menu"><Menu items={items(f)} /></span>
 			</div>
 		{/if}
-		{#if editing && 'parent' in editing && editing.parent === f.id}
+		{#if tree.editing && 'parent' in tree.editing && tree.editing.parent === f.id}
 			{@render input(depth + 1)}
 		{/if}
 	{/each}

@@ -1,12 +1,13 @@
 <script lang="ts">
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
-	import { Sortable, placeIn, type Drop } from 'zipp-ui/sortable';
+	import { Sortable, type Drop } from 'zipp-ui/sortable';
 	import LinkAdd from './LinkAdd.svelte';
 	import LinkEditor from './LinkEditor.svelte';
 	import LinkRow from './LinkRow.svelte';
 	import { hasTarget, opensInNewTab } from './link';
-	import type { Link, LinkKind, NavItem, Schema } from '../../core/schema';
+	import { flatten, linkOf, moveRow, removeRow, setRowLink } from './navTree';
+	import type { LinkKind, NavItem, Schema } from '../../core/schema';
 	import type { Refs } from '../../entries/api';
 	import { t } from '../../i18n/index.svelte';
 
@@ -32,57 +33,20 @@
 		onchange: (items: NavItem[]) => void;
 	} = $props();
 
-	type Row = { item: NavItem; depth: number; path: number[] };
-
-	/** The tree as rows, a link before the ones under it. */
-	function flatten(list: NavItem[], d = 0, path: number[] = []): Row[] {
-		return list.flatMap((item, i) => [
-			{ item, depth: d, path: [...path, i] },
-			...flatten(item.children ?? [], d + 1, [...path, i]),
-		]);
-	}
-
 	const rows = $derived(flatten(items));
 	// the row whose settings are open
 	let editing = $state<number | null>(null);
 
-	/** A copy of the items to change, with the rows of the copy. */
-	function copy(): [NavItem[], Row[]] {
+	/** Changes a copy of the items and sets it. */
+	function change(f: (next: NavItem[]) => void) {
 		const next = $state.snapshot(items) as NavItem[];
-		return [next, flatten(next)];
-	}
-
-	/** The list a row is in, of its parent or the top. */
-	function siblings(list: NavItem[], path: number[]): NavItem[] {
-		let level = list;
-		for (const i of path.slice(0, -1)) level = level[i].children!;
-		return level;
-	}
-
-	/** Takes `item` out of its list, an empty list of children goes. */
-	function take(list: NavItem[], row: Row) {
-		const sibs = siblings(list, row.path);
-		sibs.splice(row.path.at(-1)!, 1);
-		if (!sibs.length && row.path.length > 1) {
-			delete siblings(list, row.path.slice(0, -1))[row.path.at(-2)!]
-				.children;
-		}
+		f(next);
+		onchange(next);
 	}
 
 	function move(from: number, drop: Drop) {
-		const [next, copied] = copy();
-		const to = placeIn(
-			rows.map(r => r.depth),
-			from,
-			drop,
-		);
-		const item = copied[from].item;
-		const parent = to.parent === null ? null : copied[to.parent].item;
-		take(next, copied[from]);
-		const list = parent ? (parent.children ??= []) : next;
-		list.splice(to.index, 0, item);
 		editing = null;
-		onchange(next);
+		change(next => moveRow(next, from, drop));
 	}
 
 	let list = $state<HTMLElement>();
@@ -96,32 +60,13 @@
 		onmove: move,
 	});
 
-	/** The link of an item, without its children. */
-	function linkOf(item: NavItem): Link {
-		const { children: _, ...link } = item;
-		return link;
-	}
-
-	function setLink(i: number, link: Link) {
-		const [next, copied] = copy();
-		const children = copied[i].item.children;
-		const sibs = siblings(next, copied[i].path);
-		sibs[copied[i].path.at(-1)!] = {
-			...link,
-			...(children ? { children } : {}),
-		};
-		onchange(next);
-	}
-
 	function remove(i: number) {
 		const question = rows[i].item.children?.length
 			? t('fields.confirmRemoveLinkChildren')
 			: t('fields.confirmRemoveLink');
 		if (hasTarget(rows[i].item) && !confirm(question)) return;
-		const [next, copied] = copy();
-		take(next, copied[i]);
 		editing = null;
-		onchange(next);
+		change(next => removeRow(next, i));
 	}
 
 	function add(type: LinkKind) {
@@ -180,7 +125,7 @@
 						{to}
 						labels
 						newTab={opensInNewTab(schema, link, true)}
-						onchange={l => setLink(i, l)}
+						onchange={l => change(next => setRowLink(next, i, l))}
 						ondone={() => (editing = null)}
 					/>
 				</div>

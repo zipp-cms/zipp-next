@@ -6,9 +6,9 @@
 	import { setupPath } from '../../core/paths';
 	import SiteBadges from '../SiteBadges.svelte';
 	import { componentName, siteName } from '../../core/schema';
-	import type { Component, Schema, Section } from '../../core/schema';
+	import type { Schema } from '../../core/schema';
 	import { setSite } from '../../core/router.svelte';
-	import type { EntryEditor, May } from './entryEditor.svelte';
+	import type { EntryEditor } from './entryEditor.svelte';
 	import { t } from '../../i18n/index.svelte';
 
 	/**
@@ -20,21 +20,18 @@
 	let {
 		schema,
 		ed,
-		secDef,
-		comp,
-		may,
 		compact = false,
 	}: {
 		schema: Schema;
+		/** with its section and type, see Edit */
 		ed: EntryEditor;
-		secDef: Section;
-		comp: Component;
-		may: May;
 		compact?: boolean;
 	} = $props();
 
+	const secDef = $derived(ed.secDef!);
+	const comp = $derived(ed.comp!);
+	const may = $derived(ed.may);
 	const isNew = $derived(ed.id === null);
-	const single = $derived(secDef.kind === 'single');
 	const multiSite = $derived(schema.sites.length > 1);
 
 	/** a published entry its dates keep off the website, and why */
@@ -75,7 +72,7 @@ discarding or restoring: what is typed then would be lost -->
 	</div>
 
 	<!-- in every site, like Craft's -->
-	{#if !single}
+	{#if !ed.single}
 		<fieldset class="part" disabled={!may.edit || ed.busy}>
 			<label class="date">
 				<span>
@@ -154,7 +151,7 @@ discarding or restoring: what is typed then would be lost -->
 			</label>
 		{/if}
 		<!-- the url is under View and in the live preview -->
-		{#if !single}
+		{#if !ed.single}
 			<label>
 				<span>
 					{#if ed.changed.has('slug')}<span

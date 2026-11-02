@@ -1,15 +1,14 @@
 import {
-	NO_EDITS,
 	assetUsage,
 	deleteAsset,
 	moveAssets,
-	noEdits,
 	replaceAsset,
 	updateAsset,
 	type Asset,
 	type AssetUsage,
 	type Edits,
 } from './api';
+import { NO_EDITS, noEdits } from './image/edits';
 import { Busy } from '../core/busy.svelte';
 import type { Values } from '../core/schema';
 import { clean } from '../core/values';

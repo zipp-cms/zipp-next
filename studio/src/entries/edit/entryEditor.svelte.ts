@@ -1,8 +1,8 @@
-import { ApiError } from '../../core/client';
 import { Busy } from '../../core/busy.svelte';
 import {
 	componentOf,
 	defaults,
+	hasPages,
 	sameKind,
 	sectionOf,
 	type Schema,
@@ -25,41 +25,22 @@ import {
 	getRevisions,
 	previewToken,
 	publishDraft,
-	putDraft,
 	restoreRevision,
 	type Draft,
 	type Revision,
 	type SiteDoc,
 } from '../drafts';
 import { site } from '../../core/router.svelte';
-import { changedPaths } from './diff';
+import { DraftSaver, savesDone } from './autosave.svelte';
+import { docChanges } from './diff';
+import { can } from '../../core/access';
 import { clean } from '../../core/values';
 import { slugify } from '../../core/format';
-import { guardUnload } from '../../core/leave';
 import { depths } from '../../core/tree';
 import { t } from '../../i18n/index.svelte';
 
 /** What the role may do with the entry; the server checks it too. */
 export type May = { edit: boolean; publish: boolean; delete: boolean };
-
-/** How long after the last key a draft is saved. */
-const SAVE_AFTER_MS = 700;
-
-/**
- * The saves of all editors that didn't end yet: an editor that opens
- * waits for them, so it loads what an editor just left behind (leaving,
- * switching the site, the flyout) and doesn't save over it.
- */
-const unsaved = new Set<Promise<unknown>>();
-
-function track(p: Promise<unknown>) {
-	unsaved.add(p);
-	p.finally(() => unsaved.delete(p));
-}
-
-/** Whether a draft still waits for its save, the tab asks before closing. */
-let waiting = 0;
-guardUnload(() => waiting > 0 || unsaved.size > 0);
 
 /**
  * The state of the entry editor and what it does: loading, saving drafts
@@ -112,8 +93,7 @@ export class EntryEditor {
 	parents = $state<Entry[]>([]);
 	/** unpublished changes, saved while typing */
 	draft = $state<Draft | null>(null);
-	/** `failed`: the last save didn't work, the error says why */
-	draftState = $state<'' | 'saving' | 'saved' | 'failed'>('');
+	readonly saver = new DraftSaver(this);
 	revisions = $state<Revision[]>([]);
 	/** the live content of the site, to mark what the draft changes */
 	live = $state<SiteDoc | null>(null);
@@ -125,11 +105,6 @@ export class EntryEditor {
 	} | null>(null);
 	/** someone else changed the draft, nothing is saved until resolved */
 	conflict = $state('');
-
-	private lastSaved = '';
-	private timer: ReturnType<typeof setTimeout> | undefined;
-	/** the save running now, the next one waits for it */
-	private saving: Promise<boolean> | null = null;
 
 	/** the site it edits, the one of the start: the site may switch */
 	readonly site: string;
@@ -161,6 +136,24 @@ export class EntryEditor {
 		this.loaded = id === null;
 	}
 
+	/** the page shows once both are loaded */
+	secDef = $derived.by(() => sectionOf(this.schema, this.sec));
+	comp = $derived.by(() => componentOf(this.schema, this.ty));
+	single = $derived(this.secDef?.kind === 'single');
+	/** a single without a page, its title is the section's name */
+	global = $derived(
+		this.single && this.secDef !== undefined && !hasPages(this.secDef),
+	);
+	/** what the role may do here, the server checks it too */
+	may: May = $derived.by(() => ({
+		edit: can(this.schema, this.sec, 'edit'),
+		publish: can(this.schema, this.sec, 'publish'),
+		delete:
+			this.id !== null &&
+			!this.single &&
+			can(this.schema, this.sec, 'delete'),
+	}));
+
 	/**
 	 * The editor of an entry, loaded; a new one (`id` null) of the
 	 * section with its first type and, in a structure, its parents.
@@ -171,7 +164,7 @@ export class EntryEditor {
 		section: string | null,
 	): Promise<EntryEditor> {
 		const ed = new EntryEditor(schema, id, section);
-		await Promise.allSettled([...unsaved]);
+		await savesDone();
 		if (id !== null) {
 			await ed.load();
 			return ed;
@@ -179,24 +172,42 @@ export class EntryEditor {
 		const sec = sectionOf(schema, ed.sec);
 		ed.ty = sec?.types[0] ?? '';
 		ed.fields = defaults(schema, ed.ty);
-		ed.lastSaved = ed.snapshot();
+		ed.saver.saved();
 		if (sec?.kind === 'structure') await ed.loadParents();
 		return ed;
 	}
 
 	/** What the draft changes against the live entry, also in blocks. */
 	changed = $derived.by(() => {
-		const live = this.live;
-		if (!this.draft || !live) return new Set<string>();
-		const set = changedPaths(live.fields, $state.snapshot(this.fields));
-		if (this.ty !== live.type) set.add('type');
-		if (this.title !== live.title) set.add('title');
-		if (this.slug !== live.slug) set.add('slug');
-		if (this.published !== live.published) set.add('published');
-		if (this.dates.postDate !== live.postDate) set.add('postDate');
-		if (this.dates.expiryDate !== live.expiryDate) set.add('expiryDate');
-		return set;
+		if (!this.draft || !this.live) return new Set<string>();
+		return docChanges(this.live, this.doc);
 	});
+
+	/** The content of the site as a draft keeps it. */
+	get doc(): SiteDoc {
+		return {
+			type: this.ty,
+			title: this.title,
+			slug: this.slug,
+			published: this.published,
+			fields: $state.snapshot(this.fields),
+			...$state.snapshot(this.dates),
+		};
+	}
+
+	/** Shows a content of the site: the live one or a draft's. */
+	private setDoc(d: SiteDoc) {
+		// a draft may change the type
+		this.ty = d.type;
+		this.#title = d.title;
+		this.#slug = d.slug;
+		this.published = d.published;
+		this.dates = {
+			postDate: d.postDate ?? null,
+			expiryDate: d.expiryDate ?? null,
+		};
+		this.fields = d.fields;
+	}
 
 	async load() {
 		const id = this.id;
@@ -221,21 +232,12 @@ export class EntryEditor {
 			expiryDate: entry.expiryDate,
 		};
 		const content = d?.doc[this.site] ?? entry;
-		// a draft may change the type
-		this.ty = content.type;
-		this.#title = content.title;
-		this.#slug = content.slug;
+		this.setDoc(content);
 		// a live entry's url stays when its title changes
 		this.slugFollows =
 			entry.postDate === null &&
 			(!content.slug || content.slug === slugify(content.title));
-		this.published = content.published;
-		this.dates = {
-			postDate: content.postDate ?? null,
-			expiryDate: content.expiryDate ?? null,
-		};
-		this.fields = content.fields;
-		this.lastSaved = this.snapshot();
+		this.saver.saved();
 		this.loaded = true;
 		const [revs, list] = await Promise.all([
 			getRevisions(id),
@@ -267,14 +269,8 @@ export class EntryEditor {
 	 * fills in on load is no change.
 	 */
 	snapshot(): string {
-		return JSON.stringify([
-			this.ty,
-			this.title,
-			this.slug,
-			this.published,
-			this.dates,
-			clean($state.snapshot(this.fields)),
-		]);
+		const doc = this.doc;
+		return JSON.stringify({ ...doc, fields: clean(doc.fields) });
 	}
 
 	/**
@@ -311,106 +307,6 @@ export class EntryEditor {
 	}
 
 	/**
-	 * A new entry with content: it has no draft, leaving or closing the
-	 * tab would lose it.
-	 */
-	get unsaved(): boolean {
-		return this.id === null && this.snapshot() !== this.lastSaved;
-	}
-
-	/** Called on every change: the draft is saved a moment later. */
-	changedNow(canEdit: boolean) {
-		const snap = this.snapshot();
-		if (!this.loaded || this.id === null || this.conflict || !canEdit)
-			return;
-		if (snap === this.lastSaved) return this.cancelSave();
-		this.stopTimer();
-		this.draftState = 'saving';
-		waiting++;
-		this.timer = setTimeout(() => {
-			this.timer = undefined;
-			waiting--;
-			this.flush();
-		}, SAVE_AFTER_MS);
-	}
-
-	/**
-	 * Saves what isn't saved yet, now, after the save that runs; whether
-	 * all is saved. Leaving the editor calls it, the next editor waits.
-	 */
-	flush(): Promise<boolean> {
-		this.stopTimer();
-		const before = this.saving;
-		const run = async () => {
-			if (before) await before;
-			if (this.id === null || this.conflict) return false;
-			const snap = this.snapshot();
-			return snap === this.lastSaved || this.saveDraft(snap);
-		};
-		const p = run();
-		this.saving = p;
-		track(p);
-		p.finally(() => {
-			if (this.saving === p) this.saving = null;
-		});
-		return p;
-	}
-
-	/** After a new login: the save that failed goes again. */
-	retry() {
-		if (this.draftState !== 'failed') return;
-		this.error = '';
-		this.flush();
-	}
-
-	private stopTimer() {
-		if (this.timer === undefined) return;
-		clearTimeout(this.timer);
-		this.timer = undefined;
-		waiting--;
-	}
-
-	/** Saves the draft; whether it worked, a conflict or error shows. */
-	private async saveDraft(snap: string): Promise<boolean> {
-		if (this.id === null) return false;
-		const content = {
-			type: this.ty,
-			title: this.title,
-			slug: this.slug,
-			published: this.published,
-			fields: $state.snapshot(this.fields),
-			...$state.snapshot(this.dates),
-		};
-		try {
-			this.draft = await putDraft(
-				this.id,
-				this.site,
-				content,
-				this.draft?.updatedAt ?? null,
-			);
-			this.lastSaved = snap;
-			// a newer change may wait for its save
-			if (snap === this.snapshot()) this.draftState = 'saved';
-			return true;
-		} catch (e: any) {
-			if (e instanceof ApiError && e.type === 'CONFLICT') {
-				this.conflict = e.message;
-				this.draftState = '';
-			} else {
-				this.error = e.message;
-				this.draftState = 'failed';
-			}
-			return false;
-		}
-	}
-
-	/** No save of what was typed before: discarding, restoring, theirs. */
-	private cancelSave() {
-		this.stopTimer();
-		this.draftState = '';
-	}
-
-	/**
 	 * A new entry is created directly, its id comes back; a draft is
 	 * published, the last keys first.
 	 */
@@ -421,24 +317,19 @@ export class EntryEditor {
 			if (this.id === null) {
 				const entry = await createEntry({
 					section: this.sec,
-					type: this.ty,
 					site: this.site,
 					parentId: this.parentId,
-					title: this.title,
-					slug: this.slug,
-					published: this.published,
-					fields: $state.snapshot(this.fields),
-					...$state.snapshot(this.dates),
+					...this.doc,
 				});
 				// saved, the page of the entry may open
-				this.lastSaved = this.snapshot();
+				this.saver.saved();
 				return entry.id;
 			}
 			// what isn't saved can't be published: the conflict or error shows
-			if (!(await this.flush())) return null;
+			if (!(await this.saver.flush())) return null;
 			if (!this.draft) return null;
 			await publishDraft(this.id);
-			this.draftState = '';
+			this.saver.state = '';
 			await this.load();
 			return null;
 		});
@@ -446,10 +337,10 @@ export class EntryEditor {
 	}
 
 	discard() {
-		this.cancelSave();
+		this.saver.cancel();
 		return this.action.run(async () => {
 			await discardDraft(this.id!);
-			this.draftState = '';
+			this.saver.state = '';
 			await this.load();
 		});
 	}
@@ -482,7 +373,7 @@ export class EntryEditor {
 
 	/** Throws away the own changes and shows the ones of the other. */
 	async loadTheirs() {
-		this.cancelSave();
+		this.saver.cancel();
 		await this.action.run(() => this.load());
 		// only now, else the own state would be saved again
 		this.conflict = '';
@@ -493,8 +384,8 @@ export class EntryEditor {
 		this.conflict = '';
 		return this.action.run(async () => {
 			this.draft = await getDraft(this.id!);
-			this.lastSaved = '';
-			await this.flush();
+			this.saver.forget();
+			await this.saver.flush();
 		});
 	}
 
@@ -512,14 +403,8 @@ export class EntryEditor {
 		]);
 		const now = doc[this.site] ?? null;
 		const old = prev?.[this.site] ?? null;
-		const set = new Set<string>();
-		if (now && old) {
-			changedPaths(old.fields, now.fields, '', set);
-			if (now.type !== old.type) set.add('type');
-			if (now.title !== old.title) set.add('title');
-			if (now.slug !== old.slug) set.add('slug');
-		}
-		this.viewing = { rev, doc: now, changed: set };
+		const changed = now && old ? docChanges(old, now) : new Set<string>();
+		this.viewing = { rev, doc: now, changed };
 	}
 
 	/** Replaces the draft, after asking: what isn't published is lost. */
@@ -528,7 +413,7 @@ export class EntryEditor {
 			? t('entries.confirmRestoreDraft')
 			: t('entries.confirmRestore');
 		if (!confirm(question)) return;
-		this.cancelSave();
+		this.saver.cancel();
 		return this.action.run(async () => {
 			await restoreRevision(
 				this.id!,

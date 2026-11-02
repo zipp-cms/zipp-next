@@ -2,7 +2,7 @@
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { time } from '../../core/format';
-	import type { EntryEditor, May } from './entryEditor.svelte';
+	import type { EntryEditor } from './entryEditor.svelte';
 	import { t } from '../../i18n/index.svelte';
 
 	/** Where the entry is, its state and what can be done with it. */
@@ -11,7 +11,6 @@
 		crumbs,
 		title,
 		url,
-		may,
 		live,
 		onlive,
 		onpreview,
@@ -23,7 +22,6 @@
 		crumbs: { label: string; href?: string }[];
 		title: string;
 		url: string | null;
-		may: May;
 		/** the live preview is on; null: this entry has none */
 		live: boolean | null;
 		onlive: () => void;
@@ -33,6 +31,7 @@
 		onsave: () => void;
 	} = $props();
 
+	const may = $derived(ed.may);
 	const isNew = $derived(ed.id === null);
 	const published = $derived(ed.live?.published ?? false);
 	const hasDraft = $derived(!!ed.draft);
@@ -54,13 +53,13 @@
 				{published ? t('entries.live') : t('entries.notPublished')}
 			</span>
 		{/if}
-		{#if ed.draftState === 'failed'}
+		{#if ed.saver.state === 'failed'}
 			<span class="badge failed" title={ed.error}>
 				{t('entries.notSaved')}
 			</span>
 		{:else if hasDraft}
 			<span class="badge changes" title={t('entries.savedAsDraft')}>
-				{ed.draftState === 'saving'
+				{ed.saver.state === 'saving'
 					? t('common.saving')
 					: t('common.draft')}
 			</span>

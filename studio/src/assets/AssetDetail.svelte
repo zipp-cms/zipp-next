@@ -4,28 +4,23 @@
 		ASSET_FIELDS,
 		assetUrl,
 		isVideo,
-		root,
-		folderRows,
-		transparentEdges,
 		type Asset,
 		type Folder,
 	} from './api';
+	import { root, folderRows } from './folders';
 	import { componentOf, siteName, type Schema } from '../core/schema';
 	import Fields from '../fields/Fields.svelte';
 	import { site } from '../core/router.svelte';
-	import { entryPath } from '../core/paths';
 	import { canAssets } from '../core/access';
 	import { AssetForm } from './assetForm.svelte';
 	import Flyout from 'zipp-ui/Flyout.svelte';
-	import { closeFlyout } from '../core/flyout.svelte';
-	import { guardLeave, mayLeave as mayLeavePage } from '../core/leave';
-	import { fileSize, time } from '../core/format';
-	import { confirmDelete, copyUrl as copyAssetUrl } from './actions';
+	import { guardLeave } from '../core/leave';
+	import { confirmDelete } from './actions';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import ImageEditor from './image/ImageEditor.svelte';
-	import { sectionName } from '../core/schema';
 	import Thumb from './Thumb.svelte';
-	import UploadButton from 'zipp-ui/UploadButton.svelte';
+	import AssetInfo from './AssetInfo.svelte';
+	import AssetUsage from './AssetUsage.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -58,7 +53,6 @@
 	const form = untrack(() => new AssetForm(asset));
 	const current = $derived(form.current);
 	const assetFields = $derived(componentOf(schema, ASSET_FIELDS));
-	let copied = $state(false);
 	// the alt text of the site the studio edits
 	const altLabel = $derived.by(() => {
 		if (schema.sites.length < 2) return t('assets.altText');
@@ -91,12 +85,6 @@
 		if (!confirmDelete(current, usage.length)) return;
 		if (await form.remove()) ondeleted();
 	}
-
-	async function copyUrl() {
-		await copyAssetUrl(current);
-		copied = true;
-		setTimeout(() => (copied = false), 1500);
-	}
 </script>
 
 {#snippet actions()}
@@ -114,17 +102,16 @@
 >
 	<div class="detail">
 		<div class="main">
-			{#if current.kind === 'image'}
-				{#key current.filename + current.size}
+			<!-- a replaced file shows new -->
+			{#key current.filename + current.size}
+				{#if current.kind === 'image'}
 					<ImageEditor
 						src={assetUrl(current, false, true)}
 						bind:edits={form.edits}
 						bind:focal={form.focal}
 						editable={canEdit}
 					/>
-				{/key}
-			{:else if isVideo(current)}
-				{#key current.filename + current.size}
+				{:else if isVideo(current)}
 					<!-- svelte-ignore a11y_media_has_caption -->
 					<video
 						class="player"
@@ -132,18 +119,16 @@
 						controls
 						preload="metadata"
 					></video>
-				{/key}
-			{:else if current.mime.startsWith('audio/')}
-				{#key current.filename + current.size}
+				{:else if current.mime.startsWith('audio/')}
 					<audio
 						src={assetUrl(current)}
 						controls
 						preload="metadata"
 					></audio>
-				{/key}
-			{:else}
-				<div class="file"><Thumb asset={current} /></div>
-			{/if}
+				{:else}
+					<div class="file"><Thumb asset={current} /></div>
+				{/if}
+			{/key}
 		</div>
 
 		<aside>
@@ -196,99 +181,13 @@
 				{#if form.error}<p class="error">{form.error}</p>{/if}
 			</div>
 
-			<div class="card">
-				<dl>
-					<dt>{t('assets.size')}</dt>
-					<dd>{fileSize(current.size)}</dd>
-					{#if current.width}
-						<dt>{t('assets.dimensions')}</dt>
-						<dd>
-							{current.width} × {current.height}
-							{#if current.edits}
-								<span class="note">
-									{t('assets.uploadedSize', {
-										width: current.originalWidth ?? '',
-										height: current.originalHeight ?? '',
-									})}
-								</span>
-							{/if}
-						</dd>
-					{/if}
-					<dt>{t('assets.type')}</dt>
-					<dd>
-						{current.mime}
-						{#if current.edits && transparentEdges(current.edits) && current.mime !== 'image/png'}
-							<span class="note">
-								{t('assets.deliveredAsPng')}
-							</span>
-						{/if}
-					</dd>
-					<dt>{t('assets.uploaded')}</dt>
-					<dd>
-						{time(current.createdAt)}
-						{#if current.uploadedBy}
-							<span class="note">
-								{t('assets.uploadedBy', {
-									email: current.uploadedBy,
-								})}
-							</span>
-						{/if}
-					</dd>
-				</dl>
-				<div class="actions">
-					<a
-						class="light"
-						href={assetUrl(current, false, true)}
-						download={current.filename}
-					>
-						<Icon name="download" size={14} />
-						{t('common.download')}
-					</a>
-					<button type="button" onclick={copyUrl}>
-						<Icon name="copy-url" size={14} />
-						{copied ? t('common.copied') : t('assets.copyUrl')}
-					</button>
-					{#if canEdit}
-						<UploadButton
-							onfiles={f => form.replace(f[0])}
-							icon="replace"
-						>
-							{t('assets.replaceFile')}
-						</UploadButton>
-					{/if}
-				</div>
-			</div>
+			<AssetInfo
+				asset={current}
+				{canEdit}
+				onreplace={f => form.replace(f)}
+			/>
 
-			<div class="card">
-				<h3>{t('assets.usedIn')}</h3>
-				{#if form.usage === null}
-					<p class="empty">{t('common.loading')}</p>
-				{:else}
-					<ul class="plain usage">
-						{#each form.usage as u (u.id)}
-							<li>
-								<a
-									href={entryPath(u.section, u.id)}
-									onclick={e => {
-										// asks once, the page then doesn't
-										if (mayLeavePage()) closeFlyout();
-										else e.preventDefault();
-									}}
-								>
-									{u.title}
-								</a>
-								<span class="note">
-									{sectionName(schema, u.section)} · {u.sites
-										.map(s => s.toUpperCase())
-										.join(' ')}
-								</span>
-							</li>
-						{:else}
-							<li class="note">{t('assets.notUsed')}</li>
-						{/each}
-					</ul>
-				{/if}
-			</div>
+			<AssetUsage {schema} usage={form.usage} />
 
 			{#if canDelete}
 				<button type="button" class="danger delete" onclick={remove}>
@@ -341,41 +240,6 @@
 		flex-direction: column;
 		gap: 0.75rem;
 		padding: 0.75rem;
-	}
-
-	dl {
-		display: grid;
-		grid-template-columns: auto 1fr;
-		gap: 0.25rem 0.75rem;
-		margin: 0;
-		font-size: var(--fs-sm);
-	}
-
-	dt {
-		color: var(--muted);
-	}
-
-	dd {
-		margin: 0;
-		word-break: break-word;
-	}
-
-	.actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.375rem;
-	}
-
-	.usage {
-		display: flex;
-		flex-direction: column;
-		gap: 0.375rem;
-		font-size: var(--fs-md);
-
-		li {
-			display: flex;
-			flex-direction: column;
-		}
 	}
 
 	.delete {

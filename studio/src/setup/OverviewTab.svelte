@@ -5,12 +5,12 @@
 	import { isAdmin } from '../core/access';
 	import SchemaIcon from '../core/SchemaIcon.svelte';
 	import {
-		fieldUsage,
+		blocksOf,
 		holders,
+		overviewStats,
+		pluginParts,
 		sectionsByGroup,
 		usedIn,
-		visibleEntryTypes,
-		visibleSections,
 		componentLink,
 	} from './setup';
 	import { componentPath, fieldPath, setupPath } from '../core/paths';
@@ -35,81 +35,11 @@
 	} = $props();
 
 	const groups = $derived(sectionsByGroup(schema));
-	const blocks = $derived(
-		schema.components.filter(c => !c.entry && !c.part_of),
-	);
+	const stats = $derived(overviewStats(schema, counts));
 	// blocks no field holds, code that can go
-	const unused = $derived(blocks.filter(b => !usedIn(schema, b).length));
-	const sections = $derived(visibleSections(schema));
-	const stats = $derived([
-		{
-			n: sections.length,
-			label: t('shell.setupSections'),
-			href: 'sections',
-		},
-		{
-			n: visibleEntryTypes(schema).length,
-			label: t('setup.entryTypes'),
-			href: 'types',
-		},
-		{ n: blocks.length, label: t('shell.setupBlocks'), href: 'blocks' },
-		{
-			n: fieldUsage(schema).length,
-			label: t('setup.fields'),
-			href: 'fields',
-		},
-		{
-			n: Object.values(counts).reduce((a, b) => a + b, 0),
-			label: t('setup.entries'),
-			href: 'sections',
-		},
-		{ n: schema.sites.length, label: t('setup.sites'), href: 'sites' },
-	]);
-
-	// a plugin's handles as links of Setup
-	function pluginParts(p: Schema['pluginsAdded'][number]) {
-		const comps = p.components
-			.map(h => componentOf(schema, h))
-			.filter(c => c !== undefined);
-		return [
-			{
-				name: t('shell.setupSections'),
-				links: sections
-					.filter(s => p.sections.includes(s.handle))
-					.map(s => ({
-						text: s.name,
-						href: setupPath('sections', s.handle),
-					})),
-			},
-			{
-				name: t('setup.typesAndBlocks'),
-				links: comps.map(c => ({
-					text: c.name,
-					href: componentPath(c),
-				})),
-			},
-			{
-				name: t('setup.fields'),
-				links: p.fields.map(f => {
-					const [c, field] = f.split('.');
-					const comp = componentOf(schema, c);
-					const href = comp ? fieldPath(comp, field) : undefined;
-					return { text: f, href };
-				}),
-			},
-			{
-				name: t('setup.fieldTypes'),
-				links: p.fieldTypes.map(f => ({ text: f, href: undefined })),
-			},
-			{
-				name: t('setup.transformsShort'),
-				links: p.transforms.map(tr => ({
-					text: tr,
-					href: '/admin/setup/sites',
-				})),
-			},
-		].filter(x => x.links.length);
-	}
+	const unused = $derived(
+		blocksOf(schema).filter(b => !usedIn(schema, b).length),
+	);
 </script>
 
 {#snippet parts(c: Component, seen: string[])}
@@ -209,7 +139,7 @@
 			<div class="card">
 				<h2>{t('setup.plugins')}</h2>
 				{#each schema.pluginsAdded as p (p.plugin)}
-					{@const added = pluginParts(p)}
+					{@const added = pluginParts(schema, p)}
 					<div class="plugin">
 						<code>{p.plugin}</code>
 						{#if added.length}

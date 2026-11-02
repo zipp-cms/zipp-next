@@ -1,14 +1,13 @@
 import { Latest } from '../core/latest.svelte';
 import { t } from '../i18n/index.svelte';
 import {
-	root,
-	folderRows,
 	listAssets,
 	listFolders,
 	type Asset,
 	type AssetKind,
 	type Folder,
 } from './api';
+import { root, folderRows } from './folders';
 
 /**
  * What the Assets page and the picker show of the library: its folders,

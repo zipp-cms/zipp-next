@@ -6,7 +6,8 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { t } from '../i18n/index.svelte';
-	import { folderByPath, type Asset } from './api';
+	import { type Asset } from './api';
+	import { folderByPath } from './folders';
 	import FolderTree from './FolderTree.svelte';
 	import AssetGrid from './AssetGrid.svelte';
 	import Flyout from 'zipp-ui/Flyout.svelte';
@@ -14,15 +15,14 @@
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
 	import DropOverlay from './DropOverlay.svelte';
 	import { Library } from './library.svelte';
+	import { FileDrag, uploads } from './uploads.svelte';
 	import {
-		FileDrag,
 		acceptOf,
 		pathDirs,
 		prepare,
 		fromInput,
-		uploads,
 		type Upload,
-	} from './uploads.svelte';
+	} from './files';
 
 	/** The asset library in a flyout, to pick assets or upload new ones. */
 	let {
