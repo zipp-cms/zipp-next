@@ -212,6 +212,32 @@ export function withCanvas(edits: Edits, on: boolean, resized: Size): Edits {
 	return { ...edits, canvas: on ? { width: side, height: side } : null };
 }
 
+/**
+ * How far an arrow key moves the focal point or the crop, in images: a
+ * hundredth, with Shift a tenth. `null` for other keys.
+ */
+export function arrowStep(e: KeyboardEvent): { dx: number; dy: number } | null {
+	const step = e.shiftKey ? 0.1 : 0.01;
+	const dirs: Record<string, [number, number]> = {
+		ArrowLeft: [-1, 0],
+		ArrowRight: [1, 0],
+		ArrowUp: [0, -1],
+		ArrowDown: [0, 1],
+	};
+	const d = dirs[e.key];
+	return d ? { dx: d[0] * step, dy: d[1] * step } : null;
+}
+
+/** The focal point moved by dx, dy, kept on the image. */
+export function movedFocal(
+	f: { x: number; y: number },
+	dx: number,
+	dy: number,
+): { x: number; y: number } {
+	const clamp = (v: number) => Math.min(Math.max(0, v), 1);
+	return { x: clamp(f.x + dx), y: clamp(f.y + dy) };
+}
+
 /** The focal point of a click on an element showing the image. */
 export function focalAt(e: MouseEvent, el: Element): { x: number; y: number } {
 	const r = el.getBoundingClientRect();

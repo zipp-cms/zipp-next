@@ -50,6 +50,8 @@ export function createEditor(o: {
 	editable: boolean;
 	/** of the site, so spellcheck checks the right one */
 	language: string;
+	/** the field's, the name of the text area for screen readers */
+	label: string;
 	content: unknown;
 	onChange: (doc: unknown) => void;
 	onTransaction: () => void;
@@ -65,7 +67,14 @@ export function createEditor(o: {
 	return new Editor({
 		element: o.element,
 		editable: o.editable,
-		editorProps: { attributes: { lang: o.language } },
+		editorProps: {
+			attributes: {
+				lang: o.language,
+				role: 'textbox',
+				'aria-multiline': 'true',
+				'aria-label': o.label,
+			},
+		},
 		content: (o.content ?? EMPTY) as any,
 		extensions: [
 			StarterKit.configure({

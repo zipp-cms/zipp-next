@@ -1,14 +1,16 @@
 <script>
 	import Table from 'zipp-ui/Table.svelte';
+	import { texts } from './texts.js';
 
 	/**
 	 * The SEO of a section on its setup page: the defaults of the code for
 	 * the section and its entry types, read only like all of the setup.
 	 */
 	let { schema, section, data } = $props();
+	const tx = texts();
 
 	const rows = $derived.by(() => {
-		const out = [{ name: 'Section', d: data.sections[section.handle] }];
+		const out = [{ name: tx.section, d: data.sections[section.handle] }];
 		for (const t of section.types) {
 			if (!data.types[t]) continue;
 			const name = schema.components.find(c => c.handle === t)?.name;
@@ -30,11 +32,11 @@
 			key={r => r.name}
 			columns={[
 				'',
-				'Title',
-				'Description',
-				'Image from',
-				'Robots',
-				'Sitemap',
+				tx.title,
+				tx.description,
+				tx.imageFrom,
+				tx.robots,
+				tx.sitemap,
 			]}
 		>
 			{#snippet row(r)}
@@ -43,28 +45,27 @@
 					<code>{val(r.d?.titlePattern)}</code>
 					{#if r.d?.titleFrom}
 						<br />
-						from
+						{tx.from}
 						<code>{r.d.titleFrom}</code>
 					{/if}
 				</td>
 				<td>
 					{#if r.d?.descriptionFrom}
-						from <code>{r.d.descriptionFrom}</code>
+						{tx.from}
+						<code>{r.d.descriptionFrom}</code>
 					{:else}
 						{val(r.d?.description)}
 					{/if}
 				</td>
 				<td><code>{val(r.d?.imageFrom)}</code></td>
 				<td>{val(r.d?.robots)}</td>
-				<td>{r.d?.sitemap === false ? 'No' : 'Yes'}</td>
+				<td>{r.d?.sitemap === false ? tx.no : tx.yes}</td>
 			{/snippet}
 		</Table>
 		<p class="muted">
-			The defaults of the code, from the SEO plugin. Editors override them
-			per site in the
-			<a href="/admin/entries/seoSettings">SEO settings</a>
-			(Per section and entry type), an entry's SEO field overrides both; empty
-			values come from the SEO settings.
+			{tx.setupNote}
+			<a href="/admin/entries/seoSettings">{tx.settings}</a>
+			{tx.setupNoteEnd}
 		</p>
 	</div>
 {/if}

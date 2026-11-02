@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { layer } from 'zipp-ui/layers';
+	import { layer, trapTab } from 'zipp-ui/layers';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { go, site } from '../core/router.svelte';
 	import { openAsset } from '../core/flyout.svelte';
@@ -14,7 +14,9 @@
 	 * The search of the studio over the page, like Craft's: entries of
 	 * the site and files as you type, by section. The arrow keys choose,
 	 * Enter opens an entry in its editor and a file in the flyout,
-	 * Escape or a click outside closes it.
+	 * Escape or a click outside closes it. Like a combobox for screen
+	 * readers: the focus stays in the input, which names the chosen line;
+	 * Tab stays in the box, closing gives the focus back (`layer`).
 	 */
 	let { schema }: { schema: Schema } = $props();
 
@@ -23,6 +25,9 @@
 	const s = new Search(schema);
 	let list = $state<HTMLElement>();
 	let input = $state<HTMLInputElement>();
+	let box = $state<HTMLElement>();
+	// the ids of the lines, for aria-activedescendant
+	const uid = $props.id();
 
 	// also from a field that has the focus, unlike autofocus
 	$effect(() => input?.focus());
@@ -54,6 +59,12 @@
 
 	const key = (h: Hit) => (h.kind === 'entry' ? 'e' : 'a') + idOf(h);
 	const idOf = (h: Hit) => (h.kind === 'entry' ? h.entry.id : h.asset.id);
+
+	const chosen = $derived(
+		s.q.trim() && s.hits[s.selected]
+			? `${uid}-${key(s.hits[s.selected])}`
+			: undefined,
+	);
 </script>
 
 {#snippet marked(text: string)}
@@ -68,7 +79,10 @@
 	role="dialog"
 	aria-modal="true"
 	aria-label={t('common.search')}
+	tabindex="-1"
+	bind:this={box}
 	use:layer={close}
+	onkeydown={e => box && trapTab(e, box)}
 >
 	<label class="input">
 		<Icon name="search" size={16} />
@@ -77,6 +91,11 @@
 			placeholder={t('search.placeholder')}
 			aria-label={t('search.placeholder')}
 			autocomplete="off"
+			role="combobox"
+			aria-autocomplete="list"
+			aria-controls="{uid}-results"
+			aria-expanded={!!s.q.trim()}
+			aria-activedescendant={chosen}
 			spellcheck="false"
 			bind:this={input}
 			value={s.q}
@@ -86,7 +105,13 @@
 	</label>
 
 	{#if s.q.trim()}
-		<div class="results" bind:this={list}>
+		<div
+			class="results"
+			id="{uid}-results"
+			role="listbox"
+			aria-label={t('common.search')}
+			bind:this={list}
+		>
 			{#if s.error}
 				<p class="error">{s.error}</p>
 			{:else if !s.hits.length}
@@ -97,62 +122,71 @@
 				</p>
 			{/if}
 			{#each s.groups as g (g.name)}
-				<h3>{g.name}</h3>
-				{#each g.hits as hit (key(hit))}
-					{@const i = s.hits.indexOf(hit)}
-					<button
-						type="button"
-						class="popup-item hit"
-						class:selected={i === s.selected}
-						onmousemove={() => (s.selected = i)}
-						onclick={() => open(hit)}
-					>
-						{#if hit.kind === 'entry'}
-							<span class="text">
-								<span class="title">
-									<span class="truncate">
-										{@render marked(hit.entry.title)}
+				<!-- a listbox has only groups and options, the group is named -->
+				<div role="group" aria-label={g.name}>
+					<div class="name" aria-hidden="true">{g.name}</div>
+					{#each g.hits as hit (key(hit))}
+						{@const i = s.hits.indexOf(hit)}
+						<!-- chosen with the arrow keys, not Tab -->
+						<button
+							type="button"
+							class="popup-item hit"
+							id="{uid}-{key(hit)}"
+							role="option"
+							aria-selected={i === s.selected}
+							tabindex="-1"
+							class:selected={i === s.selected}
+							onmousemove={() => (s.selected = i)}
+							onclick={() => open(hit)}
+						>
+							{#if hit.kind === 'entry'}
+								<span class="text">
+									<span class="title">
+										<span class="truncate">
+											{@render marked(hit.entry.title)}
+										</span>
+										{#if !hit.entry.published}
+											<span class="badge draft">
+												{t('search.notPublished')}
+											</span>
+										{/if}
 									</span>
-									{#if !hit.entry.published}
-										<span class="badge draft">
-											{t('search.notPublished')}
+									{#if hit.entry.snippet}
+										<span class="snippet note">
+											{@render marked(hit.entry.snippet)}
 										</span>
 									{/if}
 								</span>
-								{#if hit.entry.snippet}
-									<span class="snippet note">
-										{@render marked(hit.entry.snippet)}
-									</span>
-								{/if}
-							</span>
-						{:else}
-							{@const alt = altOf(hit.asset, site.current)}
-							<span class="thumb">
-								<Thumb asset={hit.asset} small />
-							</span>
-							<span class="text">
-								<span class="truncate">
-									{@render marked(
-										hit.asset.title || hit.asset.filename,
-									)}
+							{:else}
+								{@const alt = altOf(hit.asset, site.current)}
+								<span class="thumb">
+									<Thumb asset={hit.asset} small />
 								</span>
-								{#if hit.asset.title || alt}
-									<span class="snippet note truncate">
+								<span class="text">
+									<span class="truncate">
 										{@render marked(
-											[
-												hit.asset.title &&
-													hit.asset.filename,
-												alt,
-											]
-												.filter(t => t)
-												.join(' · '),
+											hit.asset.title ||
+												hit.asset.filename,
 										)}
 									</span>
-								{/if}
-							</span>
-						{/if}
-					</button>
-				{/each}
+									{#if hit.asset.title || alt}
+										<span class="snippet note truncate">
+											{@render marked(
+												[
+													hit.asset.title &&
+														hit.asset.filename,
+													alt,
+												]
+													.filter(t => t)
+													.join(' · '),
+											)}
+										</span>
+									{/if}
+								</span>
+							{/if}
+						</button>
+					{/each}
+				</div>
 			{/each}
 		</div>
 	{/if}
@@ -214,7 +248,7 @@
 		overflow-y: auto;
 	}
 
-	h3 {
+	.name {
 		margin: 0.625rem 0.625rem 0.25rem;
 		color: var(--subtle);
 		font-size: var(--fs-xs);

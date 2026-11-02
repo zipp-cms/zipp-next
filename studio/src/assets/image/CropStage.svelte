@@ -4,6 +4,7 @@
 	import { drawTurned } from './draw';
 	import {
 		WHOLE,
+		arrowStep,
 		dragged,
 		fitScale,
 		placeOf,
@@ -12,6 +13,7 @@
 		type Rect,
 		type Size,
 	} from './edits';
+	import { t } from '../../i18n/index.svelte';
 
 	/**
 	 * Cropping: the whole stage is the area, the image in its middle; the
@@ -83,6 +85,34 @@
 		refit++;
 	}
 
+	// the arrow keys move the crop or the corner that has the focus
+	function onkeydown(e: KeyboardEvent, kind: 'move' | Corner) {
+		const step = arrowStep(e);
+		if (!editable || !step) return;
+		e.preventDefault();
+		e.stopPropagation();
+		const c = dragged(kind, rect, step.dx, step.dy, place, want, turned);
+		edits = withCrop(edits, c);
+		refit++;
+	}
+
+	const percent = (v: number) => Math.round(v * 100);
+	// for screen readers, the crop and its corners
+	const where = $derived(
+		t('assets.cropAt', {
+			x: percent(rect.x),
+			y: percent(rect.y),
+			w: percent(rect.w),
+			h: percent(rect.h),
+		}),
+	);
+	const corners = $derived({
+		nw: t('assets.cornerNw'),
+		ne: t('assets.cornerNe'),
+		sw: t('assets.cornerSw'),
+		se: t('assets.cornerSe'),
+	});
+
 	/** Where a fraction rect is on the stage. */
 	const at = (r: Rect) => ({
 		left: `${place.left + r.x * place.w}px`,
@@ -123,13 +153,23 @@
 			onpointerup={up}
 			onpointercancel={up}
 			onlostpointercapture={up}
-			role="presentation"
+			role="slider"
+			tabindex={editable ? 0 : -1}
+			aria-label={t('assets.crop')}
+			aria-valuenow={percent(rect.x)}
+			aria-valuetext={where}
+			onkeydown={e => onkeydown(e, 'move')}
 		>
 			{#each ['nw', 'ne', 'sw', 'se'] as const as h (h)}
 				<span
 					class="handle {h}"
 					onpointerdown={e => down(e, h)}
-					role="presentation"
+					role="slider"
+					tabindex={editable ? 0 : -1}
+					aria-label={corners[h]}
+					aria-valuenow={percent(rect.x)}
+					aria-valuetext={where}
+					onkeydown={e => onkeydown(e, h)}
 				></span>
 			{/each}
 		</div>
@@ -161,6 +201,10 @@
 		outline: 2px solid white;
 		cursor: move;
 		touch-action: none;
+
+		&:focus-visible {
+			outline-color: var(--accent);
+		}
 	}
 
 	// inside the corners, the frame cuts what is outside the image
@@ -172,6 +216,11 @@
 		border: 2px solid var(--accent);
 		border-radius: var(--radius-sm);
 		touch-action: none;
+
+		&:focus-visible {
+			outline: 2px solid var(--accent);
+			outline-offset: 1px;
+		}
 
 		&.nw {
 			left: -2px;

@@ -64,7 +64,8 @@ The components write their few own texts (Today, Close, Nothing found)
 and dates in the user's language: the studio sets them in
 `zipp-ui/texts`, which a plugin's copy of zipp-ui shares. A plugin's
 own texts are its own; `<html lang>` says the studio's language (`en`
-or `de`) to pick them by.
+or `de`) to pick them by. The SEO plugin has a small map of English and
+German in `studio/src/texts.js`.
 
 `host` is what the studio lends a module: `host.request(method, path,
 body)` calls the api as the logged in user, `host.mountField(target, {

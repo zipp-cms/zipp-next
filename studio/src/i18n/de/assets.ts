@@ -84,11 +84,17 @@ export default {
 	'assets.square': 'Quadratisch',
 	'assets.portrait': 'Hochformat',
 	'assets.cropNote':
-		'Ziehen Sie den Ausschnitt über das Bild hinaus, um Platz darum herum zu schaffen.',
+		'Ziehen Sie den Ausschnitt über das Bild hinaus, um Platz darum herum zu schaffen. Mit der Tastatur verschieben die Pfeiltasten ihn oder eine Ecke, mit Shift in grösseren Schritten.',
+	'assets.cropAt': 'Bei {x} %, {y} %, {w} × {h} %',
+	'assets.cornerNw': 'Ecke oben links des Ausschnitts',
+	'assets.cornerNe': 'Ecke oben rechts des Ausschnitts',
+	'assets.cornerSw': 'Ecke unten links des Ausschnitts',
+	'assets.cornerSe': 'Ecke unten rechts des Ausschnitts',
 	'assets.transparentNote':
 		'Transparenz braucht ein PNG: Ein JPEG wird dann als PNG ausgeliefert.',
 	'assets.focalNote':
-		'Klicken Sie auf das Bild, um den Fokuspunkt zu setzen, die Zuschnitte der Grössen behalten ihn im Bild.',
+		'Klicken Sie auf das Bild, um den Fokuspunkt zu setzen, die Zuschnitte der Grössen behalten ihn im Bild. Mit der Tastatur verschieben ihn die Pfeiltasten, mit Shift in grösseren Schritten.',
+	'assets.focalAt': 'Bei {x} %, {y} %',
 	'assets.width': 'Breite',
 	'assets.height': 'Höhe',
 	'assets.originalSize': 'Originalgrösse',

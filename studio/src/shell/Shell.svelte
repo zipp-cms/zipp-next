@@ -18,7 +18,7 @@
 	import UploadProgress from '../assets/UploadProgress.svelte';
 	import LoginAsBar from './LoginAsBar.svelte';
 	import { sideNav } from './sideNav.svelte';
-	import { layer } from 'zipp-ui/layers';
+	import { layer, trapTab } from 'zipp-ui/layers';
 	import { providePageLead } from 'zipp-ui/pageLead';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import SearchBox from '../search/SearchBox.svelte';
@@ -46,6 +46,11 @@
 	});
 
 	const close = () => (sideNav.open = false);
+
+	// the drawer is modal: it takes the focus and keeps Tab, `layer` gives
+	// the focus back
+	let drawer = $state<HTMLElement>();
+	$effect(() => drawer?.focus());
 
 	// Cmd+K (Ctrl+K) opens the search on every page, again closes it
 	async function onkeydown(e: KeyboardEvent) {
@@ -93,7 +98,16 @@
 </div>
 {#if sideNav.open}
 	<div class="backdrop" role="presentation" onclick={close}></div>
-	<div class="drawer" use:layer={close}>
+	<div
+		class="drawer"
+		role="dialog"
+		aria-modal="true"
+		aria-label={t('shell.menu')}
+		tabindex="-1"
+		bind:this={drawer}
+		use:layer={close}
+		onkeydown={e => drawer && trapTab(e, drawer)}
+	>
 		<Sidebar {schema} {onlogout} />
 	</div>
 {/if}
@@ -144,6 +158,7 @@
 		width: 14.5rem;
 		max-width: 85vw;
 		box-shadow: var(--shadow-flyout);
+		outline: none;
 		animation: slide 0.18s ease-out;
 	}
 

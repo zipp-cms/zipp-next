@@ -1,4 +1,4 @@
-import { locale } from '../i18n/index.svelte';
+import { locale, t } from '../i18n/index.svelte';
 
 /**
  * A slug of a title like the server's (`entries::slugify`): lowercase,
@@ -34,15 +34,17 @@ export function capitalized(s: string): string {
 	return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-/** A size of a file: `27 KB`, `1.4 MB`. */
+/** A size of a file in the user's language: `27 KB`, `1,4 MB`. */
 export function fileSize(bytes: number): string {
-	if (bytes < 1024 * 1024)
-		return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+	if (bytes < 1024 * 1024) {
+		const kb = Math.max(1, Math.round(bytes / 1024));
+		return t('common.kb', { n: kb.toLocaleString(locale()) });
+	}
 	const mb = new Intl.NumberFormat(locale(), {
 		minimumFractionDigits: 1,
 		maximumFractionDigits: 1,
 	});
-	return `${mb.format(bytes / 1024 / 1024)} MB`;
+	return t('common.mb', { n: mb.format(bytes / 1024 / 1024) });
 }
 
 /** How long a video plays: `0:42`, `1:02:05`. */

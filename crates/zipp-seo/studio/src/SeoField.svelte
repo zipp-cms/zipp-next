@@ -1,6 +1,7 @@
 <script>
 	import FieldGroup from 'zipp-ui/FieldGroup.svelte';
 	import FieldRow from 'zipp-ui/FieldRow.svelte';
+	import { texts } from './texts.js';
 
 	/**
 	 * The SEO of a single entry, like the Craft plugin's field: every value
@@ -12,6 +13,7 @@
 	let { value, onchange, entryId, site, host } = $props();
 	// the ids of its inputs, an entry can have more than one SEO field
 	const uid = $props.id();
+	const tx = texts();
 
 	const ROBOTS = [
 		'index, follow',
@@ -42,8 +44,7 @@
 	let social = $state(false);
 	$effect(() => {
 		if (entryId === null) return;
-		host
-			.request('GET', `/entries/${entryId}/seo?site=${site}`)
+		host.request('GET', `/entries/${entryId}/seo?site=${site}`)
 			.then(d => (defaults = d))
 			.catch(() => {});
 	});
@@ -61,7 +62,7 @@
 	function image(target, key) {
 		const field = {
 			handle: key,
-			label: key,
+			label: tx[key],
 			required: false,
 			indexed: false,
 			translatable: false,
@@ -80,14 +81,14 @@
 </script>
 
 <FieldGroup>
-	<FieldRow label="Preview">
-		<div class="preview">
+	<FieldRow label={tx.preview}>
+		<div class="preview" role="group" aria-label={tx.searchResult}>
 			<span class="url">{defaults?.url ?? ''}</span>
 			<span class="title">{title}</span>
 			<span class="description">{description}</span>
 		</div>
 	</FieldRow>
-	<FieldRow label="Title" for="{uid}-title">
+	<FieldRow label={tx.title} for="{uid}-title">
 		{#snippet info()}
 			<span class:over={title.length > 60}>{title.length} / 60</span>
 		{/snippet}
@@ -97,7 +98,7 @@
 			placeholder={defaults?.title ?? ''}
 		/>
 	</FieldRow>
-	<FieldRow label="Description" for="{uid}-description">
+	<FieldRow label={tx.description} for="{uid}-description">
 		{#snippet info()}
 			<span class:over={description.length > 160}>
 				{description.length} / 160
@@ -110,18 +111,18 @@
 			placeholder={defaults?.description ?? ''}
 		></textarea>
 	</FieldRow>
-	<FieldRow label="Image">
+	<FieldRow label={tx.image}>
 		<div use:image={'image'}></div>
 	</FieldRow>
-	<FieldRow label="Robots" for="{uid}-robots">
+	<FieldRow label={tx.robots} for="{uid}-robots">
 		<select id="{uid}-robots" bind:value={seo.robots}>
 			<option value={undefined}>
-				Inherit: {defaults?.robots ?? 'index, follow'}
+				{tx.inherit}: {defaults?.robots ?? 'index, follow'}
 			</option>
 			{#each ROBOTS as r (r)}<option value={r}>{r}</option>{/each}
 		</select>
 	</FieldRow>
-	<FieldRow label="Canonical URL" for="{uid}-canonical">
+	<FieldRow label={tx.canonicalUrl} for="{uid}-canonical">
 		<input
 			id="{uid}-canonical"
 			bind:value={seo.canonicalUrl}
@@ -131,18 +132,18 @@
 
 	<FieldRow>
 		<button type="button" class="link" onclick={() => (social = !social)}>
-			{social ? 'Hide' : 'Show'} sharing (Open Graph, X)
+			{social ? tx.hideSharing : tx.showSharing}
 		</button>
 	</FieldRow>
 	{#if social}
-		<FieldRow label="Social title" for="{uid}-social-title">
+		<FieldRow label={tx.socialTitle} for="{uid}-social-title">
 			<input
 				id="{uid}-social-title"
 				bind:value={seo.socialTitle}
 				placeholder={title}
 			/>
 		</FieldRow>
-		<FieldRow label="Social description" for="{uid}-social-description">
+		<FieldRow label={tx.socialDescription} for="{uid}-social-description">
 			<textarea
 				id="{uid}-social-description"
 				rows="2"
@@ -150,7 +151,7 @@
 				placeholder={description}
 			></textarea>
 		</FieldRow>
-		<FieldRow label="Social image">
+		<FieldRow label={tx.socialImage}>
 			<div use:image={'socialImage'}></div>
 		</FieldRow>
 	{/if}

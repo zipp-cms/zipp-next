@@ -73,6 +73,7 @@
 			refs,
 			editable: !el.closest('fieldset[disabled]'),
 			language,
+			label: field.label,
 			// a plain copy, TipTap doesn't take Svelte's proxies
 			content: $state.snapshot(values[field.handle]),
 			onChange: doc => {

@@ -14,8 +14,10 @@
 	import { drawEdited } from './draw';
 	import { t } from '../../i18n/index.svelte';
 	import {
+		arrowStep,
 		flipped,
 		focalAt,
+		movedFocal,
 		ratioCrop,
 		rotated,
 		sizes,
@@ -98,6 +100,16 @@
 	function setFocal(e: MouseEvent) {
 		if (editable && mode === 'focal' && view) focal = focalAt(e, view);
 	}
+
+	// the point also moves with the arrow keys, when it has the focus
+	function moveFocal(e: KeyboardEvent) {
+		const step = arrowStep(e);
+		if (!editable || !step) return;
+		e.preventDefault();
+		focal = movedFocal(focal, step.dx, step.dy);
+	}
+
+	const percent = (v: number) => Math.round(v * 100);
 </script>
 
 <div class="editor">
@@ -223,10 +235,21 @@
 			>
 				<canvas bind:this={view}></canvas>
 				{#if mode === 'focal'}
+					<!-- for the keyboard a slider, read only without edit -->
 					<span
 						class="point"
+						role="slider"
+						tabindex={editable ? 0 : -1}
+						aria-label={t('assets.focalPoint')}
+						aria-readonly={!editable}
+						aria-valuenow={percent(focal.x)}
+						aria-valuetext={t('assets.focalAt', {
+							x: percent(focal.x),
+							y: percent(focal.y),
+						})}
 						style:left="{focal.x * 100}%"
 						style:top="{focal.y * 100}%"
+						onkeydown={moveFocal}
 					></span>
 				{/if}
 			</div>
@@ -315,5 +338,10 @@
 		border-radius: 50%;
 		box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
 		pointer-events: none;
+
+		&:focus-visible {
+			outline: 2px solid var(--accent);
+			outline-offset: 2px;
+		}
 	}
 </style>

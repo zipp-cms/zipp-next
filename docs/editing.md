@@ -181,7 +181,8 @@ ratio, square, 16:9, 4:3, 3:2, also upright; past the image for room
 around it), rotate, flip, a new size (also bigger), a canvas around it,
 the background around the image in a color or transparent (a JPEG with
 transparent parts is delivered as PNG) and the focal point the
-crops of the transforms keep in view. The uploaded file stays as it
+crops of the transforms keep in view. The focal point, the crop and its
+corners also move with the arrow keys (Shift for bigger steps). The uploaded file stays as it
 was: the edits are stored next to it, every transform starts from the
 edited image, Reset brings the original back. Next to it: title, alt
 text (of the site the studio shows, the primary site's as placeholder)

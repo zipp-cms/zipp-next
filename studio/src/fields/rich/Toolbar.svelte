@@ -132,6 +132,7 @@
 	<button
 		type="button"
 		class:on={active('bold')}
+		aria-pressed={active('bold')}
 		title={t('fields.bold')}
 		onclick={() => chain().toggleBold().run()}
 	>
@@ -140,6 +141,7 @@
 	<button
 		type="button"
 		class:on={active('italic')}
+		aria-pressed={active('italic')}
 		title={t('fields.italic')}
 		onclick={() => chain().toggleItalic().run()}
 	>
@@ -149,6 +151,7 @@
 		<button
 			type="button"
 			class:on={active('bulletList')}
+			aria-pressed={active('bulletList')}
 			title={t('fields.list')}
 			onclick={() => chain().toggleBulletList().run()}
 		>
@@ -157,6 +160,7 @@
 		<button
 			type="button"
 			class:on={active('orderedList')}
+			aria-pressed={active('orderedList')}
 			title={t('fields.numberedList')}
 			onclick={() => chain().toggleOrderedList().run()}
 		>

@@ -42,3 +42,30 @@ export function layer(_node: HTMLElement, close: () => void) {
 		},
 	};
 }
+
+const FOCUSABLE =
+	'a[href], button:not(:disabled), input:not(:disabled), ' +
+	'select:not(:disabled), textarea:not(:disabled), ' +
+	'[tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
+
+/**
+ * For the keydown of a modal layer: Tab stays in `root`, from the last
+ * to the first and back.
+ */
+export function trapTab(e: KeyboardEvent, root: HTMLElement) {
+	if (e.key !== 'Tab') return;
+	// shown, and not only for the arrow keys (`tabindex="-1"`)
+	const all = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+		el => el.offsetParent !== null && !el.matches('[tabindex="-1"]'),
+	);
+	if (!all.length) return;
+	const [first, last] = [all[0], all[all.length - 1]];
+	const at = document.activeElement;
+	if (e.shiftKey && (at === first || at === root)) {
+		e.preventDefault();
+		last.focus();
+	} else if (!e.shiftKey && at === last) {
+		e.preventDefault();
+		first.focus();
+	}
+}
