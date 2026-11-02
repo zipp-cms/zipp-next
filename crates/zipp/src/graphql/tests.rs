@@ -867,6 +867,35 @@ async fn offline_sites_only_for_previews() {
 	// an admin sees it
 	let data = run(&gql, q, false).await;
 	assert_eq!(data["entries"], json!([{ "title": "Team" }]));
+
+	// the preview of an entry: the site, but only that entry of it
+	let jobs = save(
+		&db.conn(),
+		&s,
+		None,
+		input("pages", "page", "Jobs", json!({})),
+		None,
+	)
+	.unwrap();
+	let preview = |p| Viewer {
+		published_only: true,
+		preview: Some(p),
+		token: None,
+		indexing: true,
+		scope: Scope::ALL,
+		loaded: Default::default(),
+	};
+	let ask = async |v: Viewer| {
+		let resp = gql.execute(async_graphql::Request::new(q).data(v)).await;
+		assert!(resp.errors.is_empty(), "{:?}", resp.errors);
+		resp.data.into_json().unwrap()
+	};
+	let data = ask(preview(Preview::Entry(jobs.id, Default::default()))).await;
+	assert_eq!(data["crelteSites"].as_array().unwrap().len(), 2);
+	assert_eq!(data["entries"], json!([{ "title": "Jobs" }]));
+	// the preview of all drafts, the studio's, sees the whole site
+	let data = ask(preview(Preview::All(vec!["pages".into()]))).await;
+	assert_eq!(data["entries"].as_array().unwrap().len(), 2);
 	assert_eq!(
 		site().offline("de").check().unwrap_err(),
 		"the primary site can't be offline"

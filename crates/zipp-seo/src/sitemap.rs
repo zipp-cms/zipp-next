@@ -127,18 +127,28 @@ struct OriginParam {
 	origin: Option<String>,
 }
 
-/// The frontend's origin, the primary site's without one.
+/// The frontend's origin: the one it sends if a site has a url there
+/// (anything else would end up in the text of robots.txt and in the cache
+/// of the frontend), else the primary site's.
 fn frontend(state: &AppState, p: &OriginParam) -> String {
-	let given = p.origin.as_deref().map(|o| o.trim_end_matches('/'));
-	let valid = given.filter(|o| {
+	let primary = &state.schema.primary_site().handle;
+	frontend_of(&state.site_urls, primary, p.origin.as_deref())
+}
+
+pub(crate) fn frontend_of(
+	urls: &zipp::SiteUrls,
+	primary: &str,
+	given: Option<&str>,
+) -> String {
+	let given = given.map(|o| o.trim_end_matches('/'));
+	let known = given.filter(|o| {
 		(o.starts_with("https://") || o.starts_with("http://"))
-			&& origin(o) == *o
+			&& urls.values().any(|u| origin(u) == *o)
 	});
-	match valid {
+	match known {
 		Some(o) => o.to_string(),
 		None => {
-			let primary = &state.schema.primary_site().handle;
-			let url = state.site_urls.get(primary).cloned().unwrap_or_default();
+			let url = urls.get(primary).cloned().unwrap_or_default();
 			origin(&url).to_string()
 		}
 	}

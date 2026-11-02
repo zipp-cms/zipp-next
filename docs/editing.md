@@ -28,7 +28,10 @@ What a site's frontend needs for it (and for the AI page):
 
 - The studio may frame it: no `X-Frame-Options` and no CSP
   `frame-ancestors` that leave out the studio's origin, at least for
-  urls with `?token=`.
+  urls with `?token=`. Its origin is in `--site-url` (the studio's CSP
+  allows frames of those). The frame is sandboxed (scripts, its own
+  origin, forms and popups, but it can't navigate the studio), a tab of
+  View opens without `opener`.
 - crelte's live preview mode (`x-craft-live-preview`, the studio adds
   it): it keeps the scroll position when the page loads again.
 - The bridge (`example/crelte/svelte/src/components/PreviewBridge.svelte`,

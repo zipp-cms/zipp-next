@@ -31,6 +31,13 @@ pub(super) struct ServeArgs {
 	/// `--frame-ancestor https://dash.example.com`, repeat for more
 	#[arg(long, env = "ZIPP_FRAME_ANCESTOR", value_delimiter = ',')]
 	pub(super) frame_ancestor: Vec<String>,
+	/// A proxy in front of the cms, like the server of the frontend that
+	/// forwards a form: its `X-Forwarded-For` names the visitor (for the
+	/// limits of logins and forms). `--trusted-proxy 127.0.0.1`, a
+	/// network like `172.16.0.0/12` too, repeat for more; without one
+	/// the header is ignored
+	#[arg(long, env = "ZIPP_TRUSTED_PROXY", value_delimiter = ',')]
+	pub(super) trusted_proxy: Vec<client::Proxy>,
 	/// A backup a day into this folder (and at the start when the last
 	/// one is older), see `backup`
 	#[arg(long, env = "ZIPP_BACKUP_DIR")]

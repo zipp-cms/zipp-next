@@ -10,11 +10,13 @@
 //! ```
 
 use std::fs;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use axum::Router;
 use axum::body::{Body, to_bytes};
+use axum::extract::connect_info::MockConnectInfo;
 use axum::http::{self, header};
 use axum::response::Response;
 use serde::Deserialize;
@@ -66,7 +68,7 @@ impl TestServer {
 			..AppState::new(db, schema, gql, files)
 		};
 		Self {
-			app: server::app(state.clone(), Router::new()),
+			app: app(&state, Router::new()),
 			routes: Router::new(),
 			state,
 			users: AtomicU32::new(0),
@@ -81,28 +83,38 @@ impl TestServer {
 		let mut hooks = (*self.state.hooks).clone();
 		hooks.push(Arc::new(hook));
 		self.state.hooks = Arc::new(hooks);
-		self.app = server::app(self.state.clone(), self.routes.clone());
+		self.app = app(&self.state, self.routes.clone());
 		self
 	}
 
 	/// Routes of the site, like [`Cms::routes`](crate::Cms::routes).
 	pub fn routes(mut self, routes: Router<AppState>) -> Self {
 		self.routes = self.routes.clone().merge(routes);
-		self.app = server::app(self.state.clone(), self.routes.clone());
+		self.app = app(&self.state, self.routes.clone());
 		self
 	}
 
 	/// Development mode, like `serve --dev`.
 	pub fn dev(mut self) -> Self {
 		self.state.dev = true;
-		self.app = server::app(self.state.clone(), self.routes.clone());
+		self.app = app(&self.state, self.routes.clone());
 		self
 	}
 
 	/// The cms' url, like `serve --public-url`; empty is none.
 	pub fn public_url(mut self, url: &str) -> Self {
 		self.state.public_url = Arc::new(url.into());
-		self.app = server::app(self.state.clone(), self.routes.clone());
+		self.app = app(&self.state, self.routes.clone());
+		self
+	}
+
+	/// A proxy that may name the client, like `serve --trusted-proxy`.
+	/// Requests come from `127.0.0.1`.
+	pub fn trusted_proxy(mut self, proxy: &str) -> Self {
+		let mut proxies = (*self.state.trusted_proxies).clone();
+		proxies.push(proxy.parse().unwrap());
+		self.state.trusted_proxies = Arc::new(proxies);
+		self.app = app(&self.state, self.routes.clone());
 		self
 	}
 
@@ -144,6 +156,12 @@ impl Drop for TestServer {
 	fn drop(&mut self) {
 		let _ = fs::remove_dir_all(&self.state.files);
 	}
+}
+
+/// The app of `serve`, its requests come from `127.0.0.1`.
+fn app(state: &AppState, routes: Router<AppState>) -> Router {
+	let peer = SocketAddr::from(([127, 0, 0, 1], 40000));
+	server::app(state.clone(), routes).layer(MockConnectInfo(peer))
 }
 
 /// bcrypt of `password`, made once: it takes a while.

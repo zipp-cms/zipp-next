@@ -11,6 +11,8 @@
 	"devDependencies": {
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tsconfig/svelte": "^5.0.2",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
 		"prettier": "^3.3",
 		"prettier-plugin-svelte": "^3.2.5",
 		"sass": "^1.63.4",
@@ -28,8 +30,12 @@
 		"@tiptap/pm": "^3.32.0",
 		"@tiptap/starter-kit": "^3.32.0",
 		"chuchi": "^0.1.7",
+		"graphiql": "^4.1.2",
+		"graphql": "^16.14.2",
 		"lucide-static": "^1.65.0",
 		"marked": "^18.1.2",
+		"react": "^19.3.1",
+		"react-dom": "^19.3.1",
 		"zipp-ui": "file:./ui"
 	}
 }

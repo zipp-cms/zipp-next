@@ -24,7 +24,9 @@ and the root `seoJson(siteId:)` in the plugin's shape (title, meta, links,
 JSON-LD with Organization, WebSite, WebPage and breadcrumbs, hreflang
 alternates, a 1200×630 social image), so the npm package `meierlabs-seo`
 (`<Seo>`, `seoRoutes`) works unchanged: zipp answers its sitemap and
-robots.txt actions. `serve --noindex` (and `--dev`) makes every page
+robots.txt actions (their `?origin=` counts only when it is the origin
+of a `--site-url`; `jsonLd` has `<`, `>` and `&` escaped, it can't end
+its `<script>`). `serve --noindex` (and `--dev`) makes every page
 noindex and robots.txt disallow everything.
 
 ## Differences from the plugin

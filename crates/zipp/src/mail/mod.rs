@@ -17,7 +17,7 @@ use std::sync::Arc;
 #[cfg(any(test, feature = "testing"))]
 use std::sync::Mutex;
 
-use lettre::message::{Mailbox, MultiPart};
+use lettre::message::{Mailbox, Mailboxes, MultiPart};
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 
 use crate::error::{Error, Result};
@@ -33,7 +33,8 @@ pub(crate) use routes::routes;
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub struct Mail {
-	/// an address, or `Anna Muster <anna@example.ch>`
+	/// an address, or `Anna Muster <anna@example.ch>`; several separated
+	/// by commas get the same mail
 	pub to: String,
 	pub subject: String,
 	pub text: String,
@@ -116,8 +117,22 @@ impl Mailer {
 
 	/// Mails over the SMTP server of `url` (lettre's: `smtp://` with
 	/// `?tls=required` for STARTTLS, `smtps://` for TLS, user and password
-	/// before the host), from `from`.
+	/// before the host), from `from`. A password only goes over TLS.
 	pub fn smtp(url: &str, from: &str) -> std::result::Result<Self, String> {
+		let (scheme, rest) = url.split_once("://").unwrap_or(("", url));
+		let credentials = rest
+			.split(['/', '?'])
+			.next()
+			.is_some_and(|h| h.contains('@'));
+		let tls = scheme == "smtps"
+			|| url.split_once('?').is_some_and(|(_, q)| {
+				q.split('&').any(|p| p == "tls=required")
+			});
+		if credentials && !tls {
+			return Err("--smtp-url: a password only over TLS, \
+				`smtps://` or `?tls=required`"
+				.into());
+		}
 		let transport = AsyncSmtpTransport::<Tokio1Executor>::from_url(url)
 			.map_err(|e| format!("--smtp-url: {e}"))?
 			.build();
@@ -182,10 +197,15 @@ impl Mailer {
 			a.parse::<Mailbox>()
 				.map_err(|e| Error::Request(format!("the address {a:?}: {e}")))
 		};
+		let to = mail.to.parse::<Mailboxes>().map_err(|e| {
+			Error::Request(format!("the address {:?}: {e}", mail.to))
+		})?;
 		let mut b = Message::builder()
 			.from(self.0.from.clone())
-			.to(address(&mail.to)?)
 			.subject(&mail.subject);
+		for to in to {
+			b = b.to(to);
+		}
 		if let Some(r) = &mail.reply_to {
 			b = b.reply_to(address(r)?);
 		}

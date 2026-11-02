@@ -63,7 +63,9 @@ like in the studio (Try it on the GraphQL page opens it); without a
 session it goes to the login. In development (`serve --dev`,
 `ZIPP_DEV=1`) GraphQL is open without a token, unless `serve` has one;
 a wrong token gets 401 there too and a token reads only its scope.
-GraphiQL loads its scripts from unpkg.com.
+GraphiQL is bundled with the studio (`studio/graphiql.html`, its own
+page of the build) and has the studio's CSP, it loads nothing from other
+servers.
 
 ## Craft's arguments and fields
 

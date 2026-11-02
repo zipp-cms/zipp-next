@@ -1,6 +1,7 @@
 //! `POST /forms/<handle>`: a submission of the website, checked and
 //! mailed to the recipients of the form's settings.
 
+use std::net::IpAddr;
 use std::sync::Arc;
 
 use serde::Deserialize;
@@ -9,9 +10,10 @@ use zipp::AppState;
 use zipp::axum::Router;
 use zipp::axum::body::Bytes;
 use zipp::axum::extract::{Path, Query, State};
-use zipp::axum::http::{HeaderMap, StatusCode};
+use zipp::axum::http::StatusCode;
 use zipp::axum::response::{IntoResponse, Response};
 use zipp::axum::routing::post;
+use zipp::client::ClientAddr;
 use zipp::content::valid_email;
 use zipp::db::now;
 use zipp::mail::Mail;
@@ -19,7 +21,11 @@ use zipp::mail::Mail;
 use crate::{FORM_SETTINGS, Form, FormFieldKind, Forms};
 
 /// Submissions of an address in [`WINDOW_MS`] before it has to wait.
-const MAX_PER_WINDOW: usize = 5;
+const MAX_PER_ADDRESS: usize = 5;
+/// Submissions of a form in [`WINDOW_MS`], from all addresses: many
+/// addresses can't send a flood of mails either. It also keeps the
+/// limits small, only what is counted is kept.
+const MAX_PER_FORM: usize = 50;
 const WINDOW_MS: i64 = 1000 * 60 * 10;
 
 #[derive(Deserialize)]
@@ -31,8 +37,8 @@ struct SiteParam {
 pub(crate) fn routes(forms: Arc<Forms>) -> Router<AppState> {
 	Router::new().route(
 		"/forms/{handle}",
-		post(move |state, path, query, headers, body| {
-			submit(forms.clone(), state, path, query, headers, body)
+		post(move |state, path, query, client, body| {
+			submit(forms.clone(), state, path, query, client, body)
 		}),
 	)
 }
@@ -56,7 +62,7 @@ async fn submit(
 	State(state): State<AppState>,
 	Path(handle): Path<String>,
 	Query(q): Query<SiteParam>,
-	headers: HeaderMap,
+	client: ClientAddr,
 	body: Bytes,
 ) -> Response {
 	let Some(form) = forms.get(&handle) else {
@@ -102,7 +108,7 @@ async fn submit(
 			);
 		}
 	};
-	if !forms.may_send(&address(&headers)) {
+	if !forms.may_send(&handle, client) {
 		let message = "Too many messages, please try again in a few minutes";
 		return answer(
 			StatusCode::TOO_MANY_REQUESTS,
@@ -123,14 +129,13 @@ async fn submit(
 		.position(|f| f.reply_to)
 		.map(|i| fields[i].as_str())
 		.filter(|a| !a.is_empty());
-	for to in &settings.to {
-		let mut mail = Mail::new(to, &subject, &text);
-		if let Some(r) = reply {
-			mail = mail.reply_to(r);
-		}
-		if let Err(e) = state.mail.send(mail).await {
-			return unavailable(&format!("{handle}: {e}"));
-		}
+	// one mail to all: a failing one doesn't leave the others sent
+	let mut mail = Mail::new(&settings.to.join(", "), &subject, &text);
+	if let Some(r) = reply {
+		mail = mail.reply_to(r);
+	}
+	if let Err(e) = state.mail.send(mail).await {
+		return unavailable(&format!("{handle}: {e}"));
 	}
 	ok
 }
@@ -240,34 +245,30 @@ pub(crate) fn mail_text(form: &Form, values: &[String]) -> String {
 	text
 }
 
-/// Who sends: the first address the proxies name, else unknown.
-fn address(headers: &HeaderMap) -> String {
-	let header = |name: &str| {
-		headers
-			.get(name)
-			.and_then(|v| v.to_str().ok())
-			.and_then(|v| v.split(',').next())
-			.map(|v| v.trim().to_string())
-	};
-	header("x-forwarded-for")
-		.or_else(|| header("x-real-ip"))
-		.unwrap_or_else(|| "-".into())
+/// What a submission counts for.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) enum Limit {
+	Address(IpAddr),
+	Form(String),
 }
 
 impl Forms {
-	/// Whether an address may send now; counts it.
-	fn may_send(&self, address: &str) -> bool {
+	/// Whether an address may send the form now; counts it.
+	fn may_send(&self, form: &str, client: ClientAddr) -> bool {
 		let now = now();
 		let mut limits = self.limits.lock().unwrap_or_else(|e| e.into_inner());
 		limits.retain(|_, times| {
 			times.retain(|t| now - *t < WINDOW_MS);
 			!times.is_empty()
 		});
-		let times = limits.entry(address.to_string()).or_default();
-		if times.len() >= MAX_PER_WINDOW {
+		let address = Limit::Address(client.network());
+		let form = Limit::Form(form.into());
+		let count = |l: &Limit| limits.get(l).map_or(0, Vec::len);
+		if count(&address) >= MAX_PER_ADDRESS || count(&form) >= MAX_PER_FORM {
 			return false;
 		}
-		times.push(now);
+		limits.entry(address).or_default().push(now);
+		limits.entry(form).or_default().push(now);
 		true
 	}
 }

@@ -31,13 +31,12 @@ use async_graphql::dynamic::{
 	Interface, InterfaceField, Object, ResolverContext, Scalar,
 	Schema as GqlSchema, TypeRef, Union,
 };
-use async_graphql::http::GraphiQLSource;
 use async_graphql::{Error as GqlError, Value as GqlValue};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::Router;
 use axum::extract::{Query as QueryParams, State};
 use axum::http::HeaderMap;
-use axum::response::Html;
+use axum::response::Response;
 use axum::routing::get;
 use serde::Deserialize;
 use serde_json::Value;
@@ -451,29 +450,12 @@ fn token_scope(
 	tokens::scope_of(conn, sent)
 }
 
-/// The playground, for admins and in development. Its queries send the
-/// session of the studio (the same origin keeps it), so an admin sees
-/// drafts like in the studio; without one it goes to the login, except
-/// in development where GraphQL is open. It loads its scripts from a cdn.
-async fn graphiql(State(state): State<AppState>) -> Html<String> {
-	let html = GraphiQLSource::build()
-		.endpoint("/api/graphql")
-		.title("GraphiQL · zipp")
-		.finish();
-	let session = format!(
-		"<script>
-		const zippToken = localStorage.getItem('zipp-token')
-			?? sessionStorage.getItem('zipp-token');
-		if (!zippToken && !{dev}) location.replace('/admin');
-		const plainFetch = window.fetch;
-		window.fetch = (url, opts = {{}}) => plainFetch(url, zippToken
-			? {{ ...opts, headers: {{ ...opts.headers, 'session-token': zippToken }} }}
-			: opts);
-		</script>
-		</head>",
-		dev = state.dev,
-	);
-	Html(html.replacen("</head>", &session, 1))
+/// The playground, for admins and in development: a page of the studio's
+/// build, see [`crate::studio`]. Its queries send the session of the
+/// studio, so an admin sees drafts like in the studio; without one it goes
+/// to the login, except in development where GraphQL is open.
+async fn graphiql(State(state): State<AppState>) -> Response {
+	crate::studio::graphiql(&state)
 }
 
 pub fn routes() -> Router<AppState> {

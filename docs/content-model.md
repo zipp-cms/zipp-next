@@ -282,7 +282,8 @@ studio; put its handle into a nav group like a section.
 `.offline("fr")` keeps a site off the website
 like a disabled site in Craft: frontends get none of its entries and it
 is not in `crelteSites` or the sitemaps; editors fill it in, previews and
-admins see it.
+admins see it. The preview link of one entry shows only that entry of an
+offline site, not the rest of it.
 
 ## Designing a content model
 

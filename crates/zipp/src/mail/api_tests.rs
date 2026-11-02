@@ -40,9 +40,21 @@ fn builds_a_mail_with_html() {
 // the pool of the transport lives in a runtime
 #[tokio::test]
 async fn smtp_needs_a_sender_and_hides_the_password() {
-	let m =
-		Mailer::smtp("smtp://u:secret@mail.example.ch:587", "cms@example.ch")
-			.unwrap();
+	let url = "smtp://u:secret@mail.example.ch:587?tls=required";
+	let m = Mailer::smtp(url, "cms@example.ch").unwrap();
 	assert_eq!(m.server(), Some("mail.example.ch:587"));
 	assert!(Mailer::smtp("smtp://localhost:1025", "not an address").is_err());
+}
+
+#[tokio::test]
+async fn smtp_sends_a_password_only_over_tls() {
+	let from = "cms@example.ch";
+	let err = Mailer::smtp("smtp://u:secret@mail.example.ch:587", from);
+	assert!(err.err().unwrap().contains("TLS"));
+	let err =
+		Mailer::smtp("smtp://u:p@mail.example.ch:587?tls=opportunistic", from);
+	assert!(err.is_err());
+	assert!(Mailer::smtp("smtps://u:secret@mail.example.ch", from).is_ok());
+	// Mailpit of development has no password
+	assert!(Mailer::smtp("smtp://localhost:1025", from).is_ok());
 }

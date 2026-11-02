@@ -10,11 +10,12 @@ use super::links::{
 	take_link,
 };
 use super::{
-	ClientAddr, Session, end_session, hash_password, login, new_session,
-	renew_session, role_of, set_password_hash, token_of,
+	Session, end_session, hash_password, login, new_session, renew_session,
+	role_of, set_password_hash, token_of,
 };
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
+use crate::client::ClientAddr;
 use crate::content::FieldError;
 use crate::db::now;
 use crate::error::Error;
@@ -22,13 +23,13 @@ use crate::users::{password_error, user};
 
 async fn login_route(
 	State(state): State<AppState>,
-	ClientAddr(address): ClientAddr,
+	client: ClientAddr,
 	Req(req): Req<LoginReq>,
 ) -> ApiResult<LoginReq> {
 	let user_id = login(
 		&state.db,
 		&state.logins,
-		&address,
+		&client.network().to_string(),
 		&req.email,
 		&req.password,
 	)

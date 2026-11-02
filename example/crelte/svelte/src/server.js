@@ -21,15 +21,24 @@ export async function routes(router) {
 	router.post('/forms/:handle', csr => forward(csr));
 }
 
-/** A submission to the cms, with who sent it for its limit. */
+/**
+ * A submission to the cms, with who sent it for its limit. crelte gives
+ * no socket address: the proxy in front of this server (Caddy, Traefik)
+ * adds the visitor's address at the end of X-Forwarded-For, whatever the
+ * visitor wrote before it doesn't count. The cms trusts it from this
+ * server with `--trusted-proxy`, see docs/operations.md.
+ */
 async function forward(csr) {
 	const url = new URL(csr.req.url);
 	const to = csr.backendUrl(url.pathname);
 	to.search = url.search;
-	const ip = csr.req.headers.get('x-forwarded-for') ?? '';
+	const hops = csr.req.headers.get('x-forwarded-for')?.split(',') ?? [];
+	const ip = hops.at(-1)?.trim();
+	const headers = { 'content-type': 'application/json' };
+	if (ip) headers['x-forwarded-for'] = ip;
 	const resp = await fetch(to, {
 		method: 'POST',
-		headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
+		headers,
 		body: await csr.req.text(),
 	});
 	return new Response(await resp.text(), {

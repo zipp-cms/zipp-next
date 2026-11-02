@@ -57,17 +57,28 @@ export default defineConfig({
 			},
 		},
 	},
-	// /assets are the uploaded files
+	// /assets are the uploaded files; GraphiQL is a page of its own, the
+	// cms serves it on GET /api/graphql
 	build: {
 		outDir: '../crates/zipp/studio',
 		emptyOutDir: true,
 		assetsDir: '_studio',
+		// GraphiQL is big, only admins load it
+		chunkSizeWarningLimit: 1200,
+		rollupOptions: {
+			input: {
+				index: fileURLToPath(new URL('./index.html', import.meta.url)),
+				graphiql: fileURLToPath(
+					new URL('./graphiql.html', import.meta.url),
+				),
+			},
+		},
 	},
 	// what isn't the studio comes from the cms: the api, uploaded files,
 	// the editors of field types and plugins
 	server: {
 		proxy: Object.fromEntries(
-			['/api', '/assets', '/_fields', '/_plugins'].map(path => [
+			['/api', '/assets', '/_fields', '/_plugins', '/_studio'].map(path => [
 				path,
 				'http://127.0.0.1:8090',
 			]),

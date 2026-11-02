@@ -185,7 +185,7 @@ async fn login_from(
 
 #[tokio::test]
 async fn others_can_t_lock_a_user_out() {
-	let ts = TestServer::new(site());
+	let ts = TestServer::new(site()).trusted_proxy("127.0.0.1");
 	add_user(&ts.state.db.conn(), "d@x.ch", "password1", None).unwrap();
 
 	// someone guesses from their address until it waits

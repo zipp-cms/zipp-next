@@ -1,6 +1,9 @@
+use std::net::SocketAddr;
+
 use serde_json::{Value, json};
 use zipp::Schema;
 use zipp::axum::body::{Body, to_bytes};
+use zipp::axum::extract::ConnectInfo;
 use zipp::axum::http::{Request, StatusCode};
 use zipp::testing::TestServer;
 
@@ -74,9 +77,10 @@ async fn a_submission_is_mailed() {
 		post(&ts, "/forms/contact?site=de", valid(), "1.1.1.1").await;
 	assert_eq!(status, StatusCode::OK);
 	assert_eq!(body, json!({ "success": true, "message": "Danke!" }));
+	// one mail to all
 	let mails = ts.mails();
-	assert_eq!(mails.len(), 2);
-	assert_eq!(mails[0].to, "luisa@example.ch");
+	assert_eq!(mails.len(), 1);
+	assert_eq!(mails[0].to, "luisa@example.ch, team@example.ch");
 	assert_eq!(mails[0].subject, "New message: Contact");
 	assert_eq!(mails[0].reply_to.as_deref(), Some("anna@example.ch"));
 	assert_eq!(
@@ -118,7 +122,7 @@ async fn invalid_ones_and_bots_are_not() {
 
 #[tokio::test]
 async fn an_address_may_send_a_few() {
-	let ts = TestServer::new(schema());
+	let ts = TestServer::new(schema()).trusted_proxy("127.0.0.1");
 	settings(&ts, "luisa@example.ch", "");
 	for _ in 0..5 {
 		let (status, _) = post(&ts, "/forms/contact", valid(), "3.3.3.3").await;
@@ -126,9 +130,48 @@ async fn an_address_may_send_a_few() {
 	}
 	let (status, _) = post(&ts, "/forms/contact", valid(), "3.3.3.3").await;
 	assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+	// what the visitor wrote before the proxy's hop doesn't count
+	let spoofed = "8.8.8.8, 3.3.3.3";
+	let (status, _) = post(&ts, "/forms/contact", valid(), spoofed).await;
+	assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
 	// another one still may
 	let (status, _) = post(&ts, "/forms/contact", valid(), "4.4.4.4").await;
 	assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn a_visitor_s_header_doesn_t_count() {
+	let ts = TestServer::new(schema());
+	settings(&ts, "luisa@example.ch", "");
+	// straight from the internet, not through a proxy
+	let send = async |forwarded: &str| {
+		let mut req = Request::post("/forms/contact")
+			.header("content-type", "application/json")
+			.header("x-forwarded-for", forwarded)
+			.body(Body::from(valid().to_string()))
+			.unwrap();
+		let peer: SocketAddr = "9.9.9.9:1".parse().unwrap();
+		req.extensions_mut().insert(ConnectInfo(peer));
+		ts.anonymous().send(req).await.status()
+	};
+	for i in 0..5 {
+		assert_eq!(send(&format!("6.6.6.{i}")).await, StatusCode::OK);
+	}
+	assert_eq!(send("6.6.6.9").await, StatusCode::TOO_MANY_REQUESTS);
+}
+
+#[tokio::test]
+async fn a_form_takes_a_limited_number_from_all() {
+	let ts = TestServer::new(schema()).trusted_proxy("127.0.0.1");
+	settings(&ts, "luisa@example.ch", "");
+	for i in 0..50 {
+		let ip = format!("7.7.7.{i}");
+		let (status, _) = post(&ts, "/forms/contact", valid(), &ip).await;
+		assert_eq!(status, StatusCode::OK);
+	}
+	let (status, _) = post(&ts, "/forms/contact", valid(), "7.7.8.1").await;
+	assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+	assert_eq!(ts.mails().len(), 50);
 }
 
 #[tokio::test]

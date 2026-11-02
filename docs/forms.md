@@ -23,11 +23,15 @@ recipients in all sites (commas between them), `contactSubject` and
 recipient answers that it can't send.
 
 The website posts JSON to `POST /forms/<handle>?site=<site>` on the cms;
-the crelte server proxies it and passes `X-Forwarded-For` (see
-`example/crelte/svelte/src/server.js`). The answer is `{ "success":
+the crelte server proxies it and passes the visitor's address in
+`X-Forwarded-For`: the last one of the header it got from its own proxy
+(see `example/crelte/svelte/src/server.js`); the cms reads it only from
+a `serve --trusted-proxy` (operations.md), else the connection
+counts. The answer is `{ "success":
 true, "message": "…" }`, invalid fields `422 { "success": false,
 "errors": [{ "path": "email", "message": "An email address" }] }`, too
 many `429`, a mail that can't go `503`. Against spam: a filled honeypot
 field (`website`, `.honeypot("company")` for another name, hidden from
-people) is answered like a success and dropped, and an address sends at
-most 5 in 10 minutes. Mails need `serve --smtp-url`, see operations.md.
+people) is answered like a success and dropped, an address (IPv6: its
+/64) sends at most 5 in 10 minutes and a form takes at most 50 from all
+in 10 minutes. The recipients get one mail together. Mails need `serve --smtp-url`, see operations.md.

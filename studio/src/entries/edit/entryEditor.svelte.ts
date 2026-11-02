@@ -551,8 +551,11 @@ export class EntryEditor {
 		try {
 			const token = await previewToken(this.id!);
 			const page = `${url}?token=${token}`;
-			if (tab) tab.location.href = page;
-			else window.open(page, '_blank');
+			// the website can't navigate the studio's tab
+			if (tab) {
+				tab.opener = null;
+				tab.location.href = page;
+			} else window.open(page, '_blank', 'noopener');
 		} catch (e: any) {
 			tab?.close();
 			this.error = e.message;

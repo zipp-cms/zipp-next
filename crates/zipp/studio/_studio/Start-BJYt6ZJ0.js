@@ -1,1 +1,0 @@
-import{p as e,d as r,v as n}from"./index-YVAXRqUe.js";import{i as f}from"./legacy-COIuVbMw.js";import{n as c}from"./paths-Rl1elA-T.js";function h(s,a){var o;const t=(o=n(s.schema)[0])==null?void 0:o.sections[0],i=t?c(s.schema,t):"/admin/assets";a.setRedirect(i)}function l(s,a){e(a,!1),f(),r()}export{l as default,h as loadProps};

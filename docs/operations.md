@@ -36,8 +36,7 @@ keeps only a hash of each session's token. After 10 wrong passwords of
 an email from one address, that address waits 15 minutes for it (others
 can't lock a user out); an address waits after 50 wrong passwords of
 any emails, an email after 100 from any addresses. The address is the
-peer's, or behind a proxy on the same machine or a private network the
-last one in `X-Forwarded-For` (a proxy elsewhere counts as one address).
+visitor's, see Visitors' addresses.
 
 When a session ends while the studio is open, the page stays and a
 dialog asks for the password again; the draft that couldn't be saved
@@ -68,7 +67,8 @@ password.
 | `--dev` | `ZIPP_DEV` | development: GraphQL open without a token, noindex |
 | `--noindex` | `ZIPP_NOINDEX` | a staging site: noindex everywhere, robots.txt disallows all |
 | `--openrouter-key-file` | `ZIPP_OPENROUTER_KEY_FILE` | turns on the AI chat |
-| `--frame-ancestor` | `ZIPP_FRAME_ANCESTOR` | a site that may show the studio in a frame |
+| `--frame-ancestor` | `ZIPP_FRAME_ANCESTOR` | an origin that may show the studio in a frame, `https://dash.example.com` |
+| `--trusted-proxy` | `ZIPP_TRUSTED_PROXY` | a proxy whose `X-Forwarded-For` names the visitor, an address or a network, see below |
 | `--backup-dir` | `ZIPP_BACKUP_DIR` | a backup a day into it, see Backups |
 | `--backup-keep` | `ZIPP_BACKUP_KEEP` | how many stay, default 14 |
 | `--smtp-url` | `ZIPP_SMTP_URL` | the SMTP server of mails, see below; without it mails are only logged |
@@ -89,11 +89,37 @@ soon. GraphQL's limits are in docs/graphql.md.
 The cms sends mails over SMTP (lettre): `--smtp-url
 smtp://user:pass@mail.example.ch:587?tls=required` for STARTTLS,
 `smtps://…:465` for TLS, `smtp://localhost:1025` for a local catcher.
+A url with a user and password needs TLS (`smtps://` or
+`?tls=required`), `serve` refuses it otherwise.
 `<cms> mail you@example.ch` (with the same options or environment)
 sends a test mail from the shell; admins see the server in Setup →
 Sites, transforms and roles and send themselves one there. In
 development Mailpit catches them: `mailpit --smtp 127.0.0.1:1025`, its
 inbox on `http://127.0.0.1:8025`.
+
+### Visitors' addresses
+
+The limits of logins and forms count the address of the connection. A
+proxy in front of the cms (traefik, the crelte server that forwards a
+form) is that connection for everybody, so from a proxy the cms takes
+the right-most address in `X-Forwarded-For` that isn't a proxy. Each
+proxy adds the address it got the request from at the end, so what a
+visitor writes into the header before doesn't count. `--trusted-proxy`
+names the proxies (`127.0.0.1`, a network like `172.16.0.0/12` for
+docker); without it the header is ignored and the proxy counts as one
+address for all visitors, so behind traefik or a crelte server set it,
+or all logins and forms share one limit.
+
+### Security headers
+
+The studio's pages and GraphiQL are served with a Content-Security-
+Policy: scripts, styles, fonts and requests only from the cms (inline
+styles allowed), images also `data:` and `blob:`, frames of the cms
+and the origins of `--site-url` (the live preview, the AI page), no
+plugins, no `<base>`, framed only by the cms and `--frame-ancestor`
+(an origin, `serve` refuses anything else). GraphiQL is bundled with
+the studio, nothing loads from other servers. The dev server of the
+studio (vite) sends none.
 
 ### Backups
 
@@ -160,6 +186,8 @@ services:
       ZIPP_GRAPHQL_TOKEN: ${GRAPHQL_TOKEN}
       ZIPP_SMTP_URL: ${SMTP_URL}
       ZIPP_MAIL_FROM: Website <cms@example.ch>
+      # traefik and the frontend name the visitor (logins, forms)
+      ZIPP_TRUSTED_PROXY: 172.16.0.0/12
     volumes:
       - ./data:/data
       # backups on another disk than the data

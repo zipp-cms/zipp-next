@@ -97,9 +97,11 @@
 	</div>
 	{#if preview.error}<p class="error">{preview.error}</p>{/if}
 	<div class="stage" class:framed={WIDTHS[device]}>
-		<!-- its src is set by the preview, see `load` -->
+		<!-- its src is set by the preview, see `load`; it may not navigate
+		the studio away -->
 		<iframe
 			bind:this={frame}
+			sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
 			title={t('entries.website')}
 			style:width={WIDTHS[device] ? `${WIDTHS[device]}px` : null}
 			style:pointer-events={resizing ? 'none' : null}

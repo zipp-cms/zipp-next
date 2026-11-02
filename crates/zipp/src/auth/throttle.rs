@@ -6,12 +6,7 @@
 //! many addresses trying one email.
 
 use std::collections::BTreeMap;
-use std::convert::Infallible;
-use std::net::{IpAddr, SocketAddr};
 use std::sync::{Mutex, PoisonError};
-
-use axum::extract::{ConnectInfo, FromRequestParts};
-use axum::http::request::Parts;
 
 /// Wrong passwords of an email from one address before it has to wait.
 pub(super) const MAX_FAILS: u32 = 10;
@@ -74,53 +69,6 @@ impl Throttle {
 			if let Some((n, _)) = counts.get_mut(&key) {
 				*n = n.saturating_sub(1);
 			}
-		}
-	}
-}
-
-/// The address of who sends a request: the peer, or behind a proxy on
-/// the same machine or network (a loopback or private peer) the address
-/// that proxy added last to `X-Forwarded-For`. The first ones of that
-/// header are whatever the client wrote. `-` when there is none, like in
-/// tests.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ClientAddr(pub String);
-
-impl<S: Send + Sync> FromRequestParts<S> for ClientAddr {
-	type Rejection = Infallible;
-
-	async fn from_request_parts(
-		parts: &mut Parts,
-		_state: &S,
-	) -> Result<Self, Infallible> {
-		let peer = parts
-			.extensions
-			.get::<ConnectInfo<SocketAddr>>()
-			.map(|c| c.0.ip());
-		let forwarded = parts
-			.headers
-			.get("x-forwarded-for")
-			.and_then(|v| v.to_str().ok())
-			.and_then(|v| v.rsplit(',').next())
-			.and_then(|v| v.trim().parse::<IpAddr>().ok());
-		let addr = match (peer, forwarded) {
-			(Some(peer), Some(fwd)) if behind_proxy(peer) => Some(fwd),
-			(peer, _) => peer,
-		};
-		Ok(Self(addr.map_or_else(|| "-".into(), |a| a.to_string())))
-	}
-}
-
-/// Whether a peer is a proxy in front of zipp rather than a visitor.
-fn behind_proxy(peer: IpAddr) -> bool {
-	match peer {
-		IpAddr::V4(ip) => ip.is_loopback() || ip.is_private(),
-		IpAddr::V6(ip) => {
-			ip.is_loopback()
-				|| ip.is_unique_local()
-				|| ip
-					.to_ipv4_mapped()
-					.is_some_and(|v4| v4.is_loopback() || v4.is_private())
 		}
 	}
 }

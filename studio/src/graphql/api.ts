@@ -39,6 +39,7 @@ export function deleteToken(id: number): Promise<void> {
 
 /** GraphiQL, its queries run with the session of the studio. */
 export function openGraphiql() {
-	// not noopener: the tab keeps a session that isn't remembered
-	window.open('/api/graphql', '_blank');
+	// not noopener: the tab keeps a session that isn't remembered; in
+	// development vite serves the page itself
+	window.open(import.meta.env.DEV ? '/graphiql.html' : '/api/graphql');
 }

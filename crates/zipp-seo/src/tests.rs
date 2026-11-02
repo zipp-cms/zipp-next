@@ -108,3 +108,29 @@ fn settings_override_the_code_per_section_and_type() {
 	let g = globals(&de, &json!({}), &json!({}));
 	assert!(!section_in_sitemap(&schema, &g, "events"));
 }
+
+#[test]
+fn sitemaps_take_only_the_origins_of_the_sites() {
+	use crate::sitemap::frontend_of;
+	let urls = zipp::SiteUrls::from([
+		("de".to_string(), "https://zandi.ch".to_string()),
+		("en".to_string(), "https://zandi.com/en".to_string()),
+	]);
+	let of = |given| frontend_of(&urls, "de", given);
+	assert_eq!(of(Some("https://zandi.com/")), "https://zandi.com");
+	assert_eq!(of(None), "https://zandi.ch");
+	// anything else is the primary site's
+	assert_eq!(of(Some("https://evil.example")), "https://zandi.ch");
+	assert_eq!(
+		of(Some("https://zandi.ch\nSitemap: https://evil.example")),
+		"https://zandi.ch"
+	);
+}
+
+#[test]
+fn json_ld_cant_end_its_script() {
+	let v = json!({ "name": "</script><script>alert(1)</script> & co" });
+	let s = script_json(&v);
+	assert!(!s.contains(['<', '>', '&']), "{s}");
+	assert_eq!(serde_json::from_str::<serde_json::Value>(&s).unwrap(), v);
+}

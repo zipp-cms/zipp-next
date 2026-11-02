@@ -610,8 +610,18 @@ pub fn resolve(page: &Page) -> Value {
 			.collect::<Vec<_>>(),
 		"meta": meta,
 		"links": links,
-		"jsonLd": serde_json::to_string(&json_ld).unwrap(),
+		"jsonLd": script_json(&json_ld),
 	})
+}
+
+/// JSON for a `<script>` of the page: a title with `</script>` can't end
+/// it. The escapes are JSON's own, it reads the same.
+pub(crate) fn script_json(v: &Value) -> String {
+	serde_json::to_string(v)
+		.unwrap()
+		.replace('<', "\\u003c")
+		.replace('>', "\\u003e")
+		.replace('&', "\\u0026")
 }
 
 /// An image with its absolute url, the social size if `crop`.

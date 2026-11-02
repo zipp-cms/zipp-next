@@ -45,11 +45,19 @@ async fn serves_the_studio() {
 	let get = |path: &str| Request::get(path).body(Body::empty()).unwrap();
 	let anon = ts.anonymous();
 
-	// every page of the studio is its index.html, nobody else frames it
+	// every page of the studio is its index.html, scripts only of the
+	// cms, nobody else frames it
 	let resp = anon.send(get("/admin/entries/pages")).await;
 	assert_eq!(resp.status(), StatusCode::OK);
 	let csp = resp.headers()[header::CONTENT_SECURITY_POLICY].to_str();
-	assert_eq!(csp.unwrap().trim(), "frame-ancestors 'self'");
+	let csp = csp.unwrap();
+	assert!(
+		csp.starts_with("default-src 'self'; script-src 'self';"),
+		"{csp}"
+	);
+	assert!(csp.contains("object-src 'none'; base-uri 'none';"), "{csp}");
+	assert!(csp.contains("frame-src 'self';"), "{csp}");
+	assert!(csp.ends_with("frame-ancestors 'self'"), "{csp}");
 
 	let resp = anon.send(get("/")).await;
 	assert_eq!(resp.status(), StatusCode::SEE_OTHER);
@@ -134,4 +142,49 @@ async fn the_schema_has_the_tabs_of_blocks() {
 	assert_eq!(teaser["tabs"][0]["fields"], serde_json::json!(["heading"]));
 	assert_eq!(teaser["tabs"][1]["fields"], serde_json::json!(["wide"]));
 	assert_eq!(teaser["tabs"][1]["when"]["field"], "heading");
+}
+
+#[tokio::test]
+async fn the_studio_frames_the_sites_and_its_ancestors_frame_it() {
+	let mut ts = TestServer::new(site_with_roles());
+	ts.state.site_urls = std::sync::Arc::new(
+		[
+			("de".to_string(), "https://example.ch/de".to_string()),
+			("en".to_string(), "/en".to_string()),
+		]
+		.into(),
+	);
+	ts.state.frame_ancestors =
+		std::sync::Arc::new(vec!["https://dash.example.com".into()]);
+	// builds the app again with the state
+	let ts = ts.dev();
+	let req = Request::get("/admin").body(Body::empty()).unwrap();
+	let resp = ts.anonymous().send(req).await;
+	let csp = resp.headers()[header::CONTENT_SECURITY_POLICY].to_str();
+	let csp = csp.unwrap();
+	// a relative url is the cms itself
+	assert!(
+		csp.contains("frame-src 'self' https://example.ch;"),
+		"{csp}"
+	);
+	assert!(
+		csp.ends_with("frame-ancestors 'self' https://dash.example.com"),
+		"{csp}"
+	);
+}
+
+#[test]
+fn origins_of_urls() {
+	use super::origin;
+	assert_eq!(origin("https://example.ch/de"), Some("https://example.ch"));
+	assert_eq!(
+		origin("http://localhost:5173"),
+		Some("http://localhost:5173")
+	);
+	assert_eq!(origin("https://*.example.ch"), Some("https://*.example.ch"));
+	assert_eq!(origin("/de"), None);
+	assert_eq!(origin("javascript://x"), None);
+	// nothing that would end the header's directive
+	assert_eq!(origin("https://a.ch; script-src *"), None);
+	assert_eq!(origin("https://a.ch'"), None);
 }

@@ -27,7 +27,7 @@ mod tests;
 mod throttle;
 
 pub use routes::routes;
-pub use throttle::{ClientAddr, Throttle};
+pub use throttle::Throttle;
 
 /// bcrypt's work, small in tests so they stay fast.
 const COST: u32 = if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST };

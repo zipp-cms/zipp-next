@@ -16,6 +16,7 @@ pub(super) async fn serve(
 		site_url: site_urls,
 		openrouter_key_file: key_file,
 		frame_ancestor,
+		trusted_proxy,
 		backup_dir,
 		backup_keep,
 		graphql_token,
@@ -36,6 +37,15 @@ pub(super) async fn serve(
 			_ => Err(format!("--site-url {s:?} needs <site>=<url>")),
 		})
 		.collect::<Result<graphql::SiteUrls, _>>()?;
+	// they go into a header of the studio
+	if let Some(a) = frame_ancestor
+		.iter()
+		.find(|a| studio::origin(a) != Some(a.as_str()))
+	{
+		return Err(format!(
+			"--frame-ancestor {a:?}: an origin like https://dash.example.com"
+		));
+	}
 	let files = assets::files_dir(files).map_err(|e| e.to_string())?;
 	let db = Db::open(db_path).map_err(|e| e.to_string())?;
 
@@ -71,6 +81,7 @@ pub(super) async fn serve(
 		public_url: Arc::new(public_url.trim_end_matches('/').into()),
 		site_urls: Arc::new(site_urls),
 		frame_ancestors: Arc::new(frame_ancestor),
+		trusted_proxies: Arc::new(trusted_proxy),
 		graphql_token: graphql_token.map(Arc::new),
 		dev,
 		indexing: !dev && !noindex,
@@ -95,7 +106,7 @@ pub(super) async fn serve(
 		.await
 		.map_err(|e| e.to_string())?;
 	info!("listening on {listen}");
-	// the peer's address for the login throttle, see auth::ClientAddr
+	// the peer's address, see `client`
 	let app = app.into_make_service_with_connect_info::<SocketAddr>();
 	axum::serve(listener, app).await.map_err(|e| e.to_string())
 }

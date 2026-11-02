@@ -1,6 +1,8 @@
+use std::collections::BTreeSet;
+
 use axum::extract::{Path, State};
 use axum::http::{StatusCode, Uri, header};
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 
@@ -39,18 +41,76 @@ async fn file(State(state): State<AppState>, uri: Uri) -> Response {
 		"no-cache"
 	};
 
-	let frames =
-		format!("frame-ancestors 'self' {}", state.frame_ancestors.join(" "));
 	(
 		[
 			(header::CONTENT_TYPE, mime),
 			(header::CACHE_CONTROL, cache),
-			// no other site may frame the studio and click for an editor
-			(header::CONTENT_SECURITY_POLICY, frames.as_str()),
+			(header::CONTENT_SECURITY_POLICY, &csp(&state)),
 		],
 		file.data,
 	)
 		.into_response()
+}
+
+/// GraphiQL, a page of the studio's build, see `graphql`. Development
+/// tells it that GraphQL is open without a session.
+pub(crate) fn graphiql(state: &AppState) -> Response {
+	let Some(file) = Files::get("graphiql.html") else {
+		return StatusCode::NOT_FOUND.into_response();
+	};
+	let html = String::from_utf8_lossy(&file.data);
+	let html = match state.dev {
+		true => html.replacen("<body>", "<body data-dev>", 1),
+		false => html.into_owned(),
+	};
+	(
+		[
+			(header::CACHE_CONTROL, "no-cache"),
+			(header::CONTENT_SECURITY_POLICY, &csp(state)),
+		],
+		Html(html),
+	)
+		.into_response()
+}
+
+/// What the pages of the studio may load: scripts only of the cms (also
+/// the plugins'), so an injected script can't run with the session;
+/// frames of the sites for the previews; framed only by the studio and
+/// the `--frame-ancestor`s, no other site may click for an editor. Styles
+/// may be inline, Svelte and the rich text set them.
+fn csp(state: &AppState) -> String {
+	let sites = state
+		.site_urls
+		.values()
+		.filter_map(|u| origin(u))
+		.collect::<BTreeSet<_>>();
+	let mut frames = String::from("'self'");
+	for s in sites {
+		frames += &format!(" {s}");
+	}
+	let mut ancestors = String::from("'self'");
+	for a in state.frame_ancestors.iter() {
+		ancestors += &format!(" {a}");
+	}
+	format!(
+		"default-src 'self'; script-src 'self'; \
+		style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; \
+		font-src 'self' data:; media-src 'self' blob:; connect-src 'self'; \
+		frame-src {frames}; object-src 'none'; base-uri 'none'; \
+		form-action 'self'; frame-ancestors {ancestors}"
+	)
+}
+
+/// The origin of a url, `https://example.ch` of `https://example.ch/de`;
+/// `None` for a relative one or one that doesn't fit into a header.
+pub(crate) fn origin(url: &str) -> Option<&str> {
+	let (scheme, rest) = url.split_once("://")?;
+	let host = rest.split('/').next()?;
+	let plain = |c: char| c.is_ascii_alphanumeric() || ".-:*[]".contains(c);
+	let fits = matches!(scheme, "http" | "https")
+		&& !host.is_empty()
+		&& host.chars().all(plain);
+	fits.then(|| &url[..scheme.len() + 3 + host.len()])
 }
 
 /// The editor of a field type of another crate, see

@@ -252,8 +252,18 @@ pub(super) fn query(
 		Some(Preview::All(sections)) => q.preview_sections = sections.clone(),
 		None => {}
 	}
-	// a frontend gets nothing of an offline site, counts neither
-	q.nothing = schema.is_offline(&q.site) && hides_offline(viewer);
+	// a frontend gets nothing of an offline site, counts neither; the
+	// preview of one entry only that entry, its link opens no more
+	if schema.is_offline(&q.site) && viewer.published_only {
+		match &viewer.preview {
+			None => q.nothing = true,
+			Some(Preview::Entry(id, _)) => match &mut q.ids {
+				Some(ids) => ids.retain(|i| i == id),
+				None => q.ids = Some(vec![*id]),
+			},
+			Some(Preview::All(_)) => {}
+		}
+	}
 
 	// nor of what its token doesn't read
 	let scope = &viewer.scope;
@@ -407,7 +417,7 @@ pub(super) fn query_object(schema: &Schema) -> Object {
 }
 
 /// Whether offline sites are hidden: from frontends, not from previews
-/// and admins.
+/// and admins (which entries a preview sees, see [`query`]).
 pub(super) fn hides_offline(viewer: &Viewer) -> bool {
 	viewer.published_only && viewer.preview.is_none()
 }

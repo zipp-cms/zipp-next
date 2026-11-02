@@ -9,6 +9,7 @@ pub mod auth;
 pub mod backup;
 mod change_requests;
 mod cli;
+pub mod client;
 pub mod content;
 #[cfg(feature = "craft")]
 mod craft;
@@ -104,6 +105,8 @@ pub struct AppState {
 	pub site_urls: Arc<graphql::SiteUrls>,
 	/// origins that may frame the studio
 	pub frame_ancestors: Arc<Vec<String>>,
+	/// who may name the client in `X-Forwarded-For`, see [`client`]
+	pub trusted_proxies: Arc<Vec<client::Proxy>>,
 	/// what frontends send to GraphQL, see `serve --graphql-token`
 	pub graphql_token: Option<Arc<String>>,
 	/// development mode, see `serve --dev`
@@ -168,6 +171,7 @@ impl AppState {
 			files,
 			site_urls: Default::default(),
 			frame_ancestors: Default::default(),
+			trusted_proxies: Default::default(),
 			graphql_token: None,
 			dev: false,
 			indexing: true,
