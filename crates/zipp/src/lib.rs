@@ -33,11 +33,6 @@ pub mod trash;
 mod typescript;
 mod users;
 
-pub use content::richtext;
-pub use entries::query;
-pub use migrate::apply;
-pub use schema::field_type;
-
 use std::fs;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
@@ -52,14 +47,14 @@ use tower_http::trace::TraceLayer;
 use tracing::info;
 
 use crate::db::Db;
-use crate::migrate::{Migration, Migrations, Rename};
+use crate::migrate::{Migration, Migrations, Rename, apply};
 use cli::*;
 use server::*;
 
-pub use crate::field_type::{
+pub use crate::plugin::{EntryField, GraphqlExt, Plugin, PluginStudio};
+pub use crate::schema::field_type::{
 	FieldRelation, FieldType, GraphqlType, Scalar, StudioModule, Target,
 };
-pub use crate::plugin::{EntryField, GraphqlExt, Plugin, PluginStudio};
 pub use crate::schema::{
 	Access, Choice, Column, ColumnKind, Condition, Field, FieldKind, Format,
 	Icon, LinkKind, Role, Schema, Section, Style, Transform,
@@ -116,7 +111,7 @@ pub struct AppState {
 	/// where uploads go
 	pub files: PathBuf,
 	/// the url of each site, for previews
-	pub site_urls: Arc<graphql::SiteUrls>,
+	pub site_urls: Arc<SiteUrls>,
 	/// origins that may frame the studio
 	pub frame_ancestors: Arc<Vec<String>>,
 	/// who may name the client in `X-Forwarded-For`, see [`client`]

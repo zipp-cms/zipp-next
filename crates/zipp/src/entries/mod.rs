@@ -18,8 +18,8 @@ use crate::content::{
 };
 use crate::db::{marks, now};
 use crate::drafts::record_revision;
+use crate::entries::query::Query;
 use crate::error::{Error, Result};
-use crate::query::Query;
 use crate::schema::Access;
 use crate::schema::{LinkKind, Schema, Section, SectionKind};
 use crate::{AppState, ChangeKind};
@@ -97,14 +97,6 @@ pub(crate) const LIVE_DATES: &str = "(e.post_date IS NULL \
 	OR e.post_date <= ROUND((julianday('now') - 2440587.5) * 86400000)) \
 	AND (e.expiry_date IS NULL \
 	OR e.expiry_date > ROUND((julianday('now') - 2440587.5) * 86400000))";
-
-impl Dates {
-	/// Whether these dates make an entry live at `now`.
-	pub fn live_at(&self, now: i64) -> bool {
-		self.post_date.is_none_or(|p| p <= now)
-			&& self.expiry_date.is_none_or(|e| e > now)
-	}
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -187,7 +179,7 @@ fn from_row(row: &Row) -> rusqlite::Result<Entry> {
 /// An entry in a picker: an [`EntryRef`] with its parent for the tree.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Choice {
+pub struct EntryChoice {
 	pub id: i64,
 	pub section: String,
 	#[serde(rename = "type")]
@@ -209,7 +201,7 @@ pub fn choices(
 	schema: &Schema,
 	sections: &[&str],
 	site: &str,
-) -> Result<Vec<Choice>> {
+) -> Result<Vec<EntryChoice>> {
 	let mut all = vec![];
 	for section in sections {
 		let params = [
@@ -219,7 +211,7 @@ pub fn choices(
 		];
 		let q = Query::parse(schema, &params).map_err(Error::Request)?;
 		let entries = select(conn, &q)?;
-		all.extend(entries.into_iter().map(|e| Choice {
+		all.extend(entries.into_iter().map(|e| EntryChoice {
 			id: e.id,
 			section: e.section,
 			ty: e.ty,

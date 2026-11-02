@@ -130,18 +130,19 @@ impl EntryField {
 /// `/_plugins/<name>.js` that brings its own framework like a field
 /// type's. It may export
 /// `sectionSetup(target, { schema, section, data, host })`, a card on
-/// the setup page of a section; `data` is the plugin's JSON for it.
-#[derive(Debug, Clone)]
+/// the setup page of a section; `data` is the plugin's JSON for it. A
+/// plugin without a module (`default`) can still give the studio data.
+#[derive(Debug, Clone, Default)]
 #[non_exhaustive]
 pub struct PluginStudio {
-	pub js: &'static str,
+	pub js: Option<&'static str>,
 	pub data: Value,
 }
 
 impl PluginStudio {
 	pub fn new(js: &'static str) -> Self {
 		Self {
-			js,
+			js: Some(js),
 			data: Value::Null,
 		}
 	}

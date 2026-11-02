@@ -213,8 +213,8 @@ export type Schema = {
 	dev: boolean;
 	/** the svgs of the Lucide icons it names, by name */
 	icons: Record<string, string>;
-	/** the plugins with a studio module, `/_plugins/<name>.js` */
-	plugins: { name: string; data: unknown }[];
+	/** the plugins of the studio, `module`: `/_plugins/<name>.js` */
+	plugins: { name: string; module: boolean; data: unknown }[];
 	/** what each plugin added to the content model, handles */
 	pluginsAdded: {
 		plugin: string;

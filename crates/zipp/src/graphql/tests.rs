@@ -334,7 +334,7 @@ async fn answers_crelte_like_craft() {
 		ops: crate::migrate::diff(&Schema::new(), &s, &[]).unwrap(),
 		schema: (*s).clone(),
 	};
-	crate::apply::apply_migrations(&db.conn(), &[first], &s).unwrap();
+	crate::migrate::apply::apply_migrations(&db.conn(), &[first], &s).unwrap();
 
 	let data = run(
 		&gql,
@@ -709,7 +709,7 @@ async fn translations_for_crelte() {
 	// the single of the texts, as the first migration makes it
 	{
 		let conn = db.conn();
-		crate::apply::create_singles(&conn, &s).unwrap();
+		crate::migrate::apply::create_singles(&conn, &s).unwrap();
 		let id: i64 = conn
 			.query_row(
 				"SELECT id FROM entries WHERE section = 'translations'",

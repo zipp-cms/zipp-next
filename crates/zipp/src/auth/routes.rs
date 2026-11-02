@@ -6,7 +6,7 @@ use rusqlite::{OptionalExtension, params};
 
 use super::api::*;
 use super::links::{
-	LinkKind, create_link, get_link, link_mail, link_url, login_as_session,
+	self, create_link, get_link, link_mail, link_url, login_as_session,
 	take_link,
 };
 use super::{
@@ -91,7 +91,7 @@ async fn forgot_route(
 		));
 	}
 	// before the lookup, so the answer is the same for every email
-	link_url(&state.public_url, LinkKind::Reset, "")?;
+	link_url(&state.public_url, links::Kind::Reset, "")?;
 	let conn = state.db.conn();
 	let user: Option<(i64, String)> = conn
 		.query_row(
@@ -105,11 +105,11 @@ async fn forgot_route(
 	let Some((id, email)) = user else {
 		return Ok(Json(()));
 	};
-	let (token, _) = create_link(&conn, id, LinkKind::Reset, None)?;
+	let (token, _) = create_link(&conn, id, links::Kind::Reset, None)?;
 	drop(conn);
-	let url = link_url(&state.public_url, LinkKind::Reset, &token)?;
+	let url = link_url(&state.public_url, links::Kind::Reset, &token)?;
 	let mail =
-		link_mail(&state.public_url, LinkKind::Reset, &email, &url, None);
+		link_mail(&state.public_url, links::Kind::Reset, &email, &url, None);
 	// in the background: the answer takes as long for unknown emails
 	tokio::spawn(async move {
 		if let Err(e) = state.mail.send(mail).await {
@@ -138,7 +138,7 @@ async fn set_password_route(
 	State(state): State<AppState>,
 	Req(req): Req<SetPasswordReq>,
 ) -> ApiResult<SetPasswordReq> {
-	let kinds = [LinkKind::Invite, LinkKind::Reset];
+	let kinds = [links::Kind::Invite, links::Kind::Reset];
 	let link = get_link(&state.db.conn(), &req.token)?;
 	if !kinds.contains(&link.kind) {
 		return Err(Error::Request("This link is used or expired".into()));
@@ -169,7 +169,7 @@ async fn login_as_route(
 	Req(req): Req<LoginAsReq>,
 ) -> ApiResult<LoginAsReq> {
 	let conn = state.db.conn();
-	let link = take_link(&conn, &req.token, &[LinkKind::LoginAs])?;
+	let link = take_link(&conn, &req.token, &[links::Kind::LoginAs])?;
 	// still an admin, and the user still none
 	let by = link.created_by.ok_or(Error::Forbidden)?;
 	let admin = role_of(&conn, by)?.is_none();

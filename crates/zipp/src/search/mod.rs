@@ -80,7 +80,11 @@ pub(crate) fn index(
 
 /// The texts of fields that editors write, a line each: text, markdown,
 /// rich text, tables and texts, also inside blocks and groups.
-pub fn texts(schema: &Schema, comp: &Component, fields: &Value) -> String {
+pub(crate) fn texts(
+	schema: &Schema,
+	comp: &Component,
+	fields: &Value,
+) -> String {
 	let mut out = vec![];
 	collect(schema, comp, fields, &mut out);
 	out.retain(|t| !t.trim().is_empty());
@@ -134,7 +138,7 @@ fn collect(
 }
 
 /// The words of a search; signs alone (`-`) find nothing, so they go.
-pub fn words(q: &str) -> Vec<String> {
+pub(crate) fn words(q: &str) -> Vec<String> {
 	q.split_whitespace()
 		.filter(|w| w.chars().any(char::is_alphanumeric))
 		.take(10)

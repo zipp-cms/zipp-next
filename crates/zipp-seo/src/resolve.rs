@@ -11,6 +11,7 @@ use serde_json::{Map, Value, json};
 
 use crate::{ORGANIZATION_TYPES, Seo, SeoDefaults};
 use zipp::assets::{Asset, transform_size};
+use zipp::db::iso;
 use zipp::entries::Entry;
 use zipp::schema::{FieldKind, Schema, Site, Transform};
 
@@ -162,9 +163,7 @@ pub(crate) fn levels(
 	ty: Option<&str>,
 	section: &str,
 ) -> Vec<Level> {
-	let Some(seo) = schema.plugin_of::<Seo>() else {
-		return vec![];
-	};
+	let seo = Seo::of(schema);
 	let set = |k: String| globals.overrides.get(&k).cloned();
 	let code = |d: Option<&SeoDefaults>| d.map(Level::from);
 	let mut out = vec![];
@@ -204,7 +203,8 @@ pub fn section_in_sitemap(
 /// The value of the entry's SEO field, if its type has one.
 pub fn field_data(schema: &Schema, entry: &Entry) -> Value {
 	let comp = schema.get(&entry.ty);
-	let field = comp.and_then(|c| c.fields.iter().find(|f| crate::is_seo(f)));
+	let field =
+		comp.and_then(|c| c.fields.iter().find(|f| crate::plugin::is_seo(f)));
 	field.map_or(Value::Null, |f| entry.fields[&f.handle].clone())
 }
 
@@ -815,5 +815,3 @@ fn json_ld(
 
 	json!({ "@context": "https://schema.org", "@graph": graph })
 }
-
-pub use zipp::db::iso;

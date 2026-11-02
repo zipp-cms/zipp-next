@@ -8,7 +8,7 @@ use super::{
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::auth::links::{
-	LinkKind, create_link, end_password_links, link_mail, link_url,
+	self, create_link, end_password_links, link_mail, link_url,
 };
 use crate::auth::{
 	Admin, Authed, end_sessions, hash_password, password_matches,
@@ -162,8 +162,8 @@ async fn password_link_route(
 		let conn = state.db.conn();
 		let account = get(&conn, req.id)?;
 		let kind = match account.invited {
-			true => LinkKind::Invite,
-			false => LinkKind::Reset,
+			true => links::Kind::Invite,
+			false => links::Kind::Reset,
 		};
 		// without the url of the cms there is no link to make
 		link_url(&state.public_url, kind, "")?;
@@ -200,7 +200,7 @@ async fn login_as_route(
 	if get(&conn, req.id)?.user.role.is_none() {
 		return Err(Error::Request("you can't log in as an admin".into()));
 	}
-	let kind = LinkKind::LoginAs;
+	let kind = links::Kind::LoginAs;
 	link_url(&state.public_url, kind, "")?;
 	let (token, expires_at) =
 		create_link(&conn, req.id, kind, Some(auth.user_id))?;

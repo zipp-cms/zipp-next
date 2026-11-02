@@ -40,7 +40,7 @@ fn cleans_empty_space() {
 		p(" "),
 	] });
 	let mut errors = vec![];
-	let out = validate(&s, &allowed(&[]), &doc, "text", &mut errors);
+	let out = validate(&s, &allowed(&[]), &doc, "text", false, &mut errors);
 	assert!(errors.is_empty(), "{errors:?}");
 	assert_eq!(out, json!({ "type": "doc", "content": [p("Hi")] }));
 }
@@ -53,7 +53,7 @@ fn keeps_no_break_spaces_between_words() {
 		p("two \u{a0}spaces\u{a0}"),
 	] });
 	let mut errors = vec![];
-	let out = validate(&s, &allowed(&[]), &doc, "text", &mut errors);
+	let out = validate(&s, &allowed(&[]), &doc, "text", false, &mut errors);
 	let doc = json!({ "type": "doc", "content": [
 		p("in der\u{a0}Katarakt"),
 		p("two  spaces "),
@@ -72,7 +72,14 @@ fn allows_only_what_the_field_says() {
 		{ "type": "image" },
 	] });
 	let mut errors = vec![];
-	validate(&s, &allowed(&["text".into()]), &doc, "text", &mut errors);
+	validate(
+		&s,
+		&allowed(&["text".into()]),
+		&doc,
+		"text",
+		false,
+		&mut errors,
+	);
 	let messages: Vec<_> = errors.iter().map(|e| e.message.as_str()).collect();
 	assert_eq!(
 		messages,
@@ -101,7 +108,14 @@ fn splits_into_chunks() {
 		] },
 	] });
 	let mut errors = vec![];
-	let doc = validate(&s, &allowed(&["text".into()]), &doc, "t", &mut errors);
+	let doc = validate(
+		&s,
+		&allowed(&["text".into()]),
+		&doc,
+		"t",
+		false,
+		&mut errors,
+	);
 	assert!(errors.is_empty(), "{errors:?}");
 
 	let chunks = chunks(&doc, &mut resolver);
@@ -130,8 +144,14 @@ fn splits_into_chunks() {
 	let other = json!({ "type": "doc", "content": [
 		{ "type": "button", "attrs": { "link": { "type": "url", "value": null } } },
 	] });
-	let other =
-		validate(&s, &allowed(&["text".into()]), &other, "t", &mut errors);
+	let other = validate(
+		&s,
+		&allowed(&["text".into()]),
+		&other,
+		"t",
+		false,
+		&mut errors,
+	);
 	assert_eq!(other["content"], json!([]), "{errors:?}");
 	// the two buttons and the link in the text
 	assert_eq!(links(&doc).len(), 3);
@@ -166,7 +186,7 @@ fn styles_are_classes() {
 			"content": [{ "type": "text", "text": "H" }] },
 	] });
 	let mut errors = vec![];
-	let doc = validate(&s, &allowed(&[]), &doc, "t", &mut errors);
+	let doc = validate(&s, &allowed(&[]), &doc, "t", false, &mut errors);
 	assert!(errors.is_empty(), "{errors:?}");
 	assert_eq!(doc["content"][1]["attrs"], json!({ "level": 2 }));
 
@@ -193,7 +213,7 @@ fn refuses_unknown_styles() {
 			"content": [{ "type": "text", "text": "c" }] },
 	] });
 	let mut errors = vec![];
-	validate(&s, &allowed(&[]), &doc, "t", &mut errors);
+	validate(&s, &allowed(&[]), &doc, "t", false, &mut errors);
 	let messages: Vec<_> = errors.iter().map(|e| e.message.as_str()).collect();
 	assert_eq!(
 		messages,

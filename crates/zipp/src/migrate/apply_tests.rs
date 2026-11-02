@@ -2,10 +2,10 @@ use serde_json::json;
 
 use super::*;
 use crate::db::Db;
+use crate::entries::query::Query;
 use crate::entries::{get_entry, list, save};
 use crate::fixtures::site;
 use crate::migrate::{Rename, diff};
-use crate::query::Query;
 use crate::schema::Field;
 use crate::testing::input;
 

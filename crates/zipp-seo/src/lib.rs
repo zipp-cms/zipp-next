@@ -43,19 +43,18 @@ mod sitemap;
 #[cfg(test)]
 mod tests;
 
-pub use plugin::{NAME, SeoField, is_seo, seo_field};
-pub use resolve::{Globals, Level, resolve};
+pub use plugin::seo_field;
 
 /// The single of the global SEO settings.
-pub const SEO_SETTINGS: &str = "seoSettings";
+pub(crate) const SEO_SETTINGS: &str = "seoSettings";
 /// The block of the organization in the global settings.
-pub const SEO_ORGANIZATION: &str = "seoOrganization";
+pub(crate) const SEO_ORGANIZATION: &str = "seoOrganization";
 /// The block of a day's opening hours.
-pub const SEO_OPENING_HOURS: &str = "seoOpeningHours";
+pub(crate) const SEO_OPENING_HOURS: &str = "seoOpeningHours";
 /// The block of the settings of a section or an entry type.
-pub const SEO_OVERRIDE: &str = "seoOverride";
+pub(crate) const SEO_OVERRIDE: &str = "seoOverride";
 
-pub const ROBOTS: &[(&str, &str)] = &[
+pub(crate) const ROBOTS: &[(&str, &str)] = &[
 	("index, follow", "Index, follow links"),
 	("noindex, follow", "No index, follow links"),
 	("index, nofollow", "Index, don't follow links"),
@@ -64,7 +63,7 @@ pub const ROBOTS: &[(&str, &str)] = &[
 
 /// schema.org types of the organization, local businesses get opening
 /// hours, coordinates and a price range.
-pub const ORGANIZATION_TYPES: &[(&str, bool)] = &[
+pub(crate) const ORGANIZATION_TYPES: &[(&str, bool)] = &[
 	("Organization", false),
 	("Corporation", false),
 	("LocalBusiness", true),
@@ -145,6 +144,11 @@ impl Seo {
 			sitemap_page_size: 2000,
 			..Default::default()
 		}
+	}
+
+	/// The plugin of a schema. What calls it only runs with the plugin on.
+	pub(crate) fn of(schema: &Schema) -> &Self {
+		schema.plugin_of::<Self>().expect("the seo plugin is on")
 	}
 
 	pub fn section(mut self, handle: &str, defaults: SeoDefaults) -> Self {

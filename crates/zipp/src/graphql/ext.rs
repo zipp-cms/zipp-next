@@ -43,13 +43,9 @@ pub fn entries<const N: usize>(
 	load(ctx, &site_params(site, params))
 }
 
-/// An entry as a GraphQL value of its type.
-pub fn entry(e: Entry) -> FieldValue<'static> {
-	entry_value(e)
-}
-
 /// A request as a frontend sends it (published entries only) or an
 /// admin, for tests of plugins.
+#[cfg(feature = "testing")]
 pub fn request(
 	query: &str,
 	published_only: bool,

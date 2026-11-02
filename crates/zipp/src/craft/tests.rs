@@ -123,7 +123,7 @@ fn imports_a_site() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();
 	let schema = schema();
-	crate::apply::create_singles(&conn, &schema).unwrap();
+	crate::migrate::apply::create_singles(&conn, &schema).unwrap();
 	let opts = Options {
 		sites: vec![],
 		volumes: HashMap::new(),
@@ -144,7 +144,7 @@ fn imports_a_site() {
 
 	let (pages, _) = entries::list(
 		&conn,
-		&crate::query::Query::parse(
+		&crate::entries::query::Query::parse(
 			&schema,
 			&[("section".into(), "pages".into())],
 		)

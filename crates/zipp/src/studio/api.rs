@@ -13,6 +13,8 @@ request!(SchemaReq, GET "/schema" => SchemaResp);
 #[derive(Debug, Serialize)]
 pub struct PluginResp {
 	pub name: String,
+	/// whether it has a module, else only `data`
+	pub module: bool,
 	pub data: serde_json::Value,
 }
 
@@ -36,7 +38,7 @@ pub struct SchemaResp {
 	#[serde(flatten)]
 	pub schema: Schema,
 	/// for the preview button of the studio
-	pub site_urls: crate::graphql::SiteUrls,
+	pub site_urls: crate::SiteUrls,
 	/// the models of the AI chat, none if it is off
 	pub ai_models: Vec<AiModel>,
 	pub docs: Vec<DocResp>,

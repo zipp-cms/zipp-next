@@ -1,5 +1,5 @@
 use super::*;
-use crate::query::relation_field;
+use crate::entries::query::relation_field;
 
 /// The arguments of `entry`, `entries` and `entryCount`, the same as the
 /// rest api (see query.rs).

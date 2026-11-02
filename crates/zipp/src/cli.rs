@@ -1,5 +1,9 @@
 use super::*;
 
+/// The error of a command, printed before zipp exits.
+pub(super) type CmdError = Box<dyn std::error::Error + Send + Sync>;
+pub(super) type CmdResult = Result<(), CmdError>;
+
 #[derive(Debug, Parser)]
 pub(super) struct Opts {
 	#[arg(long, env = "ZIPP_DB", default_value = "zipp.db")]
@@ -170,7 +174,7 @@ pub(super) fn backup(
 	files: &Path,
 	dir: &Path,
 	keep: Option<usize>,
-) -> Result<(), String> {
+) -> CmdResult {
 	let w = crate::backup::backup(db, files, dir, crate::db::now())?;
 	println!(
 		"Wrote {}: the database, {} files copied, {} unchanged linked",
@@ -179,8 +183,7 @@ pub(super) fn backup(
 		w.linked
 	);
 	if let Some(keep) = keep {
-		let removed =
-			crate::backup::prune(dir, keep).map_err(|e| e.to_string())?;
+		let removed = crate::backup::prune(dir, keep)?;
 		for path in removed {
 			println!("Removed {}", path.display());
 		}
@@ -189,11 +192,7 @@ pub(super) fn backup(
 }
 
 /// See [`Cmd::Restore`].
-pub(super) fn restore(
-	db: &Path,
-	files: &Path,
-	from: &Path,
-) -> Result<(), String> {
+pub(super) fn restore(db: &Path, files: &Path, from: &Path) -> CmdResult {
 	crate::backup::restore(from, db, files)?;
 	println!(
 		"Restored {} into {} and {}",
@@ -205,7 +204,7 @@ pub(super) fn restore(
 }
 
 /// See [`Cmd::Mail`].
-pub(super) fn test_mail(to: &str, args: &MailArgs) -> Result<(), String> {
+pub(super) fn test_mail(to: &str, args: &MailArgs) -> CmdResult {
 	// the transport's pool lives in the runtime
 	tokio::runtime::Runtime::new().unwrap().block_on(async {
 		let mailer = args.mailer()?;
@@ -213,7 +212,7 @@ pub(super) fn test_mail(to: &str, args: &MailArgs) -> Result<(), String> {
 			return Err("no --smtp-url, the mail would only be logged".into());
 		}
 		let mail = crate::mail::test_mail(to);
-		mailer.send(mail).await.map_err(|e| e.to_string())?;
+		mailer.send(mail).await?;
 		println!("sent to {to} over {}", mailer.server().unwrap_or("?"));
 		Ok(())
 	})
@@ -224,7 +223,7 @@ pub(super) fn makemigration(
 	migrations: &Migrations,
 	renames: &[String],
 	name: Option<&str>,
-) -> Result<(), String> {
+) -> CmdResult {
 	let renames = renames
 		.iter()
 		.map(|r| Rename::parse(r))
@@ -259,9 +258,10 @@ pub(super) fn makemigration(
 		ops,
 		schema: schema.clone(),
 	};
-	fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+	fs::create_dir_all(dir)?;
 	let json = serde_json::to_string_pretty(&m).unwrap() + "\n";
-	fs::write(dir.join(format!("{name}.json")), json).map_err(|e| e.to_string())
+	fs::write(dir.join(format!("{name}.json")), json)?;
+	Ok(())
 }
 
 pub(super) fn add_user(
@@ -269,23 +269,19 @@ pub(super) fn add_user(
 	db_path: &Path,
 	email: &str,
 	role: Option<&str>,
-) -> Result<(), String> {
-	crate::users::check_role(schema, role).map_err(|e| e.to_string())?;
+) -> CmdResult {
+	crate::users::check_role(schema, role)?;
 	print!("Password: ");
 	io::stdout().flush().ok();
 	let mut password = String::new();
-	io::stdin()
-		.lock()
-		.read_line(&mut password)
-		.map_err(|e| e.to_string())?;
+	io::stdin().lock().read_line(&mut password)?;
 	let password = password.trim_end_matches(['\n', '\r']);
 	if let Some(e) = crate::users::password_error(password) {
-		return Err(format!("The password: {e}"));
+		return Err(format!("The password: {e}").into());
 	}
 
-	let db = Db::open(db_path).map_err(|e| e.to_string())?;
-	auth::add_user(&db.conn(), email, password, role)
-		.map_err(|e| e.to_string())?;
+	let db = Db::open(db_path)?;
+	auth::add_user(&db.conn(), email, password, role)?;
 	println!("Saved {email} as {}", role.unwrap_or("admin"));
 	Ok(())
 }
@@ -300,7 +296,7 @@ pub(super) fn import_craft(
 	files: PathBuf,
 	volumes: &[String],
 	sites: &[String],
-) -> Result<(), String> {
+) -> CmdResult {
 	let pair = |s: &String, what: &str| {
 		s.split_once('=')
 			.map(|(a, b)| (a.to_string(), b.to_string()))
@@ -321,13 +317,12 @@ pub(super) fn import_craft(
 	let export: craft::Export =
 		serde_json::from_str(&json).map_err(|e| format!("the export: {e}"))?;
 
-	let files = assets::files_dir(files).map_err(|e| e.to_string())?;
-	let db = Db::open(db_path).map_err(|e| e.to_string())?;
+	let files = assets::files_dir(files)?;
+	let db = Db::open(db_path)?;
 	let migrations = migrations.load()?;
 	apply::up_to_date(&db.conn(), &migrations, schema)?;
 
-	let report = craft::import(&db.conn(), schema, &files, &export, &opts)
-		.map_err(|e| e.to_string())?;
+	let report = craft::import(&db.conn(), schema, &files, &export, &opts)?;
 	for s in &report.skipped {
 		println!("skipped {s}");
 	}
@@ -345,7 +340,7 @@ pub(super) fn check(
 	schema: Schema,
 	migrations: &Migrations,
 	queries: &[PathBuf],
-) -> Result<(), String> {
+) -> CmdResult {
 	let mut mistakes = 0;
 
 	let changes = migrate::unmigrated(&migrations.load()?, &schema)?;
@@ -359,7 +354,7 @@ pub(super) fn check(
 		}
 	}
 
-	let db = Db::memory().map_err(|e| e.to_string())?;
+	let db = Db::memory()?;
 	let gql = graphql::build(
 		Arc::new(schema),
 		db,
@@ -373,7 +368,7 @@ pub(super) fn check(
 			.map_err(|e| format!("{}: {e}", dir.display()))?;
 	}
 	for file in files {
-		let query = fs::read_to_string(&file).map_err(|e| e.to_string())?;
+		let query = fs::read_to_string(&file)?;
 		let errors = runtime.block_on(graphql::check_query(&gql, &query));
 		if errors.is_empty() {
 			println!("ok   {}", file.display());
@@ -388,7 +383,7 @@ pub(super) fn check(
 
 	match mistakes {
 		0 => Ok(()),
-		n => Err(format!("{n} mistakes")),
+		n => Err(format!("{n} mistakes").into()),
 	}
 }
 

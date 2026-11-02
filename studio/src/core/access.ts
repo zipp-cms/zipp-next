@@ -74,13 +74,14 @@ export function visibleNav(schema: Schema): NavGroup[] {
 }
 
 /**
- * The chat hands everything to the coding agent of the plugin `agent`:
- * development and admins only, the server checks it too.
+ * The chat hands everything to the coding agent of a plugin that says
+ * `chat` in its data: development and admins only, the server checks it
+ * too.
  */
 export function hasAgent(schema: Schema): boolean {
 	return (
 		schema.dev &&
 		isAdmin(schema) &&
-		schema.plugins.some(p => p.name === 'agent')
+		schema.plugins.some(p => (p.data as { chat?: boolean } | null)?.chat)
 	);
 }

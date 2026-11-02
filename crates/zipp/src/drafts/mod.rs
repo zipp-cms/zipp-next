@@ -42,7 +42,6 @@ pub use preview::create_token;
 pub use preview::preview;
 pub use revisions::FieldChange;
 pub use revisions::Revision;
-pub use revisions::diff_docs;
 pub use revisions::get_revision;
 pub use revisions::record_revision;
 pub use revisions::restore;

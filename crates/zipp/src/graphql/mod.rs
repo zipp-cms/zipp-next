@@ -44,13 +44,13 @@ use serde_json::Value;
 use crate::AppState;
 use crate::assets::{Asset, get_many};
 use crate::auth::{role_of, session};
+use crate::content::richtext::{self, Chunk};
 use crate::db::Db;
 use crate::drafts::{Preview, docs_of, preview};
+use crate::entries::query::Query;
 use crate::entries::{Entry, count, select};
 use crate::error::{Error, Result};
-use crate::field_type::{GraphqlType, Scalar as FieldScalar};
-use crate::query::Query;
-use crate::richtext::{self, Chunk};
+use crate::schema::field_type::{GraphqlType, Scalar as FieldScalar};
 use crate::schema::{ASSET, ColumnKind, FieldKind, Format, Schema, Transform};
 
 pub mod api;
@@ -128,7 +128,7 @@ pub const ASSET_FIELDS: &[&str] = &[
 /// Put before asset urls.
 struct PublicUrl(String);
 
-pub use crate::SiteUrls;
+use crate::SiteUrls;
 
 /// Who asks, set per request.
 struct Viewer {

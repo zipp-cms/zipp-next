@@ -2,10 +2,10 @@ use serde_json::json;
 
 use super::*;
 use crate::db::Db;
+use crate::entries::query::Query;
 use crate::entries::tests::site_with_levels;
 use crate::entries::{get_entry, move_entry, save};
 use crate::fixtures::site;
-use crate::query::Query;
 use crate::testing::input;
 
 fn admin() -> Authed {

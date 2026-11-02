@@ -1,5 +1,5 @@
 use super::*;
-use crate::field_type::Scalar;
+use crate::schema::field_type::Scalar;
 
 impl Schema {
 	/// Finds mistakes a compiler can't: unknown or duplicate handles and

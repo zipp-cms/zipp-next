@@ -76,7 +76,7 @@ impl Plugin for Agent {
 
 	/// The studio's chat uses the agent, it has no module of its own.
 	fn studio(&self) -> Option<PluginStudio> {
-		Some(PluginStudio::new("").data(json!({ "chat": true })))
+		Some(PluginStudio::default().data(json!({ "chat": true })))
 	}
 }
 

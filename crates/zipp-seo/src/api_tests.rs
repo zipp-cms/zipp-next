@@ -5,11 +5,12 @@ use std::sync::Arc;
 use crate::api::DefaultsReq;
 use crate::{Seo, SeoDefaults, seo_field};
 use serde_json::{Value, json};
+use zipp::SiteUrls;
 use zipp::db::Db;
 use zipp::drafts::{SiteDoc, put_draft};
 use zipp::entries::save;
 use zipp::error::Error;
-use zipp::graphql::{SiteUrls, build, ext};
+use zipp::graphql::{build, ext};
 use zipp::testing::{TestServer, input};
 use zipp::{Field, Schema, Section};
 
@@ -62,7 +63,7 @@ async fn seo_like_the_craft_plugin() {
 	let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
 	{
 		let conn = db.conn();
-		zipp::apply::create_singles(&conn, &s).unwrap();
+		zipp::migrate::apply::create_singles(&conn, &s).unwrap();
 		let id: i64 = conn
 			.query_row(
 				"SELECT id FROM entries WHERE section = 'seoSettings'",

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::links::LinkKind;
+use super::links;
 use crate::request;
 use crate::users::User;
 
@@ -60,7 +60,7 @@ pub struct LinkReq {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkInfo {
-	pub kind: LinkKind,
+	pub kind: links::Kind,
 	pub email: String,
 	pub name: String,
 	pub expires_at: i64,

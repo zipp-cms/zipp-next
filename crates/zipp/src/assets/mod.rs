@@ -45,24 +45,25 @@ mod routes;
 pub(crate) mod tests;
 mod transform;
 
-pub use archive::{
-	Limits, Unpacked, Unzipped, ZipOf, read_zip, unzip, write_zip, zip_files,
+pub(crate) use archive::{
+	Limits, Unzipped, ZipOf, read_zip, unzip, write_zip, zip_files,
 };
-pub use edits::{Canvas, Crop, Edits, Resize};
-pub use folders::{
+pub(crate) use edits::Edits;
+#[cfg(test)]
+use edits::{Canvas, Crop, Resize};
+pub(crate) use folders::{
 	Folder, check_folder, create_folder, delete_folder, folders, move_assets,
 	top_count, update_folder,
 };
 use folders::{folder, folder_named};
-pub use manage::{
+pub(crate) use manage::{
 	AssetChange, InFolder, Usage, delete, find, replace, search, update, usage,
 };
 
-pub use routes::api_routes;
+pub(crate) use routes::api_routes;
 #[cfg(test)]
 use routes::file_headers;
-pub use routes::file_routes;
-pub use transform::crop_rect;
+pub(crate) use routes::file_routes;
 pub use transform::transform_size;
 use transform::*;
 

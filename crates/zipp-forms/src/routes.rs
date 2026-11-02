@@ -155,7 +155,7 @@ fn settings(
 		("section".to_string(), FORM_SETTINGS.to_string()),
 		("site".to_string(), site.to_string()),
 	];
-	let q = zipp::query::Query::parse(&state.schema, &params)?;
+	let q = zipp::entries::query::Query::parse(&state.schema, &params)?;
 	let found = zipp::entries::select(&state.db.conn(), &q)
 		.map_err(|e| e.to_string())?;
 	let fields = found.first().map(|e| e.fields.clone()).unwrap_or_default();

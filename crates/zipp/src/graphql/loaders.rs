@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, HashMap};
 use async_graphql::dataloader::{DataLoader, HashMapCache, Loader};
 
 use super::*;
-use crate::query::MAX_IDS;
+use crate::entries::query::MAX_IDS;
 
 /// The loaders of a request, see [`Loaded`].
 pub(super) struct Loaders {

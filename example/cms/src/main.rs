@@ -5,8 +5,8 @@ use zipp::axum::extract::State;
 use zipp::axum::http::header;
 use zipp::axum::response::IntoResponse;
 use zipp::axum::routing::get;
+use zipp::entries::query::Query;
 use zipp::error::Result;
-use zipp::query::Query;
 use zipp::{
 	Access, AppState, Cms, Column, Condition, Field, Format, LinkKind, Role,
 	Schema, Section, Style, Transform,

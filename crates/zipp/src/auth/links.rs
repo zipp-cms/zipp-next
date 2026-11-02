@@ -16,7 +16,7 @@ use crate::mail::Mail;
 /// What a link does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum LinkKind {
+pub enum Kind {
 	/// a new user sets their password, a week long
 	Invite,
 	/// a new password, an hour long
@@ -25,7 +25,7 @@ pub enum LinkKind {
 	LoginAs,
 }
 
-impl LinkKind {
+impl Kind {
 	fn as_str(self) -> &'static str {
 		match self {
 			Self::Invite => "invite",
@@ -62,7 +62,7 @@ impl LinkKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Link {
 	pub user_id: i64,
-	pub kind: LinkKind,
+	pub kind: Kind,
 	pub created_by: Option<i64>,
 	pub created_at: i64,
 	pub expires_at: i64,
@@ -72,7 +72,7 @@ pub struct Link {
 pub fn create_link(
 	conn: &Connection,
 	user_id: i64,
-	kind: LinkKind,
+	kind: Kind,
 	created_by: Option<i64>,
 ) -> Result<(String, i64)> {
 	conn.execute("DELETE FROM user_links WHERE expires_at < ?1", [now()])?;
@@ -104,9 +104,9 @@ pub fn get_link(conn: &Connection, token: &str) -> Result<Link> {
 	let gone = || Error::Request("This link is used or expired".into());
 	let (user_id, kind, created_by, created_at, expires_at) =
 		row.ok_or_else(gone)?;
-	let kind = LinkKind::parse(&kind).ok_or_else(gone)?;
+	let kind = Kind::parse(&kind).ok_or_else(gone)?;
 	// an invite is for a user without a password
-	if kind == LinkKind::Invite && !invited(conn, user_id)? {
+	if kind == Kind::Invite && !invited(conn, user_id)? {
 		return Err(gone());
 	}
 	Ok(Link {
@@ -133,7 +133,7 @@ pub fn end_password_links(conn: &Connection, user_id: i64) -> Result<()> {
 pub fn take_link(
 	conn: &Connection,
 	token: &str,
-	kinds: &[LinkKind],
+	kinds: &[Kind],
 ) -> Result<Link> {
 	let link = get_link(conn, token)?;
 	if !kinds.contains(&link.kind) {
@@ -144,7 +144,7 @@ pub fn take_link(
 }
 
 /// Whether a user still has to set a password, invited by an admin.
-pub fn invited(conn: &Connection, user_id: i64) -> Result<bool> {
+pub(crate) fn invited(conn: &Connection, user_id: i64) -> Result<bool> {
 	Ok(conn.query_row(
 		"SELECT password_hash = '' FROM users WHERE id = ?1",
 		[user_id],
@@ -155,7 +155,7 @@ pub fn invited(conn: &Connection, user_id: i64) -> Result<bool> {
 /// How long a session of logging in as someone lasts; it isn't renewed.
 pub const LOGIN_AS_MS: i64 = 2 * HOUR_MS;
 
-/// A session of `user_id` for the admin `by`, see [`LinkKind::LoginAs`];
+/// A session of `user_id` for the admin `by`, see [`Kind::LoginAs`];
 /// it isn't the user's login.
 pub fn login_as_session(
 	conn: &Connection,
@@ -166,11 +166,7 @@ pub fn login_as_session(
 }
 
 /// The full url of a link, after `serve --public-url`.
-pub fn link_url(
-	public_url: &str,
-	kind: LinkKind,
-	token: &str,
-) -> Result<String> {
+pub fn link_url(public_url: &str, kind: Kind, token: &str) -> Result<String> {
 	if public_url.is_empty() {
 		return Err(Error::Request(
 			"links need the url of the cms: serve --public-url".into(),
@@ -182,7 +178,7 @@ pub fn link_url(
 /// The mail of an invite or reset link; `by` the admin who sent it.
 pub fn link_mail(
 	public_url: &str,
-	kind: LinkKind,
+	kind: Kind,
 	to: &str,
 	url: &str,
 	by: Option<&str>,
@@ -191,7 +187,7 @@ pub fn link_mail(
 		.split_once("://")
 		.map_or(public_url, |(_, host)| host);
 	match kind {
-		LinkKind::Invite => {
+		Kind::Invite => {
 			let who =
 				by.map_or(String::new(), |b| format!("{b} invites you. "));
 			let text = format!(

@@ -15,11 +15,10 @@ async fn list_route(
 	Ok(Json(list(&state.db.conn(), &state.schema, &auth)?))
 }
 
-/// The section of an entry of the trash, if the user may delete in it.
-fn entry_section(state: &AppState, auth: &Authed, id: i64) -> Result<String> {
+/// Whether the user may delete in the section of an entry of the trash.
+fn check_entry(state: &AppState, auth: &Authed, id: i64) -> Result<()> {
 	let section = trashed_section(&state.db.conn(), id)?;
-	auth.check(&state.schema, &section, Access::Delete)?;
-	Ok(section)
+	auth.check(&state.schema, &section, Access::Delete)
 }
 
 async fn restore_entry_route(
@@ -27,7 +26,7 @@ async fn restore_entry_route(
 	auth: Authed,
 	Req(req): Req<RestoreEntryReq>,
 ) -> ApiResult<RestoreEntryReq> {
-	entry_section(&state, &auth, req.id)?;
+	check_entry(&state, &auth, req.id)?;
 	let section = restore_entry(&state.db.conn(), &state.schema, req.id)?;
 	state.changed(req.id, &section, ChangeKind::Saved);
 	Ok(Json(()))
@@ -38,7 +37,7 @@ async fn purge_entry_route(
 	auth: Authed,
 	Req(req): Req<PurgeEntryReq>,
 ) -> ApiResult<PurgeEntryReq> {
-	entry_section(&state, &auth, req.id)?;
+	check_entry(&state, &auth, req.id)?;
 	purge_entry(&state.db.conn(), req.id)?;
 	Ok(Json(()))
 }

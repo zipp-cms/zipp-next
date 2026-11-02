@@ -118,7 +118,8 @@ fn from_body<R: Request>(
 }
 
 /// The path of a request, with its path params filled in.
-pub fn path_of<R: Request>(req: &R) -> String {
+#[cfg(any(test, feature = "testing"))]
+pub(crate) fn path_of<R: Request>(req: &R) -> String {
 	let value = serde_json::to_value(req).unwrap_or_default();
 	let mut path = String::new();
 	let mut rest = R::PATH;

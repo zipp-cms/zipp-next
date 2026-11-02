@@ -173,7 +173,6 @@ impl FromRequestParts<AppState> for Admin {
 /// A user who may do `L` in the section of the entry `{id}` of the path.
 pub struct EntryAccess<L> {
 	pub auth: Authed,
-	pub id: i64,
 	pub section: String,
 	level: PhantomData<L>,
 }
@@ -199,7 +198,6 @@ impl<L: Level> FromRequestParts<AppState> for EntryAccess<L> {
 		auth.check(&state.schema, &section, L::ACCESS)?;
 		Ok(Self {
 			auth,
-			id,
 			section,
 			level: PhantomData,
 		})

@@ -280,7 +280,7 @@ pub(super) fn validate_value(
 		}
 		(kind @ FieldKind::RichText { .. }, Value::Object(_)) => {
 			let allowed = richtext::Allowed::of(kind).unwrap();
-			let doc = richtext::validate_in(
+			let doc = richtext::validate(
 				schema, &allowed, value, path, hidden, errors,
 			);
 			if richtext::is_empty(&doc) {

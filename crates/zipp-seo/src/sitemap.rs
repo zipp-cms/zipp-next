@@ -12,9 +12,9 @@ use zipp::axum::response::{IntoResponse, Response};
 use zipp::axum::routing::get;
 
 use zipp::db::iso;
+use zipp::entries::query::Query;
 use zipp::entries::{Entry, list};
 use zipp::error::{Error, Result};
-use zipp::query::Query;
 use zipp::schema::{Schema, Site};
 use zipp::{AppState, origin};
 
@@ -91,9 +91,7 @@ fn sections<'a>(schema: &'a Schema, globals: &Globals) -> Vec<&'a str> {
 }
 
 fn page_size(schema: &Schema) -> i64 {
-	schema
-		.plugin_of::<Seo>()
-		.map_or(2000, |s| s.sitemap_page_size) as i64
+	Seo::of(schema).sitemap_page_size as i64
 }
 
 fn escape(s: &str) -> String {

@@ -131,7 +131,7 @@ pub fn inner<'a>(
 }
 
 /// Like [`inner`], the components and their fields to change.
-pub fn inner_mut<'a>(
+pub(crate) fn inner_mut<'a>(
 	schema: &'a Schema,
 	field: &Field,
 	value: &'a mut Value,

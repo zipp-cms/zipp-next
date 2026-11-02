@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::{Choice, Entry, EntryInput, EntryRef};
+use super::{Entry, EntryChoice, EntryInput, EntryRef};
 use crate::request;
 
-/// Entries of a [`Query`](crate::query::Query): its params as pairs,
+/// Entries of a [`Query`](crate::entries::query::Query): its params as pairs,
 /// like `section=events&order=title&field.city=Bern`.
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(from = "Vec<(String, String)>")]
@@ -42,7 +42,7 @@ pub struct ChoicesReq {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChoicesResp {
-	pub entries: Vec<Choice>,
+	pub entries: Vec<EntryChoice>,
 }
 
 request!(ChoicesReq, GET "/entries/choices" => ChoicesResp);

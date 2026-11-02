@@ -92,7 +92,7 @@ impl Condition {
 
 impl Component {
 	/// The conditions of a field: its own and the one of its tab.
-	pub fn conditions_of(&self, handle: &str) -> Vec<&Condition> {
+	pub(crate) fn conditions_of(&self, handle: &str) -> Vec<&Condition> {
 		let own = self.fields.iter().find(|f| f.handle == handle);
 		let tab = self
 			.tabs

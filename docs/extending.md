@@ -94,7 +94,9 @@ A plugin is a crate that adds a whole feature, turned on with one line:
   the frontend proxies.
 - `studio`: an ES module served as `/_plugins/<name>.js` with data for it;
   `sectionSetup(target, { schema, section, data, host })` adds a card to
-  the setup page of a section.
+  the setup page of a section. `PluginStudio::default().data(..)` gives
+  the studio only data, like the agent's `{ "chat": true }` that turns
+  on the coding agent in the chat.
 
 What a plugin hands zipp is made with constructors (`GraphqlExt::new()`,
 `EntryField::new`, `PluginStudio::new(js).data(..)`,

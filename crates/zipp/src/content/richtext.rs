@@ -68,20 +68,10 @@ pub fn is_empty(doc: &Value) -> bool {
 	doc["content"].as_array().is_none_or(|c| c.is_empty())
 }
 
-/// Checks and cleans a document, errors go to `errors` with `path`.
-pub fn validate(
-	schema: &Schema,
-	allowed: &Allowed,
-	doc: &Value,
-	path: &str,
-	errors: &mut Vec<FieldError>,
-) -> Value {
-	validate_in(schema, allowed, doc, path, false, errors)
-}
-
-/// [`validate`] in a field that may be hidden by its condition, its
-/// embedded blocks needn't be filled then.
-pub(crate) fn validate_in(
+/// Checks and cleans a document, errors go to `errors` with `path`. In a
+/// field that is `hidden` by its condition its embedded blocks needn't be
+/// filled.
+pub(crate) fn validate(
 	schema: &Schema,
 	allowed: &Allowed,
 	doc: &Value,

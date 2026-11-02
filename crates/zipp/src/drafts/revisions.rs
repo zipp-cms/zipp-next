@@ -20,7 +20,7 @@ pub struct FieldChange {
 
 /// What differs between two versions of an entry, in the order of the
 /// fields of the newer one.
-pub fn diff_docs(old: &Doc, new: &Doc) -> Vec<FieldChange> {
+fn diff_docs(old: &Doc, new: &Doc) -> Vec<FieldChange> {
 	let mut changes: Vec<FieldChange> = vec![];
 	let mut add = |field: &str, site: &str| match changes
 		.iter_mut()

@@ -8,7 +8,6 @@ pub fn create_token(
 	id: i64,
 	user_id: i64,
 ) -> Result<String> {
-	get_entry_exists(conn, id)?;
 	insert_token(conn, Some(id), user_id)
 }
 
@@ -30,11 +29,6 @@ fn insert_token(
 	)?;
 	conn.execute("DELETE FROM preview_tokens WHERE expires_at < ?1", [now()])?;
 	Ok(token)
-}
-
-pub(super) fn get_entry_exists(conn: &Connection, id: i64) -> Result<()> {
-	conn.query_row("SELECT id FROM entries WHERE id = ?1", [id], |_| Ok(()))?;
-	Ok(())
 }
 
 /// What a preview token shows.

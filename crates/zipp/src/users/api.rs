@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::Account;
-use crate::auth::links::LinkKind;
+use crate::auth::links;
 use crate::request;
 
 /// All users, for admins.
@@ -83,7 +83,7 @@ pub struct PasswordLinkReq {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkResp {
-	pub kind: LinkKind,
+	pub kind: links::Kind,
 	pub url: String,
 	pub expires_at: i64,
 	/// whether it was mailed

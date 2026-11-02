@@ -102,7 +102,7 @@ fn csp(state: &AppState) -> String {
 }
 
 /// The editor of a field type of another crate, see
-/// [`StudioModule`](crate::field_type::StudioModule).
+/// [`StudioModule`](crate::schema::field_type::StudioModule).
 async fn field_module(
 	State(state): State<AppState>,
 	Path(file): Path<String>,
@@ -118,7 +118,7 @@ async fn plugin_module(
 ) -> Response {
 	let name = file.strip_suffix(".js").unwrap_or(&file);
 	let studio = state.schema.plugins.get(name).and_then(|p| p.studio());
-	module(studio.map(|s| s.js))
+	module(studio.and_then(|s| s.js))
 }
 
 /// An ES module of another crate, asked again on every load: it changes
@@ -160,6 +160,7 @@ async fn schema_route(
 				let s = p.studio()?;
 				Some(PluginResp {
 					name: p.name().into(),
+					module: s.js.is_some(),
 					data: s.data,
 				})
 			})

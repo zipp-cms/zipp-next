@@ -1,5 +1,4 @@
 use super::api::*;
-use super::links::LinkKind;
 use super::*;
 use crate::fixtures::site_with_roles;
 use crate::testing::TestServer;
@@ -63,7 +62,7 @@ async fn a_forgotten_password_comes_by_mail() {
 	let info = anon.call(&link).await.unwrap();
 	assert_eq!(
 		(info.kind, info.email.as_str()),
-		(LinkKind::Reset, "a@x.ch")
+		(links::Kind::Reset, "a@x.ch")
 	);
 
 	// too short: the link stays
@@ -179,7 +178,7 @@ async fn an_invited_user_sets_a_password() {
 		send: true,
 	};
 	let link = admin.call(&req).await.unwrap();
-	assert_eq!(link.kind, LinkKind::Invite);
+	assert_eq!(link.kind, links::Kind::Invite);
 	let sent = ts.mails();
 	assert_eq!(sent[0].to, "new@x.ch");
 	assert!(sent[0].text.contains(&link.url));

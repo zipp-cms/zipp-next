@@ -22,7 +22,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::field_type::{FieldType, FieldTypes, GraphqlType};
+use crate::schema::field_type::{FieldType, FieldTypes, GraphqlType};
 pub use role::{Access, Role};
 
 mod builders;

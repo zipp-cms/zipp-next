@@ -35,6 +35,6 @@
 	}
 </script>
 
-{#each schema.plugins as p (p.name + section.handle)}
+{#each schema.plugins.filter(p => p.module) as p (p.name + section.handle)}
 	<div use:card={p.name}></div>
 {/each}

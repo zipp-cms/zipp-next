@@ -65,6 +65,45 @@ async fn serves_the_studio() {
 	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
+/// A plugin with a module in the studio, `chat` one with data only.
+struct Studio(&'static str);
+
+impl crate::Plugin for Studio {
+	fn name(&self) -> &'static str {
+		self.0
+	}
+
+	fn studio(&self) -> Option<crate::PluginStudio> {
+		Some(match self.0 {
+			"chat" => crate::PluginStudio::default()
+				.data(serde_json::json!({ "chat": true })),
+			_ => crate::PluginStudio::new("export {}"),
+		})
+	}
+}
+
+#[tokio::test]
+async fn plugins_with_and_without_a_module() {
+	let schema = site_with_roles()
+		.plugin(Studio("cards"))
+		.plugin(Studio("chat"));
+	let ts = TestServer::new(schema);
+	let schema = ts.admin().call_json(&SchemaReq {}).await.unwrap();
+	assert_eq!(
+		schema["plugins"],
+		serde_json::json!([
+			{ "name": "cards", "module": true, "data": null },
+			{ "name": "chat", "module": false, "data": { "chat": true } },
+		])
+	);
+
+	let anon = ts.anonymous();
+	let resp = anon.get("/_plugins/cards.js").await;
+	assert_eq!(resp.status(), StatusCode::OK);
+	let resp = anon.get("/_plugins/chat.js").await;
+	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
 #[tokio::test]
 async fn the_schema_brings_its_lucide_icons() {
 	let schema = site_with_roles()

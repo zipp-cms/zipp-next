@@ -8,7 +8,7 @@ pub(super) async fn serve(
 	migrations: &Migrations,
 	args: ServeArgs,
 	(routes, hooks): (Router<AppState>, Vec<Hook>),
-) -> Result<(), String> {
+) -> CmdResult {
 	let ServeArgs {
 		listen,
 		files,
@@ -36,7 +36,7 @@ pub(super) async fn serve(
 			}
 			_ => Err(format!("--site-url {s:?} needs <site>=<url>")),
 		})
-		.collect::<Result<graphql::SiteUrls, _>>()?;
+		.collect::<Result<SiteUrls, _>>()?;
 	// they go into a header of the studio
 	if let Some(a) = frame_ancestor
 		.iter()
@@ -44,17 +44,18 @@ pub(super) async fn serve(
 	{
 		return Err(format!(
 			"--frame-ancestor {a:?}: an origin like https://dash.example.com"
-		));
+		)
+		.into());
 	}
-	let files = assets::files_dir(files).map_err(|e| e.to_string())?;
-	let db = Db::open(db_path).map_err(|e| e.to_string())?;
+	let files = assets::files_dir(files)?;
+	let db = Db::open(db_path)?;
 
 	let migrations = migrations.load()?;
 	let applied = apply::up_to_date(&db.conn(), &migrations, &schema)?;
 	for name in applied {
 		info!("applied migration {name}");
 	}
-	assets::index_usage(&db.conn(), &schema).map_err(|e| e.to_string())?;
+	assets::index_usage(&db.conn(), &schema)?;
 
 	let schema = Arc::new(schema);
 	let ai = match key_file {
@@ -96,13 +97,12 @@ pub(super) async fn serve(
 	}
 	let app = app(state, routes);
 
-	let listener = tokio::net::TcpListener::bind(&listen)
-		.await
-		.map_err(|e| e.to_string())?;
+	let listener = tokio::net::TcpListener::bind(&listen).await?;
 	info!("listening on {listen}");
 	// the peer's address, see `client`
 	let app = app.into_make_service_with_connect_info::<SocketAddr>();
-	axum::serve(listener, app).await.map_err(|e| e.to_string())
+	axum::serve(listener, app).await?;
+	Ok(())
 }
 
 /// zipp's routes, the plugins' and the site's, under the state.
@@ -194,8 +194,8 @@ async fn backups(db: PathBuf, files: PathBuf, dir: PathBuf, keep: usize) {
 				return Ok(None);
 			}
 			let w = crate::backup::backup(&db, &files, &dir, now)?;
-			crate::backup::prune(&dir, keep).map_err(|e| e.to_string())?;
-			Ok::<_, String>(Some(w))
+			crate::backup::prune(&dir, keep)?;
+			Ok::<_, CmdError>(Some(w))
 		})
 		.await;
 		match res {
