@@ -169,6 +169,11 @@ commit.
 - [x] A login dialog when the session expires, so unsaved work stays, 4b457a1
 - [x] The link box of a link field clickable over its whole height, not
       only on its text (operator 2026-11-01)
+- [ ] The entry picker as a flyout: sections on the left like the Content
+      nav, the nested structure on the right (operator 2026-11-03)
+- [ ] Limit which sections a relation field and a link field's entry links
+      (and rich text / navigation links) may pick from, besides the types
+      (operator 2026-11-03)
 - textrem's forms (contact, Mappenabo, orders with prices from the cms)
   stay in the site, not in zipp-forms: in the crelte server as today or
   later as routes of its cms crate with `state.mail`, either is fine
