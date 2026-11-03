@@ -18,7 +18,7 @@ SQLite database, default `zipp.db`):
 - `types`: prints TypeScript types of the content
 - `mail <to> [--smtp-url url --mail-from from]`: sends a test mail, see
   Mail below
-- `import-craft <export.json> [--volume handle=dir] [--site craft=zipp]`:
+- `import-craft <export.json> [--volume handle=[folder:]dir] [--site craft=zipp]`:
   imports a Craft site into a database without content, only with the
   feature `craft`, see below
 - `backup <dir> [--files dir] [--keep n]`: a backup of the database and
@@ -376,7 +376,12 @@ fields to the field. Values follow the zipp field: a matrix becomes
 blocks or a navigation (each nested entry's link and the nested entries
 under it), a content block a group, categories a relation, CKEditor's
 html rich text (nested entries become embedded blocks, or buttons if
-they are only a link). A group that Craft didn't have takes the flat
+they are only a link), meierlabs-seo's field the field of zipp-seo
+(`seo_field`), a TableMaker table a table field: its columns are each
+entry's own in Craft, the cells go to the table's columns in their order
+(headings and widths are the schema's, more columns than the table has
+are left out and listed; a table whose columns really change per entry
+needs a field type of the site). A group that Craft didn't have takes the flat
 fields of the same entry or block with the handles of its fields, or
 with the group's handle before them: a group `sale` with `price` and
 `format` takes Craft's `price` and `format`, a group `contact` with
@@ -384,9 +389,17 @@ with the group's handle before them: a group `sale` with `price` and
 place only: a field of the entry type itself wins, and a Craft field
 that fits two places (or two that fit one) is left out and listed, so
 rename one of them. Assets come with their title, alt text (per
-site, `export.php` from before gives only the primary site's) and focal
-point (a path out of its volume, absolute or with `..`, is left out
-and listed); entries keep Craft's post date, structures their order. What
+site, `export.php` from before gives only the primary site's), focal
+point and the fields of their volume, if the schema has them as asset
+fields (a path out of its volume, absolute or with `..`, is left out
+and listed). Each volume becomes a folder with Craft's folders in it,
+named like the volume or as `--volume` says before a colon:
+`--volume timetables=Stundenpläne:../craft/web/timetables`,
+`--volume default=:../craft/web/assets` puts the files and folders of
+the volume on the top. A section whose uri format has only some types
+(`{% if type == 'blog' %}blog/{slug}{% endif %}`) is a section without
+a uri and `uri_of("blog", "blog/{slug}")`. Entries keep Craft's post date, structures their order. What
 the schema doesn't have is left out and listed; slugs are made zipp's
 (`teddy--co.` becomes `teddy-co`), so redirect such urls in the
-frontend. SEO fields aren't imported yet.
+frontend. SEOmatic's fields aren't imported, nor meierlabs-seo's
+settings (set them in the single `seoSettings`).

@@ -46,6 +46,8 @@ pub(crate) use folders::{
 	top_count, update_folder,
 };
 use folders::{folder, folder_named};
+#[cfg(feature = "craft")]
+pub(crate) use manage::check_fields;
 pub(crate) use manage::{
 	AssetChange, InFolder, Usage, delete, find, replace, search, update, usage,
 };

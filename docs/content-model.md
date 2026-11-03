@@ -27,7 +27,9 @@ content, the others are dropped in every site; blocks keep theirs. In
 the studio it is a draft change (the editor asks before content goes),
 publishing writes the type, its uris and index.
 
-`uri_of("home", "")` gives one entry type another uri, `uri_in("fr",
+`uri_of("home", "")` gives one entry type another uri (a section
+without `uri` and with `uri_of("blog", "blog/{slug}")` gives only blogs a
+page), `uri_in("fr",
 "offres/{slug}")` one site, `uri_if("hasPage")` gives only entries with
 that boolean field on a page, like Craft's `{% if hasPage %}` in a uri
 format.

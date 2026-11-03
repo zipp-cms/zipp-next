@@ -6,6 +6,10 @@
   options like a dropdown, as buttons in a color per option like
   Craft's; GraphQL gives `ButtonGroupOption { value label color }`. It
   was the example crate `zipp-button-group`, which is gone.
+- `import-craft` imports meierlabs-seo's SEO field into zipp-seo's,
+  TableMaker tables into table fields (by the order of the columns) and
+  the fields of assets into the asset fields; each volume is a folder
+  with Craft's folders in it (`--volume handle=folder:dir` names it).
 
 ## 0.1.0 (2026-11-03)
 

@@ -2,7 +2,7 @@ use serde_json::json;
 
 use super::*;
 use crate::db::Db;
-use crate::schema::{LinkKind, Section};
+use crate::schema::{Column, LinkKind, Section};
 
 fn schema() -> Schema {
 	Schema::new()
@@ -345,7 +345,13 @@ fn imports_the_alt_text_per_site() {
 	.unwrap();
 	let opts = Options {
 		sites: vec![("deCH".into(), "de".into()), ("en".into(), "en".into())],
-		volumes: HashMap::from([("default".into(), volume)]),
+		volumes: HashMap::from([(
+			"default".into(),
+			Volume {
+				dir: volume,
+				folder: None,
+			},
+		)]),
 	};
 
 	let files = dir.join("files");
@@ -360,4 +366,178 @@ fn imports_the_alt_text_per_site() {
 		[("de".into(), "Ein A".into()), ("en".into(), "An A".into())].into()
 	);
 	assert_eq!(alt(2), [("de".into(), "Noch ein A".into())].into());
+}
+
+/// zipp-seo's field type, which depends on zipp: its values as they are.
+struct Seo;
+
+impl crate::FieldType for Seo {
+	fn name(&self) -> &'static str {
+		"seo"
+	}
+
+	fn validate(
+		&self,
+		_options: &Value,
+		value: &Value,
+	) -> std::result::Result<Value, String> {
+		Ok(value.clone())
+	}
+
+	fn graphql(&self) -> crate::GraphqlType {
+		crate::GraphqlType::Named("Seo")
+	}
+
+	fn studio(&self) -> crate::StudioModule {
+		crate::StudioModule::new("")
+	}
+}
+
+#[test]
+fn imports_seo_tables_and_asset_folders() {
+	let schema = Schema::new()
+		.site("de", "Deutsch", "de-CH")
+		.field_type(Seo)
+		// only blogs have a page, like Craft's `{% if type == 'blog' %}`
+		.section(
+			Section::channel("blogs", ["blog", "video"])
+				.uri_of("blog", "blog/{slug}"),
+		)
+		.entry(
+			"blog",
+			"Blog",
+			[
+				Field::custom("seo", "seo", Value::Null),
+				Field::table(
+					"table",
+					[Column::text("day"), Column::text("time")],
+				),
+			],
+		)
+		.entry("video", "Video", [])
+		.asset_fields([
+			Field::text("label"),
+			Field::relation("blog", ["blog"]).max(1),
+		]);
+	schema.check().unwrap();
+
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
+	for v in ["timetables", "photos", "docs"] {
+		fs::create_dir_all(dir.join(v).join("2026")).unwrap();
+	}
+	fs::write(dir.join("timetables/2026/plan.txt"), "p").unwrap();
+	fs::write(dir.join("photos/a.txt"), "a").unwrap();
+	fs::write(dir.join("docs/2026/b.txt"), "b").unwrap();
+	let asset = |id, volume: &str, name: &str, path: &str, fields| {
+		json!({ "id": id, "volume": volume, "volumeName": name,
+			"path": path, "title": null, "alt": null, "focalPoint": null,
+			"fields": fields })
+	};
+	let export: Export = serde_json::from_value(json!({
+		"sites": [{ "handle": "default" }],
+		"sections": { "blogs": { "sites": { "default": [
+			{ "id": 1, "type": "blog", "title": "Herbst", "slug": "herbst",
+				"enabled": true, "fields": {
+				"seo": { "title": "Im Herbst", "description": null,
+					"image": [11], "socialImage": [], "robots": "noindex, follow",
+					"canonicalUrl": null },
+				"table": {
+					"columns": [
+						{ "heading": "Tag", "width": "", "align": "",
+							"type": "singleline" },
+						{ "heading": "Zeit", "width": "", "align": "",
+							"type": "singleline" },
+						{ "heading": "Ort", "width": "", "align": "",
+							"type": "singleline" },
+					],
+					"rows": [["Mo", "9:00", "Halle"], ["Di", null, null]],
+				},
+			} },
+			{ "id": 2, "type": "video", "title": "Clip", "slug": "clip",
+				"enabled": true, "fields": {} },
+		] } } },
+		"assets": [
+			asset(10, "timetables", "Timetables", "2026/plan.txt",
+				json!({ "label": "Herbst", "blog": [1] })),
+			asset(11, "photos", "Fotos", "a.txt", json!({})),
+			asset(12, "docs", "Dokumente", "2026/b.txt", json!([])),
+		],
+	}))
+	.unwrap();
+	let volume = |name: &str, folder: Option<&str>| {
+		let v = Volume {
+			dir: dir.join(name),
+			folder: folder.map(Into::into),
+		};
+		(name.to_string(), v)
+	};
+	let opts = Options {
+		sites: vec![],
+		volumes: HashMap::from([
+			volume("timetables", Some("Stundenpläne")),
+			volume("photos", None),
+			// no folder of its own, its folders on the top
+			volume("docs", Some("")),
+		]),
+	};
+
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let report =
+		import(&conn, &schema, &dir.join("files"), &export, &opts).unwrap();
+	assert_eq!((report.entries, report.assets), (2, 3));
+	assert_eq!(
+		report.skipped,
+		["table: a table has 3 columns, only the first 2 are imported"]
+	);
+
+	// a volume is a folder, Craft's folders are in it
+	let folders = assets::folders(&conn).unwrap();
+	let folder = |name: &str| folders.iter().find(|f| f.name == name);
+	let plans = folder("Stundenpläne").unwrap();
+	assert_eq!(plans.parent_id, None);
+	let in_plans = folders
+		.iter()
+		.find(|f| f.name == "2026" && f.parent_id == Some(plans.id))
+		.unwrap();
+	let photos = folder("Fotos").unwrap();
+	let on_top = folders
+		.iter()
+		.find(|f| f.name == "2026" && f.parent_id.is_none())
+		.unwrap();
+	assert_eq!(folders.len(), 4);
+	let asset = |id| assets::get_asset(&conn, id).unwrap();
+	assert_eq!(asset(1).folder_id, Some(in_plans.id));
+	assert_eq!(asset(2).folder_id, Some(photos.id));
+	assert_eq!(asset(3).folder_id, Some(on_top.id));
+
+	let (blogs, _) = entries::list(
+		&conn,
+		&crate::entries::query::Query::parse(
+			&schema,
+			&[("section".into(), "blogs".into())],
+		)
+		.unwrap(),
+	)
+	.unwrap();
+	let blog = blogs.iter().find(|e| e.ty == "blog").unwrap();
+	let video = blogs.iter().find(|e| e.ty == "video").unwrap();
+	assert_eq!(blog.uri.as_deref(), Some("blog/herbst"));
+	assert_eq!(video.uri, None);
+
+	// the asset fields link the entry, the SEO image is the asset in zipp
+	assert_eq!(
+		asset(1).fields,
+		json!({ "label": "Herbst", "blog": [blog.id] })
+	);
+	assert_eq!(asset(2).fields, json!({}));
+	let seo = &blog.fields["seo"];
+	assert_eq!(seo["title"], "Im Herbst");
+	assert_eq!(seo["image"], json!([2]));
+	assert_eq!(seo["robots"], "noindex, follow");
+	assert_eq!(
+		blog.fields["table"],
+		json!([{ "day": "Mo", "time": "9:00" }, { "day": "Di" }])
+	);
 }

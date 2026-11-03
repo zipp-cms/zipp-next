@@ -215,7 +215,7 @@ pub(crate) fn update(
 
 /// The values of the asset fields cleaned up, or what is wrong with
 /// them; nothing to check without asset fields.
-fn check_fields(
+pub(crate) fn check_fields(
 	conn: &Connection,
 	schema: &Schema,
 	fields: &Value,

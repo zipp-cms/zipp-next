@@ -11,8 +11,10 @@
 //! under it), content blocks to groups (and flat fields to a group with
 //! their handles), CKEditor's html to rich text (nested entries become
 //! embedded blocks or, if they are only a link, buttons), categories to
-//! relations. Assets are copied with their title, alt text and focal
-//! point.
+//! relations, meierlabs-seo's field to zipp-seo's, TableMaker to a table
+//! by the order of its columns. Assets are copied with their title, alt
+//! text, focal point and fields, each volume a folder with Craft's folders
+//! in it.
 
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
@@ -25,7 +27,7 @@ use crate::assets;
 use crate::db::{now, parse_iso};
 use crate::entries::{self, EntryInput, next_position};
 use crate::error::{Error, Result};
-use crate::schema::{Component, Field, FieldKind, Schema, SectionKind};
+use crate::schema::{ASSET, Component, Field, FieldKind, Schema, SectionKind};
 
 mod export;
 mod html;
@@ -38,8 +40,16 @@ pub struct Options {
 	/// Craft site handle to zipp site handle; without it sites match by
 	/// handle, or the only site of each
 	pub sites: Vec<(String, String)>,
-	/// Craft volume handle to the folder of its files
-	pub volumes: HashMap<String, PathBuf>,
+	/// Craft volume handle to where its files are
+	pub volumes: HashMap<String, Volume>,
+}
+
+pub struct Volume {
+	/// the folder of its files
+	pub dir: PathBuf,
+	/// the asset folder it becomes, `None` the volume's name, `""` none:
+	/// its files and folders go on the top
+	pub folder: Option<String>,
 }
 
 /// What an import did and what it left out.
@@ -75,6 +85,7 @@ pub fn import(
 		schema,
 		entries: HashMap::new(),
 		assets: HashMap::new(),
+		folders: HashMap::new(),
 		report: Report::default(),
 	};
 
@@ -82,6 +93,7 @@ pub fn import(
 	im.assets(&tx, files, export, opts, &sites)?;
 	let planned = im.plan(export, &sites);
 	im.save_planned(&tx, &planned)?;
+	im.asset_fields(&tx, export)?;
 	im.import_globals(&tx, export, &sites)?;
 
 	tx.commit()?;
@@ -203,6 +215,8 @@ struct Importer<'a> {
 	entries: HashMap<i64, i64>,
 	/// Craft asset id to zipp asset id
 	assets: HashMap<i64, i64>,
+	/// a folder's parent and name to its id
+	folders: HashMap<(Option<i64>, String), i64>,
 	report: Report,
 }
 
@@ -407,7 +421,7 @@ impl Importer<'_> {
 		sites: &HashMap<String, String>,
 	) -> Result<()> {
 		for a in &export.assets {
-			let Some(dir) = opts.volumes.get(&a.volume) else {
+			let Some(volume) = opts.volumes.get(&a.volume) else {
 				self.skip(format!(
 					"asset {}: no folder for volume {}, use --volume {}=<dir>",
 					a.path, a.volume, a.volume
@@ -425,14 +439,31 @@ impl Importer<'_> {
 				));
 				continue;
 			}
-			let data = match fs::read(dir.join(&a.path)) {
+			let data = match fs::read(volume.dir.join(&a.path)) {
 				Ok(d) => d,
 				Err(e) => {
 					self.skip(format!("asset {}: {e}", a.path));
 					continue;
 				}
 			};
-			let name = a.path.rsplit('/').next().unwrap_or(&a.path);
+			let (dirs, name) = match a.path.rsplit_once('/') {
+				Some((dirs, name)) => (Some(dirs), name),
+				None => (None, a.path.as_str()),
+			};
+			let top = match &volume.folder {
+				Some(f) => f.as_str(),
+				None => a.volume_name.as_deref().unwrap_or(&a.volume),
+			};
+			let path = [top]
+				.into_iter()
+				.chain(dirs.into_iter().flat_map(|d| d.split('/')));
+			let folder = match self.folder(conn, path) {
+				Ok(f) => f,
+				Err(e) => {
+					self.skip(format!("asset {}: {e}", a.path));
+					continue;
+				}
+			};
 			let stored = match assets::store(conn, files, name, &data, None) {
 				Ok(s) => s,
 				Err(e) => {
@@ -455,17 +486,80 @@ impl Importer<'_> {
 			alt.retain(|_, a| !a.trim().is_empty());
 			conn.execute(
 				"UPDATE assets SET title = ?1, alt = ?2, focal_x = ?3,
-				focal_y = ?4 WHERE id = ?5",
+				focal_y = ?4, folder_id = ?5 WHERE id = ?6",
 				params![
 					a.title.as_deref().unwrap_or_default(),
 					serde_json::to_string(&alt).unwrap(),
 					fx,
 					fy,
+					folder,
 					stored.id
 				],
 			)?;
 			self.assets.insert(a.id, stored.id);
 			self.report.assets += 1;
+		}
+		Ok(())
+	}
+
+	/// The folder of a path of names, made if it isn't there; empty names
+	/// stay where they are, so a volume without a name is the top.
+	fn folder<'p>(
+		&mut self,
+		conn: &Connection,
+		path: impl Iterator<Item = &'p str>,
+	) -> Result<Option<i64>> {
+		let mut parent = None;
+		for name in path.filter(|n| !n.is_empty()) {
+			let key = (parent, name.to_string());
+			let id = match self.folders.get(&key) {
+				Some(id) => *id,
+				None => {
+					let id = assets::create_folder(conn, parent, name)?.id;
+					self.folders.insert(key, id);
+					id
+				}
+			};
+			parent = Some(id);
+		}
+		Ok(parent)
+	}
+
+	/// The asset fields, once the entries exist that they may link.
+	fn asset_fields(
+		&mut self,
+		conn: &Connection,
+		export: &Export,
+	) -> Result<()> {
+		let Some(comp) = self.schema.get(ASSET) else {
+			return Ok(());
+		};
+		for a in &export.assets {
+			let Some(&id) = self.assets.get(&a.id) else {
+				continue;
+			};
+			let fields = self.fields(comp, &a.fields);
+			if fields.as_object().is_none_or(Map::is_empty) {
+				continue;
+			}
+			let checked = assets::check_fields(
+				conn,
+				self.schema,
+				&fields,
+				&json!({}),
+				None,
+			);
+			match checked {
+				Ok(f) => {
+					conn.execute(
+						"UPDATE assets SET fields = ?1 WHERE id = ?2",
+						params![f.to_string(), id],
+					)?;
+				}
+				Err(err) => {
+					self.skip(format!("asset {}: {}", a.path, describe(err)))
+				}
+			}
 		}
 		Ok(())
 	}
@@ -608,13 +702,29 @@ impl Importer<'_> {
 			},
 			FieldKind::Boolean => v.as_bool().map(Value::from),
 			FieldKind::Checkboxes { .. } => Some(v.clone()),
-			// each cell like the field of its column
+			// each cell like the field of its column, TableMaker's by
+			// their order: its columns are each entry's own
 			FieldKind::Table { columns } => {
+				let maker = v.get("rows").is_some();
+				let craft_rows = if maker { &v["rows"] } else { v };
+				let more = v["columns"].as_array().map_or(0, Vec::len);
+				if more > columns.len() {
+					let what = format!(
+						"{}: a table has {more} columns, only the first {} \
+						are imported",
+						field.handle,
+						columns.len()
+					);
+					if !self.report.skipped.contains(&what) {
+						self.skip(what);
+					}
+				}
 				let mut rows = vec![];
-				for row in v.as_array().into_iter().flatten() {
+				for row in craft_rows.as_array().into_iter().flatten() {
 					let mut cells = serde_json::Map::new();
-					for c in columns {
-						let cell = &row[&c.handle];
+					for (i, c) in columns.iter().enumerate() {
+						let cell =
+							if maker { &row[i] } else { &row[&c.handle] };
 						match self.value(&c.as_field(), cell) {
 							None | Some(Value::Bool(false)) => {}
 							Some(v) => {
@@ -645,6 +755,17 @@ impl Importer<'_> {
 				Some(Value::from(blocks))
 			}
 			FieldKind::RichText { .. } => Some(self.rich_text(field, v)),
+			// zipp-seo's field from meierlabs-seo's, its images are ours
+			FieldKind::Custom { ty, .. } if ty == "seo" => {
+				let mut seo = v.as_object()?.clone();
+				for key in ["image", "socialImage"] {
+					if let Some(ids) = seo.get(key) {
+						let ids = self.ids(ids, true);
+						seo.insert(key.into(), ids);
+					}
+				}
+				Some(Value::Object(seo))
+			}
 			FieldKind::Custom { .. } => Some(v.clone()),
 			FieldKind::Note { .. } => None,
 		}

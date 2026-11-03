@@ -60,6 +60,9 @@ pub struct Global {
 pub struct CraftAsset {
 	pub id: i64,
 	pub volume: String,
+	/// from exports that have it, else the handle names its folder
+	pub volume_name: Option<String>,
+	/// in the volume, with its folders: `photos/a.jpg`
 	pub path: String,
 	pub title: Option<String>,
 	/// of the primary site
@@ -68,6 +71,9 @@ pub struct CraftAsset {
 	#[serde(default, deserialize_with = "map_or_list")]
 	pub alts: BTreeMap<String, String>,
 	pub focal_point: Option<(f64, f64)>,
+	/// the fields of its volume
+	#[serde(default)]
+	pub fields: Value,
 }
 
 /// PHP writes an empty map as `[]`.

@@ -142,7 +142,9 @@ pub(super) enum Cmd {
 		/// Where uploaded files go, like `serve --files`
 		#[arg(long, default_value = "files")]
 		files: PathBuf,
-		/// The folder of a volume: `--volume default=craft/web/assets`
+		/// The folder of a volume: `--volume default=craft/web/assets`,
+		/// with the name of its asset folder before a colon
+		/// (`timetables=Stundenpläne:dir`, `default=:dir` for none)
 		#[arg(long)]
 		volume: Vec<String>,
 		/// A site of Craft for a site of zipp: `--site default=de`,
@@ -384,7 +386,7 @@ pub(super) fn import_craft(
 			.collect::<Result<_, _>>()?,
 		volumes: volumes
 			.iter()
-			.map(|v| pair(v, "volume").map(|(h, d)| (h, PathBuf::from(d))))
+			.map(|v| pair(v, "volume").map(|(h, d)| (h, volume(&d))))
 			.collect::<Result<_, _>>()?,
 	};
 	let json = fs::read_to_string(export)
@@ -408,6 +410,19 @@ pub(super) fn import_craft(
 		report.skipped.len()
 	);
 	Ok(())
+}
+
+/// `[folder:]dir` of `--volume`, see [`Cmd::ImportCraft`].
+#[cfg(feature = "craft")]
+fn volume(s: &str) -> craft::Volume {
+	let (folder, dir) = match s.split_once(':') {
+		Some((f, d)) => (Some(f.to_string()), d),
+		None => (None, s),
+	};
+	craft::Volume {
+		dir: PathBuf::from(dir),
+		folder,
+	}
 }
 
 /// See [`Cmd::Check`]; the schema itself is checked before every command.

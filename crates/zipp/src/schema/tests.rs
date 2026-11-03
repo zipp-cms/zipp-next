@@ -154,6 +154,11 @@ fn renders_uris() {
 		.uri_of("home", "");
 	assert_eq!(uri(&pages, "home", "start", None).unwrap(), "");
 	assert_eq!(uri(&pages, "page", "start", None).unwrap(), "start");
+	// only one type has pages, like Craft's `{% if type == 'blog' %}`
+	let blogs = Section::channel("blogs", ["blog", "video"])
+		.uri_of("blog", "blog/{slug}");
+	assert_eq!(uri(&blogs, "blog", "a", None).unwrap(), "blog/a");
+	assert_eq!(uri(&blogs, "video", "a", None), None);
 
 	// another uri in English, a page only with hasPage on
 	let offers = Section::channel("offers", ["offer"])

@@ -12,7 +12,10 @@
 // categories and assets a list of ids; links { type, id | value, label,
 // target, download }; matrix a list of nested entries { id, type, title,
 // enabled, fields }; content blocks { fields }; CKEditor { html, entries }
-// with the raw html (`<craft-entry data-entry-id>`, `{entry:1@1:url}`).
+// with the raw html (`<craft-entry data-entry-id>`, `{entry:1@1:url}`);
+// meierlabs-seo's field in zipp-seo's shape with asset ids; TableMaker
+// { columns: [{ heading, width, align, type }], rows } with each row a list
+// in the order of the columns. Assets have the fields of their volume.
 
 $sites = \Craft::$app->getSites()->getAllSites();
 
@@ -65,6 +68,33 @@ $value = function (\craft\base\ElementInterface $el, \craft\base\FieldInterface 
 			'download' => $v->download,
 		],
 		$field instanceof \craft\fields\BaseRelationField => $ids($v),
+		// meierlabs-seo, the plugin may not be installed
+		$v instanceof \soerenmeier\meierlabsseo\models\SeoFieldData => [
+			'title' => $v->title,
+			'description' => $v->description,
+			'image' => array_filter([$v->imageId]),
+			'socialTitle' => $v->socialTitle,
+			'socialDescription' => $v->socialDescription,
+			'socialImage' => array_filter([$v->socialImageId]),
+			'robots' => $v->robots,
+			'canonicalUrl' => $v->canonicalUrl,
+		],
+		// the columns are the entry's own, keyed by an id like col1
+		get_class($field) === 'verbb\\tablemaker\\fields\\TableMakerField' => [
+			'columns' => array_values(array_map(fn($c) => [
+				'heading' => $c['heading'] ?? '',
+				'width' => $c['width'] ?? '',
+				'align' => $c['align'] ?? '',
+				'type' => $c['type'] ?? 'singleline',
+			], $v['columns'] ?? [])),
+			'rows' => array_values(array_map(
+				fn($row) => array_map(
+					fn($key) => $row[$key] ?? null,
+					array_keys($v['columns'] ?? []),
+				),
+				$v['rows'] ?? [],
+			)),
+		],
 		$v instanceof \craft\fields\data\SingleOptionFieldData => $v->value,
 		$v instanceof \craft\fields\data\MultiOptionsFieldData => array_map(
 			fn($o) => $o->value,
@@ -155,11 +185,13 @@ foreach (\craft\elements\Asset::find()->status(null)->all() as $a) {
 	$out['assets'][] = [
 		'id' => $a->id,
 		'volume' => $a->getVolume()->handle,
+		'volumeName' => $a->getVolume()->name,
 		'path' => $a->getPath(),
 		'title' => $a->title,
 		'alt' => $a->alt,
 		'alts' => $alts[$a->id] ?? [],
 		'focalPoint' => $focal ? [$focal['x'], $focal['y']] : null,
+		'fields' => $fieldsOf($a),
 	];
 }
 
