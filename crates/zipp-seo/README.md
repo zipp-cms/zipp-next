@@ -21,7 +21,7 @@ Schema::new()
 	)
 ```
 
-See [SEO](https://github.com/zipp-cms/zipp-next/blob/code-first/docs/seo.md) in the documentation.
+See [SEO](https://github.com/zipp-cms/zipp-next/blob/main/docs/seo.md) in the documentation.
 
 ## License
 

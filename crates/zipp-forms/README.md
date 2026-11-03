@@ -24,7 +24,7 @@ Schema::new()
 ```
 
 The website posts JSON to `POST /forms/<handle>?site=<site>`. See
-[Forms](https://github.com/zipp-cms/zipp-next/blob/code-first/docs/forms.md) in the documentation.
+[Forms](https://github.com/zipp-cms/zipp-next/blob/main/docs/forms.md) in the documentation.
 
 ## License
 

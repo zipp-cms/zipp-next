@@ -4,7 +4,7 @@ The components of the studio of [zipp](https://github.com/zipp-cms/zipp-next),
 a code-first CMS in Rust: the studio is built of them, and the editors
 of field types and the studio modules of plugins use them to look the
 same. How to write such a module is in
-[docs/extending.md](https://github.com/zipp-cms/zipp-next/blob/code-first/docs/extending.md#a-studio-module-from-scratch).
+[docs/extending.md](https://github.com/zipp-cms/zipp-next/blob/main/docs/extending.md#a-studio-module-from-scratch).
 
 ```sh
 npm install -D zipp-ui svelte sass vite @sveltejs/vite-plugin-svelte

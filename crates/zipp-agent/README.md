@@ -16,7 +16,7 @@ Schema::new()
 Where it runs is set by the environment: `ZIPP_AGENT_COMMAND` (default
 `claude`), `ZIPP_AGENT_DIR` (the project, default `..`),
 `ZIPP_AGENT_RESTART` and `ZIPP_AGENT_API`. See the crate docs and
-[Extending](https://github.com/zipp-cms/zipp-next/blob/code-first/docs/extending.md).
+[Extending](https://github.com/zipp-cms/zipp-next/blob/main/docs/extending.md).
 
 ## License
 

@@ -42,7 +42,7 @@ site).
 Plugins: [zipp-seo](https://crates.io/crates/zipp-seo),
 [zipp-forms](https://crates.io/crates/zipp-forms).
 
-The [documentation](https://github.com/zipp-cms/zipp-next/blob/code-first/docs/README.md) explains the content model, editing,
+The [documentation](https://github.com/zipp-cms/zipp-next/blob/main/docs/README.md) explains the content model, editing,
 GraphQL, SEO, extending and running a site.
 
 ## License
