@@ -1,16 +1,12 @@
 //! The plugin in a site, through zipp's public api like a site uses it.
 
-use std::sync::Arc;
-
 use crate::api::DefaultsReq;
 use crate::{Seo, SeoDefaults, seo_field};
 use serde_json::{Value, json};
 use zipp::SiteUrls;
-use zipp::db::Db;
 use zipp::drafts::{SiteDoc, put_draft};
 use zipp::entries::save;
 use zipp::error::Error;
-use zipp::graphql::{build, ext};
 use zipp::testing::{TestServer, input};
 use zipp::{Field, Schema, Section};
 
@@ -53,17 +49,14 @@ fn site() -> Schema {
 
 #[tokio::test]
 async fn seo_like_the_craft_plugin() {
-	let db = Db::memory().unwrap();
-	let s = Arc::new(site());
-	s.check().unwrap();
 	let urls = SiteUrls::from([
 		("de".to_string(), "https://x.ch".to_string()),
 		("en".to_string(), "https://x.ch/en".to_string()),
 	]);
-	let gql = build(s.clone(), db.clone(), String::new(), urls).unwrap();
+	let ts = TestServer::new(schema()).site_urls(urls);
+	let s = ts.state.schema.clone();
 	{
-		let conn = db.conn();
-		zipp::migrate::apply::create_singles(&conn, &s).unwrap();
+		let conn = ts.state.db.conn();
 		let id: i64 = conn
 			.query_row(
 				"SELECT id FROM entries WHERE section = 'seoSettings'",
@@ -121,16 +114,13 @@ async fn seo_like_the_craft_plugin() {
 		);
 	}
 
-	let seo = |q: &'static str, indexing: bool| {
-		let gql = gql.clone();
-		async move {
-			let resp = gql.execute(ext::request(q, true, indexing)).await;
-			assert!(resp.errors.is_empty(), "{:?}", resp.errors);
-			resp.data.into_json().unwrap()
-		}
+	let seo = async |ts: &TestServer, q: &str| {
+		let resp = ts.graphql(q, json!({})).await;
+		assert_eq!(resp["errors"], Value::Null, "{resp}");
+		resp["data"].clone()
 	};
 
-	let data = seo(r#"{ entry(section: "events") { seoJson } }"#, true).await;
+	let data = seo(&ts, r#"{ entry(section: "events") { seoJson } }"#).await;
 	let j = &data["entry"]["seoJson"];
 	assert_eq!(j["title"], "Konzert – Events | Zandi");
 	assert_eq!(j["description"], "Ein schöner Abend mit Musik.");
@@ -164,31 +154,32 @@ async fn seo_like_the_craft_plugin() {
 
 	// the field of the page: its type's `seo` resolves the whole SEO
 	let data = seo(
+		&ts,
 		r#"{ entry(section: "pages") { ... on page_Entry { seo { title robots } } } }"#,
-		true,
 	)
 	.await;
 	assert_eq!(data["entry"]["seo"]["title"], "Über uns | Zandi");
 	assert_eq!(data["entry"]["seo"]["robots"], "noindex, follow");
 	let data = seo(
+		&ts,
 		r#"{ entry(section: "pages", slug: "team") { seoJson } }"#,
-		true,
 	)
 	.await;
 	assert_eq!(data["entry"]["seoJson"]["title"], "Unser Team | Zandi");
 
+	// a page without an entry: the site, with the primary site's name
+	let data = seo(&ts, r#"{ seoJson(siteId: 2) }"#).await;
+	assert_eq!(data["seoJson"]["title"], "Zandi");
+	assert_eq!(data["seoJson"]["description"], Value::Null);
+
 	// outside production nothing is indexed
+	let ts = ts.indexing(false);
 	let data = seo(
+		&ts,
 		r#"{ entry(section: "events") { ... on event_Entry { seo { robots } } } }"#,
-		false,
 	)
 	.await;
 	assert_eq!(data["entry"]["seo"]["robots"], "noindex, nofollow");
-
-	// a page without an entry: the site, with the primary site's name
-	let data = seo(r#"{ seoJson(siteId: 2) }"#, true).await;
-	assert_eq!(data["seoJson"]["title"], "Zandi");
-	assert_eq!(data["seoJson"]["description"], Value::Null);
 }
 
 #[test]
@@ -223,14 +214,13 @@ async fn defaults_for_the_studio() {
 	// a draft shows with its own type, which takes the title elsewhere
 	{
 		let conn = ts.state.db.conn();
-		let draft = SiteDoc {
-			ty: "landing".into(),
-			title: "Team".into(),
-			slug: "team".into(),
-			published: true,
-			fields: json!({ "headline": "Willkommen" }),
-			dates: Default::default(),
-		};
+		let mut draft = SiteDoc::new(
+			"landing",
+			"Team",
+			"team",
+			json!({ "headline": "Willkommen" }),
+		);
+		draft.published = true;
 		put_draft(&conn, &ts.state.schema, id, "de", draft, None, None)
 			.unwrap();
 	}

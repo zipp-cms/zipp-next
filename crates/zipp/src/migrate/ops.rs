@@ -1,7 +1,7 @@
 use super::*;
 
 impl Op {
-	pub fn apply_schema(&self, schema: &mut Schema) {
+	pub(crate) fn apply_schema(&self, schema: &mut Schema) {
 		match self {
 			Self::AddComponent { component } => {
 				schema.components.push(component.clone())
@@ -70,7 +70,7 @@ impl Op {
 
 	/// Changes one entry. `schema` is the schema before this op. Returns
 	/// false when the entry has to be deleted.
-	pub fn apply_entry(
+	pub(crate) fn apply_entry(
 		&self,
 		schema: &Schema,
 		ty: &mut String,
@@ -218,7 +218,7 @@ impl Op {
 	}
 
 	/// One line for the review of a new migration, `!` marks lost content.
-	pub fn describe(&self) -> String {
+	pub(crate) fn describe(&self) -> String {
 		match self {
 			Self::AddComponent { component } => {
 				format!("  add component {}", component.handle)

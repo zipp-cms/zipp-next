@@ -26,7 +26,7 @@ pub struct Session {
 	pub user_id: i64,
 	/// in milliseconds
 	pub expires_at: i64,
-	/// the admin logged in as the user, see [`links`]
+	/// the admin logged in as the user, see `auth::links`
 	pub impersonated_by: Option<i64>,
 }
 
@@ -53,7 +53,7 @@ pub(super) fn get_session(
 
 /// The valid session of a token, renewed when less than `RENEW_BELOW_MS`
 /// are left: who uses the studio stays logged in.
-pub fn renew_session(conn: &Connection, token: &str) -> Result<Session> {
+pub(crate) fn renew_session(conn: &Connection, token: &str) -> Result<Session> {
 	let mut s = get_session(conn, token)?
 		.filter(|s| s.expires_at > now())
 		.ok_or(Error::InvalidSessionToken)?;
@@ -72,7 +72,7 @@ pub fn renew_session(conn: &Connection, token: &str) -> Result<Session> {
 }
 
 /// Adds a user or sets a new password and role, `None` is an admin.
-pub fn add_user(
+pub(crate) fn add_user(
 	conn: &Connection,
 	email: &str,
 	password: &str,
@@ -99,7 +99,7 @@ pub fn add_user(
 /// The user of a login, after the password was checked; bcrypt takes a
 /// while: not with the database locked, not on the async workers, and as
 /// long for unknown emails. `address` is who tries, see [`Throttle`].
-pub async fn login(
+pub(crate) async fn login(
 	db: &Db,
 	throttle: &Throttle,
 	address: &str,
@@ -139,7 +139,7 @@ pub async fn login(
 }
 
 /// A new session of a user, a login.
-pub fn new_session(conn: &Connection, user_id: i64) -> Result<Session> {
+pub(crate) fn new_session(conn: &Connection, user_id: i64) -> Result<Session> {
 	conn.execute(
 		"UPDATE users SET last_login_at = ?1 WHERE id = ?2",
 		params![now(), user_id],
@@ -195,7 +195,7 @@ pub fn end_session(conn: &Connection, token: &str) -> Result<()> {
 }
 
 /// Logs a user out everywhere, except in the session `keep`.
-pub fn end_sessions(
+pub(crate) fn end_sessions(
 	conn: &Connection,
 	user_id: i64,
 	keep: Option<&str>,
@@ -209,7 +209,7 @@ pub fn end_sessions(
 
 /// The bcrypt hash of a password; it takes a while, not on the async
 /// workers and not with the database locked.
-pub async fn hash_password(password: String) -> Result<String> {
+pub(crate) async fn hash_password(password: String) -> Result<String> {
 	tokio::task::spawn_blocking(move || bcrypt::hash(password, COST))
 		.await?
 		.map_err(|e| Error::Internal(e.to_string()))
@@ -226,7 +226,7 @@ async fn verify(password: &str, hash: String) -> Result<bool> {
 }
 
 /// Whether the password is the one of the user, see [`hash_password`].
-pub async fn password_matches(
+pub(crate) async fn password_matches(
 	db: &Db,
 	user_id: i64,
 	password: &str,
@@ -241,7 +241,7 @@ pub async fn password_matches(
 
 /// A new password: the user is logged out everywhere, except in `keep`,
 /// and links that set one end.
-pub fn set_password_hash(
+pub(crate) fn set_password_hash(
 	conn: &Connection,
 	user_id: i64,
 	hash: &str,

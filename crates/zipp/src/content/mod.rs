@@ -9,16 +9,15 @@ use crate::schema::{
 	Column, ColumnKind, Component, Field, FieldKind, Holds, LinkKind, Schema,
 };
 
-mod relations;
+pub(crate) mod relations;
 pub mod richtext;
 #[cfg(test)]
 pub(crate) mod tests;
 mod validate;
 
-pub use relations::RelationRef;
-pub use relations::Target;
-pub use relations::drop_links;
-pub use relations::relations;
+pub(crate) use relations::Target;
+pub(crate) use relations::drop_links;
+pub(crate) use relations::relations;
 pub(crate) use validate::check_default;
 pub(crate) use validate::check_link;
 pub(crate) use validate::is_empty;
@@ -68,7 +67,7 @@ pub(crate) fn new_block_id() -> String {
 /// A component in the value of a field: a block, a block embedded in a
 /// rich text, the fields of a group. `at` is where in the value, the
 /// position of a block or empty for a group.
-pub struct Inner<'a> {
+pub(crate) struct Inner<'a> {
 	pub comp: &'a Component,
 	pub fields: &'a Value,
 	pub at: Option<usize>,
@@ -76,7 +75,7 @@ pub struct Inner<'a> {
 
 impl Inner<'_> {
 	/// The path of its fields: `body.2.` for a block, `seo.` for a group.
-	pub fn prefix(&self, path: &str) -> String {
+	pub(crate) fn prefix(&self, path: &str) -> String {
 		match self.at {
 			Some(i) => format!("{path}.{i}."),
 			None => format!("{path}."),
@@ -86,7 +85,7 @@ impl Inner<'_> {
 
 /// The components in the value of a field, as [`FieldKind::holds`] says;
 /// blocks of unknown types are left out.
-pub fn inner<'a>(
+pub(crate) fn inner<'a>(
 	schema: &'a Schema,
 	field: &'a Field,
 	value: &'a Value,
@@ -161,7 +160,7 @@ pub(crate) fn inner_mut<'a>(
 
 /// Calls `f` with the fields of every component in the content: first the
 /// entry's own, then those of each block and group, depth first.
-pub fn walk_mut(
+pub(crate) fn walk_mut(
 	schema: &Schema,
 	comp: &Component,
 	fields: &mut Value,
@@ -182,7 +181,10 @@ pub fn walk_mut(
 
 /// What the fields of a new entry or block start with: their defaults,
 /// a group's inside its object.
-pub fn defaults(schema: &Schema, comp: &Component) -> Map<String, Value> {
+pub(crate) fn defaults(
+	schema: &Schema,
+	comp: &Component,
+) -> Map<String, Value> {
 	comp.fields
 		.iter()
 		.filter_map(|f| Some((f.handle.clone(), default_of(schema, f)?)))
@@ -190,7 +192,7 @@ pub fn defaults(schema: &Schema, comp: &Component) -> Map<String, Value> {
 }
 
 /// The default of a field, of a group the defaults of its fields.
-pub fn default_of(schema: &Schema, field: &Field) -> Option<Value> {
+pub(crate) fn default_of(schema: &Schema, field: &Field) -> Option<Value> {
 	if let Some(v) = &field.default {
 		return Some(v.clone());
 	}
@@ -203,7 +205,7 @@ pub fn default_of(schema: &Schema, field: &Field) -> Option<Value> {
 
 /// `fields` with the defaults of the fields it doesn't have; one that is
 /// there, also empty, stays as it is.
-pub fn with_defaults(
+pub(crate) fn with_defaults(
 	schema: &Schema,
 	comp: &Component,
 	fields: &Value,
@@ -222,7 +224,7 @@ pub fn with_defaults(
 
 /// Markdown to html, raw html in it is dropped (editors write text) and
 /// links and images only point to the web or the site.
-pub fn markdown_html(md: &str) -> String {
+pub(crate) fn markdown_html(md: &str) -> String {
 	use pulldown_cmark::{Event, Options, Parser, Tag, html};
 	let safe = |url: &str| safe_url(url) || url.starts_with("mailto:");
 	let parser = Parser::new_ext(
@@ -278,7 +280,7 @@ pub fn markdown_text(md: &str) -> String {
 }
 
 /// The texts of a texts field with the code's text where none is saved.
-pub fn texts_of(
+pub(crate) fn texts_of(
 	keys: &[(String, String)],
 	value: &Value,
 ) -> Map<String, Value> {
@@ -292,7 +294,11 @@ pub fn texts_of(
 
 /// The fields of an entry of type `from` as one of type `to`: a field
 /// stays when `to` has one of the same handle and kind, the rest goes.
-pub fn convert(from: &Component, to: &Component, fields: &Value) -> Value {
+pub(crate) fn convert(
+	from: &Component,
+	to: &Component,
+	fields: &Value,
+) -> Value {
 	fn kind<'a>(c: &'a Component, handle: &str) -> Option<&'a FieldKind> {
 		c.fields
 			.iter()
@@ -306,7 +312,7 @@ pub fn convert(from: &Component, to: &Component, fields: &Value) -> Value {
 
 /// The fields of another site after a save of `saved` as type `to`: of
 /// type `from` they are converted first, then the shared ones taken.
-pub fn follow(
+pub(crate) fn follow(
 	schema: &Schema,
 	from: &str,
 	to: &Component,
@@ -322,7 +328,7 @@ pub fn follow(
 
 /// The fields of `into` with the shared (not translatable) ones taken
 /// from `from`, so every site has the same shared values.
-pub fn share(comp: &Component, from: &Value, into: &Value) -> Value {
+pub(crate) fn share(comp: &Component, from: &Value, into: &Value) -> Value {
 	let mut out = into.as_object().cloned().unwrap_or_default();
 	for f in comp.fields.iter().filter(|f| !f.translatable) {
 		match from.get(&f.handle) {
@@ -335,14 +341,17 @@ pub fn share(comp: &Component, from: &Value, into: &Value) -> Value {
 
 /// A row of `entry_values`.
 #[derive(Debug, Clone, PartialEq)]
-pub struct IndexValue {
+pub(crate) struct IndexValue {
 	pub field: String,
 	pub text: Option<String>,
 	pub num: Option<f64>,
 }
 
 /// The values of the indexed fields of an entry.
-pub fn index_values(comp: &Component, fields: &Value) -> Vec<IndexValue> {
+pub(crate) fn index_values(
+	comp: &Component,
+	fields: &Value,
+) -> Vec<IndexValue> {
 	comp.fields
 		.iter()
 		.filter(|f| f.indexed)

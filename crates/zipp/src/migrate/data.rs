@@ -31,7 +31,7 @@ pub type DataResult =
 
 /// A registered step, see [`Cms::data_migration`](crate::Cms::data_migration).
 #[derive(Clone)]
-pub struct DataStep(
+pub(crate) struct DataStep(
 	pub(crate) Arc<dyn Fn(&DataTx) -> DataResult + Send + Sync>,
 );
 

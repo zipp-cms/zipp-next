@@ -22,7 +22,7 @@
 //! ```
 //!
 //! Requests without a session only see published entries. Frontends
-//! send a token, its [`Scope`] says which sections and sites they read.
+//! send a token, its `Scope` says which sections and sites they read.
 
 use std::sync::Arc;
 
@@ -43,12 +43,11 @@ use crate::db::Db;
 use crate::drafts::{Preview, docs_of};
 use crate::entries::query::Query;
 use crate::entries::{Entry, count, select};
-use crate::schema::field_type::{
-	FieldType, GraphqlType, Scalar as FieldScalar,
-};
 use crate::schema::{ASSET, ColumnKind, FieldKind, Format, Schema, Transform};
+use crate::schema::{FieldType, GraphqlType, Scalar as FieldScalar};
+use ext::value_field;
 
-pub mod api;
+pub(crate) mod api;
 #[cfg(test)]
 mod api_tests;
 mod asset;
@@ -67,7 +66,7 @@ mod search_tests;
 #[cfg(test)]
 pub(crate) mod tests;
 mod texts;
-pub mod tokens;
+pub(crate) mod tokens;
 #[cfg(test)]
 mod viewer_tests;
 
@@ -78,13 +77,13 @@ use link::*;
 use loaders::*;
 use query::*;
 use rich::*;
-pub use routes::routes;
+pub(crate) use routes::routes;
 use search::*;
 use texts::*;
-pub use tokens::Scope;
+pub(crate) use tokens::Scope;
 
 /// Fields every entry has, field handles can't use them.
-pub const ENTRY_FIELDS: &[&str] = &[
+pub(crate) const ENTRY_FIELDS: &[&str] = &[
 	"id",
 	"sectionHandle",
 	"typeHandle",
@@ -109,10 +108,10 @@ pub const ENTRY_FIELDS: &[&str] = &[
 ];
 
 /// Fields every block has.
-pub const BLOCK_FIELDS: &[&str] = &["id", "typeHandle"];
+pub(crate) const BLOCK_FIELDS: &[&str] = &["id", "typeHandle"];
 
 /// Fields every asset has, asset fields can't use them.
-pub const ASSET_FIELDS: &[&str] = &[
+pub(crate) const ASSET_FIELDS: &[&str] = &[
 	"id",
 	"filename",
 	"kind",
@@ -193,25 +192,6 @@ struct TableRow {
 	site: String,
 }
 
-/// A part of an object value, for objects built as values.
-pub fn value_field<'a>(
-	ctx: ResolverContext<'a>,
-	name: &'static str,
-) -> FieldFuture<'a> {
-	FieldFuture::new(async move {
-		let GqlValue::Object(o) = ctx.parent_value.try_to_value()? else {
-			return Ok(None);
-		};
-		Ok(match o.get(name) {
-			Some(GqlValue::List(l)) => {
-				Some(FieldValue::list(l.iter().cloned().map(FieldValue::value)))
-			}
-			Some(v) => Some(FieldValue::value(v.clone())),
-			None => None,
-		})
-	})
-}
-
 /// Url and target of the links of a rich text, external ones in a new tab.
 fn resolver<'a>(
 	ctx: &'a ResolverContext,
@@ -245,7 +225,7 @@ fn block_of(b: &Value, site: &str) -> FieldValue<'static> {
 	.with_type(format!("{ty}_Block"))
 }
 
-pub fn build(
+pub(crate) fn build(
 	schema: Arc<Schema>,
 	db: Db,
 	public_url: String,
@@ -408,7 +388,7 @@ fn scalar_name(s: FieldScalar) -> &'static str {
 /// The mistakes of a query of a frontend against the schema: unknown
 /// fields and types, wrong arguments. It runs on an empty database, so
 /// only the shape is checked; variables it needs are no mistake.
-pub async fn check_query(gql: &GqlSchema, query: &str) -> Vec<String> {
+pub(crate) async fn check_query(gql: &GqlSchema, query: &str) -> Vec<String> {
 	let req = async_graphql::Request::new(query).data(Viewer {
 		published_only: true,
 		preview: None,

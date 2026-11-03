@@ -3,7 +3,7 @@ use crate::db::token_hash;
 use crate::schema::Access;
 
 /// A token of `user_id` that shows the draft of an entry.
-pub fn create_token(
+pub(crate) fn create_token(
 	conn: &Connection,
 	id: i64,
 	user_id: i64,
@@ -12,7 +12,10 @@ pub fn create_token(
 }
 
 /// A token that shows every draft `user_id` may see.
-pub fn create_site_token(conn: &Connection, user_id: i64) -> Result<String> {
+pub(crate) fn create_site_token(
+	conn: &Connection,
+	user_id: i64,
+) -> Result<String> {
 	insert_token(conn, None, user_id)
 }
 
@@ -33,7 +36,7 @@ fn insert_token(
 
 /// What a preview token shows.
 #[derive(Debug, Clone)]
-pub enum Preview {
+pub(crate) enum Preview {
 	/// one entry and its draft, the live content if there is none
 	Entry(i64, Doc),
 	/// every draft of these sections, the ones its user may view (now,
@@ -42,7 +45,7 @@ pub enum Preview {
 }
 
 /// What a valid token shows.
-pub fn preview(
+pub(crate) fn preview(
 	conn: &Connection,
 	schema: &Schema,
 	token: &str,

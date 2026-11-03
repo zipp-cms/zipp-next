@@ -3,8 +3,6 @@
 
 use super::*;
 
-pub use super::value_field;
-
 pub fn schema<'a>(
 	ctx: &ResolverContext<'a>,
 ) -> async_graphql::Result<&'a Arc<Schema>> {
@@ -43,20 +41,21 @@ pub fn entries<const N: usize>(
 	load(ctx, &site_params(site, params))
 }
 
-/// A request as a frontend sends it (published entries only) or an
-/// admin, for tests of plugins.
-#[cfg(feature = "testing")]
-pub fn request(
-	query: &str,
-	published_only: bool,
-	indexing: bool,
-) -> async_graphql::Request {
-	async_graphql::Request::new(query).data(Viewer {
-		published_only,
-		preview: None,
-		token: None,
-		indexing,
-		scope: Scope::ALL,
-		loaded: Default::default(),
+/// A part of an object value, for objects built as values.
+pub fn value_field<'a>(
+	ctx: ResolverContext<'a>,
+	name: &'static str,
+) -> FieldFuture<'a> {
+	FieldFuture::new(async move {
+		let GqlValue::Object(o) = ctx.parent_value.try_to_value()? else {
+			return Ok(None);
+		};
+		Ok(match o.get(name) {
+			Some(GqlValue::List(l)) => {
+				Some(FieldValue::list(l.iter().cloned().map(FieldValue::value)))
+			}
+			Some(v) => Some(FieldValue::value(v.clone())),
+			None => None,
+		})
 	})
 }

@@ -17,7 +17,7 @@ async fn status_route(
 	Ok(Json(MailStatus {
 		configured: m.configured(),
 		server: m.server().map(String::from),
-		from: m.from(),
+		from: m.sender(),
 	}))
 }
 
@@ -33,7 +33,7 @@ async fn test_route(
 	Ok(Json(()))
 }
 
-pub fn routes() -> Router<AppState> {
+pub(crate) fn routes() -> Router<AppState> {
 	Router::new()
 		.api::<StatusReq, _>(status_route)
 		.api::<TestReq, _>(test_route)

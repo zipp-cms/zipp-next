@@ -34,16 +34,16 @@ mod structure;
 #[cfg(test)]
 pub(crate) mod tests;
 
-pub use routes::routes;
+pub(crate) use routes::routes;
 pub(crate) use routes::viewable_refs;
-pub use save::check;
-pub use save::reindex;
-pub use save::reindex_all;
+pub(crate) use save::check;
+pub(crate) use save::reindex;
+pub(crate) use save::reindex_all;
 pub use save::save;
-pub use save::write;
+pub(crate) use save::write;
 pub(crate) use save::{check_relations, links_of};
-pub use structure::move_entry;
-pub use structure::refresh_uris;
+pub(crate) use structure::move_entry;
+pub(crate) use structure::refresh_uris;
 use structure::*;
 pub(crate) use structure::{fits_below, free_uri, levels_of, next_position};
 
@@ -58,6 +58,7 @@ pub(crate) const INDEX_TABLES: [&str; 4] = [
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct Entry {
 	pub id: i64,
 	pub section: String,
@@ -83,6 +84,7 @@ pub struct Entry {
 /// is live there, see `LIVE_DATES`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct Dates {
 	#[serde(default)]
 	pub post_date: Option<i64>,
@@ -100,6 +102,7 @@ pub(crate) const LIVE_DATES: &str = "(e.post_date IS NULL \
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct EntryInput {
 	pub section: String,
 	#[serde(rename = "type")]
@@ -122,8 +125,27 @@ pub struct EntryInput {
 	pub fields: Value,
 }
 
+impl EntryInput {
+	/// An unpublished entry of the primary site, the slug from the
+	/// title.
+	pub fn new(section: &str, ty: &str, title: &str, fields: Value) -> Self {
+		Self {
+			section: section.into(),
+			ty: ty.into(),
+			site: None,
+			title: title.into(),
+			slug: String::new(),
+			published: false,
+			dates: Dates::default(),
+			parent_id: None,
+			fields,
+		}
+	}
+}
+
 /// What a relation id points to, sent next to the entries.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct EntryRef {
 	pub id: i64,
 	pub section: String,
@@ -187,6 +209,7 @@ pub(crate) fn from_row(row: &Row) -> rusqlite::Result<Entry> {
 /// its dates and whether it has unpublished changes, for its status.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct EntryChoice {
 	pub id: i64,
 	pub section: String,
@@ -206,12 +229,14 @@ pub struct EntryChoice {
 
 /// The most entries of a section a picker gets at once, and of a
 /// search; the tests page with a few.
-pub const CHOICES_LIMIT: i64 = if cfg!(test) { 3 } else { query::MAX_LIMIT };
+pub(crate) const CHOICES_LIMIT: i64 =
+	if cfg!(test) { 3 } else { query::MAX_LIMIT };
 
 /// How many entries of a section there are, sent or not: `entries` in
 /// its order (a structure with its other types, as parents), `pickable`
 /// of the types.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct ChoiceCount {
 	pub entries: i64,
 	pub pickable: i64,
@@ -219,6 +244,7 @@ pub struct ChoiceCount {
 
 /// The entries a picker shows and how many there are of each section.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Choices {
 	pub entries: Vec<EntryChoice>,
 	pub totals: BTreeMap<String, ChoiceCount>,
@@ -230,7 +256,7 @@ pub struct Choices {
 /// structure as its tree, so its other types are there too as the
 /// parents; a channel newest first, only the types. At most
 /// [`CHOICES_LIMIT`] per section from `offset`, a picker loads more.
-pub fn choices(
+pub(crate) fn choices(
 	conn: &Connection,
 	schema: &Schema,
 	types: &[&str],
@@ -278,7 +304,7 @@ pub fn choices(
 /// The entries of the types in some sections that have all the words of
 /// `search`, like the studio's search, the best first; at most
 /// [`CHOICES_LIMIT`], with their parents.
-pub fn search_choices(
+pub(crate) fn search_choices(
 	conn: &Connection,
 	schema: &Schema,
 	types: &[&str],
@@ -401,7 +427,7 @@ pub fn get_entry(conn: &Connection, id: i64, site: &str) -> Result<Entry> {
 }
 
 /// The entry of a page of a site, `None` if no entry has the uri.
-pub fn by_uri(
+pub(crate) fn by_uri(
 	conn: &Connection,
 	site: &str,
 	uri: &str,
@@ -422,9 +448,9 @@ pub fn list(conn: &Connection, q: &Query) -> Result<(Vec<Entry>, i64)> {
 }
 
 /// The entries of a query, [`list`] without the count.
-pub fn select(conn: &Connection, q: &Query) -> Result<Vec<Entry>> {
+pub(crate) fn select(conn: &Connection, q: &Query) -> Result<Vec<Entry>> {
 	let (with, mut params) = q.with();
-	let (from, more) = q.from_where();
+	let (from, more) = q.sql_from();
 	params.extend(more);
 
 	let sql = format!(
@@ -442,8 +468,12 @@ pub fn select(conn: &Connection, q: &Query) -> Result<Vec<Entry>> {
 
 /// The children of the query's parents in their order, at most `each` of
 /// a parent; the query's own order and limit don't count.
-pub fn children(conn: &Connection, q: &Query, each: i64) -> Result<Vec<Entry>> {
-	let (from, params) = q.from_where();
+pub(crate) fn children(
+	conn: &Connection,
+	q: &Query,
+	each: i64,
+) -> Result<Vec<Entry>> {
+	let (from, params) = q.sql_from();
 	// the columns of the entries have different names
 	let sql = format!(
 		"SELECT * FROM (SELECT {COLUMNS}, ROW_NUMBER() OVER (
@@ -458,9 +488,9 @@ pub fn children(conn: &Connection, q: &Query, each: i64) -> Result<Vec<Entry>> {
 }
 
 /// How many entries a query finds without its limit.
-pub fn count(conn: &Connection, q: &Query) -> Result<i64> {
+pub(crate) fn count(conn: &Connection, q: &Query) -> Result<i64> {
 	let (with, mut params) = q.with();
-	let (from, more) = q.from_where();
+	let (from, more) = q.sql_from();
 	params.extend(more);
 
 	Ok(conn.query_row(
@@ -472,7 +502,7 @@ pub fn count(conn: &Connection, q: &Query) -> Result<i64> {
 
 /// A save that passed all checks, ready to be written. Publishing a draft
 /// checks all its sites first and then writes them together.
-pub struct Checked {
+pub(crate) struct Checked {
 	id: Option<i64>,
 	site: String,
 	section: Section,
@@ -489,7 +519,7 @@ pub struct Checked {
 
 /// The published entries whose post or expiry date passed in `(from,
 /// to]`: they went live or expired then. With their section.
-pub fn dated_between(
+pub(crate) fn dated_between(
 	conn: &Connection,
 	from: i64,
 	to: i64,
@@ -508,7 +538,12 @@ pub fn dated_between(
 
 /// Deletes an entry for good in all sites, in a structure also its
 /// children; the studio moves it to the trash ([`crate::trash`]).
-pub fn delete(conn: &Connection, schema: &Schema, id: i64) -> Result<()> {
+#[cfg(feature = "craft")]
+pub(crate) fn delete(
+	conn: &Connection,
+	schema: &Schema,
+	id: i64,
+) -> Result<()> {
 	let section: String = conn.query_row(
 		"SELECT section FROM entries WHERE id = ?1",
 		[id],
@@ -526,7 +561,7 @@ pub fn delete(conn: &Connection, schema: &Schema, id: i64) -> Result<()> {
 }
 
 /// The entries the given ones link to, in a site.
-pub fn refs(
+pub(crate) fn refs(
 	conn: &Connection,
 	ids: &[i64],
 	site: &str,
@@ -550,7 +585,7 @@ pub fn refs(
 }
 
 /// The entries of these ids as they show in a site, for chips.
-pub fn refs_of(
+pub(crate) fn refs_of(
 	conn: &Connection,
 	ids: &[i64],
 	site: &str,
@@ -585,7 +620,7 @@ fn refs_by(
 }
 
 /// Which of the entries have a draft.
-pub fn with_drafts(conn: &Connection, ids: &[i64]) -> Result<Vec<i64>> {
+pub(crate) fn with_drafts(conn: &Connection, ids: &[i64]) -> Result<Vec<i64>> {
 	let sql = format!(
 		"SELECT entry_id FROM drafts WHERE entry_id IN ({})",
 		marks(ids.len())
@@ -596,7 +631,7 @@ pub fn with_drafts(conn: &Connection, ids: &[i64]) -> Result<Vec<i64>> {
 }
 
 /// Whether the entries are published, per site.
-pub fn published_per_site(
+pub(crate) fn published_per_site(
 	conn: &Connection,
 	ids: &[i64],
 ) -> Result<BTreeMap<i64, BTreeMap<String, bool>>> {
@@ -618,7 +653,7 @@ pub fn published_per_site(
 	Ok(out)
 }
 
-pub fn section_of(conn: &Connection, id: i64) -> Result<String> {
+pub(crate) fn section_of(conn: &Connection, id: i64) -> Result<String> {
 	Ok(conn.query_row(
 		"SELECT section FROM entries WHERE id = ?1 AND deleted_at IS NULL",
 		[id],
@@ -627,7 +662,7 @@ pub fn section_of(conn: &Connection, id: i64) -> Result<String> {
 }
 
 /// `Über uns!` becomes `über-uns`.
-pub fn slugify(s: &str) -> String {
+pub(crate) fn slugify(s: &str) -> String {
 	let mut out = String::new();
 	for c in s.chars().flat_map(char::to_lowercase) {
 		if c.is_alphanumeric() {

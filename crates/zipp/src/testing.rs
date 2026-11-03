@@ -29,7 +29,7 @@ use crate::db::Db;
 use crate::entries::EntryInput;
 use crate::error::{Error, Result};
 use crate::schema::Schema;
-use crate::{AppState, graphql, migrate, server};
+use crate::{AppState, SiteUrls, graphql, migrate, server};
 
 pub struct TestServer {
 	pub state: AppState,
@@ -103,6 +103,28 @@ impl TestServer {
 	/// The cms' url, like `serve --public-url`; empty is none.
 	pub fn public_url(mut self, url: &str) -> Self {
 		self.state.public_url = Arc::new(url.into());
+		self.app = app(&self.state, self.routes.clone());
+		self
+	}
+
+	/// The url of each site, like `serve --site-url`: previews, and
+	/// GraphQL's urls of pages.
+	pub fn site_urls(mut self, urls: SiteUrls) -> Self {
+		self.state.gql = graphql::build(
+			self.state.schema.clone(),
+			self.state.db.clone(),
+			String::new(),
+			urls.clone(),
+		)
+		.unwrap();
+		self.state.site_urls = Arc::new(urls);
+		self.app = app(&self.state, self.routes.clone());
+		self
+	}
+
+	/// Whether search engines may index, off like `serve --noindex`.
+	pub fn indexing(mut self, on: bool) -> Self {
+		self.state.indexing = on;
 		self.app = app(&self.state, self.routes.clone());
 		self
 	}
@@ -352,14 +374,7 @@ pub fn input(
 	fields: Value,
 ) -> EntryInput {
 	EntryInput {
-		dates: Default::default(),
-		section: section.into(),
-		ty: ty.into(),
-		site: None,
-		title: title.into(),
-		slug: String::new(),
 		published: true,
-		parent_id: None,
-		fields,
+		..EntryInput::new(section, ty, title, fields)
 	}
 }

@@ -25,6 +25,10 @@ use serde_json::Value;
 use crate::AppState;
 use crate::schema::Schema;
 
+/// A crate that adds a whole feature, like `zipp-seo`: to the content
+/// model, GraphQL, the routes and the studio. The site adds it with
+/// [`Schema::plugin`]; every method has a default, a plugin implements
+/// what it needs.
 pub trait Plugin: Any + Send + Sync + 'static {
 	/// A handle, also the name of its studio module, like `seo`.
 	fn name(&self) -> &'static str;
@@ -51,7 +55,7 @@ pub trait Plugin: Any + Send + Sync + 'static {
 	}
 
 	/// Routes under `/api`, for the studio; `Authed` checks the session.
-	fn api_routes(&self) -> Router<AppState> {
+	fn api_routes(&self, _schema: &Schema) -> Router<AppState> {
 		Router::new()
 	}
 
@@ -72,11 +76,11 @@ pub trait Plugin: Any + Send + Sync + 'static {
 #[derive(Default)]
 #[non_exhaustive]
 pub struct GraphqlExt {
-	pub types: Vec<Type>,
+	pub(crate) types: Vec<Type>,
 	/// on every entry type and the `Entry` interface; an entry type with
 	/// a field of the same handle keeps its field
-	pub entry_fields: Vec<EntryField>,
-	pub root_fields: Vec<GqlField>,
+	pub(crate) entry_fields: Vec<EntryField>,
+	pub(crate) root_fields: Vec<GqlField>,
 }
 
 impl GraphqlExt {
@@ -89,8 +93,11 @@ impl GraphqlExt {
 		self
 	}
 
-	pub fn entry_field(mut self, field: EntryField) -> Self {
-		self.entry_fields.push(field);
+	pub fn entry_fields(
+		mut self,
+		fields: impl IntoIterator<Item = EntryField>,
+	) -> Self {
+		self.entry_fields.extend(fields);
 		self
 	}
 
@@ -106,9 +113,9 @@ impl GraphqlExt {
 /// A field of every entry, made once per entry type.
 #[non_exhaustive]
 pub struct EntryField {
-	pub name: String,
-	pub ty: TypeRef,
-	pub field: Arc<dyn Fn() -> GqlField + Send + Sync>,
+	pub(crate) name: String,
+	pub(crate) ty: TypeRef,
+	pub(crate) field: Arc<dyn Fn() -> GqlField + Send + Sync>,
 }
 
 impl EntryField {
@@ -135,8 +142,8 @@ impl EntryField {
 #[derive(Debug, Clone, Default)]
 #[non_exhaustive]
 pub struct PluginStudio {
-	pub js: Option<&'static str>,
-	pub data: Value,
+	pub(crate) js: Option<&'static str>,
+	pub(crate) data: Value,
 }
 
 impl PluginStudio {
@@ -157,12 +164,15 @@ impl PluginStudio {
 /// The plugins of a schema, code like field types, and what each added
 /// to the content model, in the same order.
 #[derive(Clone, Default)]
-pub struct Plugins(pub(crate) Vec<Arc<dyn Plugin>>, pub(crate) Vec<Added>);
+pub(crate) struct Plugins(
+	pub(crate) Vec<Arc<dyn Plugin>>,
+	pub(crate) Vec<Added>,
+);
 
 /// What a plugin added to the content model, for Setup.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Added {
+pub(crate) struct Added {
 	pub plugin: String,
 	pub sections: Vec<String>,
 	/// entry types and blocks
@@ -219,13 +229,13 @@ impl Added {
 
 impl Plugins {
 	/// What the plugins added, see [`Added`].
-	pub fn added(&self) -> &[Added] {
+	pub(crate) fn added(&self) -> &[Added] {
 		&self.1
 	}
 }
 
 impl Plugins {
-	pub fn get(&self, name: &str) -> Option<&Arc<dyn Plugin>> {
+	pub(crate) fn get(&self, name: &str) -> Option<&Arc<dyn Plugin>> {
 		self.0.iter().find(|p| p.name() == name)
 	}
 }

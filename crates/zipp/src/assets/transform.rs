@@ -26,7 +26,7 @@ pub fn transform_size(width: u32, height: u32, t: &Transform) -> (u32, u32) {
 
 /// The part of the image a crop to `out_w` x `out_h` keeps: the biggest
 /// rect of that ratio, as close to the focal point as it fits.
-pub fn crop_rect(
+pub(crate) fn crop_rect(
 	width: u32,
 	height: u32,
 	out_w: u32,

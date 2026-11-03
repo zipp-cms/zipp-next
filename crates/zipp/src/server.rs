@@ -141,7 +141,7 @@ pub(crate) fn app(state: AppState, routes: Router<AppState>) -> Router {
 		.merge(studio::routes());
 	// the plugins': under /api for the studio, others for the website
 	for p in &state.schema.plugins.0 {
-		api = api.merge(p.api_routes());
+		api = api.merge(p.api_routes(&state.schema));
 		app = app.merge(p.routes(&state.schema));
 	}
 

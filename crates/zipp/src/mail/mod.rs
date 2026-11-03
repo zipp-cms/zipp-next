@@ -22,7 +22,7 @@ use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 
 use crate::error::{Error, Result};
 
-pub mod api;
+pub(crate) mod api;
 #[cfg(test)]
 mod api_tests;
 mod routes;
@@ -118,7 +118,10 @@ impl Mailer {
 	/// Mails over the SMTP server of `url` (lettre's: `smtp://` with
 	/// `?tls=required` for STARTTLS, `smtps://` for TLS, user and password
 	/// before the host), from `from`. A password only goes over TLS.
-	pub fn smtp(url: &str, from: &str) -> std::result::Result<Self, String> {
+	pub(crate) fn smtp(
+		url: &str,
+		from: &str,
+	) -> std::result::Result<Self, String> {
 		let (scheme, rest) = url.split_once("://").unwrap_or(("", url));
 		let credentials = rest
 			.split(['/', '?'])
@@ -145,13 +148,13 @@ impl Mailer {
 
 	/// Keeps the mails instead of sending them, see [`Mailer::sent`].
 	#[cfg(any(test, feature = "testing"))]
-	pub fn memory() -> Self {
+	pub(crate) fn memory() -> Self {
 		Self::new(Transport::Memory(Mutex::default()), None, None).unwrap()
 	}
 
 	/// The mails a [`Mailer::memory`] got, none of the others.
 	#[cfg(any(test, feature = "testing"))]
-	pub fn sent(&self) -> Vec<Mail> {
+	pub(crate) fn sent(&self) -> Vec<Mail> {
 		match &self.0.transport {
 			Transport::Memory(m) => m.lock().unwrap().clone(),
 			_ => vec![],
@@ -159,17 +162,17 @@ impl Mailer {
 	}
 
 	/// Whether mails go to a server, else they are only logged.
-	pub fn configured(&self) -> bool {
+	pub(crate) fn configured(&self) -> bool {
 		!matches!(self.0.transport, Transport::Log)
 	}
 
 	/// The host and port mails go to.
-	pub fn server(&self) -> Option<&str> {
+	pub(crate) fn server(&self) -> Option<&str> {
 		self.0.server.as_deref()
 	}
 
 	/// The sender of every mail.
-	pub fn from(&self) -> String {
+	pub fn sender(&self) -> String {
 		self.0.from.to_string()
 	}
 

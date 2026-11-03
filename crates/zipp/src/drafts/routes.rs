@@ -107,7 +107,7 @@ async fn site_preview_route(
 	Ok(Json(TokenResp { token }))
 }
 
-pub fn routes() -> Router<AppState> {
+pub(crate) fn routes() -> Router<AppState> {
 	Router::new()
 		.api::<GetReq, _>(get_route)
 		.api::<PutReq, _>(put_route)

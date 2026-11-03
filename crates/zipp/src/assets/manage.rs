@@ -14,7 +14,7 @@ use crate::schema::{ASSET, Schema};
 /// The newest assets whose filename contains `search`, of a kind.
 /// Where to look for assets: all folders, or one (`None` the top).
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum InFolder {
+pub(crate) enum InFolder {
 	All,
 	Folder(Option<i64>),
 }
@@ -22,7 +22,7 @@ pub enum InFolder {
 /// With `kind` only `image`s, `file`s (no images), `video`s or
 /// `document`s (files but videos and audio); with `extensions` only
 /// files that end so (lowercase, without dot).
-pub fn search(
+pub(crate) fn search(
 	conn: &Connection,
 	search: &str,
 	kind: Option<&str>,
@@ -78,7 +78,7 @@ pub fn search(
 
 /// Assets whose filename, title or alt text contain every word, the
 /// newest first, for the studio's search.
-pub fn find(
+pub(crate) fn find(
 	conn: &Connection,
 	words: &[String],
 	limit: i64,
@@ -111,7 +111,7 @@ pub fn find(
 /// What an editor changes of an asset.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AssetChange {
+pub(crate) struct AssetChange {
 	/// unchanged when missing
 	pub title: Option<String>,
 	/// per site handle, of all sites
@@ -132,7 +132,7 @@ pub struct AssetChange {
 /// focal point delete the transforms. The values of the asset fields
 /// are checked like those of a block, for the user `user_id` (`None`: the
 /// system).
-pub fn update(
+pub(crate) fn update(
 	conn: &Connection,
 	files: &FsPath,
 	schema: &Schema,
@@ -250,7 +250,7 @@ fn check_edits(asset: &Asset, e: &Edits) -> Result<()> {
 
 /// Another file for the asset, like Craft's replace file: where it is
 /// used stays, the edits and the focal point start new.
-pub fn replace(
+pub(crate) fn replace(
 	conn: &Connection,
 	files: &FsPath,
 	id: i64,
@@ -285,7 +285,7 @@ pub fn replace(
 
 /// An entry that uses an asset.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Usage {
+pub(crate) struct Usage {
 	pub id: i64,
 	pub section: String,
 	#[serde(rename = "type")]
@@ -297,7 +297,11 @@ pub struct Usage {
 
 /// The entries that use an asset, as published, the title of the
 /// primary site first.
-pub fn usage(conn: &Connection, primary: &str, id: i64) -> Result<Vec<Usage>> {
+pub(crate) fn usage(
+	conn: &Connection,
+	primary: &str,
+	id: i64,
+) -> Result<Vec<Usage>> {
 	let mut stmt = conn.prepare(
 		"SELECT e.id, e.section, e.type, group_concat(DISTINCT r.site),
 		(SELECT title FROM entry_sites s WHERE s.entry_id = e.id
@@ -322,7 +326,7 @@ pub fn usage(conn: &Connection, primary: &str, id: i64) -> Result<Vec<Usage>> {
 }
 
 /// Deletes an asset and its files for good, see [`crate::trash`].
-pub fn delete(conn: &Connection, files: &FsPath, id: i64) -> Result<()> {
+pub(crate) fn delete(conn: &Connection, files: &FsPath, id: i64) -> Result<()> {
 	if conn.execute("DELETE FROM assets WHERE id = ?1", [id])? == 0 {
 		return Err(Error::NotFound);
 	}

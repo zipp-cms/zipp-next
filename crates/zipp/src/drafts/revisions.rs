@@ -2,6 +2,7 @@ use super::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct Revision {
 	pub id: i64,
 	pub user: Option<String>,
@@ -13,6 +14,7 @@ pub struct Revision {
 /// A field (or type, title, slug, published, postDate, expiryDate) that
 /// changed, and in which sites.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct FieldChange {
 	pub field: String,
 	pub sites: Vec<String>,
@@ -68,7 +70,7 @@ fn diff_docs(old: &Doc, new: &Doc) -> Vec<FieldChange> {
 
 /// Keeps the live state of an entry as a revision, called after every
 /// save of the live entry.
-pub fn record_revision(
+pub(crate) fn record_revision(
 	conn: &Connection,
 	id: i64,
 	user_id: Option<i64>,
@@ -90,7 +92,7 @@ pub fn record_revision(
 }
 
 /// The revisions of an entry, newest first, each with what it changed.
-pub fn revisions(conn: &Connection, id: i64) -> Result<Vec<Revision>> {
+pub(crate) fn revisions(conn: &Connection, id: i64) -> Result<Vec<Revision>> {
 	let mut stmt = conn.prepare(
 		"SELECT r.id, u.email, r.created_at, r.doc FROM revisions r
 		LEFT JOIN users u ON u.id = r.user_id
@@ -123,7 +125,11 @@ pub fn revisions(conn: &Connection, id: i64) -> Result<Vec<Revision>> {
 	Ok(revs)
 }
 
-pub fn get_revision(conn: &Connection, id: i64, revision: i64) -> Result<Doc> {
+pub(crate) fn get_revision(
+	conn: &Connection,
+	id: i64,
+	revision: i64,
+) -> Result<Doc> {
 	let doc: String = conn.query_row(
 		"SELECT doc FROM revisions WHERE id = ?1 AND entry_id = ?2",
 		params![revision, id],
@@ -135,7 +141,7 @@ pub fn get_revision(conn: &Connection, id: i64, revision: i64) -> Result<Doc> {
 /// Puts an old revision into the draft. Sites that the revision doesn't
 /// know yet keep their live content. `base` like [`put_draft`]'s: the
 /// draft of someone else isn't replaced unseen.
-pub fn restore(
+pub(crate) fn restore(
 	conn: &Connection,
 	id: i64,
 	revision: i64,

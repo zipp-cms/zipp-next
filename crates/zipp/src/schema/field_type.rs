@@ -10,7 +10,7 @@ use std::sync::Arc;
 use async_graphql::dynamic::{FieldValue, ResolverContext};
 use serde_json::Value;
 
-pub use crate::content::Target;
+pub use crate::content::relations::Target;
 
 /// A scalar of GraphQL.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -43,9 +43,9 @@ pub enum GraphqlType {
 #[non_exhaustive]
 pub struct FieldRelation {
 	/// inside the value, like `image`, empty for the value itself
-	pub path: String,
-	pub target: Target,
-	pub ids: Vec<i64>,
+	pub(crate) path: String,
+	pub(crate) target: Target,
+	pub(crate) ids: Vec<i64>,
 }
 
 impl FieldRelation {
@@ -73,7 +73,7 @@ impl FieldRelation {
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
 pub struct StudioModule {
-	pub js: &'static str,
+	pub(crate) js: &'static str,
 }
 
 impl StudioModule {
@@ -82,6 +82,10 @@ impl StudioModule {
 	}
 }
 
+/// A field type of another crate, like `zipp-button-group`: its options,
+/// its values, how GraphQL shows them and its editor in the studio. The
+/// site registers it with [`Schema::field_type`](crate::Schema::field_type),
+/// fields of it are [`Field::custom`](crate::Field::custom).
 pub trait FieldType: Send + Sync + 'static {
 	/// The name in the schema, like `buttonGroup`.
 	fn name(&self) -> &'static str;
@@ -141,10 +145,10 @@ pub trait FieldType: Send + Sync + 'static {
 
 /// The registered field types, part of the schema but not of its JSON.
 #[derive(Clone, Default)]
-pub struct FieldTypes(pub(crate) Vec<Arc<dyn FieldType>>);
+pub(crate) struct FieldTypes(pub(crate) Vec<Arc<dyn FieldType>>);
 
 impl FieldTypes {
-	pub fn get(&self, name: &str) -> Option<&Arc<dyn FieldType>> {
+	pub(crate) fn get(&self, name: &str) -> Option<&Arc<dyn FieldType>> {
 		self.0.iter().find(|t| t.name() == name)
 	}
 }

@@ -7,6 +7,7 @@ use super::{Choice, Field, FieldKind, LinkKind, humanize};
 
 /// A column of a table field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Column {
 	pub handle: String,
 	pub label: String,
@@ -159,6 +160,7 @@ impl Column {
 /// A style of a rich text: a class on a paragraph or heading, or on a
 /// part of the text (`inline`); the frontend's CSS gives it its look.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Style {
 	pub class: String,
 	pub label: String,

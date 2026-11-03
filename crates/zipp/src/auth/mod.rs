@@ -14,10 +14,10 @@ use crate::db::{Db, now};
 use crate::error::{Error, Result};
 use crate::schema::{Access, Role, Schema};
 
-pub mod api;
+pub(crate) mod api;
 #[cfg(test)]
 mod api_tests;
-pub mod links;
+pub(crate) mod links;
 #[cfg(test)]
 mod links_tests;
 mod routes;
@@ -26,13 +26,13 @@ mod sessions;
 mod tests;
 mod throttle;
 
-pub use routes::routes;
-pub use sessions::{
-	Session, add_user, end_session, end_sessions, hash_password, login,
-	new_session, password_matches, renew_session, set_password_hash,
-	short_session,
+pub(crate) use routes::routes;
+pub use sessions::{Session, end_session, short_session};
+pub(crate) use sessions::{
+	add_user, end_sessions, hash_password, login, new_session,
+	password_matches, renew_session, set_password_hash,
 };
-pub use throttle::Throttle;
+pub(crate) use throttle::Throttle;
 
 /// Extractor that only succeeds with a valid `session-token` header.
 #[non_exhaustive]
@@ -50,7 +50,7 @@ impl Authed {
 	}
 
 	/// An admin, or the user `id` themself.
-	pub fn check_self(&self, id: i64) -> Result<()> {
+	pub(crate) fn check_self(&self, id: i64) -> Result<()> {
 		allowed(self.admin() || self.user_id == id)
 	}
 
@@ -240,7 +240,10 @@ impl FromRequestParts<AppState> for AiAccess {
 
 /// The user of a request, `None` without a token. Public routes use it to
 /// show unpublished entries to editors.
-pub fn session(conn: &Connection, headers: &HeaderMap) -> Result<Option<i64>> {
+pub(crate) fn session(
+	conn: &Connection,
+	headers: &HeaderMap,
+) -> Result<Option<i64>> {
 	let Some(token) = token_of(headers)? else {
 		return Ok(None);
 	};
@@ -276,7 +279,10 @@ pub(crate) fn user_of(
 }
 
 /// The role of a user, `None` is an admin.
-pub fn role_of(conn: &Connection, user_id: i64) -> Result<Option<String>> {
+pub(crate) fn role_of(
+	conn: &Connection,
+	user_id: i64,
+) -> Result<Option<String>> {
 	Ok(conn.query_row(
 		"SELECT role FROM users WHERE id = ?1",
 		[user_id],

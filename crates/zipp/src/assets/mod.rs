@@ -20,7 +20,7 @@ use crate::db::{marks, now};
 use crate::error::{Error, Result};
 use crate::schema::{Format, Transform};
 
-pub mod api;
+pub(crate) mod api;
 #[cfg(test)]
 mod api_tests;
 mod archive;
@@ -59,6 +59,7 @@ use transform::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct Asset {
 	pub id: i64,
 	pub filename: String,
@@ -73,7 +74,7 @@ pub struct Asset {
 	pub original_width: Option<u32>,
 	pub original_height: Option<u32>,
 	/// the image editor's, see `Edits`
-	pub edits: Option<Edits>,
+	pub(crate) edits: Option<Edits>,
 	/// the email of who uploaded it
 	pub uploaded_by: Option<String>,
 	/// changes with the file, the edits and the focal point, urls and the
@@ -106,7 +107,11 @@ impl Asset {
 
 	/// The path of a transform in `format`, else in the transform's
 	/// format, else in the type of the image.
-	pub fn format_url(&self, t: &Transform, format: Option<Format>) -> String {
+	pub(crate) fn format_url(
+		&self,
+		t: &Transform,
+		format: Option<Format>,
+	) -> String {
 		match format.or(t.format) {
 			Some(f) => self.versioned(format!(
 				"/assets/{}/{}/{}",
@@ -120,7 +125,7 @@ impl Asset {
 
 	/// The name of a transform in another type: the extension says it,
 	/// `piano.jpg` in WebP is `piano.webp`.
-	pub fn format_filename(&self, format: Format) -> String {
+	pub(crate) fn format_filename(&self, format: Format) -> String {
 		let stem = match self.filename.rsplit_once('.') {
 			Some((stem, _)) => stem,
 			None => &self.filename,
@@ -144,13 +149,13 @@ impl Asset {
 	}
 
 	/// The size of the image after a transform.
-	pub fn size_after(&self, t: &Transform) -> Option<(u32, u32)> {
+	pub(crate) fn size_after(&self, t: &Transform) -> Option<(u32, u32)> {
 		Some(transform_size(self.width?, self.height?, t))
 	}
 
 	/// The type of the images made of it: a transparent canvas needs a
 	/// png when the original is a jpeg.
-	pub fn output_mime(&self) -> &str {
+	pub(crate) fn output_mime(&self) -> &str {
 		match &self.edits {
 			Some(e) if e.transparent() && self.mime == "image/jpeg" => {
 				"image/png"
@@ -249,7 +254,7 @@ pub(crate) fn trashed(
 }
 
 /// The assets of these ids in the same order, missing ones are left out.
-pub fn get_many(conn: &Connection, ids: &[i64]) -> Result<Vec<Asset>> {
+pub(crate) fn get_many(conn: &Connection, ids: &[i64]) -> Result<Vec<Asset>> {
 	let sql = format!(
 		"SELECT {COLUMNS} FROM assets WHERE id IN ({}) AND deleted_at IS NULL",
 		marks(ids.len())
@@ -267,16 +272,16 @@ pub fn get_many(conn: &Connection, ids: &[i64]) -> Result<Vec<Asset>> {
 /// Only letters, digits, dots, dashes and underscores, so the name is a
 /// safe path and url.
 /// The folder of an asset: its file and [`TRANSFORMS`].
-pub fn asset_dir(files: &FsPath, id: i64) -> std::path::PathBuf {
+pub(crate) fn asset_dir(files: &FsPath, id: i64) -> std::path::PathBuf {
 	files.join(id.to_string())
 }
 
 /// The folder of an asset's transforms, made again when they change. It
 /// starts with a dot, which [`clean_filename`] never leaves, so no file
 /// can take its name.
-pub const TRANSFORMS: &str = ".t";
+pub(crate) const TRANSFORMS: &str = ".t";
 
-pub fn clean_filename(name: &str) -> String {
+pub(crate) fn clean_filename(name: &str) -> String {
 	let name: String = name
 		.rsplit(['/', '\\'])
 		.next()
@@ -320,7 +325,7 @@ fn file_mime(filename: &str) -> &'static str {
 }
 
 /// The most bytes of an upload, of a file or a zip.
-pub const MAX_UPLOAD: usize = 200 * 1024 * 1024;
+pub(crate) const MAX_UPLOAD: usize = 200 * 1024 * 1024;
 
 /// Images above this many pixels are refused, decoding them for a
 /// transform would take too much memory.
@@ -396,7 +401,8 @@ pub(crate) fn temp_file(files: &FsPath) -> Result<tempfile::NamedTempFile> {
 }
 
 /// Stores an upload, see [`store_file`].
-pub fn store(
+#[cfg(any(test, feature = "craft"))]
+pub(crate) fn store(
 	conn: &Connection,
 	files: &FsPath,
 	filename: &str,
@@ -410,7 +416,7 @@ pub fn store(
 
 /// Stores an upload that came in as `tmp`: the row first for the id, then
 /// the file moves in. `user` is who uploads, none for imports.
-pub fn store_file(
+pub(crate) fn store_file(
 	conn: &Connection,
 	files: &FsPath,
 	filename: &str,
@@ -447,14 +453,14 @@ pub fn store_file(
 }
 
 /// Where uploads go, `--files`.
-pub fn files_dir(path: PathBuf) -> std::io::Result<PathBuf> {
+pub(crate) fn files_dir(path: PathBuf) -> std::io::Result<PathBuf> {
 	fs::create_dir_all(&path)?;
 	Ok(path)
 }
 
 /// Fills in where assets are used for content from before zipp kept it
 /// (`asset_relations`): once, when that is empty and there is content.
-pub fn index_usage(
+pub(crate) fn index_usage(
 	conn: &Connection,
 	schema: &crate::schema::Schema,
 ) -> Result<()> {

@@ -4,10 +4,10 @@ use crate::request;
 
 /// How the cms sends mails, for admins.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct StatusReq {}
+pub(crate) struct StatusReq {}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MailStatus {
+pub(crate) struct MailStatus {
 	/// whether mails go to a server, else they are only logged
 	pub configured: bool,
 	/// its host and port
@@ -19,6 +19,6 @@ request!(StatusReq, GET "/mail" => MailStatus);
 
 /// Sends a test mail to the admin who asks.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct TestReq {}
+pub(crate) struct TestReq {}
 
 request!(TestReq, POST "/mail/test" => ());

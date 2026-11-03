@@ -3,13 +3,13 @@
 //! the frontend unchanged: `/sitemap.xml`, `/sitemap-<site>-<section>-
 //! <page>.xml` and `/robots.txt` of the frontend's domain.
 
-use rusqlite::Connection;
 use serde::Deserialize;
 use zipp::axum::Router;
 use zipp::axum::extract::{Query as Params, State};
 use zipp::axum::http::{StatusCode, header};
 use zipp::axum::response::{IntoResponse, Response};
 use zipp::axum::routing::get;
+use zipp::rusqlite::Connection;
 
 use zipp::db::iso;
 use zipp::entries::query::Query;

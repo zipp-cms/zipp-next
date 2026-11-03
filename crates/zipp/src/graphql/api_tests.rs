@@ -4,6 +4,7 @@ use serde_json::{Value, json};
 
 use super::api::*;
 use super::tokens::Scope;
+use crate::SiteUrls;
 use crate::drafts::SiteDoc;
 use crate::drafts::api::{PreviewReq, PutReq, SitePreviewReq};
 use crate::entries::api::CreateReq;
@@ -398,4 +399,14 @@ async fn development_is_open_without_a_token() {
 	let token = new_token(&admin, events, None).await;
 	let (_, body) = graphql(&anon, "/api/graphql", all, Some(&token)).await;
 	assert!(titles(&body).is_empty());
+}
+
+#[tokio::test]
+async fn sites_have_the_urls_of_serve() {
+	let urls = SiteUrls::from([("de".to_string(), "https://x.ch".into())]);
+	let ts = TestServer::new(site_with_roles()).site_urls(urls);
+	let body = ts.graphql("{ sites { handle baseUrl } }", json!({})).await;
+	assert_eq!(body["data"]["sites"][0]["handle"], "de");
+	assert_eq!(body["data"]["sites"][0]["baseUrl"], "https://x.ch");
+	assert_eq!(ts.state.site_urls["de"], "https://x.ch");
 }

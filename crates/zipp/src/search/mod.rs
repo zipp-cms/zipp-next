@@ -274,7 +274,7 @@ pub fn hits(conn: &Connection, q: &Query) -> Result<Vec<Hit>> {
 		return Ok(vec![]);
 	}
 	let (with, mut params) = q.with();
-	let (from, more) = q.from_where();
+	let (from, more) = q.sql_from();
 	params.extend(more);
 
 	let sql = format!(

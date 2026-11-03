@@ -42,7 +42,7 @@ fn rejects_bad_queries() {
 #[test]
 fn builds_sql_in_param_order() {
 	let q = parse("type=event&f.city=Bern&order=price&site=en").unwrap();
-	let (sql, params) = q.from_where();
+	let (sql, params) = q.sql_from();
 	assert_eq!(
 		params,
 		[
@@ -60,7 +60,7 @@ fn builds_sql_in_param_order() {
 #[test]
 fn structure_order_uses_the_tree() {
 	let q = parse("section=pages&order=structure&uri=/about/").unwrap();
-	let (sql, _) = q.from_where();
+	let (sql, _) = q.sql_from();
 	let (with, params) = q.with();
 	assert!(with.starts_with("WITH RECURSIVE tree"));
 	assert_eq!(params, [Value::Text("pages".into())]);
@@ -71,7 +71,7 @@ fn structure_order_uses_the_tree() {
 	// children need no tree
 	let q = parse("section=pages&parent=5").unwrap();
 	assert_eq!(q.with().0, "");
-	assert!(!q.from_where().0.contains("tree"));
+	assert!(!q.sql_from().0.contains("tree"));
 	assert_eq!(
 		q.order_by(),
 		"ORDER BY e.parent_id, e.position ASC, e.id ASC"

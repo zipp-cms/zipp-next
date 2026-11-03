@@ -162,7 +162,7 @@ async fn login_as_route(
 	Ok(Json(authenticated(&conn, session)?))
 }
 
-pub fn routes() -> Router<AppState> {
+pub(crate) fn routes() -> Router<AppState> {
 	Router::new()
 		.api::<LoginReq, _>(login_route)
 		.api::<LogoutReq, _>(logout_route)

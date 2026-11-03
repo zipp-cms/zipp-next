@@ -28,7 +28,7 @@ use std::sync::Arc;
 use serde_json::json;
 use zipp::axum::Router;
 use zipp::error::{Error, Result};
-use zipp::{AppState, Plugin, PluginStudio};
+use zipp::{AppState, Plugin, PluginStudio, Schema};
 
 pub mod api;
 #[cfg(test)]
@@ -70,7 +70,7 @@ impl Plugin for Agent {
 		"agent"
 	}
 
-	fn api_routes(&self) -> Router<AppState> {
+	fn api_routes(&self, _schema: &Schema) -> Router<AppState> {
 		routes::routes()
 	}
 

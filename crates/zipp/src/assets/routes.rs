@@ -304,7 +304,7 @@ pub(super) async fn move_route(
 }
 
 /// The api, under `/api`.
-pub fn api_routes() -> Router<AppState> {
+pub(crate) fn api_routes() -> Router<AppState> {
 	let big = || DefaultBodyLimit::max(MAX_UPLOAD);
 	Router::new()
 		.route("/assets", post(upload).layer(big()))

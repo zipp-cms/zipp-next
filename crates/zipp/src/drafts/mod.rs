@@ -36,17 +36,17 @@ mod routes;
 #[cfg(test)]
 pub(crate) mod tests;
 
-pub use preview::Preview;
-pub use preview::create_site_token;
-pub use preview::create_token;
-pub use preview::preview;
+pub(crate) use preview::Preview;
+pub(crate) use preview::create_site_token;
+pub(crate) use preview::create_token;
+pub(crate) use preview::preview;
 pub use revisions::FieldChange;
 pub use revisions::Revision;
-pub use revisions::get_revision;
-pub use revisions::record_revision;
-pub use revisions::restore;
-pub use revisions::revisions;
-pub use routes::routes;
+pub(crate) use revisions::get_revision;
+pub(crate) use revisions::record_revision;
+pub(crate) use revisions::restore;
+pub(crate) use revisions::revisions;
+pub(crate) use routes::routes;
 
 /// How long a preview link works.
 const TOKEN_DURATION_MS: i64 = DAY_MS;
@@ -56,6 +56,7 @@ const MAX_REVISIONS: i64 = 50;
 
 /// The content of an entry in one site.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct SiteDoc {
 	/// the entry type, the same in every site: a draft can change it;
 	/// left out (empty) in [`put_draft`] it stays
@@ -70,15 +71,30 @@ pub struct SiteDoc {
 	pub dates: Dates,
 }
 
+impl SiteDoc {
+	/// Unpublished in its site, with no dates.
+	pub fn new(ty: &str, title: &str, slug: &str, fields: Value) -> Self {
+		Self {
+			ty: ty.into(),
+			title: title.into(),
+			slug: slug.into(),
+			published: false,
+			fields,
+			dates: Dates::default(),
+		}
+	}
+}
+
 /// The content of an entry in every site, by site handle.
 pub type Doc = BTreeMap<String, SiteDoc>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct Draft {
 	pub doc: Doc,
 	#[serde(skip)]
-	pub user_id: Option<i64>,
+	pub(crate) user_id: Option<i64>,
 	/// email of who changed it last
 	pub user: Option<String>,
 	pub updated_at: i64,
@@ -86,7 +102,7 @@ pub struct Draft {
 
 /// The entries a draft links to in a site, also those only the draft
 /// has: the live relations don't know them.
-pub fn draft_refs(
+pub(crate) fn draft_refs(
 	conn: &Connection,
 	schema: &Schema,
 	draft: &Draft,
@@ -109,7 +125,7 @@ pub fn draft_refs(
 }
 
 /// The live content of an entry.
-pub fn live_doc(conn: &Connection, id: i64) -> Result<Doc> {
+pub(crate) fn live_doc(conn: &Connection, id: i64) -> Result<Doc> {
 	let mut stmt = conn.prepare(
 		"SELECT s.site, s.title, s.slug, s.published, s.fields, e.post_date,
 		e.expiry_date, e.type FROM entry_sites s JOIN entries e ON e.id = s.entry_id
@@ -150,7 +166,7 @@ pub fn draft_or_live(conn: &Connection, id: i64) -> Result<(Doc, bool)> {
 
 /// The content of an entry in a site as the editor sees it, draft first,
 /// and whether it is a draft.
-pub fn current(
+pub(crate) fn current(
 	conn: &Connection,
 	id: i64,
 	site: &str,
@@ -175,7 +191,7 @@ impl Entry {
 	}
 }
 
-pub fn get_draft(conn: &Connection, id: i64) -> Result<Option<Draft>> {
+pub(crate) fn get_draft(conn: &Connection, id: i64) -> Result<Option<Draft>> {
 	let row: Option<(String, Option<i64>, Option<String>, i64)> = conn
 		.query_row(
 			"SELECT d.doc, d.user_id, u.email, d.updated_at FROM drafts d
@@ -193,7 +209,10 @@ pub fn get_draft(conn: &Connection, id: i64) -> Result<Option<Draft>> {
 }
 
 /// The drafts of some entries, those that have one.
-pub fn docs_of(conn: &Connection, ids: &[i64]) -> Result<HashMap<i64, Doc>> {
+pub(crate) fn docs_of(
+	conn: &Connection,
+	ids: &[i64],
+) -> Result<HashMap<i64, Doc>> {
 	let sql = format!(
 		"SELECT entry_id, doc FROM drafts WHERE entry_id IN ({})",
 		marks(ids.len())
@@ -251,7 +270,7 @@ pub(super) fn check_base(
 /// validated here, a draft may be half done.
 ///
 /// The type is that of every site: another type of the section changes
-/// it in all of them, their fields converted (see [`convert`](crate::content::convert)). The
+/// it in all of them, their fields converted (see `content::convert`). The
 /// editor sends `content` already converted; without a type it stays.
 ///
 /// `base` is the version of the draft the editor started from (its
@@ -297,7 +316,7 @@ pub fn put_draft(
 
 /// Applies the draft to the live entry in every site and keeps a
 /// revision. Errors of a site that isn't the primary one name the site.
-pub fn publish(
+pub(crate) fn publish(
 	conn: &Connection,
 	schema: &Schema,
 	id: i64,
@@ -354,7 +373,7 @@ pub fn publish(
 	Ok(())
 }
 
-pub fn discard(conn: &Connection, id: i64) -> Result<()> {
+pub(crate) fn discard(conn: &Connection, id: i64) -> Result<()> {
 	conn.execute("DELETE FROM drafts WHERE entry_id = ?1", [id])?;
 	Ok(())
 }

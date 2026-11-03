@@ -5,21 +5,21 @@ use crate::request;
 use crate::users::User;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LoginReq {
+pub(crate) struct LoginReq {
 	pub email: String,
 	pub password: String,
 }
 
 /// A session and its user, what the studio keeps.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Authenticated {
+pub(crate) struct Authenticated {
 	pub session: SessionInfo,
 	pub user: User,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SessionInfo {
+pub(crate) struct SessionInfo {
 	pub token: String,
 	/// in milliseconds; using the studio pushes it back
 	pub expires_at: i64,
@@ -32,20 +32,20 @@ request!(LoginReq, POST "/auth/login" => Authenticated);
 /// The session of the `session-token` header with its user, renewed when
 /// it ends soon; the studio asks when it opens.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SessionReq {}
+pub(crate) struct SessionReq {}
 
 request!(SessionReq, GET "/auth/session" => Authenticated);
 
 /// Ends the session of the `session-token` header, if there is one.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LogoutReq {}
+pub(crate) struct LogoutReq {}
 
 request!(LogoutReq, POST "/auth/logout" => ());
 
 /// Mails a password reset link if there is a user with the email; the
 /// answer is the same either way.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ForgotReq {
+pub(crate) struct ForgotReq {
 	pub email: String,
 }
 
@@ -53,13 +53,13 @@ request!(ForgotReq, POST "/auth/forgot" => ());
 
 /// What a link of `/admin/password/<token>` is for, before it is used.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LinkReq {
+pub(crate) struct LinkReq {
 	pub token: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LinkInfo {
+pub(crate) struct LinkInfo {
 	pub kind: links::Kind,
 	pub email: String,
 	pub name: String,
@@ -71,7 +71,7 @@ request!(LinkReq, GET "/auth/links/{token}" => LinkInfo);
 /// Sets the password with an invite or reset link and logs in; an
 /// invited user may give their name too.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SetPasswordReq {
+pub(crate) struct SetPasswordReq {
 	pub token: String,
 	pub password: String,
 	pub name: Option<String>,
@@ -81,7 +81,7 @@ request!(SetPasswordReq, POST "/auth/links/{token}/password" => Authenticated);
 
 /// Logs in as the user of a link an admin made, see `users`.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LoginAsReq {
+pub(crate) struct LoginAsReq {
 	pub token: String,
 }
 

@@ -26,7 +26,7 @@ pub(super) const MAX_EMAIL_LEN: usize = 254;
 
 /// The attempts per key: count and the time of the first one.
 #[derive(Debug, Default)]
-pub struct Throttle {
+pub(crate) struct Throttle {
 	counts: Mutex<BTreeMap<String, (u32, i64)>>,
 }
 

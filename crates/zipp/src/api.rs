@@ -1,7 +1,7 @@
 //! The rest api of the studio, under `/api`. Every request is a type that
 //! knows its method, path and response ([`Request`]): handlers take it
 //! with [`Req`], routers add it with [`ApiRouter::api`] (`.api::<LoginReq, _>(login)`) and tests send it
-//! with [`TestServer`](crate::testing::TestServer), so a path is written
+//! with `testing::TestServer`, so a path is written
 //! once.
 //!
 //! What isn't JSON stays a plain axum route: uploads (multipart), files,

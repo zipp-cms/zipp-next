@@ -162,7 +162,7 @@ async fn delete_route(
 	Ok(Json(()))
 }
 
-pub fn routes() -> Router<AppState> {
+pub(crate) fn routes() -> Router<AppState> {
 	Router::new()
 		.api::<ListReq, _>(list_route)
 		.api::<ChoicesReq, _>(choices_route)

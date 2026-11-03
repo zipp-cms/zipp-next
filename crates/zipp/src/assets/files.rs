@@ -180,7 +180,7 @@ pub(super) static GENERATING: tokio::sync::Semaphore =
 	tokio::sync::Semaphore::const_new(2);
 
 /// The files, under `/assets`.
-pub fn file_routes() -> Router<AppState> {
+pub(crate) fn file_routes() -> Router<AppState> {
 	Router::new()
 		.route("/assets/{id}/{filename}", get(serve_original))
 		.route("/assets/{id}/{transform}/{filename}", get(serve_transform))

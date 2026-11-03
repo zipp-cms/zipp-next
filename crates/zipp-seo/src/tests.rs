@@ -43,11 +43,7 @@ fn titles_and_dates() {
 
 #[test]
 fn globals_inherit_but_not_the_description() {
-	let site = Site {
-		handle: "en".into(),
-		name: "English".into(),
-		language: "en".into(),
-	};
+	let site = Site::new("en", "English", "en");
 	let primary = json!({ "siteName": "Zandi", "description": "Augenärzte", "robotsTxt": "x" });
 	let g = globals(&site, &json!({}), &primary);
 	assert_eq!(g.site_name, "Zandi");
@@ -91,11 +87,7 @@ fn settings_override_the_code_per_section_and_type() {
 	assert!(section_in_sitemap(&schema, &g, "events"));
 
 	// another site inherits the pattern, not the description
-	let en = Site {
-		handle: "en".into(),
-		name: "English".into(),
-		language: "en".into(),
-	};
+	let en = Site::new("en", "English", "en");
 	let g = globals(&en, &json!({}), &primary);
 	let set = &g.overrides["section:events"];
 	assert_eq!(set.title_pattern.as_deref(), Some("settings"));

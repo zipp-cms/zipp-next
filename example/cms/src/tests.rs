@@ -4,7 +4,6 @@
 use serde_json::{Value, json};
 use zipp::drafts::SiteDoc;
 use zipp::drafts::api::{PublishReq, PutReq};
-use zipp::entries::EntryInput;
 use zipp::entries::api::{CreateReq, UpdateReq};
 use zipp::error::Error;
 use zipp::testing::{Client, TestServer, input};
@@ -29,14 +28,8 @@ async fn authors_write_editors_publish() {
 	// an author's event waits as a draft for someone who may publish
 	let jazz = author.call(&event("Jazz", "2099-01-01")).await.unwrap();
 	assert!(!jazz.published);
-	let live = SiteDoc {
-		ty: jazz.ty,
-		dates: Default::default(),
-		title: jazz.title,
-		slug: jazz.slug,
-		published: true,
-		fields: jazz.fields,
-	};
+	let mut live = SiteDoc::new(&jazz.ty, &jazz.title, &jazz.slug, jazz.fields);
+	live.published = true;
 	let draft = PutReq {
 		id: jazz.id,
 		site: "de".into(),
@@ -159,10 +152,12 @@ async fn pages_load_in_a_few_statements() {
 	}
 	let update = UpdateReq {
 		id: about.id,
-		input: EntryInput {
-			fields: json!({ "content": content, "hero": image(0) }),
-			..input("pages", "page", "About", json!({}))
-		},
+		input: input(
+			"pages",
+			"page",
+			"About",
+			json!({ "content": content, "hero": image(0) }),
+		),
 	};
 	admin.call(&update).await.unwrap();
 

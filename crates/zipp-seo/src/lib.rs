@@ -95,7 +95,7 @@ const DAYS: &[&str] = &[
 	"Sunday",
 ];
 
-/// The SEO of a site, turned on with `Schema::plugin`.
+/// The SEO of a site, added with `Schema::plugin(Seo::new())`.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Seo {
 	/// by section handle
@@ -311,10 +311,10 @@ fn add_targets(mut schema: Schema) -> Schema {
 		if s.uri.is_none() && s.type_uris.is_empty() {
 			continue;
 		}
-		options.push(Choice {
-			value: format!("section:{}", s.handle),
-			label: format!("Section {}", s.name),
-		});
+		options.push(Choice::new(
+			&format!("section:{}", s.handle),
+			&format!("Section {}", s.name),
+		));
 		for t in &s.types {
 			if !types.contains(t) {
 				types.push(t.clone());
@@ -323,18 +323,20 @@ fn add_targets(mut schema: Schema) -> Schema {
 	}
 	for t in types {
 		let name = schema.get(&t).map_or(t.clone(), |c| c.name.clone());
-		options.push(Choice {
-			value: format!("type:{t}"),
-			label: format!("Entry type {name}"),
-		});
+		options.push(Choice::new(
+			&format!("type:{t}"),
+			&format!("Entry type {name}"),
+		));
 	}
 	let field = schema
 		.components
 		.iter_mut()
 		.find(|c| c.handle == SEO_OVERRIDE)
 		.and_then(|c| c.fields.iter_mut().find(|f| f.handle == "appliesTo"));
-	if let Some(field) = field {
-		field.kind = FieldKind::Dropdown { options };
+	if let Some(FieldKind::Dropdown { options: o, .. }) =
+		field.map(|f| &mut f.kind)
+	{
+		*o = options;
 	}
 	schema
 }

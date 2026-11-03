@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 	Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
 )]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub enum Access {
 	/// see the entries
 	View,
@@ -24,6 +25,7 @@ pub enum Access {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Role {
 	pub handle: String,
 	pub name: String,

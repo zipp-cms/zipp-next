@@ -19,7 +19,7 @@ use crate::AppState;
 
 /// An address or a network of proxies: `127.0.0.1`, `172.16.0.0/12`.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Proxy {
+pub(crate) struct Proxy {
 	addr: IpAddr,
 	prefix: u8,
 }

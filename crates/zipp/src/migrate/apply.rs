@@ -21,7 +21,7 @@ use crate::schema::{ASSET, Schema, SectionKind};
 /// Brings the database up to the code before the server or a command
 /// uses it: refuses when the code changed since the last migration,
 /// applies the migrations that didn't run yet and returns their names.
-pub fn up_to_date(
+pub(crate) fn up_to_date(
 	conn: &Connection,
 	migrations: &[Migration],
 	code: &Schema,
@@ -41,7 +41,7 @@ pub fn up_to_date(
 /// (see [`unmigrated`]): the singles and the
 /// indexes are made with it, a migration file has no field types of
 /// plugins and their relations would go.
-pub fn apply_migrations(
+pub(crate) fn apply_migrations(
 	conn: &Connection,
 	migrations: &[Migration],
 	code: &Schema,
@@ -89,7 +89,7 @@ pub fn apply_migrations(
 
 /// Whether a migration ran already; in an empty database (`check` on a
 /// new file) none did.
-pub fn is_applied(conn: &Connection, name: &str) -> Result<bool> {
+pub(crate) fn is_applied(conn: &Connection, name: &str) -> Result<bool> {
 	let migrated: bool = conn.query_row(
 		"SELECT COUNT(*) FROM sqlite_master WHERE name = 'schema_migrations'",
 		[],
@@ -421,7 +421,7 @@ fn share_primary(
 
 /// Every single has its entry, titled like the section, with the defaults
 /// of its fields.
-pub fn create_singles(conn: &Connection, schema: &Schema) -> Result<()> {
+pub(crate) fn create_singles(conn: &Connection, schema: &Schema) -> Result<()> {
 	let singles = schema
 		.sections
 		.iter()

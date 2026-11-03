@@ -136,7 +136,7 @@ async fn graphiql(State(state): State<AppState>) -> Response {
 	crate::studio::graphiql(&state)
 }
 
-pub fn routes() -> Router<AppState> {
+pub(crate) fn routes() -> Router<AppState> {
 	Router::new()
 		.route(
 			"/graphql",

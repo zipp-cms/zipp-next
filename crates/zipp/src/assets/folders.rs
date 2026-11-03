@@ -10,7 +10,7 @@ use crate::error::{Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Folder {
+pub(crate) struct Folder {
 	pub id: i64,
 	/// `None` on the top
 	pub parent_id: Option<i64>,
@@ -20,7 +20,7 @@ pub struct Folder {
 }
 
 /// All folders, by name; the studio makes the tree.
-pub fn folders(conn: &Connection) -> Result<Vec<Folder>> {
+pub(crate) fn folders(conn: &Connection) -> Result<Vec<Folder>> {
 	let mut stmt = conn.prepare(
 		"SELECT id, parent_id, name,
 			(SELECT COUNT(*) FROM assets a
@@ -34,7 +34,7 @@ pub fn folders(conn: &Connection) -> Result<Vec<Folder>> {
 }
 
 /// How many assets are in no folder, on the top.
-pub fn top_count(conn: &Connection) -> Result<i64> {
+pub(crate) fn top_count(conn: &Connection) -> Result<i64> {
 	let n = conn.query_row(
 		"SELECT COUNT(*) FROM assets
 		WHERE folder_id IS NULL AND deleted_at IS NULL",
@@ -100,14 +100,17 @@ fn check_name(
 }
 
 /// That the folder exists, `None` is the top.
-pub fn check_folder(conn: &Connection, parent: Option<i64>) -> Result<()> {
+pub(crate) fn check_folder(
+	conn: &Connection,
+	parent: Option<i64>,
+) -> Result<()> {
 	match parent {
 		Some(p) => folder(conn, p).map(|_| ()),
 		None => Ok(()),
 	}
 }
 
-pub fn create_folder(
+pub(crate) fn create_folder(
 	conn: &Connection,
 	parent: Option<i64>,
 	name: &str,
@@ -144,7 +147,7 @@ pub(crate) fn folder_named(
 }
 
 /// A new name or place; not into itself or a folder in it.
-pub fn update_folder(
+pub(crate) fn update_folder(
 	conn: &Connection,
 	id: i64,
 	parent: Option<i64>,
@@ -170,7 +173,7 @@ pub fn update_folder(
 
 /// Deletes an empty folder: one with files or folders stays, so nothing
 /// goes by mistake.
-pub fn delete_folder(conn: &Connection, id: i64) -> Result<()> {
+pub(crate) fn delete_folder(conn: &Connection, id: i64) -> Result<()> {
 	let f = folder(conn, id)?;
 	let folders_in: i64 = conn.query_row(
 		"SELECT COUNT(*) FROM asset_folders WHERE parent_id = ?1",
@@ -190,7 +193,7 @@ pub fn delete_folder(conn: &Connection, id: i64) -> Result<()> {
 }
 
 /// Puts assets into a folder, `None` on the top.
-pub fn move_assets(
+pub(crate) fn move_assets(
 	conn: &Connection,
 	ids: &[i64],
 	folder_id: Option<i64>,

@@ -1,7 +1,7 @@
 use super::*;
 
 /// What has to happen to go from `old` to `new`.
-pub fn diff(
+pub(crate) fn diff(
 	old: &Schema,
 	new: &Schema,
 	renames: &[Rename],

@@ -4,7 +4,7 @@ use super::*;
 /// given, with a revision of who did it (`None`: the system). Shared
 /// fields are copied to the other sites. The section of an entry can't
 /// change, its type can to another of the section: the fields of the
-/// other sites are converted (see [`convert`](crate::content::convert)).
+/// other sites are converted (see `content::convert`).
 pub fn save(
 	conn: &Connection,
 	schema: &Schema,
@@ -22,7 +22,7 @@ pub fn save(
 
 /// Validates a save of `user_id` (`None`: the system) without writing
 /// anything.
-pub fn check(
+pub(crate) fn check(
 	conn: &Connection,
 	schema: &Schema,
 	id: Option<i64>,
@@ -153,7 +153,11 @@ pub fn check(
 }
 
 /// Writes a checked save, returns the id of the entry.
-pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
+pub(crate) fn write(
+	conn: &Connection,
+	schema: &Schema,
+	c: &Checked,
+) -> Result<i64> {
 	let comp = schema.entry_type(&c.ty).unwrap();
 	let section = &c.section;
 	let (site, title, slug, uris, fields) =
@@ -421,7 +425,7 @@ pub(crate) fn has_extension(filename: &str, extensions: &[String]) -> bool {
 /// Rewrites the index rows of every entry that isn't in the trash, in
 /// all its sites (the trash keeps none). Content that isn't JSON fails,
 /// it would be lost from the index without anyone noticing.
-pub fn reindex_all(conn: &Connection, schema: &Schema) -> Result<()> {
+pub(crate) fn reindex_all(conn: &Connection, schema: &Schema) -> Result<()> {
 	let mut stmt = conn.prepare(
 		"SELECT e.id, s.site, e.type, s.fields FROM entries e
 		JOIN entry_sites s ON s.entry_id = e.id
@@ -440,7 +444,7 @@ pub fn reindex_all(conn: &Connection, schema: &Schema) -> Result<()> {
 }
 
 /// Rewrites the index rows of an entry in a site from its fields.
-pub fn reindex(
+pub(crate) fn reindex(
 	conn: &Connection,
 	schema: &Schema,
 	id: i64,

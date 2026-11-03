@@ -1,12 +1,52 @@
 //! zipp is a headless cms. The content model is code: a site has a small
 //! crate that builds its [`Schema`] and calls [`run`]. The content is
 //! edited in the studio and read by any frontend over the api.
+//!
+//! ```no_run
+//! use zipp::{Field, Schema, Section};
+//!
+//! fn main() {
+//!     let schema = Schema::new()
+//!         .site("de", "Deutsch", "de-CH")
+//!         .section(Section::channel("events", ["event"]).uri("events/{slug}"))
+//!         .entry("event", "Event", [
+//!             Field::text("intro").multiline(),
+//!             Field::images("image").max(1),
+//!         ]);
+//!     zipp::run(schema, zipp::migrations!());
+//! }
+//! ```
+//!
+//! The binary is the whole cms: `serve` runs the server with the studio,
+//! `makemigration` writes a migration after the model changed, `--help`
+//! lists the others.
+//!
+//! Where to start:
+//!
+//! - [`Schema`], [`Section`], [`Field`], [`Role`]: the content model and
+//!   who may change what, made with their builder methods, see
+//!   [`schema`].
+//! - [`Cms`]: what [`run`] can't do, routes of the site, a hook after
+//!   every change and data migrations.
+//! - [`migrations!`]: the migrations in the `migrations/` of the site's
+//!   crate.
+//! - [`AppState`]: what the routes of the site get, the database, the
+//!   schema and the mailer.
+//! - [`Plugin`] and [`FieldType`]: crates that add a feature or a field
+//!   type, like `zipp-seo`. They use [`api`], [`auth`], [`entries`],
+//!   [`drafts`] and [`graphql::ext`].
+//! - `testing::TestServer`, with the feature `testing`: the whole cms in
+//!   a test, on a database in memory.
+//!
+//! The feature `craft` adds `import-craft`, the import of a Craft site.
+//! The guides are in `docs/` of the repository,
+//! <https://github.com/zipp-cms/zipp-next>.
 
 mod ai;
 pub mod api;
 pub mod assets;
 pub mod auth;
-pub mod backup;
+mod backup;
 mod change_requests;
 mod cli;
 pub mod client;
@@ -22,14 +62,14 @@ mod fixtures;
 pub mod graphql;
 pub mod mail;
 pub mod migrate;
-pub mod plugin;
+mod plugin;
 pub mod schema;
-pub mod search;
+mod search;
 mod server;
 mod studio;
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
-pub mod trash;
+mod trash;
 mod typescript;
 mod users;
 
@@ -50,15 +90,14 @@ use cli::{
 use server::serve;
 
 pub use crate::plugin::{EntryField, GraphqlExt, Plugin, PluginStudio};
-pub use crate::schema::field_type::{
-	FieldRelation, FieldType, GraphqlType, Scalar, StudioModule, Target,
-};
 pub use crate::schema::{
-	Access, Choice, Column, ColumnKind, Condition, Field, FieldKind, Format,
-	Icon, LinkKind, Role, Schema, Section, Style, Transform,
+	Access, Choice, Column, ColumnKind, Condition, Field, FieldKind,
+	FieldRelation, FieldType, Format, GraphqlType, Icon, LinkKind, Role,
+	Scalar, Schema, Section, Site, StudioModule, Style, Target, Transform,
 };
 pub use async_graphql;
 pub use axum;
+pub use rusqlite;
 
 #[doc(hidden)]
 pub use rust_embed;
@@ -101,38 +140,40 @@ macro_rules! migrations {
 	}};
 }
 
+/// What zipp's routes and the site's get as `State`, and parts of it
+/// with `FromRef` (`State<Db>`).
 #[derive(Clone, FromRef)]
 pub struct AppState {
 	pub db: Db,
 	pub schema: Arc<Schema>,
-	pub gql: async_graphql::dynamic::Schema,
+	pub(crate) gql: async_graphql::dynamic::Schema,
 	/// where uploads go
 	pub files: PathBuf,
 	/// the url of each site, for previews
 	pub site_urls: Arc<SiteUrls>,
 	/// origins that may frame the studio
-	pub frame_ancestors: Arc<Vec<String>>,
+	pub(crate) frame_ancestors: Arc<Vec<String>>,
 	/// who may name the client in `X-Forwarded-For`, see [`client`]
-	pub trusted_proxies: Arc<Vec<client::Proxy>>,
+	pub(crate) trusted_proxies: Arc<Vec<client::Proxy>>,
 	/// what frontends send to GraphQL, see `serve --graphql-token`
-	pub graphql_token: Option<Arc<String>>,
+	pub(crate) graphql_token: Option<Arc<String>>,
 	/// development mode, see `serve --dev`
 	pub dev: bool,
 	/// whether search engines may index, see `serve --noindex`
 	#[from_ref(skip)]
 	pub indexing: bool,
 	/// the AI chat, if there is an api key
-	pub ai: Option<ai::AiConfig>,
+	pub(crate) ai: Option<ai::AiConfig>,
 	/// sends mails, see [`mail`]
 	pub mail: mail::Mailer,
 	/// where the cms is, `serve --public-url`: links in mails
 	pub public_url: Arc<String>,
 	/// the svgs of the schema's Lucide icons, see `studio::schema_icons`
 	#[from_ref(skip)]
-	pub icons: Arc<std::collections::BTreeMap<String, String>>,
+	pub(crate) icons: Arc<std::collections::BTreeMap<String, String>>,
 	/// the wrong passwords of logins, see [`auth::Throttle`]
 	#[from_ref(skip)]
-	pub logins: Arc<auth::Throttle>,
+	pub(crate) logins: Arc<auth::Throttle>,
 	hooks: Arc<Vec<Hook>>,
 }
 
@@ -191,7 +232,12 @@ impl AppState {
 	}
 
 	/// Tells the hooks of the site, after the change is written.
-	pub fn changed(&self, entry_id: i64, section: &str, kind: ChangeKind) {
+	pub(crate) fn changed(
+		&self,
+		entry_id: i64,
+		section: &str,
+		kind: ChangeKind,
+	) {
 		let change = Change {
 			entry_id,
 			section: section.into(),
@@ -288,7 +334,8 @@ impl Cms {
 				tracing_subscriber::EnvFilter::try_from_default_env()
 					.unwrap_or_else(|_| "zipp=info,tower_http=info".into()),
 			)
-			.init();
+			.try_init()
+			.ok();
 
 		let Self {
 			schema,

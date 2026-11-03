@@ -127,12 +127,11 @@ impl Plugin for Seo {
 		GraphqlExt::new()
 			.types(types)
 			// `seo` like the plugin's, unless a type has a field so named
-			.entry_field(entry("seoJson", SEO_JSON))
-			.entry_field(entry("seo", "Seo"))
+			.entry_fields([entry("seoJson", SEO_JSON), entry("seo", "Seo")])
 			.root_fields(root_fields())
 	}
 
-	fn api_routes(&self) -> Router<AppState> {
+	fn api_routes(&self, _schema: &Schema) -> Router<AppState> {
 		crate::routes::routes()
 	}
 

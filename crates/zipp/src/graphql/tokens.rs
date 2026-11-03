@@ -12,7 +12,7 @@ use crate::schema::Schema;
 
 /// What a request may read in GraphQL.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Scope {
+pub(crate) struct Scope {
 	/// handles of sections, `None` all
 	pub sections: Option<Vec<String>>,
 	/// handles of sites, `None` all
@@ -23,19 +23,19 @@ pub struct Scope {
 
 impl Scope {
 	/// Everything: admins, the token of `serve` and development.
-	pub const ALL: Scope = Scope {
+	pub(crate) const ALL: Scope = Scope {
 		sections: None,
 		sites: None,
 		previews: true,
 	};
 
-	pub fn section(&self, handle: &str) -> bool {
+	pub(crate) fn section(&self, handle: &str) -> bool {
 		self.sections
 			.as_ref()
 			.is_none_or(|l| l.iter().any(|s| s == handle))
 	}
 
-	pub fn site(&self, handle: &str) -> bool {
+	pub(crate) fn site(&self, handle: &str) -> bool {
 		self.sites
 			.as_ref()
 			.is_none_or(|l| l.iter().any(|s| s == handle))
@@ -45,7 +45,7 @@ impl Scope {
 /// A token as the studio lists it, without the token itself.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GraphqlToken {
+pub(crate) struct GraphqlToken {
 	pub id: i64,
 	pub name: String,
 	#[serde(flatten)]
@@ -79,7 +79,7 @@ fn token_row(r: &rusqlite::Row) -> rusqlite::Result<GraphqlToken> {
 }
 
 /// All tokens, by name.
-pub fn list(conn: &Connection) -> Result<Vec<GraphqlToken>> {
+pub(crate) fn list(conn: &Connection) -> Result<Vec<GraphqlToken>> {
 	let mut stmt = conn.prepare(&format!("{TOKEN} ORDER BY name, id"))?;
 	let tokens = stmt
 		.query_map([], token_row)?
@@ -87,13 +87,17 @@ pub fn list(conn: &Connection) -> Result<Vec<GraphqlToken>> {
 	Ok(tokens)
 }
 
-pub fn get(conn: &Connection, id: i64) -> Result<GraphqlToken> {
+pub(crate) fn get(conn: &Connection, id: i64) -> Result<GraphqlToken> {
 	let sql = format!("{TOKEN} WHERE id = ?1");
 	Ok(conn.query_row(&sql, [id], token_row)?)
 }
 
 /// The mistakes of a new token: a name, sections and sites the schema has.
-pub fn check(schema: &Schema, name: &str, scope: &Scope) -> Vec<FieldError> {
+pub(crate) fn check(
+	schema: &Schema,
+	name: &str,
+	scope: &Scope,
+) -> Vec<FieldError> {
 	let mut errors = vec![];
 	let mut error = |path: &str, message: String| {
 		errors.push(FieldError::new(path, message))
@@ -115,7 +119,7 @@ pub fn check(schema: &Schema, name: &str, scope: &Scope) -> Vec<FieldError> {
 }
 
 /// A new token, and the token itself: it shows only now.
-pub fn create(
+pub(crate) fn create(
 	conn: &Connection,
 	name: &str,
 	scope: &Scope,
@@ -143,7 +147,7 @@ pub fn create(
 }
 
 /// Revokes a token, frontends that send it get 401.
-pub fn delete(conn: &Connection, id: i64) -> Result<()> {
+pub(crate) fn delete(conn: &Connection, id: i64) -> Result<()> {
 	match conn.execute("DELETE FROM graphql_tokens WHERE id = ?1", [id])? {
 		0 => Err(Error::NotFound),
 		_ => Ok(()),
@@ -151,7 +155,10 @@ pub fn delete(conn: &Connection, id: i64) -> Result<()> {
 }
 
 /// The scope of a token that hasn't expired, and it was used now.
-pub fn scope_of(conn: &Connection, token: &str) -> Result<Option<Scope>> {
+pub(crate) fn scope_of(
+	conn: &Connection,
+	token: &str,
+) -> Result<Option<Scope>> {
 	let sql = format!("{TOKEN} WHERE hash = ?1");
 	let Some(t) = conn
 		.query_row(&sql, [token_hash(token)], token_row)

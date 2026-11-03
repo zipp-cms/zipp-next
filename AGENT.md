@@ -38,6 +38,11 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   `assets/archive_tests.rs`). The test site and what several areas'
   tests share are in `fixtures.rs`, files in `tempfile::tempdir()`.
   Tests run on the real SQL, no mocks.
+- The public api is what sites and plugins use (`lib.rs` says where to
+  start), everything else is `pub(crate)`. Public data structs and enums
+  are `#[non_exhaustive]`, made with constructors or builders, so zipp
+  can add a field without a major version; crates of the api are
+  re-exported (`zipp::axum`, `zipp::rusqlite`, ...).
 - Permissions are in a handler's signature: `Admin`, `EntryAccess<Publish>`,
   `AssetAccess<Edit>`, `AiAccess`; `Authed::check` only where the section
   comes with the request (creating, lists).

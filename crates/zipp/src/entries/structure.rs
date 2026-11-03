@@ -196,7 +196,7 @@ fn stored_uri(
 /// Recomputes the uris of the entries of a section in all sites, parents
 /// before their children: of all of them, or of an entry and the ones
 /// below it, the others keep theirs.
-pub fn refresh_uris(
+pub(crate) fn refresh_uris(
 	conn: &Connection,
 	schema: &Schema,
 	section: &Section,
@@ -276,7 +276,7 @@ pub fn refresh_uris(
 
 /// Moves an entry of a structure under `parent` (`None` is the top) at
 /// `index` among its new siblings.
-pub fn move_entry(
+pub(crate) fn move_entry(
 	conn: &Connection,
 	schema: &Schema,
 	id: i64,

@@ -22,7 +22,10 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::schema::field_type::{FieldType, FieldTypes, GraphqlType, Scalar};
+use crate::schema::field_type::FieldTypes;
+pub use field_type::{
+	FieldRelation, FieldType, GraphqlType, Scalar, StudioModule, Target,
+};
 pub use role::{Access, Role};
 
 mod builders;
@@ -30,8 +33,8 @@ mod check;
 mod column;
 mod condition;
 mod field;
-pub mod field_type;
-pub mod role;
+mod field_type;
+mod role;
 #[cfg(test)]
 mod tests;
 
@@ -40,18 +43,18 @@ pub use condition::Condition;
 pub use field::Choice;
 pub use field::Field;
 pub use field::FieldKind;
-pub use field::Holds;
+pub(crate) use field::Holds;
 pub use field::LinkKind;
-pub use field::VIDEOS;
 pub use field::humanize;
 
 /// The single of the texts of the frontend, see [`Schema::translations`].
-pub const TRANSLATIONS: &str = "translations";
+pub(crate) const TRANSLATIONS: &str = "translations";
 
 /// The component of the fields of assets, see [`Schema::asset_fields`].
-pub const ASSET: &str = "asset";
+pub(crate) const ASSET: &str = "asset";
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Schema {
 	/// The first one is the primary site.
 	#[serde(default)]
@@ -69,27 +72,28 @@ pub struct Schema {
 	/// Pages of markdown from the code, the studio shows them read only.
 	/// Not part of the content model, so not in migrations.
 	#[serde(skip)]
-	pub docs: Vec<DocPage>,
+	pub(crate) docs: Vec<DocPage>,
 	/// Field types of other crates, see [`FieldType`].
 	#[serde(skip)]
-	pub field_types: FieldTypes,
+	pub(crate) field_types: FieldTypes,
 	/// Roles of studio users, not part of the content model.
 	#[serde(skip)]
-	pub roles: Vec<Role>,
+	pub(crate) roles: Vec<Role>,
 	/// Plugins, see [`Schema::plugin`].
 	#[serde(skip)]
-	pub plugins: crate::plugin::Plugins,
+	pub(crate) plugins: crate::plugin::Plugins,
 	/// Sites not on the website yet, see [`Schema::offline`].
 	#[serde(skip)]
-	pub offline: Vec<String>,
+	pub(crate) offline: Vec<String>,
 	/// Widths images can have without a named transform, see
 	/// [`Schema::image_widths`].
 	#[serde(skip)]
-	pub image_widths: Vec<u32>,
+	pub(crate) image_widths: Vec<u32>,
 }
 
 /// A markdown file of the project shown in the studio, like a readme.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub struct DocPage {
 	pub handle: String,
 	pub name: String,
@@ -98,6 +102,7 @@ pub struct DocPage {
 
 /// A group of sections in the studio, like Content or Settings.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct NavGroup {
 	pub name: String,
 	pub sections: Vec<String>,
@@ -110,6 +115,7 @@ pub struct NavGroup {
 /// take the color of the text.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub enum Icon {
 	Lucide(String),
 	Svg(String),
@@ -133,6 +139,7 @@ impl From<&str> for Icon {
 /// height the image keeps its ratio, `crop` fills both dimensions around
 /// the focal point. Images are never made bigger.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Transform {
 	pub handle: String,
 	pub width: Option<u32>,
@@ -147,6 +154,7 @@ pub struct Transform {
 /// like Craft's transform format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum Format {
 	Jpeg,
 	Png,
@@ -187,15 +195,27 @@ impl Format {
 /// A site has its own version of every entry: title, slug, uri, published
 /// and the translatable fields. Usually one per language.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Site {
 	pub handle: String,
 	pub name: String,
 	pub language: String,
 }
 
+impl Site {
+	pub fn new(handle: &str, name: &str, language: &str) -> Self {
+		Self {
+			handle: handle.into(),
+			name: name.into(),
+			language: language.into(),
+		}
+	}
+}
+
 /// Where entries live, like in Craft: a single has exactly one entry, a
 /// channel a list and a structure a tree.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Section {
 	pub handle: String,
 	pub name: String,
@@ -225,6 +245,7 @@ pub struct Section {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub enum SectionKind {
 	Single,
 	Channel,
@@ -234,6 +255,7 @@ pub enum SectionKind {
 /// A set of fields. Entry components are the types of entries, the others
 /// are blocks that live inside a blocks field.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Component {
 	pub handle: String,
 	pub name: String,
@@ -263,13 +285,14 @@ pub struct Component {
 /// How an indexed field is compared and sorted, see
 /// [`Schema::index_kind`].
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum IndexKind {
+pub(crate) enum IndexKind {
 	Text,
 	Number,
 }
 
 /// A tab of an entry type in the editor, see [`Schema::entry_tabs`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Tab {
 	pub name: String,
 	pub fields: Vec<String>,
@@ -286,7 +309,7 @@ impl Schema {
 		self.offline.iter().any(|s| s == site)
 	}
 
-	pub fn get_role(&self, handle: &str) -> Option<&Role> {
+	pub(crate) fn get_role(&self, handle: &str) -> Option<&Role> {
 		self.roles.iter().find(|r| r.handle == handle)
 	}
 
@@ -295,7 +318,7 @@ impl Schema {
 	}
 
 	/// The transform of a name: a named one or `w800` of an allowed width.
-	pub fn transform_named(&self, name: &str) -> Option<Transform> {
+	pub(crate) fn transform_named(&self, name: &str) -> Option<Transform> {
 		if let Some(t) = self.get_transform(name) {
 			return Some(t.clone());
 		}
@@ -304,7 +327,7 @@ impl Schema {
 	}
 
 	/// The transform of an allowed width.
-	pub fn width_transform(&self, width: u32) -> Option<Transform> {
+	pub(crate) fn width_transform(&self, width: u32) -> Option<Transform> {
 		self.image_widths
 			.contains(&width)
 			.then(|| Transform::new(&format!("w{width}")).width(width))
@@ -327,7 +350,7 @@ impl Schema {
 	}
 
 	/// A section and one of its entry types, an entry is saved as.
-	pub fn section_type(
+	pub(crate) fn section_type(
 		&self,
 		section: &str,
 		ty: &str,
@@ -391,7 +414,7 @@ impl Schema {
 	/// How a field of this kind is indexed, `None`: it can't be. A
 	/// custom type is like the scalar GraphQL shows. Every kind is named,
 	/// a new one has to say.
-	pub fn index_kind(&self, kind: &FieldKind) -> Option<IndexKind> {
+	pub(crate) fn index_kind(&self, kind: &FieldKind) -> Option<IndexKind> {
 		match kind {
 			// a date sorts as text, `2026-11-14T20:00`
 			FieldKind::Text { .. }
@@ -429,7 +452,7 @@ impl Schema {
 impl Section {
 	/// The uri of an entry in a site, `None` if it has no page. `fields`
 	/// are its values in the site, for [`Section::uri_if`].
-	pub fn render_uri(
+	pub(crate) fn render_uri(
 		&self,
 		ty: &str,
 		slug: &str,

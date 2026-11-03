@@ -24,7 +24,7 @@ const LINKS: [LinkKind; 4] = [
 ];
 
 /// What a rich text field allows, from its kind.
-pub struct Allowed<'a> {
+pub(crate) struct Allowed<'a> {
 	pub headings: &'a [u8],
 	pub lists: bool,
 	pub links: bool,
@@ -41,7 +41,7 @@ impl<'a> Allowed<'a> {
 			.any(|s| s.class == class && s.inline == inline)
 	}
 
-	pub fn of(kind: &'a FieldKind) -> Option<Self> {
+	pub(crate) fn of(kind: &'a FieldKind) -> Option<Self> {
 		match kind {
 			FieldKind::RichText {
 				headings,
@@ -65,7 +65,7 @@ impl<'a> Allowed<'a> {
 }
 
 /// Whether a document has nothing in it.
-pub fn is_empty(doc: &Value) -> bool {
+pub(crate) fn is_empty(doc: &Value) -> bool {
 	doc["content"].as_array().is_none_or(|c| c.is_empty())
 }
 
@@ -304,7 +304,7 @@ fn clean_list(
 }
 
 /// The links of a document (in text and in buttons), for relations.
-pub fn links(doc: &Value) -> Vec<&Value> {
+pub(crate) fn links(doc: &Value) -> Vec<&Value> {
 	let mut out = vec![];
 	collect_links(doc, &mut out);
 	out
@@ -326,7 +326,7 @@ fn collect_links<'a>(node: &'a Value, out: &mut Vec<&'a Value>) {
 
 /// A piece of a rich text for the frontend.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Chunk {
+pub(crate) enum Chunk {
 	Html(String),
 	/// one row of buttons, the links
 	Buttons(Vec<Value>),
@@ -336,12 +336,12 @@ pub enum Chunk {
 
 /// The url and target of a link, `None` for a link to nowhere (an entry
 /// that is gone or not published).
-pub type Resolve<'a> =
+pub(crate) type Resolve<'a> =
 	dyn FnMut(&Value) -> Option<(String, Option<String>)> + 'a;
 
 /// The chunks of a document: html between rows of buttons (the buttons
 /// next to each other) and blocks.
-pub fn chunks(doc: &Value, resolve: &mut Resolve) -> Vec<Chunk> {
+pub(crate) fn chunks(doc: &Value, resolve: &mut Resolve) -> Vec<Chunk> {
 	let mut out = vec![];
 	let mut html = String::new();
 	for node in doc["content"].as_array().into_iter().flatten() {
@@ -370,7 +370,7 @@ pub fn chunks(doc: &Value, resolve: &mut Resolve) -> Vec<Chunk> {
 
 /// The whole document as html, a row of buttons as links in a paragraph,
 /// blocks left out (they are for the chunks).
-pub fn html(doc: &Value, resolve: &mut Resolve) -> String {
+pub(crate) fn html(doc: &Value, resolve: &mut Resolve) -> String {
 	let mut html = String::new();
 	let mut in_row = false;
 	for node in doc["content"].as_array().into_iter().flatten() {
@@ -526,7 +526,7 @@ fn collect_text(node: &Value, buttons: bool, out: &mut String) {
 }
 
 /// The blocks of a document, to walk into them.
-pub fn blocks_mut(doc: &mut Value) -> Vec<&mut Value> {
+pub(crate) fn blocks_mut(doc: &mut Value) -> Vec<&mut Value> {
 	doc["content"]
 		.as_array_mut()
 		.into_iter()

@@ -29,7 +29,7 @@ impl Transform {
 
 	/// Its images in this type, `Format::Webp` for smaller photos. Urls of
 	/// other types still work with another extension, see
-	/// [`Asset::format_url`](crate::assets::Asset::format_url).
+	/// `Asset::format_url`.
 	pub fn format(mut self, format: Format) -> Self {
 		self.format = Some(format);
 		self
@@ -166,11 +166,7 @@ impl Schema {
 	}
 
 	pub fn site(mut self, handle: &str, name: &str, language: &str) -> Self {
-		self.sites.push(Site {
-			handle: handle.into(),
-			name: name.into(),
-			language: language.into(),
-		});
+		self.sites.push(Site::new(handle, name, language));
 		self
 	}
 

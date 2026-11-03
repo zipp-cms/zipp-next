@@ -12,7 +12,7 @@ use super::*;
 
 /// What a zip holds.
 #[derive(Debug, Clone, PartialEq)]
-pub enum ZipOf {
+pub(crate) enum ZipOf {
 	/// these assets, side by side
 	Assets(Vec<i64>),
 	/// a folder: its assets on the top, its subfolders as folders
@@ -22,7 +22,7 @@ pub enum ZipOf {
 /// The assets of a zip with their paths in it, the ones in the trash
 /// left out. A name that is taken in its folder gets `-2`, `-3`: zips
 /// are opened where case doesn't count, so names compare without it.
-pub fn zip_files(
+pub(crate) fn zip_files(
 	conn: &Connection,
 	of: &ZipOf,
 ) -> Result<Vec<(String, Asset)>> {
@@ -84,7 +84,7 @@ fn unique(taken: &mut HashSet<String>, dir: &str, name: &str) -> String {
 /// Writes the files of [`zip_files`] as they were uploaded into a zip.
 /// Images, video, audio and zips are compressed already, they are only
 /// stored. A file missing on disk is left out.
-pub fn write_zip<W: Write + Seek>(
+pub(crate) fn write_zip<W: Write + Seek>(
 	files: &FsPath,
 	entries: &[(String, Asset)],
 	out: W,
@@ -126,7 +126,7 @@ fn broken(e: impl std::fmt::Display) -> Error {
 /// What an unpacked zip may hold at most: a zip bomb is refused before
 /// a file is stored.
 #[derive(Debug, Clone, Copy)]
-pub struct Limits {
+pub(crate) struct Limits {
 	pub files: usize,
 	/// folders, also the ones only the paths of files have
 	pub folders: usize,
@@ -152,7 +152,7 @@ impl Default for Limits {
 
 /// What an unpacked zip gave.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Unzipped {
+pub(crate) struct Unzipped {
 	pub assets: Vec<Asset>,
 	/// files that were left out and why, like an image too big
 	pub skipped: Vec<String>,
@@ -169,7 +169,7 @@ struct Item {
 
 /// A zip read by [`read_zip`]: its folders and its files unpacked into
 /// temporary files, ready to go in.
-pub struct Unpacked(Vec<Spooled>);
+pub(crate) struct Unpacked(Vec<Spooled>);
 
 /// A file or folder of a read zip.
 struct Spooled {
@@ -182,7 +182,7 @@ struct Spooled {
 /// needed. Hidden files, macOS' `__MACOSX` and links are left out; paths
 /// out of the zip, encrypted files and more than `limits` refuse the
 /// whole zip.
-pub fn read_zip(
+pub(crate) fn read_zip(
 	files: &FsPath,
 	zip: impl Read + Seek,
 	limits: &Limits,
@@ -213,7 +213,7 @@ pub fn read_zip(
 /// The files of a read zip as assets into `folder`, its folders as
 /// folders in it (merged with the ones of the same name). All or
 /// nothing, only a file that is no fitting asset is skipped.
-pub fn unzip(
+pub(crate) fn unzip(
 	conn: &Connection,
 	files: &FsPath,
 	zip: Unpacked,

@@ -11,7 +11,7 @@ use super::*;
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Edits {
+pub(crate) struct Edits {
 	/// clockwise: 0, 90, 180 or 270
 	#[serde(default)]
 	pub rotate: u32,
@@ -33,7 +33,7 @@ pub struct Edits {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Crop {
+pub(crate) struct Crop {
 	pub x: f64,
 	pub y: f64,
 	pub w: f64,
@@ -41,7 +41,7 @@ pub struct Crop {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Resize {
+pub(crate) struct Resize {
 	pub width: u32,
 	pub height: Option<u32>,
 }
@@ -58,7 +58,7 @@ impl Resize {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Canvas {
+pub(crate) struct Canvas {
 	pub width: u32,
 	pub height: u32,
 }
@@ -67,7 +67,7 @@ pub struct Canvas {
 const MAX_SIDE: u32 = 10_000;
 
 impl Edits {
-	pub fn is_empty(&self) -> bool {
+	pub(crate) fn is_empty(&self) -> bool {
 		*self == Self::default()
 	}
 
@@ -79,7 +79,7 @@ impl Edits {
 	}
 
 	/// Whether the result needs an alpha channel.
-	pub fn transparent(&self) -> bool {
+	pub(crate) fn transparent(&self) -> bool {
 		self.background
 			.as_deref()
 			.is_none_or(|b| b == "transparent")
@@ -95,7 +95,7 @@ impl Edits {
 		}
 	}
 
-	pub fn check(&self) -> std::result::Result<(), String> {
+	pub(crate) fn check(&self) -> std::result::Result<(), String> {
 		if ![0, 90, 180, 270].contains(&self.rotate) {
 			return Err("rotate is 0, 90, 180 or 270".into());
 		}
@@ -137,7 +137,7 @@ impl Edits {
 	/// [`MAX_PIXELS`], also on the way: a crop past the image is made
 	/// before a resize makes it smaller, and a resize goes through the
 	/// wider and the taller of both sizes.
-	pub fn check_size(
+	pub(crate) fn check_size(
 		&self,
 		width: u32,
 		height: u32,
@@ -161,7 +161,7 @@ impl Edits {
 	}
 
 	/// The size of a `width` x `height` image after the edits.
-	pub fn size(&self, width: u32, height: u32) -> (u32, u32) {
+	pub(crate) fn size(&self, width: u32, height: u32) -> (u32, u32) {
 		let (mut w, mut h) = match self.rotate {
 			90 | 270 => (height, width),
 			_ => (width, height),
@@ -180,7 +180,7 @@ impl Edits {
 	}
 
 	/// The edited image.
-	pub fn apply(&self, img: DynamicImage) -> DynamicImage {
+	pub(crate) fn apply(&self, img: DynamicImage) -> DynamicImage {
 		let mut img = match self.rotate {
 			90 => img.rotate90(),
 			180 => img.rotate180(),

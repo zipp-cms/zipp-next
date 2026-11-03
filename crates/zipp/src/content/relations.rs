@@ -2,7 +2,7 @@ use super::*;
 
 /// A relation in the content: `path` is where it is, `body.2.link`.
 #[derive(Debug, Clone, PartialEq)]
-pub struct RelationRef {
+pub(crate) struct RelationRef {
 	pub path: String,
 	pub target: Target,
 	pub ids: Vec<i64>,
@@ -24,7 +24,7 @@ pub enum Target {
 }
 
 /// All relations to entries and assets, also those inside blocks.
-pub fn relations(
+pub(crate) fn relations(
 	schema: &Schema,
 	comp: &Component,
 	fields: &Value,
@@ -189,7 +189,7 @@ fn nav_relations(
 /// is left out when validated again), the link mark from a text; an item
 /// of a navigation gives its place to the items under it. Field types of
 /// other crates keep theirs.
-pub fn drop_links(
+pub(crate) fn drop_links(
 	schema: &Schema,
 	comp: &Component,
 	fields: &mut Value,

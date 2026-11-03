@@ -176,19 +176,29 @@ A plugin is a crate that adds a whole feature, turned on with one line:
   rights of who asks, so previews show drafts.
 - `api_routes` under `/api` for the studio, made like zipp's own (see
   [The rest api](#the-rest-api)), `routes` for the website, like sitemaps
-  the frontend proxies.
+  the frontend proxies; both get the finished schema.
 - `studio`: an ES module served as `/_plugins/<name>.js` with data for it;
   `sectionSetup(target, { schema, section, data, host })` adds a card to
   the setup page of a section. `PluginStudio::default().data(..)` gives
   the studio only data, like the agent's `{ "chat": true }` that turns
   on the coding agent in the chat.
 
-What a plugin hands zipp is made with constructors (`GraphqlExt::new()`,
-`EntryField::new`, `PluginStudio::new(js).data(..)`,
-`StudioModule::new(js)`, `FieldRelation::new(..).at(..)`), and the enums
-it matches (`FieldKind`, `ChangeKind`, `Target`, `Error`, …) are
+What a plugin hands zipp is made with constructors (`GraphqlExt::new()`
+with `types`, `entry_fields` and `root_fields`, `EntryField::new`,
+`PluginStudio::new(js).data(..)`, `StudioModule::new(js)`,
+`FieldRelation::new(..).at(..)`). The enums it matches (`FieldKind`,
+`ChangeKind`, `Target`, `Error`, …) and the structs of the content
+model and of entries (`Field`, `Section`, `Entry`, `SiteDoc`, …) are
 `#[non_exhaustive]`: zipp can add to them without breaking a plugin.
-Names of plugins and field types are unique, `check` says so.
+Their fields are read, made with constructors (`Choice::new`,
+`Site::new`, `SiteDoc::new`, `EntryInput::new`, the builders of the
+schema) and matched with `..`. Names of plugins and field types are
+unique, `check` says so.
+
+zipp re-exports the crates of its api, `zipp::axum`,
+`zipp::async_graphql` and `zipp::rusqlite` (the `Connection` of
+`zipp::db`): a plugin uses these instead of its own dependency, so the
+versions always match.
 
 `Schema::plugin_of::<T>()` finds a plugin's settings. What editors set
 for a plugin lives in a single: `entries::single_fields(conn, schema,
@@ -261,6 +271,8 @@ assert_eq!(err, Error::Forbidden);
 ```
 
 `ts.routes(...)` adds the site's routes, `ts.dev()` development mode,
+`ts.site_urls(...)` the urls of the sites, `ts.indexing(false)` like
+`serve --noindex`,
 `ts.login(email, password)` logs in like the studio, `ts.graphql(query,
 variables)` asks like a frontend with its token; `client.get(path)`
 fetches a page or a file, `client.send(...)` any request and

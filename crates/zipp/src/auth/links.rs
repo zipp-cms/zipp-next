@@ -16,7 +16,7 @@ use crate::mail::Mail;
 /// What a link does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum Kind {
+pub(crate) enum Kind {
 	/// a new user sets their password, a week long
 	Invite,
 	/// a new password, an hour long
@@ -41,7 +41,7 @@ impl Kind {
 	}
 
 	/// How long it works.
-	pub fn duration_ms(self) -> i64 {
+	pub(crate) fn duration_ms(self) -> i64 {
 		match self {
 			Self::Invite => 7 * DAY_MS,
 			Self::Reset => HOUR_MS,
@@ -50,7 +50,7 @@ impl Kind {
 	}
 
 	/// The page of the studio that opens it.
-	pub fn path(self, token: &str) -> String {
+	pub(crate) fn path(self, token: &str) -> String {
 		match self {
 			Self::LoginAs => format!("/admin/login-as/{token}"),
 			_ => format!("/admin/password/{token}"),
@@ -60,7 +60,7 @@ impl Kind {
 
 /// A valid link.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Link {
+pub(crate) struct Link {
 	pub user_id: i64,
 	pub kind: Kind,
 	pub created_by: Option<i64>,
@@ -69,7 +69,7 @@ pub struct Link {
 }
 
 /// A new link of a user, the one of the same kind before ends; its token.
-pub fn create_link(
+pub(crate) fn create_link(
 	conn: &Connection,
 	user_id: i64,
 	kind: Kind,
@@ -100,7 +100,7 @@ pub fn create_link(
 
 /// A new link of a user, see [`create_link`], with its full url: the url
 /// and when it ends.
-pub fn new_link(
+pub(crate) fn new_link(
 	conn: &Connection,
 	public_url: &str,
 	user_id: i64,
@@ -114,7 +114,7 @@ pub fn new_link(
 }
 
 /// The answer to a link that doesn't work (anymore).
-pub fn gone() -> Error {
+pub(crate) fn gone() -> Error {
 	Error::Request("This link is used or expired".into())
 }
 
@@ -123,7 +123,7 @@ const FORGOT_EVERY_MS: i64 = 2 * MINUTE_MS;
 
 /// The user of an email who may get a reset link: none asked for one in
 /// the last minutes. Its id and email.
-pub fn reset_target(
+pub(crate) fn reset_target(
 	conn: &Connection,
 	email: &str,
 ) -> Result<Option<(i64, String)>> {
@@ -139,7 +139,7 @@ pub fn reset_target(
 }
 
 /// The link of a token while it works.
-pub fn get_link(conn: &Connection, token: &str) -> Result<Link> {
+pub(crate) fn get_link(conn: &Connection, token: &str) -> Result<Link> {
 	let row: Option<(i64, String, Option<i64>, i64, i64)> = conn
 		.query_row(
 			"SELECT user_id, kind, created_by, created_at, expires_at
@@ -166,7 +166,10 @@ pub fn get_link(conn: &Connection, token: &str) -> Result<Link> {
 
 /// Ends the invite and reset links of a user: after a new password or
 /// email a link sent before doesn't set one anymore.
-pub fn end_password_links(conn: &Connection, user_id: i64) -> Result<()> {
+pub(crate) fn end_password_links(
+	conn: &Connection,
+	user_id: i64,
+) -> Result<()> {
 	conn.execute(
 		"DELETE FROM user_links WHERE user_id = ?1
 		AND kind IN ('invite', 'reset')",
@@ -176,7 +179,7 @@ pub fn end_password_links(conn: &Connection, user_id: i64) -> Result<()> {
 }
 
 /// The link of a token if it is of one of the kinds, used up.
-pub fn take_link(
+pub(crate) fn take_link(
 	conn: &Connection,
 	token: &str,
 	kinds: &[Kind],
@@ -202,11 +205,11 @@ pub(crate) fn invited(conn: &Connection, user_id: i64) -> Result<bool> {
 }
 
 /// How long a session of logging in as someone lasts; it isn't renewed.
-pub const LOGIN_AS_MS: i64 = 2 * HOUR_MS;
+pub(crate) const LOGIN_AS_MS: i64 = 2 * HOUR_MS;
 
 /// A session of `user_id` for the admin `by`, see [`Kind::LoginAs`];
 /// it isn't the user's login.
-pub fn login_as_session(
+pub(crate) fn login_as_session(
 	conn: &Connection,
 	user_id: i64,
 	by: i64,
@@ -215,7 +218,11 @@ pub fn login_as_session(
 }
 
 /// The full url of a link, after `serve --public-url`.
-pub fn link_url(public_url: &str, kind: Kind, token: &str) -> Result<String> {
+pub(crate) fn link_url(
+	public_url: &str,
+	kind: Kind,
+	token: &str,
+) -> Result<String> {
 	if public_url.is_empty() {
 		return Err(Error::Request(
 			"links need the url of the cms: serve --public-url".into(),
@@ -225,7 +232,7 @@ pub fn link_url(public_url: &str, kind: Kind, token: &str) -> Result<String> {
 }
 
 /// The mail of an invite or reset link; `by` the admin who sent it.
-pub fn link_mail(
+pub(crate) fn link_mail(
 	public_url: &str,
 	kind: Kind,
 	to: &str,

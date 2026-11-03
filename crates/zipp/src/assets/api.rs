@@ -12,7 +12,7 @@ use crate::request;
 /// The newest assets, or the ones of `ids`; in a folder with `folder`
 /// (an id, or `top`), else of all folders.
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct ListReq {
+pub(crate) struct ListReq {
 	/// part of the filename
 	pub search: Option<String>,
 	/// `1,2,3`, in this order
@@ -29,7 +29,7 @@ pub struct ListReq {
 request!(ListReq, GET "/assets" => Vec<Asset>);
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UpdateReq {
+pub(crate) struct UpdateReq {
 	pub id: i64,
 	#[serde(flatten)]
 	pub change: AssetChange,
@@ -39,7 +39,7 @@ request!(UpdateReq, PUT "/assets/{id}" => Asset);
 
 /// Moves an asset to the trash.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DeleteReq {
+pub(crate) struct DeleteReq {
 	pub id: i64,
 }
 
@@ -47,7 +47,7 @@ request!(DeleteReq, DELETE "/assets/{id}" => ());
 
 /// The entries that use an asset, the ones the user may see.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UsageReq {
+pub(crate) struct UsageReq {
 	pub id: i64,
 }
 
@@ -55,11 +55,11 @@ request!(UsageReq, GET "/assets/{id}/usage" => Vec<Usage>);
 
 /// All folders, by name.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct FoldersReq {}
+pub(crate) struct FoldersReq {}
 
 /// The folders, and how many assets are in none.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Folders {
+pub(crate) struct Folders {
 	pub folders: Vec<Folder>,
 	pub top: i64,
 }
@@ -68,7 +68,7 @@ request!(FoldersReq, GET "/asset-folders" => Folders);
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateFolderReq {
+pub(crate) struct CreateFolderReq {
 	/// `None` on the top
 	pub parent_id: Option<i64>,
 	pub name: String,
@@ -79,7 +79,7 @@ request!(CreateFolderReq, POST "/asset-folders" => Folder);
 /// A new name or place of a folder.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct UpdateFolderReq {
+pub(crate) struct UpdateFolderReq {
 	pub id: i64,
 	pub parent_id: Option<i64>,
 	pub name: String,
@@ -89,7 +89,7 @@ request!(UpdateFolderReq, PUT "/asset-folders/{id}" => Folder);
 
 /// Deletes an empty folder.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DeleteFolderReq {
+pub(crate) struct DeleteFolderReq {
 	pub id: i64,
 }
 
@@ -98,7 +98,7 @@ request!(DeleteFolderReq, DELETE "/asset-folders/{id}" => ());
 /// Puts assets into a folder, `None` on the top.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MoveReq {
+pub(crate) struct MoveReq {
 	pub ids: Vec<i64>,
 	pub folder_id: Option<i64>,
 }

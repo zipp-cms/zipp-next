@@ -10,7 +10,7 @@
 //! else needs a migration.
 //! A rename can't be told apart from a remove and an add, it is passed as
 //! a hint. What the ops can't express is a data migration in Rust, see
-//! [`data`].
+//! [`DataTx`].
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -24,19 +24,20 @@ use crate::schema::{
 	Column, Component, Field, FieldKind, Holds, Schema, Section, Site,
 };
 
-pub mod apply;
-pub mod data;
+pub(crate) mod apply;
+pub(crate) mod data;
 mod diff;
 mod ops;
 #[cfg(test)]
 pub(crate) mod tests;
 
-pub use data::{Content, DataResult, DataStep, DataTx};
-pub use diff::diff;
+pub(crate) use data::DataStep;
+pub use data::{Content, DataResult, DataTx};
+pub(crate) use diff::diff;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "camelCase")]
-pub enum Op {
+pub(crate) enum Op {
 	AddComponent {
 		component: Component,
 	},
@@ -89,7 +90,7 @@ pub enum Op {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Rename {
+pub(crate) enum Rename {
 	Component {
 		from: String,
 		to: String,
@@ -103,7 +104,7 @@ pub enum Rename {
 
 impl Rename {
 	/// `old=new` for a component, `component.old=new` for a field.
-	pub fn parse(s: &str) -> Result<Self, String> {
+	pub(crate) fn parse(s: &str) -> Result<Self, String> {
 		let (from, to) = s
 			.split_once('=')
 			.ok_or_else(|| format!("rename {s:?} needs old=new"))?;
@@ -122,7 +123,7 @@ impl Rename {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Migration {
+pub(crate) struct Migration {
 	#[serde(skip)]
 	pub name: String,
 	/// A data migration: its step runs after the ops.
@@ -137,7 +138,7 @@ pub struct Migration {
 }
 
 /// The version of the migration files' format, written first into each
-/// file. Bump it when the shape of [`Migration`] (also of [`Op`] and the
+/// file. Bump it when the shape of `Migration` (also of `Op` and the
 /// schema it holds) changes in a way old files don't parse, and read the
 /// older ones still. A file without one is format 1.
 pub const FORMAT: u32 = 1;
@@ -200,6 +201,7 @@ pub struct Migrations {
 }
 
 impl Migrations {
+	#[doc(hidden)]
 	pub fn new<E: rust_embed::Embed>(dir: &str) -> Self {
 		let files = E::iter()
 			.filter_map(|name| {
@@ -226,7 +228,7 @@ impl Migrations {
 
 	/// The migrations sorted by name, data migrations with their step.
 	/// Fails when a step and the files don't match.
-	pub fn load(&self) -> Result<Vec<Migration>, String> {
+	pub(crate) fn load(&self) -> Result<Vec<Migration>, String> {
 		let mut migrations = self.read()?;
 		let wrong = self.unmatched(&migrations);
 		if !wrong.is_empty() {
@@ -239,7 +241,7 @@ impl Migrations {
 	}
 
 	/// The files sorted by name, without the steps.
-	pub fn read(&self) -> Result<Vec<Migration>, String> {
+	pub(crate) fn read(&self) -> Result<Vec<Migration>, String> {
 		let mut migrations = vec![];
 		for (file, data) in &self.files {
 			let Some(name) = file.strip_suffix(".json") else {
@@ -254,7 +256,7 @@ impl Migrations {
 
 	/// Data migrations without a step and steps without their file. A
 	/// step stays registered as long as its file exists.
-	pub fn unmatched(&self, migrations: &[Migration]) -> Vec<String> {
+	pub(crate) fn unmatched(&self, migrations: &[Migration]) -> Vec<String> {
 		let mut wrong = vec![];
 		for m in migrations.iter().filter(|m| m.data) {
 			if !self.steps.contains_key(&m.name) {
@@ -279,7 +281,7 @@ impl Migrations {
 
 /// What changed in the code since the last migration, nothing when the
 /// migrations are up to date.
-pub fn unmigrated(
+pub(crate) fn unmigrated(
 	migrations: &[Migration],
 	schema: &Schema,
 ) -> Result<Vec<Op>, String> {
@@ -291,7 +293,7 @@ pub fn unmigrated(
 }
 
 /// `0003` or `0003_name` after two existing migrations.
-pub fn next_name(existing: &[Migration], name: Option<&str>) -> String {
+pub(crate) fn next_name(existing: &[Migration], name: Option<&str>) -> String {
 	let n = format!("{:04}", existing.len() + 1);
 	match name {
 		Some(name) => format!("{n}_{name}"),

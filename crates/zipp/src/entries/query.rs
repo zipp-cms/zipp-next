@@ -22,14 +22,14 @@ use crate::entries::LIVE_DATES;
 use crate::schema::{IndexKind, Schema, SectionKind};
 
 /// The most entries of one query.
-pub const MAX_LIMIT: i64 = 1000;
+pub(crate) const MAX_LIMIT: i64 = 1000;
 
 /// The most ids of a list in a query, `ids=1,2,3`.
-pub const MAX_IDS: usize = 1000;
+pub(crate) const MAX_IDS: usize = 1000;
 
 /// The ids of a list `1,2,3` in the parameter `key`, at most
 /// [`MAX_IDS`]; anything that isn't an id is an error.
-pub fn parse_ids(key: &str, list: &str) -> Result<Vec<i64>, String> {
+pub(crate) fn parse_ids(key: &str, list: &str) -> Result<Vec<i64>, String> {
 	let ids: Vec<i64> = list
 		.split(',')
 		.filter(|s| !s.is_empty())
@@ -45,6 +45,7 @@ pub fn parse_ids(key: &str, list: &str) -> Result<Vec<i64>, String> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub struct Query {
 	pub site: String,
 	pub section: Option<String>,
@@ -66,29 +67,29 @@ pub struct Query {
 	pub text: Option<String>,
 	pub related: Option<i64>,
 	/// by a relation field of the entries, `r.offerCategory=5`
-	pub relations: Vec<RelationFilter>,
-	pub filters: Vec<Filter>,
-	pub order: Order,
-	pub desc: bool,
+	pub(crate) relations: Vec<RelationFilter>,
+	pub(crate) filters: Vec<Filter>,
+	pub(crate) order: Order,
+	pub(crate) desc: bool,
 	pub limit: i64,
 	pub offset: i64,
 	/// set for requests without a session
 	pub published_only: bool,
 	/// shown even if not published, the entry of a preview token
-	pub preview_id: Option<i64>,
+	pub(crate) preview_id: Option<i64>,
 	/// the sections whose drafts are shown, see
 	/// [`Preview::All`](crate::drafts::Preview)
-	pub preview_sections: Vec<String>,
+	pub(crate) preview_sections: Vec<String>,
 	/// only entries with a page
 	pub with_uri: bool,
 	/// no entries at all, an offline site for a frontend
-	pub nothing: bool,
+	pub(crate) nothing: bool,
 }
 
 /// Entries whose relation field points to one of some entries, or to
 /// any (`:notempty:`) or none (`:empty:`), like Craft's arguments.
 #[derive(Debug, Clone, PartialEq)]
-pub struct RelationFilter {
+pub(crate) struct RelationFilter {
 	pub field: String,
 	/// empty with `any`: to anything
 	pub ids: Vec<i64>,
@@ -98,7 +99,7 @@ pub struct RelationFilter {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Filter {
+pub(crate) struct Filter {
 	pub field: String,
 	pub op: &'static str,
 	/// text for text fields, a number for number and boolean fields
@@ -106,7 +107,7 @@ pub struct Filter {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Order {
+pub(crate) enum Order {
 	Column(&'static str),
 	Structure,
 	/// indexed field, true when it is stored in `num`
@@ -382,7 +383,7 @@ impl Query {
 
 	/// The `WITH` clause that goes before `SELECT`, for the tree, and its
 	/// params.
-	pub fn with(&self) -> (String, Vec<Value>) {
+	pub(crate) fn with(&self) -> (String, Vec<Value>) {
 		match &self.section {
 			_ if !self.tree() => (String::new(), vec![]),
 			Some(s) => (tree(true), vec![Value::Text(s.clone())]),
@@ -392,7 +393,7 @@ impl Query {
 
 	/// `FROM ... WHERE ...` and its params, without order and limit. `e`
 	/// are the entries, `s` their row of the site.
-	pub fn from_where(&self) -> (String, Vec<Value>) {
+	pub(crate) fn sql_from(&self) -> (String, Vec<Value>) {
 		let mut joins = String::new();
 		let mut conds = vec!["e.deleted_at IS NULL".to_string()];
 		let mut join_params = vec![Value::Text(self.site.clone())];
@@ -552,7 +553,7 @@ impl Query {
 		(sql, join_params)
 	}
 
-	pub fn order_by(&self) -> String {
+	pub(crate) fn order_by(&self) -> String {
 		let col = match &self.order {
 			Order::Column("title") => "s.title".into(),
 			// not published yet: when it was made
@@ -574,7 +575,7 @@ impl Query {
 
 /// Whether an entry type has a relation field of this handle, so
 /// `entries` can filter by it.
-pub fn relation_field(schema: &Schema, handle: &str) -> bool {
+pub(crate) fn relation_field(schema: &Schema, handle: &str) -> bool {
 	schema.components.iter().filter(|c| c.entry).any(|c| {
 		c.fields.iter().any(|f| {
 			f.handle == handle

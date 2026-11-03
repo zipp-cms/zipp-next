@@ -1,13 +1,23 @@
 use super::*;
 
 /// The extensions of videos browsers play, see [`Field::videos`].
-pub const VIDEOS: &[&str] = &["mp4", "webm", "mov"];
+pub(crate) const VIDEOS: &[&str] = &["mp4", "webm", "mov"];
 
 /// An option of a dropdown: the value that is stored and its label.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Choice {
 	pub value: String,
 	pub label: String,
+}
+
+impl Choice {
+	pub fn new(value: &str, label: &str) -> Self {
+		Self {
+			value: value.into(),
+			label: label.into(),
+		}
+	}
 }
 
 pub(super) fn choices<'a>(
@@ -15,10 +25,7 @@ pub(super) fn choices<'a>(
 ) -> Vec<Choice> {
 	options
 		.into_iter()
-		.map(|(value, label)| Choice {
-			value: value.into(),
-			label: label.into(),
-		})
+		.map(|(value, label)| Choice::new(value, label))
 		.collect()
 }
 
@@ -35,6 +42,7 @@ pub enum LinkKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Field {
 	pub handle: String,
 	pub label: String,
@@ -75,12 +83,14 @@ pub struct Field {
 #[serde(tag = "kind", rename_all = "camelCase")]
 #[non_exhaustive]
 pub enum FieldKind {
+	#[non_exhaustive]
 	Text {
 		max: Option<u32>,
 		multiline: bool,
 	},
 	/// A number between `min` and `max`, with at most `decimals` places
 	/// (none: any); the studio shows `unit` after the input.
+	#[non_exhaustive]
 	Number {
 		min: Option<f64>,
 		max: Option<f64>,
@@ -95,10 +105,12 @@ pub enum FieldKind {
 	/// A day, `2026-11-14`, with `time` and a time of it,
 	/// `2026-11-14T20:00`: as the editor sees it, no time zone; it sorts
 	/// as text.
+	#[non_exhaustive]
 	Date {
 		time: bool,
 	},
 	/// Ids of entries of the given types.
+	#[non_exhaustive]
 	Relation {
 		types: Vec<String>,
 		max: Option<u32>,
@@ -110,6 +122,7 @@ pub enum FieldKind {
 	/// Ids of assets, with `images` only images, with `extensions` only
 	/// files that end so; new ones go into `folder` (a path, `Photos/
 	/// Events`, made when missing), the picker opens there.
+	#[non_exhaustive]
 	Assets {
 		images: bool,
 		max: Option<u32>,
@@ -121,6 +134,7 @@ pub enum FieldKind {
 	/// One link to an entry, a url, an email, a phone number or an asset,
 	/// with an optional label. External urls and files open in a new tab
 	/// unless `new_tab` is off; a link can override it.
+	#[non_exhaustive]
 	Link {
 		to: Vec<LinkKind>,
 		/// whether a link can have its own label
@@ -136,6 +150,7 @@ pub enum FieldKind {
 	/// always there; headings of the given levels, lists, links, rows of
 	/// buttons, blocks of the given types and styles only if the field
 	/// says so.
+	#[non_exhaustive]
 	RichText {
 		headings: Vec<u8>,
 		lists: bool,
@@ -152,21 +167,25 @@ pub enum FieldKind {
 	/// The fields of another component (a block or an entry type), kept
 	/// together under one name, like zandi's `pageIntro`. The value is an
 	/// object, not a list like blocks.
+	#[non_exhaustive]
 	Group {
 		component: String,
 	},
 	/// Text in Markdown, GraphQL renders it to html too.
 	Markdown,
 	/// Some of the options, the value is the list of their values.
+	#[non_exhaustive]
 	Checkboxes {
 		options: Vec<Choice>,
 	},
 	/// Rows of the columns, each row an object of the cells' values.
+	#[non_exhaustive]
 	Table {
 		columns: Vec<Column>,
 	},
 	/// A menu: links with their own label and links under them, up to
 	/// `depth` levels.
+	#[non_exhaustive]
 	Navigation {
 		to: Vec<LinkKind>,
 		depth: u32,
@@ -178,15 +197,18 @@ pub enum FieldKind {
 	/// Texts of the frontend by key, `{ "nav.home": "Home" }`; the keys
 	/// and the texts of the primary site come from the code, see
 	/// [`Schema::translations`](crate::Schema::translations).
+	#[non_exhaustive]
 	Texts {
 		keys: Vec<(String, String)>,
 	},
 	/// One of some options, the value is the option's value. The studio
 	/// shows up to three as buttons, more as a select.
+	#[non_exhaustive]
 	Dropdown {
 		options: Vec<Choice>,
 	},
 	/// A list of blocks of the given types.
+	#[non_exhaustive]
 	Blocks {
 		types: Vec<String>,
 		min: Option<u32>,
@@ -195,11 +217,13 @@ pub enum FieldKind {
 	/// Text for editors in the field layout, markdown from the code: a
 	/// how-to or a warning. It holds no value, no migration when it
 	/// changes.
+	#[non_exhaustive]
 	Note {
 		text: String,
 	},
 	/// A field type of another crate, registered in the schema; the
 	/// options are its own.
+	#[non_exhaustive]
 	Custom {
 		#[serde(rename = "type")]
 		ty: String,
@@ -210,7 +234,7 @@ pub enum FieldKind {
 
 /// Where a field keeps components of its own, see [`FieldKind::holds`].
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Holds<'a> {
+pub(crate) enum Holds<'a> {
 	Nothing,
 	/// a list of blocks, `{ "id", "type", "fields" }`
 	Blocks,
@@ -224,7 +248,7 @@ impl FieldKind {
 	/// Where a value of this kind keeps components: the one place that
 	/// knows it, content walks, relations and migrations go by it. Every
 	/// kind is named, a new one has to say.
-	pub fn holds(&self) -> Holds<'_> {
+	pub(crate) fn holds(&self) -> Holds<'_> {
 		match self {
 			Self::Blocks { .. } => Holds::Blocks,
 			Self::RichText { .. } => Holds::RichText,
@@ -594,7 +618,7 @@ impl Field {
 		)
 	}
 
-	/// Only videos, the files of [`VIDEOS`].
+	/// Only videos browsers play: mp4, webm and mov.
 	pub fn videos(handle: &str) -> Self {
 		Self::assets(handle).extensions(VIDEOS.iter().copied())
 	}
