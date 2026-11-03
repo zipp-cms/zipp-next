@@ -23,10 +23,9 @@ zipp = { package = "zipp-cms", version = "0.1", features = ["testing"] }
 
 The features: `testing` (`zipp::testing::TestServer`, the test server
 for the tests of a site and its plugins) and `craft` (the command
-`import-craft`, for the crate of a Craft port). The plugins
-`zipp-button-group` (a field type) and `zipp-agent` (the coding agent in
-the AI chat, development only) are only in the repository, see
-extending.md.
+`import-craft`, for the crate of a Craft port). The plugin
+`zipp-agent` (the coding agent in the AI chat, development only) is
+only in the repository, see extending.md.
 
 `src/main.rs` builds the schema and runs zipp:
 

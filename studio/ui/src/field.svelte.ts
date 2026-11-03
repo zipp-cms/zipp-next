@@ -80,7 +80,7 @@ export type FieldModule = {
 
 /**
  * The `mount` of a field module from a Svelte component, its props
- * reactive: `export const mount = fieldModule(ButtonGroup);`. What the
+ * reactive: `export const mount = fieldModule(SeoField);`. What the
  * editor sends with `onchange` is its `value` at once: the studio sends
  * the value back only when it changes elsewhere (a restore, another
  * site), not what the editor sent itself.

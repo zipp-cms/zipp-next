@@ -159,11 +159,12 @@ impl Schema {
 					field.kind,
 					FieldKind::Boolean
 						| FieldKind::Dropdown { .. }
+						| FieldKind::ButtonGroup { .. }
 						| FieldKind::Custom { .. }
 				) {
 					return Err(format!(
-						"condition: {name} is no boolean, dropdown or field \
-						type, test whether it is filled"
+						"condition: {name} is no boolean, dropdown, button \
+						group or field type, test whether it is filled"
 					));
 				}
 				if values.is_empty() {

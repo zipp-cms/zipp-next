@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## Unreleased
+
+- The field kind button group, `Field::button_group`: one of some
+  options like a dropdown, as buttons in a color per option like
+  Craft's; GraphQL gives `ButtonGroupOption { value label color }`. It
+  was the example crate `zipp-button-group`, which is gone.
+
+## 0.1.0 (2026-11-03)
 
 The first release: zipp as a library on crates.io (`zipp-cms`, the crate
 `zipp`), the plugins `zipp-seo` and `zipp-forms`, and the studio's

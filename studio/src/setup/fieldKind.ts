@@ -99,6 +99,10 @@ export function describeField(f: Field): string {
 			return t('fields.kindDropdown', {
 				options: list(f.options.map(o => o.value)),
 			});
+		case 'buttonGroup':
+			return t('fields.kindButtonGroup', {
+				options: list(f.options.map(o => o.value)),
+			});
 		case 'texts':
 			return t('fields.kindTexts', { n: f.keys.length });
 		case 'blocks': {

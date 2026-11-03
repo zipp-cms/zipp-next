@@ -595,7 +595,8 @@ impl Importer<'_> {
 			FieldKind::Text { .. }
 			| FieldKind::Email
 			| FieldKind::Markdown
-			| FieldKind::Dropdown { .. } => match v {
+			| FieldKind::Dropdown { .. }
+			| FieldKind::ButtonGroup { .. } => match v {
 				Value::String(s) if !s.is_empty() => Some(v.clone()),
 				Value::Number(n) => Some(Value::from(n.to_string())),
 				_ => None,

@@ -32,8 +32,49 @@ framework and compiled into the crate. The props are `FieldProps` of
 error, host`, again with `update` when they change; a Svelte editor is
 `export const mount = fieldModule(MyField)`. The site registers it with `Schema::field_type(...)`, the
 studio loads the module from `/_fields/<type>.js` when a field needs it.
-`crates/zipp-button-group` is such a crate: Craft's button group, options
-in colors.
+The SEO field of `crates/zipp-seo` is such a type: its options are its
+defaults, GraphQL gives a type of its plugin, its editor is in
+`crates/zipp-seo/studio`. A small one is a struct:
+
+```rust
+use serde_json::{Value, json};
+use zipp::{FieldType, GraphqlType, Scalar, StudioModule};
+
+/// Stars from 1 to 5, GraphQL gives `{ stars of }`.
+pub struct Rating;
+
+impl FieldType for Rating {
+	fn name(&self) -> &'static str {
+		"rating"
+	}
+
+	fn validate(&self, _options: &Value, value: &Value) -> Result<Value, String> {
+		match value.as_u64() {
+			Some(1..=5) => Ok(value.clone()),
+			_ => Err("1 to 5 stars".into()),
+		}
+	}
+
+	fn graphql(&self) -> GraphqlType {
+		GraphqlType::Object {
+			name: "Rating",
+			fields: vec![("stars", Scalar::Int), ("of", Scalar::Int)],
+		}
+	}
+
+	fn output(&self, _options: &Value, value: &Value) -> Value {
+		json!({ "stars": value, "of": 5 })
+	}
+
+	fn studio(&self) -> StudioModule {
+		StudioModule::new(include_str!("../assets/rating.js"))
+	}
+}
+```
+
+A field of it is `Field::custom("rating", "rating", Value::Null)`, the
+site registers `.field_type(Rating)`; a crate usually has a builder
+that calls `Field::custom` with its options.
 
 ## The studio's components
 

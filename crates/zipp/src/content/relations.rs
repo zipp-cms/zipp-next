@@ -154,6 +154,7 @@ pub(super) fn collect_relations(
 			| FieldKind::Checkboxes { .. }
 			| FieldKind::Texts { .. }
 			| FieldKind::Dropdown { .. }
+			| FieldKind::ButtonGroup { .. }
 			| FieldKind::Blocks { .. }
 			| FieldKind::Note { .. }
 			| FieldKind::Group { .. } => {}

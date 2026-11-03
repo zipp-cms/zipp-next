@@ -7,7 +7,6 @@ publish = false
 [dependencies]
 serde_json = "1.0"
 zipp = { package = "zipp-cms", path = "../../crates/zipp" }
-zipp-button-group = { path = "../../crates/zipp-button-group" }
 zipp-forms = { path = "../../crates/zipp-forms" }
 zipp-seo = { path = "../../crates/zipp-seo" }
 

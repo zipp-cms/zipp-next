@@ -7,8 +7,7 @@ with Trusted Publishing: crates.io and npm trust that workflow of
 What is published:
 
 - crates.io: `zipp-cms` (the crate `zipp`), `zipp-seo`, `zipp-forms`;
-  `zipp-agent`, `zipp-button-group` and `example-cms` have
-  `publish = false`
+  `zipp-agent` and `example-cms` have `publish = false`
 - npm: `zipp-ui` (`studio/ui`), with its own version
 
 ## The crates

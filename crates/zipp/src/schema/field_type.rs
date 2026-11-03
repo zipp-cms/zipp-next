@@ -82,12 +82,13 @@ impl StudioModule {
 	}
 }
 
-/// A field type of another crate, like `zipp-button-group`: its options,
-/// its values, how GraphQL shows them and its editor in the studio. The
-/// site registers it with [`Schema::field_type`](crate::Schema::field_type),
-/// fields of it are [`Field::custom`](crate::Field::custom).
+/// A field type of another crate, like the SEO field of `zipp-seo`: its
+/// options, its values, how GraphQL shows them and its editor in the
+/// studio. The site registers it with
+/// [`Schema::field_type`](crate::Schema::field_type), fields of it are
+/// [`Field::custom`](crate::Field::custom).
 pub trait FieldType: Send + Sync + 'static {
-	/// The name in the schema, like `buttonGroup`.
+	/// The name in the schema, like `seo`.
 	fn name(&self) -> &'static str;
 
 	/// Checks the options of a field when the schema is checked.

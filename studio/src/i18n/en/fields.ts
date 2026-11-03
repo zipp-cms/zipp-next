@@ -135,6 +135,7 @@ export default {
 		other: 'Navigation to {to}, {n} levels',
 	},
 	'fields.kindDropdown': 'Dropdown: {options}',
+	'fields.kindButtonGroup': 'Button group: {options}',
 	'fields.kindTexts': { one: 'Texts: {n} key', other: 'Texts: {n} keys' },
 	'fields.kindBlocks': 'Blocks: {types}',
 	'fields.kindCustom': '{type} (plugin)',

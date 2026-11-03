@@ -104,6 +104,68 @@ async fn plugins_with_and_without_a_module() {
 	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
+/// A field type of another crate with its editor.
+struct Stars;
+
+impl crate::FieldType for Stars {
+	fn name(&self) -> &'static str {
+		"stars"
+	}
+
+	fn validate(
+		&self,
+		_options: &serde_json::Value,
+		value: &serde_json::Value,
+	) -> Result<serde_json::Value, String> {
+		Ok(value.clone())
+	}
+
+	fn graphql(&self) -> crate::GraphqlType {
+		crate::GraphqlType::Scalar(crate::Scalar::Int)
+	}
+
+	fn studio(&self) -> crate::StudioModule {
+		crate::StudioModule::new("export const mount = 1;")
+	}
+}
+
+#[tokio::test]
+async fn field_types_bring_their_editor() {
+	let schema = site_with_roles().field_type(Stars).block(
+		"review",
+		"Review",
+		[
+			Field::custom("stars", "stars", serde_json::Value::Null),
+			Field::button_group("tone", [("warm", "Warm", "#c05621")]),
+		],
+	);
+	let ts = TestServer::new(schema);
+	let anon = ts.anonymous();
+	let resp = anon.get("/_fields/stars.js").await;
+	assert_eq!(resp.status(), StatusCode::OK);
+	let js = crate::testing::Client::bytes(resp).await;
+	assert_eq!(js, b"export const mount = 1;");
+
+	// a button group is zipp's own, it has no module
+	let resp = anon.get("/_fields/buttonGroup.js").await;
+	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+	let schema = ts.admin().call_json(&SchemaReq {}).await.unwrap();
+	let review = schema["components"]
+		.as_array()
+		.unwrap()
+		.iter()
+		.find(|c| c["handle"] == "review")
+		.unwrap();
+	assert_eq!(
+		review["fields"][1],
+		serde_json::json!({
+			"handle": "tone", "label": "Tone", "required": false,
+			"indexed": false, "translatable": false, "kind": "buttonGroup",
+			"options": [{ "value": "warm", "label": "Warm", "color": "#c05621" }],
+		})
+	);
+}
+
 #[tokio::test]
 async fn the_schema_brings_its_lucide_icons() {
 	let schema = site_with_roles()

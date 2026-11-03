@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/zipp", "crates/zipp-button-group", "crates/zipp-seo", "crates/zipp-agent", "crates/zipp-forms", "example/cms"]
+members = ["crates/zipp", "crates/zipp-seo", "crates/zipp-agent", "crates/zipp-forms", "example/cms"]
 
 # the crates are released together, in one version
 [workspace.package]

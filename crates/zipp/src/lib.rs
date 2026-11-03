@@ -91,9 +91,10 @@ use server::serve;
 
 pub use crate::plugin::{EntryField, GraphqlExt, Plugin, PluginStudio};
 pub use crate::schema::{
-	Access, Choice, Column, ColumnKind, Condition, Field, FieldKind,
-	FieldRelation, FieldType, Format, GraphqlType, Icon, LinkKind, Role,
-	Scalar, Schema, Section, Site, StudioModule, Style, Target, Transform,
+	Access, Choice, ColorChoice, Column, ColumnKind, Condition, Field,
+	FieldKind, FieldRelation, FieldType, Format, GraphqlType, Icon, LinkKind,
+	Role, Scalar, Schema, Section, Site, StudioModule, Style, Target,
+	Transform,
 };
 pub use async_graphql;
 pub use axum;

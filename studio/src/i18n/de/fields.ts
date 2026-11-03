@@ -141,6 +141,7 @@ export default {
 		other: 'Navigation zu {to}, {n} Ebenen',
 	},
 	'fields.kindDropdown': 'Auswahlliste: {options}',
+	'fields.kindButtonGroup': 'Buttongruppe: {options}',
 	'fields.kindTexts': {
 		one: 'Texte: {n} Schlüssel',
 		other: 'Texte: {n} Schlüssel',

@@ -128,6 +128,11 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 				.map(|o| format!("{:?}", o.value))
 				.collect::<Vec<_>>()
 				.join(" | "),
+			FieldKind::ButtonGroup { options } => options
+				.iter()
+				.map(|o| format!("{:?}", o.value))
+				.collect::<Vec<_>>()
+				.join(" | "),
 			FieldKind::Group { component } => {
 				format!("{}Fields", pascal(component))
 			}

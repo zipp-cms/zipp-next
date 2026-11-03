@@ -70,7 +70,7 @@ entry or block starts with: the studio fills it in, an entry created
 through the api without the field gets it, and a single starts with it.
 The schema check refuses a default the field wouldn't take; only fields
 of plain values (text, email, number, boolean, date, markdown, dropdown,
-checkboxes, a plugin's) have one. Existing content keeps what it has,
+button group, checkboxes, a plugin's) have one. Existing content keeps what it has,
 but a migration that adds a field with a default writes it into the
 entries, drafts and revisions of before, so a new boolean that is on is
 on for old content too. Changing a default later needs no migration.
@@ -92,8 +92,8 @@ Its handle places it in tabs like a field's.
 field of the same entry type or block has a value, like Craft's field
 layout conditions: `Condition::on`/`off` for a boolean (one never set
 is off), `Condition::is("genre", "concert")` or `one_of("genre",
-["concert", "reading"])` for a dropdown or a plugin's field like the
-button group, `Condition::filled("note")`/`empty` for any field but a
+["concert", "reading"])` for a dropdown, a button group or a plugin's
+field, `Condition::filled("note")`/`empty` for any field but a
 group. The studio hides and shows it live while editing, also in blocks
 and groups, and a field hanging on a hidden one hides too. A hidden
 field keeps its value (GraphQL returns it as stored, like Craft) and
@@ -132,7 +132,7 @@ blocks' heads; they are only looks like the tabs.
 `.block_title("feedback", "author")` names a block by one of its fields,
 like Craft shows a nested entry: its head and the outline show
 `Feedback · Anna Muster`, live while typing. Text, email, number, date,
-dropdown (its label), rich text, markdown, link (its label or target) and
+dropdown and button group (its label), rich text, markdown, link (its label or target) and
 relation (the entry's title) fields can give it, the check refuses others.
 Without one, or while it is empty, a block shows its first text or link.
 
@@ -195,6 +195,14 @@ and comes as `markdown` and `html` from GraphQL.
 stores the value of one option, GraphQL gives that value like Craft.
 The studio shows up to three options as buttons, more as a select.
 Dropdowns can be indexed.
+
+`Field::button_group("genre", [("concert", "Konzert", "#2b6cb0"),
+...])` is a dropdown with a color per option (`#rrggbb`), like Craft's
+button group: the studio shows every option as a button in its color,
+the content stores the value, GraphQL gives the option as
+`ButtonGroupOption { value label color }` (none for an option removed
+since), so the website shows the label in its color. It takes a
+default, conditions and `.indexed()` like a dropdown.
 
 ## Checkboxes, tables and navigations
 

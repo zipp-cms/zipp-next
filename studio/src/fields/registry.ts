@@ -3,6 +3,7 @@ import type { Field, FieldOf, Schema, Values } from '../core/schema';
 import type { Refs } from '../entries/api';
 import AssetField from './AssetField.svelte';
 import BlocksField from './BlocksField.svelte';
+import ButtonGroupField from './ButtonGroupField.svelte';
 import CheckboxesField from './CheckboxesField.svelte';
 import CustomField from './CustomField.svelte';
 import DateField from './DateField.svelte';
@@ -49,6 +50,7 @@ const FIELDS: { [K in Field['kind']]: Component<FieldProps<FieldOf<K>>> } = {
 	richText: RichTextField,
 	texts: TextsField,
 	dropdown: DropdownField,
+	buttonGroup: ButtonGroupField,
 	checkboxes: CheckboxesField,
 	table: TableField,
 	navigation: NavigationField,

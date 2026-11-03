@@ -184,6 +184,7 @@ fn type_of(
 		FieldKind::Navigation { .. } => TypeRef::named_nn_list_nn("NavItem"),
 		// the value, like Craft's dropdown
 		FieldKind::Dropdown { .. } => TypeRef::named(TypeRef::STRING),
+		FieldKind::ButtonGroup { .. } => TypeRef::named("ButtonGroupOption"),
 		FieldKind::Group { component } => {
 			TypeRef::named(format!("{component}_Fields"))
 		}
@@ -284,6 +285,16 @@ async fn resolve_value<'a>(
 				items.collect::<async_graphql::Result<Vec<_>>>()?,
 			)))
 		}
+		// the option, one that was removed since is none
+		FieldKind::ButtonGroup { options } => {
+			let option = options.into_iter().find(|o| value == o.value);
+			match option {
+				Some(o) => Ok(Some(FieldValue::value(GqlValue::from_json(
+					serde_json::to_value(o)?,
+				)?))),
+				None => Ok(None),
+			}
+		}
 		FieldKind::Texts { keys } => {
 			let texts = crate::content::texts_of(&keys, &value);
 			let json = serde_json::to_string(&texts)?;
@@ -321,6 +332,20 @@ pub(super) fn block_value(
 pub(super) fn entry_value(e: Entry) -> FieldValue<'static> {
 	let ty = format!("{}_Entry", e.ty);
 	FieldValue::owned_any(e).with_type(ty)
+}
+
+/// The option of a button group, so a website can show its label in its
+/// color.
+pub(super) fn button_group_option() -> Object {
+	let mut obj = Object::new("ButtonGroupOption");
+	for name in ["value", "label", "color"] {
+		obj = obj.field(GqlField::new(
+			name,
+			TypeRef::named_nn(TypeRef::STRING),
+			move |ctx| value_field(ctx, name),
+		));
+	}
+	obj
 }
 
 /// The object types of the content model: of field types of other crates,

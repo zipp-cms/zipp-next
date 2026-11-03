@@ -463,6 +463,25 @@ impl Schema {
 					None => Ok(()),
 				}
 			}
+			FieldKind::ButtonGroup { options } => {
+				if options.is_empty() {
+					return Err("it needs options".into());
+				}
+				if options.iter().any(|o| o.value.is_empty()) {
+					return Err("an option needs a value".into());
+				}
+				if let Some(o) = first_twice(options, |a, b| a.value == b.value)
+				{
+					return Err(format!("option {} exists twice", o.value));
+				}
+				// the studio and websites put it into CSS
+				match options.iter().find(|o| !is_color(&o.color)) {
+					Some(o) => {
+						Err(format!("option {}: the color is #rrggbb", o.value))
+					}
+					None => Ok(()),
+				}
+			}
 			FieldKind::Assets {
 				folder, extensions, ..
 			} => {
@@ -643,14 +662,21 @@ fn check_title_field(comp: &Component, handle: &str) -> Result<(), String> {
 		| FieldKind::Number { .. }
 		| FieldKind::Date { .. }
 		| FieldKind::Dropdown { .. }
+		| FieldKind::ButtonGroup { .. }
 		| FieldKind::RichText { .. }
 		| FieldKind::Markdown
 		| FieldKind::Link { .. }
 		| FieldKind::Relation { .. } => Ok(()),
-		_ => Err("only text, email, number, date, dropdown, rich text, \
-			markdown, link and relation fields give a title"
+		_ => Err("only text, email, number, date, dropdown, button group, \
+			rich text, markdown, link and relation fields give a title"
 			.into()),
 	}
+}
+
+fn is_color(c: &str) -> bool {
+	c.len() == 7
+		&& c.starts_with('#')
+		&& c[1..].chars().all(|c| c.is_ascii_hexdigit())
 }
 
 fn asset_holds_no_content() -> String {

@@ -418,8 +418,9 @@ fn checks_conditions() {
 		"x.u: condition: hasLink can't be \"yes\""
 	);
 	assert!(
-		err(Field::text("u").when(Condition::is("note", "x")))
-			.contains("note is no boolean, dropdown or field type")
+		err(Field::text("u").when(Condition::is("note", "x"))).contains(
+			"note is no boolean, dropdown, button group or field type"
+		)
 	);
 
 	// a and b hide each other

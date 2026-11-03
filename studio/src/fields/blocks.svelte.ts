@@ -62,7 +62,7 @@ function blockTitle(
 	const v = f && fields[f.handle];
 	if (!f || v === undefined || v === null || v === '') return '';
 	let t: string;
-	if (f.kind === 'dropdown')
+	if (f.kind === 'dropdown' || f.kind === 'buttonGroup')
 		t = f.options.find(o => o.value === v)?.label ?? String(v);
 	else if (f.kind === 'number') t = f.unit ? `${v} ${f.unit}` : String(v);
 	else if (f.kind === 'date') t = String(v).replace('T', ' ');

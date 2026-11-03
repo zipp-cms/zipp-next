@@ -447,6 +447,52 @@ fn a_group_of_another_component_starts_over() {
 }
 
 #[test]
+fn a_dropdown_that_becomes_a_button_group_starts_over() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let with = |genre: Field| {
+		let mut s = site();
+		s.get_mut("event").unwrap().fields.push(genre);
+		s
+	};
+	let s = with(Field::dropdown("genre", [("talk", "Talk")]));
+	let first = migration("0001", &Schema::new(), &s, &[]);
+	apply(&conn, std::slice::from_ref(&first)).unwrap();
+	let fields = json!({ "genre": "talk" });
+	let e = save(&conn, &s, None, input("events", "event", "E", fields), None)
+		.unwrap();
+
+	// another kind brings its default, other options and colors don't
+	let buttons = |color: &str| {
+		Field::button_group(
+			"genre",
+			[("talk", "Talk", color), ("concert", "Concert", "#2b6cb0")],
+		)
+		.default("concert")
+	};
+	let s2 = with(buttons("#2f855a"));
+	let second = migration("0002", &s, &s2, &[]);
+	assert!(matches!(&second.ops[..], [Op::ChangeField { .. }]));
+	apply(&conn, &[first.clone(), second.clone()]).unwrap();
+	assert_eq!(
+		get_entry(&conn, e.id, "de").unwrap().fields["genre"],
+		"concert"
+	);
+
+	let mut talk = input("events", "event", "E", json!({ "genre": "talk" }));
+	talk.slug = "e".into();
+	save(&conn, &s2, Some(e.id), talk, None).unwrap();
+	let s3 = with(buttons("#c05621"));
+	let third = migration("0003", &s2, &s3, &[]);
+	assert!(matches!(&third.ops[..], [Op::ChangeField { .. }]));
+	apply(&conn, &[first, second, third]).unwrap();
+	assert_eq!(
+		get_entry(&conn, e.id, "de").unwrap().fields["genre"],
+		"talk"
+	);
+}
+
+#[test]
 fn unparsable_content_fails_the_migration() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();

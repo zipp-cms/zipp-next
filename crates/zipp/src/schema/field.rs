@@ -20,6 +20,26 @@ impl Choice {
 	}
 }
 
+/// An option of a button group: a choice with the color of its button.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct ColorChoice {
+	pub value: String,
+	pub label: String,
+	/// `#rrggbb`
+	pub color: String,
+}
+
+impl ColorChoice {
+	pub fn new(value: &str, label: &str, color: &str) -> Self {
+		Self {
+			value: value.into(),
+			label: label.into(),
+			color: color.into(),
+		}
+	}
+}
+
 pub(super) fn choices<'a>(
 	options: impl IntoIterator<Item = (&'a str, &'a str)>,
 ) -> Vec<Choice> {
@@ -207,6 +227,13 @@ pub enum FieldKind {
 	Dropdown {
 		options: Vec<Choice>,
 	},
+	/// One of some options like a dropdown, as buttons in the color of
+	/// each, like Craft's button group. The value is the option's value,
+	/// GraphQL gives value, label and color.
+	#[non_exhaustive]
+	ButtonGroup {
+		options: Vec<ColorChoice>,
+	},
 	/// A list of blocks of the given types.
 	#[non_exhaustive]
 	Blocks {
@@ -267,6 +294,7 @@ impl FieldKind {
 			| Self::Navigation { .. }
 			| Self::Texts { .. }
 			| Self::Dropdown { .. }
+			| Self::ButtonGroup { .. }
 			| Self::Note { .. }
 			| Self::Custom { .. } => Holds::Nothing,
 		}
@@ -523,6 +551,19 @@ impl Field {
 				options: choices(options),
 			},
 		)
+	}
+
+	/// One of the options as buttons in colors, given as value, label
+	/// and color: `("concert", "Konzert", "#2b6cb0")`.
+	pub fn button_group<'a>(
+		handle: &str,
+		options: impl IntoIterator<Item = (&'a str, &'a str, &'a str)>,
+	) -> Self {
+		let options = options
+			.into_iter()
+			.map(|(value, label, color)| ColorChoice::new(value, label, color))
+			.collect();
+		Self::new(handle, FieldKind::ButtonGroup { options })
 	}
 
 	/// Some of the options, given as value and label.

@@ -62,8 +62,6 @@ GraphQL, SEO, extending and running a site.
   website), on crates.io under their names
 - `crates/zipp-agent`: the coding agent in the AI chat, a plugin for
   development, not published
-- `crates/zipp-button-group`: a field type of another crate, as an example
-  of a plugin
 - `example/cms`: the cms crate of an example site, with its migrations;
   `example/readme.md` is its first page in the studio and says where to
   try which feature

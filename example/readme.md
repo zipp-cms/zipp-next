@@ -41,7 +41,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Conditions | Events → Genre, Tickets → Sold out | *Doors open* only for a concert, *Warteliste* only while the event is sold out; the fields come and go as you click |
 | Default values | Images block → Width, Events → Sprache | a new block starts *Wide*, a new event *Deutsch* |
 | Email | Settings → Footer → Contact email | the server takes only an address, the website links it with `mailto:` |
-| A field type of another crate | Events → Genre | `crates/zipp-button-group`: Craft's button group with a color per option, its own editor and GraphQL type |
+| Button group | Events → Genre | `Field::button_group`: Craft's button group with a color per option; the website shows the genre's label in its color |
 | Boolean, number, indexed fields | Events | *sold out*, price (CHF, two decimals) in the tickets; the website sorts by date and filters by city |
 | Date, date and time | Events → Date, Doors open | the date picker; a day or a day and time, the website sorts events by the date |
 | Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them; the picker is a flyout with the sections on the left and the pages as their tree, search "team" for a match with its path; an article takes up to 3 categories (`.max(3)`); the header's navigation links only to pages (`.sections(["pages"])`), its picker has no News or Events |

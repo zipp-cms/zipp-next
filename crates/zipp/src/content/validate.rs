@@ -106,6 +106,7 @@ pub(crate) fn check_default(
 			| FieldKind::Date { .. }
 			| FieldKind::Markdown
 			| FieldKind::Dropdown { .. }
+			| FieldKind::ButtonGroup { .. }
 			| FieldKind::Checkboxes { .. }
 			| FieldKind::Custom { .. }
 	);
@@ -214,6 +215,11 @@ pub(super) fn validate_value(
 			return filled(Value::Object(out), empty, required, path, errors);
 		}
 		(FieldKind::Dropdown { options }, Value::String(s)) => {
+			if !options.iter().any(|o| &o.value == s) {
+				error(errors, path, "not one of the options");
+			}
+		}
+		(FieldKind::ButtonGroup { options }, Value::String(s)) => {
 			if !options.iter().any(|o| &o.value == s) {
 				error(errors, path, "not one of the options");
 			}

@@ -40,12 +40,12 @@ mod tests;
 
 pub use column::{Column, ColumnKind, Style};
 pub use condition::Condition;
-pub use field::Choice;
 pub use field::Field;
 pub use field::FieldKind;
 pub(crate) use field::Holds;
 pub use field::LinkKind;
 pub use field::humanize;
+pub use field::{Choice, ColorChoice};
 
 /// The single of the texts of the frontend, see [`Schema::translations`].
 pub(crate) const TRANSLATIONS: &str = "translations";
@@ -420,6 +420,7 @@ impl Schema {
 			FieldKind::Text { .. }
 			| FieldKind::Email
 			| FieldKind::Dropdown { .. }
+			| FieldKind::ButtonGroup { .. }
 			| FieldKind::Date { .. } => Some(IndexKind::Text),
 			FieldKind::Number { .. } | FieldKind::Boolean => {
 				Some(IndexKind::Number)

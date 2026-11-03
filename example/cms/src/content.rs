@@ -5,7 +5,6 @@ use zipp::{
 	Access, Column, Condition, Field, Format, LinkKind, Role, Schema, Section,
 	Style, Transform,
 };
-use zipp_button_group::{ButtonGroup, button_group};
 use zipp_forms::{Form, FormField, Forms};
 use zipp_seo::{Seo, SeoDefaults, seo_field};
 
@@ -49,8 +48,6 @@ pub fn schema() -> Schema {
 	};
 
 	Schema::new()
-		// a field type of another crate, see crates/zipp-button-group
-		.field_type(ButtonGroup)
 		.site("de", "Deutsch", "de-CH")
 		.site("en", "English", "en")
 		// the pages like the crelte tutorial: the home page is the page of
@@ -226,7 +223,8 @@ pub fn schema() -> Schema {
 					.width(50)
 					.when(Condition::is("genre", "concert")),
 				Field::text("city").required().indexed().width(25),
-				button_group(
+				// buttons in colors, GraphQL gives the label and color
+				Field::button_group(
 					"genre",
 					[
 						("concert", "Konzert", "#2b6cb0"),

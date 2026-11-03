@@ -301,6 +301,7 @@ pub(crate) fn build(
 					|ctx| value_field(ctx, "html"),
 				)),
 		)
+		.register(button_group_option())
 		.register(
 			Scalar::new("QueryArgument")
 				.description("An id or a handle, like Craft's QueryArgument"),

@@ -260,6 +260,101 @@ async fn groups_and_markdown() {
 	);
 }
 
+/// A field type of another crate with an object type in GraphQL: a
+/// number of stars out of five.
+struct Rating;
+
+impl FieldType for Rating {
+	fn name(&self) -> &'static str {
+		"rating"
+	}
+
+	fn validate(
+		&self,
+		_options: &Value,
+		value: &Value,
+	) -> std::result::Result<Value, String> {
+		match value.as_u64() {
+			Some(1..=5) => Ok(value.clone()),
+			_ => Err("1 to 5 stars".into()),
+		}
+	}
+
+	fn graphql(&self) -> GraphqlType {
+		GraphqlType::Object {
+			name: "Rating",
+			fields: vec![("stars", FieldScalar::Int), ("of", FieldScalar::Int)],
+		}
+	}
+
+	fn output(&self, _options: &Value, value: &Value) -> Value {
+		json!({ "stars": value, "of": 5 })
+	}
+
+	fn studio(&self) -> crate::StudioModule {
+		crate::StudioModule::new("")
+	}
+}
+
+#[tokio::test]
+async fn button_groups_and_field_types() {
+	use crate::schema::{Field, Section};
+	let show = |options: &[(&str, &str, &str)]| {
+		site()
+			.field_type(Rating)
+			.section(Section::channel("shows", ["show"]).uri("{slug}"))
+			.entry(
+				"show",
+				"Show",
+				[
+					Field::button_group("genre", options.iter().copied()),
+					Field::custom("rating", "rating", Value::Null),
+				],
+			)
+	};
+	let s = Arc::new(show(&[
+		("concert", "Konzert", "#2b6cb0"),
+		("talk", "Talk", "#2f855a"),
+	]));
+	s.check().unwrap();
+	let db = Db::memory().unwrap();
+	{
+		let conn = db.conn();
+		for (title, genre) in [("a", "concert"), ("b", "talk")] {
+			let fields = json!({ "genre": genre, "rating": 4 });
+			save(&conn, &s, None, input("shows", "show", title, fields), None)
+				.unwrap();
+		}
+		let bad = json!({ "rating": 6 });
+		let Err(crate::error::Error::Invalid(errs)) =
+			save(&conn, &s, None, input("shows", "show", "c", bad), None)
+		else {
+			panic!("should fail");
+		};
+		assert_eq!(errs[0].message, "1 to 5 stars");
+	}
+
+	// talk was removed since, it is none
+	let s = Arc::new(show(&[("concert", "Konzert", "#2b6cb0")]));
+	let gql = build(s, db, String::new(), SiteUrls::new()).unwrap();
+	let data = run(
+		&gql,
+		r#"{ entries(section: "shows", order: "title") { ... on show_Entry {
+			genre { value label color } rating { stars of }
+		} } }"#,
+		true,
+	)
+	.await;
+	assert_eq!(
+		data["entries"],
+		json!([
+			{ "genre": { "value": "concert", "label": "Konzert",
+				"color": "#2b6cb0" }, "rating": { "stars": 4, "of": 5 } },
+			{ "genre": null, "rating": { "stars": 4, "of": 5 } },
+		])
+	);
+}
+
 #[tokio::test]
 async fn checkboxes_tables_and_navigations() {
 	use crate::schema::{Column, Field, LinkKind, Section};

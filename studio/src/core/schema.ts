@@ -77,6 +77,11 @@ type FieldKind =
 	/** texts of the frontend by key, [key, text of the code] */
 	| { kind: 'texts'; keys: [string, string][] }
 	| { kind: 'dropdown'; options: { value: string; label: string }[] }
+	/** a dropdown as buttons in colors, `#rrggbb` */
+	| {
+			kind: 'buttonGroup';
+			options: { value: string; label: string; color: string }[];
+	  }
 	| { kind: 'checkboxes'; options: { value: string; label: string }[] }
 	| { kind: 'table'; columns: Column[] }
 	| {
@@ -278,6 +283,7 @@ type ValueOf = {
 	/** the own texts by key */
 	texts: Record<string, string>;
 	dropdown: string;
+	buttonGroup: string;
 	checkboxes: string[];
 	table: Values[];
 	navigation: NavItem[];

@@ -2,7 +2,7 @@ use serde_json::json;
 
 use super::*;
 use crate::fixtures::site;
-use crate::schema::Section;
+use crate::schema::{Condition, Section};
 
 fn page_fields() -> Value {
 	json!({
@@ -148,6 +148,53 @@ fn dropdowns_take_one_of_their_options() {
 			[Field::dropdown("size", [("s", "Small"), ("s", "Large")])],
 		);
 	assert!(twice.check().unwrap_err().contains("exists twice"));
+}
+
+#[test]
+fn button_groups_take_one_of_their_options() {
+	let talk = |f: Field| {
+		site()
+			.section(Section::channel("talks", ["talk"]).uri("{slug}"))
+			.entry("talk", "Talk", [f, Field::text("doors")])
+	};
+	let genre = |options: &[(&str, &str, &str)]| {
+		Field::button_group("genre", options.iter().copied())
+	};
+	let options = [
+		("concert", "Konzert", "#2b6cb0"),
+		("talk", "Talk", "#2F855A"),
+	];
+	let s = talk(genre(&options).indexed().default("talk"));
+	s.check().unwrap();
+	let comp = s.get("talk").unwrap();
+	let ok = validate(&s, comp, &json!({ "genre": "concert" })).unwrap();
+	assert_eq!(ok, json!({ "genre": "concert" }));
+	let err = validate(&s, comp, &json!({ "genre": "film" })).unwrap_err();
+	assert_eq!(err[0].message, "not one of the options");
+	let vals = index_values(comp, &ok);
+	assert_eq!(vals[0].text.as_deref(), Some("concert"));
+
+	// a condition takes its options
+	let mut when = talk(genre(&options));
+	let doors = Field::text("doors").when(Condition::is("genre", "film"));
+	when.get_mut("talk").unwrap().fields[1] = doors;
+	assert_eq!(
+		when.check().unwrap_err(),
+		"talk.doors: condition: genre can't be \"film\""
+	);
+
+	let err = |options: &[(&str, &str, &str)]| {
+		talk(genre(options)).check().unwrap_err()
+	};
+	assert_eq!(err(&[]), "talk.genre: it needs options");
+	assert_eq!(
+		err(&[("a", "A", "red")]),
+		"talk.genre: option a: the color is #rrggbb"
+	);
+	assert_eq!(
+		err(&[("a", "A", "#000000"), ("a", "B", "#ffffff")]),
+		"talk.genre: option a exists twice"
+	);
 }
 
 #[test]

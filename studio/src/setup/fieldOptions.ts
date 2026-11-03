@@ -201,6 +201,14 @@ export function fieldOptions(
 				f.options.map(o => `${o.label} (${o.value})`).join(', '),
 			);
 			break;
+		case 'buttonGroup':
+			add(
+				t('fields.optOptions'),
+				f.options
+					.map(o => `${o.label} (${o.value}, ${o.color})`)
+					.join(', '),
+			);
+			break;
 		case 'table':
 			add(
 				t('fields.optColumns'),
