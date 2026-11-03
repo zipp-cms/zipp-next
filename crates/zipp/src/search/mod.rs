@@ -279,8 +279,8 @@ pub fn hits(conn: &Connection, q: &Query) -> Result<Vec<Hit>> {
 
 	let sql = format!(
 		"{with}SELECT {COLUMNS},
-		snippet(entry_search, 2, char(1), char(2), '…', 24), {RANK}
-		{from} {} LIMIT {} OFFSET {}",
+		snippet(entry_search, 2, char(1), char(2), '…', 24) AS excerpt,
+		{RANK} AS score {from} {} LIMIT {} OFFSET {}",
 		q.order_by(),
 		q.limit,
 		q.offset
@@ -288,8 +288,8 @@ pub fn hits(conn: &Connection, q: &Query) -> Result<Vec<Hit>> {
 	let mut stmt = conn.prepare(&sql)?;
 	let hits = stmt
 		.query_map(params_from_iter(&params), |r| {
-			let excerpt: String = r.get(14)?;
-			let rank: f64 = r.get(15)?;
+			let excerpt: String = r.get("excerpt")?;
+			let rank: f64 = r.get("score")?;
 			Ok(Hit {
 				entry: from_row(r)?,
 				excerpt: (!excerpt.trim().is_empty()).then_some(excerpt),

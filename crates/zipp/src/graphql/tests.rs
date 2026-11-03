@@ -647,3 +647,24 @@ async fn the_name_lists_match_the_types() {
 	let json = serde_json::to_value(&item).unwrap();
 	assert_eq!(names(&v["navItem"]["fields"]), keys(json));
 }
+
+#[tokio::test]
+async fn errors_show_no_sql() {
+	let db = Db::memory().unwrap();
+	let gql =
+		build(Arc::new(site()), db.clone(), String::new(), SiteUrls::new())
+			.unwrap();
+	db.conn().execute("DROP TABLE entry_sites", []).unwrap();
+
+	let req =
+		async_graphql::Request::new("{ entries { title } }").data(viewer(true));
+	let resp = gql.execute(req).await;
+	assert_eq!(resp.errors.len(), 1);
+	assert_eq!(resp.errors[0].message, "Internal server error: see the log");
+
+	// mistakes of the query still say what is wrong
+	let req = async_graphql::Request::new("{ entries(site: \"xx\") { id } }")
+		.data(viewer(true));
+	let resp = gql.execute(req).await;
+	assert!(resp.errors[0].message.contains("xx"), "{:?}", resp.errors);
+}

@@ -240,6 +240,19 @@ impl Op {
 				from,
 				to,
 			} => format!("  rename field {component}.{from} to {to}"),
+			// chosen entries and assets stay, a save refuses those the
+			// field no longer allows (fewer types, sections or files)
+			Self::ChangeField { component, field }
+				if matches!(
+					field.kind,
+					FieldKind::Relation { .. } | FieldKind::Assets { .. }
+				) =>
+			{
+				format!(
+					"  change field {component}.{} (content starts over if the kind changed, a save refuses what it no longer allows until it is removed)",
+					field.handle
+				)
+			}
 			Self::ChangeField { component, field } => format!(
 				"  change field {component}.{} (content starts over if the kind changed)",
 				field.handle

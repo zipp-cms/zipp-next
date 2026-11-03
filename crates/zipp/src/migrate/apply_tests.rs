@@ -30,6 +30,19 @@ fn migration(
 }
 
 #[test]
+fn nothing_is_applied_in_an_empty_database() {
+	let empty = Connection::open_in_memory().unwrap();
+	assert!(!is_applied(&empty, "0001").unwrap());
+
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let first = migration("0001", &Schema::new(), &site(), &[]);
+	apply(&conn, &[first]).unwrap();
+	assert!(is_applied(&conn, "0001").unwrap());
+	assert!(!is_applied(&conn, "0002").unwrap());
+}
+
+#[test]
 fn first_migration_creates_singles() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();

@@ -177,6 +177,23 @@ fn removing_a_component_deletes_entries_and_blocks() {
 }
 
 #[test]
+fn narrowing_a_relation_says_what_a_save_refuses() {
+	let mut new = site();
+	let event = new.get_mut("event").unwrap();
+	event.fields[2] =
+		Field::relation("page", ["page"]).max(1).sections(["pages"]);
+	let ops = diff(&site(), &new, &[]).unwrap();
+	assert_eq!(ops.len(), 1);
+	assert!(
+		ops[0]
+			.describe()
+			.contains("a save refuses what it no longer allows"),
+		"{}",
+		ops[0].describe()
+	);
+}
+
+#[test]
 fn diff_sites_and_sections() {
 	let mut new = site().site("fr", "Français", "fr");
 	new.sites.retain(|s| s.handle != "en");

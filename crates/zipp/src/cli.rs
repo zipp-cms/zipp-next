@@ -307,7 +307,7 @@ fn write_migration(
 
 /// What to add to the cms crate for a new data migration.
 fn data_stub(name: &str) -> String {
-	let step = name.split_once('_').map_or(name, |(_, n)| n);
+	let step = step_name(name);
 	format!(
 		"Data migration {name}, register its step:
 
@@ -323,6 +323,21 @@ fn {step}(tx: &DataTx) -> DataResult {{
 }}
 "
 	)
+}
+
+/// The fn of a step: the name of its file without the number, as a Rust
+/// name (`0003_split-names` is `split_names`).
+fn step_name(name: &str) -> String {
+	let step = name.split_once('_').map_or("", |(_, n)| n);
+	let step: String = step
+		.chars()
+		.map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+		.collect();
+	match step.chars().next() {
+		None => "data_step".into(),
+		Some(c) if c.is_ascii_digit() => format!("step_{step}"),
+		Some(_) => step,
+	}
 }
 
 pub(super) fn save_user(
@@ -484,15 +499,5 @@ fn graphql_files(path: &Path, out: &mut Vec<PathBuf>) -> io::Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn refuses_an_empty_graphql_token() {
-		let serve = |token: &str| {
-			Opts::try_parse_from(["zipp", "serve", "--graphql-token", token])
-		};
-		assert!(serve("").is_err());
-		assert!(serve("secret").is_ok());
-	}
-}
+#[path = "cli_tests.rs"]
+mod tests;

@@ -59,7 +59,9 @@ pages. The studio's picker shows only these sections, saving refuses
 an entry of another one. The schema check refuses an unknown section,
 one without pages for links, and a relation whose types and sections
 don't fit (a type in none of them, a section with none of the types).
-Like the types, a change of the sections is a migration.
+Like the types, a change of the sections is a migration; entries
+already chosen that it no longer allows stay, and saving refuses them
+until an editor removes them (`makemigration` says so).
 `Field::email("formEmail")` takes one address, `name@host.tld` without
 spaces (the server refuses anything else, the same check as email links
 and table columns), a `String` in GraphQL.

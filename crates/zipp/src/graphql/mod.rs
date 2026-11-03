@@ -31,6 +31,9 @@ use async_graphql::dynamic::{
 	Interface, InterfaceField, Object, ResolverContext, Scalar,
 	Schema as GqlSchema, TypeRef, Union,
 };
+use async_graphql::extensions::{
+	Extension, ExtensionContext, ExtensionFactory, NextExecute,
+};
 use async_graphql::{Error as GqlError, Value as GqlValue};
 use serde_json::Value;
 
@@ -351,8 +354,46 @@ pub fn build(
 		// introspection goes 15 deep
 		.limit_depth(15)
 		.limit_complexity(2000)
+		.extension(PublicErrors)
 		.finish()
 		.map_err(|e| e.to_string())
+}
+
+/// Shows the errors of resolvers like the rest api does: what failed
+/// inside (SQL, paths) only in the log. Every resolver, also of plugins,
+/// can `?` a [`crate::error::Error`] or a database error.
+struct PublicErrors;
+
+impl ExtensionFactory for PublicErrors {
+	fn create(&self) -> Arc<dyn Extension> {
+		Arc::new(PublicErrors)
+	}
+}
+
+#[async_graphql::async_trait::async_trait]
+impl Extension for PublicErrors {
+	async fn execute(
+		&self,
+		ctx: &ExtensionContext<'_>,
+		operation_name: Option<&str>,
+		next: NextExecute<'_>,
+	) -> async_graphql::Response {
+		let mut resp = next.run(ctx, operation_name).await;
+		for e in &mut resp.errors {
+			let Some(source) = &e.source else { continue };
+			let public = if let Some(err) =
+				source.downcast_ref::<crate::error::Error>()
+			{
+				err.clone().public()
+			} else if let Some(err) = source.downcast_ref::<rusqlite::Error>() {
+				crate::error::Error::Internal(err.to_string()).public()
+			} else {
+				continue;
+			};
+			e.message = public.to_string();
+		}
+		resp
+	}
 }
 
 fn scalar_name(s: FieldScalar) -> &'static str {

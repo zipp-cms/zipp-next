@@ -68,7 +68,7 @@ fn with_town() -> (Schema, Schema) {
 fn town_from_city(tx: &DataTx) -> DataResult {
 	tx.each("event", |c| {
 		if let Some(city) = c.get::<String>("city") {
-			c.set("town", format!("{city}town"));
+			c.set("town", format!("{city}town"))?;
 		}
 		Ok(())
 	})
@@ -159,7 +159,7 @@ fn an_error_rolls_back_the_ops_before_it() {
 		migration("0002", &s, &both.clone()),
 		data("0003", &both, |tx| {
 			tx.each("event", |c| {
-				c.set("town", "half");
+				c.set("town", "half")?;
 				Err("no town".into())
 			})
 		}),
@@ -196,11 +196,11 @@ fn each_reaches_blocks_and_groups() {
 		data("0002", &s, |tx| {
 			tx.each("text", |c| {
 				let text: String = c.get("content").unwrap_or_default();
-				c.set("content", text.to_uppercase());
+				c.set("content", text.to_uppercase())?;
 				Ok(())
 			})?;
 			tx.each("seo", |c| {
-				c.set("description", format!("{} of {}", c.title, c.site));
+				c.set("description", format!("{} of {}", c.title, c.site))?;
 				Ok(())
 			})
 		}),
@@ -210,6 +210,179 @@ fn each_reaches_blocks_and_groups() {
 	let entry = get_entry(&conn, p.id, "en").unwrap();
 	assert_eq!(entry.fields["body"][0]["fields"]["content"], "HELLO");
 	assert_eq!(entry.fields["seo"]["description"], "P of en");
+}
+
+#[test]
+fn each_reaches_drafts_and_revisions_of_another_type() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let mut s = site();
+	s.sections[1].types.push("event".into());
+	let first = migration("0001", &Schema::new(), &s);
+	apply(&conn, std::slice::from_ref(&first));
+
+	// a page with an event as draft and as revision
+	let p = save(
+		&conn,
+		&s,
+		None,
+		input("pages", "page", "P", json!({})),
+		None,
+	)
+	.unwrap();
+	let city = |c: &str| draft(json!({ "city": c }));
+	put_draft(&conn, &s, p.id, "de", city("thun"), None, None).unwrap();
+	let mut doc =
+		get_revision(&conn, p.id, revisions(&conn, p.id).unwrap()[0].id)
+			.unwrap();
+	doc.insert("de".into(), city("bern"));
+	conn.execute(
+		"UPDATE revisions SET doc = ?1 WHERE entry_id = ?2",
+		params![serde_json::to_string(&doc).unwrap(), p.id],
+	)
+	.unwrap();
+	// an event's revision as written by hand: nothing to change, it stays
+	let e = save(
+		&conn,
+		&s,
+		None,
+		input("events", "event", "E", json!({})),
+		None,
+	)
+	.unwrap();
+	let spaced = r#"{ "de": { "type": "event", "title": "E", "slug": "e",
+		"published": true, "fields": {} } }"#;
+	conn.execute(
+		"UPDATE revisions SET doc = ?1 WHERE entry_id = ?2",
+		params![spaced, e.id],
+	)
+	.unwrap();
+
+	let migrations = [
+		first,
+		data("0002", &s, |tx| {
+			tx.each("event", |c| {
+				if let Some(city) = c.get::<String>("city") {
+					c.set("city", city.to_uppercase())?;
+				}
+				Ok(())
+			})
+		}),
+	];
+	apply(&conn, &migrations);
+
+	let d = get_draft(&conn, p.id).unwrap().unwrap();
+	assert_eq!(d.doc["de"].fields["city"], "THUN");
+	let rev = revisions(&conn, p.id).unwrap()[0].id;
+	assert_eq!(
+		get_revision(&conn, p.id, rev).unwrap()["de"].fields["city"],
+		"BERN"
+	);
+	let stored: String = conn
+		.query_row(
+			"SELECT doc FROM revisions WHERE entry_id = ?1",
+			[e.id],
+			|r| r.get(0),
+		)
+		.unwrap();
+	assert_eq!(stored, spaced);
+}
+
+#[test]
+fn each_reaches_the_fields_of_assets() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site().asset_fields([Field::text("credit")]);
+	let first = migration("0001", &Schema::new(), &s);
+	apply(&conn, std::slice::from_ref(&first));
+	conn.execute(
+		r#"INSERT INTO assets (filename, kind, mime, size, created_at, fields)
+		VALUES ('a.png', 'image', '', 1, 0, '{"credit":"anna"}')"#,
+		[],
+	)
+	.unwrap();
+
+	let migrations = [
+		first,
+		data("0002", &s, |tx| {
+			tx.each("asset", |c| {
+				let credit: String = c.get("credit").unwrap_or_default();
+				let at =
+					format!("{credit} {} {}{}", c.title, c.entry_id, c.site);
+				c.set("credit", at)
+			})
+		}),
+	];
+	apply(&conn, &migrations);
+
+	let fields: String = conn
+		.query_row("SELECT fields FROM assets", [], |r| r.get(0))
+		.unwrap();
+	assert_eq!(fields, r#"{"credit":"anna a.png 1"}"#);
+}
+
+#[test]
+fn a_value_that_isn_t_json_fails() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	let first = migration("0001", &Schema::new(), &s);
+	apply(&conn, std::slice::from_ref(&first));
+	save(
+		&conn,
+		&s,
+		None,
+		input("events", "event", "E", json!({})),
+		None,
+	)
+	.unwrap();
+
+	let migrations = [
+		first,
+		data("0002", &s, |tx| {
+			tx.each("event", |c| {
+				let map = std::collections::HashMap::from([((1, 2), 3)]);
+				c.set("city", map)
+			})
+		}),
+	];
+	let err = apply_migrations(&conn, &migrations, &s).unwrap_err();
+	assert!(err.to_string().contains("key must be a string"), "{err}");
+}
+
+#[test]
+fn what_a_step_writes_in_sql_is_indexed() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	let first = migration("0001", &Schema::new(), &s);
+	apply(&conn, std::slice::from_ref(&first));
+	let fields = json!({ "city": "Bern" });
+	save(&conn, &s, None, input("events", "event", "E", fields), None).unwrap();
+
+	let migrations = [
+		first,
+		data("0002", &s, |tx| {
+			tx.conn().execute(
+				"UPDATE entry_sites SET fields =
+				json_set(fields, '$.city', 'Thun')",
+				[],
+			)?;
+			Ok(())
+		}),
+	];
+	apply(&conn, &migrations);
+
+	let found = |city: &str| {
+		let params = vec![
+			("type".to_string(), "event".to_string()),
+			("f.city".to_string(), city.to_string()),
+		];
+		let q = Query::parse(&s, &params).unwrap();
+		list(&conn, &q).unwrap().1
+	};
+	assert_eq!(found("Thun"), 1);
+	assert_eq!(found("Bern"), 0);
 }
 
 #[test]

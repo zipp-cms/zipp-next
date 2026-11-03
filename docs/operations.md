@@ -277,8 +277,8 @@ fn split_names(tx: &DataTx) -> DataResult {
 	tx.each("person", |c| {
 		let name: String = c.get("name").unwrap_or_default();
 		let (first, last) = name.split_once(' ').unwrap_or((&name, ""));
-		c.set("firstName", first);
-		c.set("lastName", last);
+		c.set("firstName", first)?;
+		c.set("lastName", last)?;
 		Ok(())
 	})
 }
@@ -299,12 +299,14 @@ so fields that a later migration removes are still there.
 type, or of every block or group of a component, in every site: the
 live content, drafts and revisions, also of entries in the trash, like
 the ops, so a draft published or a revision restored later has the new
-shape. `c.get::<T>(field)`, `c.set(field, value)` and `c.remove(field)`
-change the fields as JSON; `c.entry_id`, `c.site` and `c.title` say
-where. Values are written as they are, without the checks of a save.
-`tx.conn()` is the transaction for anything else in SQL. The indexes,
-the search and the uris are rebuilt from the code's schema after the
-migrations, as after the ops. Asset fields aren't reached yet.
+shape. `each("asset", f)` reaches the fields of every asset (and blocks
+in them); an asset has no sites, its `c.site` is empty and
+`c.entry_id` is the asset's id. `c.get::<T>(field)`, `c.set(field,
+value)?` and `c.remove(field)` change the fields as JSON; `c.entry_id`,
+`c.site` and `c.title` say where. Values are written as they are,
+without the checks of a save. `tx.conn()` is the transaction for
+anything else in SQL. The indexes, the search and the uris are rebuilt
+from the code's schema after the migrations, as after the ops.
 
 A data migration file without its step, or a step without its file,
 stops `serve` and fails `check`; the step stays in the code as long as

@@ -87,8 +87,17 @@ pub fn apply_migrations(
 	Ok(applied)
 }
 
-/// Whether a migration ran already.
+/// Whether a migration ran already; in an empty database (`check` on a
+/// new file) none did.
 pub fn is_applied(conn: &Connection, name: &str) -> Result<bool> {
+	let migrated: bool = conn.query_row(
+		"SELECT COUNT(*) FROM sqlite_master WHERE name = 'schema_migrations'",
+		[],
+		|r| r.get(0),
+	)?;
+	if !migrated {
+		return Ok(false);
+	}
 	Ok(conn.query_row(
 		"SELECT COUNT(*) FROM schema_migrations WHERE name = ?1",
 		[name],
@@ -287,44 +296,20 @@ fn retype_docs(
 	schema: &Schema,
 	keep: impl Fn(&str, &str) -> bool,
 ) -> Result<()> {
-	for table in ["drafts", "revisions"] {
-		let key = if table == "drafts" { "entry_id" } else { "id" };
-		let mut stmt = conn.prepare(&format!(
-			"SELECT d.{key}, d.doc, e.section, e.type FROM {table} d
-			JOIN entries e ON e.id = d.entry_id"
-		))?;
-		let rows = stmt
-			.query_map([], |r| {
-				Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
-			})?
-			.collect::<rusqlite::Result<Vec<(i64, String, String, String)>>>(
-			)?;
-		drop(stmt);
-
-		for (id, doc, section, live) in rows {
-			let mut doc: Doc = parse(&doc)?;
-			let mut changed = false;
-			// an empty type is the entry's
-			for sd in doc.values_mut() {
-				if sd.ty.is_empty() || keep(&section, &sd.ty) {
-					continue;
-				}
-				sd.fields = match (schema.get(&sd.ty), schema.get(&live)) {
-					(Some(from), Some(to)) => convert(from, to, &sd.fields),
-					_ => Value::Object(Default::default()),
-				};
-				sd.ty = live.clone();
-				changed = true;
+	each_doc(conn, &["drafts", "revisions"], |of, doc| {
+		// an empty type is the entry's
+		for sd in doc.values_mut() {
+			if sd.ty.is_empty() || keep(&of.section, &sd.ty) {
+				continue;
 			}
-			if changed {
-				conn.execute(
-					&format!("UPDATE {table} SET doc = ?1 WHERE {key} = ?2"),
-					params![serde_json::to_string(&doc).unwrap(), id],
-				)?;
-			}
+			sd.fields = match (schema.get(&sd.ty), schema.get(&of.ty)) {
+				(Some(from), Some(to)) => convert(from, to, &sd.fields),
+				_ => Value::Object(Default::default()),
+			};
+			sd.ty = of.ty.clone();
 		}
-	}
-	Ok(())
+		Ok(())
+	})
 }
 
 /// Changes the content of drafts and revisions.
@@ -333,25 +318,72 @@ fn change_docs(
 	tables: &[&str],
 	mut f: impl FnMut(&mut Doc),
 ) -> Result<()> {
+	each_doc(conn, tables, |_, doc| {
+		f(doc);
+		Ok(())
+	})
+}
+
+/// The entry of a draft or revision.
+pub(super) struct DocOf {
+	pub entry_id: i64,
+	pub section: String,
+	/// The entry's type, a draft or revision may have another.
+	pub ty: String,
+}
+
+/// Calls `f` with every draft or revision of `tables` and writes the
+/// ones it changed.
+pub(super) fn each_doc<E: From<Error>>(
+	conn: &Connection,
+	tables: &[&str],
+	mut f: impl FnMut(&DocOf, &mut Doc) -> std::result::Result<(), E>,
+) -> std::result::Result<(), E> {
 	for table in tables {
 		let key = if *table == "drafts" { "entry_id" } else { "id" };
-		let mut stmt =
-			conn.prepare(&format!("SELECT {key}, doc FROM {table}"))?;
-		let rows = stmt
-			.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
-			.collect::<rusqlite::Result<Vec<(i64, String)>>>()?;
-		drop(stmt);
+		let rows = doc_rows(conn, table, key)?;
 
-		for (id, doc) in rows {
-			let mut doc: Doc = parse(&doc)?;
-			f(&mut doc);
+		for (id, raw, of) in rows {
+			let mut doc: Doc = parse(&raw)?;
+			let before = doc.clone();
+			f(&of, &mut doc)?;
+			// unchanged rows stay as they are
+			if doc == before {
+				continue;
+			}
+			let doc = serde_json::to_string(&doc)
+				.map_err(|e| Error::Internal(format!("stored content: {e}")))?;
 			conn.execute(
 				&format!("UPDATE {table} SET doc = ?1 WHERE {key} = ?2"),
-				params![serde_json::to_string(&doc).unwrap(), id],
-			)?;
+				params![doc, id],
+			)
+			.map_err(Error::from)?;
 		}
 	}
 	Ok(())
+}
+
+/// The key, the doc and the entry of each row of a table of docs.
+fn doc_rows(
+	conn: &Connection,
+	table: &str,
+	key: &str,
+) -> Result<Vec<(i64, String, DocOf)>> {
+	let mut stmt = conn.prepare(&format!(
+		"SELECT d.{key}, d.doc, e.id, e.section, e.type FROM {table} d
+		JOIN entries e ON e.id = d.entry_id"
+	))?;
+	let rows = stmt
+		.query_map([], |r| {
+			let of = DocOf {
+				entry_id: r.get(2)?,
+				section: r.get(3)?,
+				ty: r.get(4)?,
+			};
+			Ok((r.get(0)?, r.get(1)?, of))
+		})?
+		.collect::<rusqlite::Result<_>>()?;
+	Ok(rows)
 }
 
 /// A field that is no longer translatable gets the value of the primary

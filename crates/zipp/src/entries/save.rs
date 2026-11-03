@@ -330,43 +330,41 @@ pub(crate) fn check_relations(
 
 	for rel in relations(schema, comp, fields) {
 		let (sql, what) = match rel.target {
-			// the section after the type, for the limit of sections
+			// the section too, for the limit of sections
 			Target::Entries { .. } => (
-				"SELECT type || ' ' || section FROM entries
+				"SELECT type, section FROM entries
 					WHERE id = ?1 AND deleted_at IS NULL",
 				"entry",
 			),
 			Target::Assets { .. } => (
-				"SELECT kind || ' ' || filename FROM assets
+				"SELECT kind, filename FROM assets
 				WHERE id = ?1 AND deleted_at IS NULL",
 				"asset",
 			),
 		};
 		for id in rel.ids {
-			let found: Option<String> =
-				conn.query_row(sql, [id], |r| r.get(0)).optional()?;
+			let found: Option<(String, String)> = conn
+				.query_row(sql, [id], |r| Ok((r.get(0)?, r.get(1)?)))
+				.optional()?;
 			let error = match (&rel.target, found) {
 				(_, None) => format!("{what} {id} doesn't exist"),
-				(Target::Entries { types, sections }, Some(found)) => {
-					let (t, s) = found.split_once(' ').unwrap_or_default();
-					if !types.iter().any(|x| x == t) {
+				(Target::Entries { types, sections }, Some((t, s))) => {
+					if !types.contains(&t) {
 						format!("entry {id} is a {t}, not allowed here")
-					} else if !sections.is_empty()
-						&& !sections.iter().any(|x| x == s)
-					{
+					} else if !sections.is_empty() && !sections.contains(&s) {
 						format!("entry {id} is in {s}, not allowed here")
 					} else {
 						continue;
 					}
 				}
-				(Target::Assets { images: true, .. }, Some(k))
-					if !k.starts_with("image ") =>
+				(Target::Assets { images: true, .. }, Some((kind, _)))
+					if kind != "image" =>
 				{
 					format!("asset {id} is not an image")
 				}
-				(Target::Assets { extensions, .. }, Some(k))
+				(Target::Assets { extensions, .. }, Some((_, filename)))
 					if !extensions.is_empty()
-						&& !has_extension(&k, extensions) =>
+						&& !has_extension(&filename, extensions) =>
 				{
 					format!("asset {id} is no {}", extensions.join(", "))
 				}

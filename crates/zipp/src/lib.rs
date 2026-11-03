@@ -262,8 +262,8 @@ impl Cms {
 	///     tx.each("person", |c| {
 	///         let name: String = c.get("name").unwrap_or_default();
 	///         let (first, last) = name.split_once(' ').unwrap_or((&name, ""));
-	///         c.set("firstName", first);
-	///         c.set("lastName", last);
+	///         c.set("firstName", first)?;
+	///         c.set("lastName", last)?;
 	///         Ok(())
 	///     })
 	/// }

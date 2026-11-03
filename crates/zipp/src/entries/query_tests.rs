@@ -102,6 +102,8 @@ fn orders_by_our_names_and_crafts() {
 	// a full text search the best match first, also in a section
 	let best = Ok((Order::Relevance, false));
 	assert_eq!(order("text=konzert&section=events"), best);
+	// signs alone search nothing, there is no relevance
+	assert_eq!(order("text=-&section=pages"), Ok((Order::Structure, false)));
 	assert_eq!(
 		order("text=konzert&order=title"),
 		Ok((Order::Column("title"), false))

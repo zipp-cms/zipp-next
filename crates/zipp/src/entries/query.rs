@@ -279,7 +279,12 @@ impl Query {
 			}
 		}
 
-		if !ordered && q.text.is_some() {
+		// signs alone search nothing, so there is no relevance to order by
+		let words = q
+			.text
+			.as_ref()
+			.is_some_and(|t| !crate::search::words(t).is_empty());
+		if !ordered && words {
 			q.order = Order::Relevance;
 			q.desc = false;
 		} else if !ordered {

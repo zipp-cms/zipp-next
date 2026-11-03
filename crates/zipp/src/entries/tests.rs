@@ -331,6 +331,35 @@ fn asset_fields_take_their_kinds_of_files() {
 }
 
 #[test]
+fn refuses_entries_of_other_types_and_files_that_aren_t_images() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	conn.execute(
+		"INSERT INTO assets (filename, kind, mime, size, created_at)
+		VALUES ('a plan.pdf', 'file', '', 1, 0)",
+		[],
+	)
+	.unwrap();
+	let jazz = input("events", "event", "Jazz", json!({}));
+	let jazz = save(&conn, &s, None, jazz, None).unwrap();
+
+	let fields = json!({ "page": [jazz.id], "image": [1] });
+	let e = input("events", "event", "Rock", fields);
+	let Err(Error::Invalid(errs)) = save(&conn, &s, None, e, None) else {
+		panic!("should fail");
+	};
+	let messages: Vec<&str> = errs.iter().map(|e| e.message.as_str()).collect();
+	assert_eq!(
+		messages,
+		[
+			format!("entry {} is a event, not allowed here", jazz.id),
+			"asset 1 is not an image".into(),
+		]
+	);
+}
+
+#[test]
 fn live_between_post_and_expiry_date() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();

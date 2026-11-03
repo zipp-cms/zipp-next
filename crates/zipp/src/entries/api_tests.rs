@@ -344,6 +344,23 @@ async fn lists_tell_nothing_of_hidden_sections() {
 }
 
 #[tokio::test]
+async fn a_text_of_only_signs_finds_nothing() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	admin
+		.call(&CreateReq(input("pages", "page", "About", json!({}))))
+		.await
+		.unwrap();
+	for text in ["-", "- * \"", ""] {
+		let found = admin.call(&params(&[("text", text)])).await.unwrap();
+		assert_eq!(found.total, 0, "{text:?}");
+		let p = [("text", text), ("section", "pages")];
+		let found = admin.call(&params(&p)).await.unwrap();
+		assert!(found.entries.is_empty(), "{text:?}");
+	}
+}
+
+#[tokio::test]
 async fn choices_for_a_picker() {
 	let ts = TestServer::new(site_with_roles());
 	let admin = ts.admin();

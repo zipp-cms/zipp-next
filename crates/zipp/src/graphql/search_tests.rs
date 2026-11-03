@@ -224,3 +224,19 @@ async fn the_syntax_of_fts_is_only_words() {
 	assert!(titles(&gql, r#"query: "-""#).await.is_empty());
 	assert!(titles(&gql, r#"query: """#).await.is_empty());
 }
+
+#[tokio::test]
+async fn entries_searching_only_signs_find_nothing() {
+	let gql = searched();
+	let data = run(
+		&gql,
+		r#"{
+			entries(search: "-") { title }
+			entryCount(search: "- *")
+		}"#,
+		true,
+	)
+	.await;
+	assert_eq!(data["entries"], json!([]));
+	assert_eq!(data["entryCount"], 0);
+}
