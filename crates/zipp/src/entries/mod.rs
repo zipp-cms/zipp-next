@@ -3,7 +3,7 @@
 //! save the indexed fields and all relations are copied to `entry_values`
 //! and `entry_relations`, so they can be queried.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use axum::extract::State;
 use axum::{Json, Router};
@@ -134,10 +134,13 @@ pub struct EntryRef {
 	pub uri: Option<String>,
 	/// in the site
 	pub published: bool,
+	/// whether it is live now, for its status
+	#[serde(flatten)]
+	pub dates: Dates,
 }
 
 /// An [`EntryRef`] of `e.id, e.section, e.type, s.title, s.slug, s.uri,
-/// s.published`.
+/// s.published, e.post_date, e.expiry_date`.
 fn entry_ref(r: &rusqlite::Row) -> rusqlite::Result<EntryRef> {
 	Ok(EntryRef {
 		id: r.get(0)?,
@@ -147,6 +150,10 @@ fn entry_ref(r: &rusqlite::Row) -> rusqlite::Result<EntryRef> {
 		slug: r.get(4)?,
 		uri: r.get(5)?,
 		published: r.get(6)?,
+		dates: Dates {
+			post_date: r.get(7)?,
+			expiry_date: r.get(8)?,
+		},
 	})
 }
 
@@ -197,32 +204,161 @@ pub struct EntryChoice {
 	pub draft: bool,
 }
 
-/// The entries of some sections to choose from, each section whole and in
-/// its order: a structure as its tree, so its other types are there too as
-/// the parents; a channel newest first. At most
-/// [`MAX_LIMIT`](query::MAX_LIMIT) per section.
+/// The most entries of a section a picker gets at once, and of a
+/// search; the tests page with a few.
+pub const CHOICES_LIMIT: i64 = if cfg!(test) { 3 } else { query::MAX_LIMIT };
+
+/// How many entries of a section there are, sent or not: `entries` in
+/// its order (a structure with its other types, as parents), `pickable`
+/// of the types.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ChoiceCount {
+	pub entries: i64,
+	pub pickable: i64,
+}
+
+/// The entries a picker shows and how many there are of each section.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Choices {
+	pub entries: Vec<EntryChoice>,
+	pub totals: BTreeMap<String, ChoiceCount>,
+	/// in a search the parents of the found ones, for their paths
+	pub parents: Vec<EntryChoice>,
+}
+
+/// The entries of some sections to choose from, each in its order: a
+/// structure as its tree, so its other types are there too as the
+/// parents; a channel newest first, only the types. At most
+/// [`CHOICES_LIMIT`] per section from `offset`, a picker loads more.
 pub fn choices(
 	conn: &Connection,
 	schema: &Schema,
+	types: &[&str],
 	sections: &[&str],
 	site: &str,
-) -> Result<Vec<EntryChoice>> {
+	offset: i64,
+) -> Result<Choices> {
 	if schema.get_site(site).is_none() {
 		return Err(Error::Request(format!("unknown site {site}")));
 	}
-	let mut all = vec![];
+	let mut out = Choices {
+		entries: vec![],
+		totals: BTreeMap::new(),
+		parents: vec![],
+	};
 	for section in sections {
-		let mut q = Query {
+		let mut of_types = Query {
 			site: site.into(),
 			section: Some(section.to_string()),
+			types: types.iter().map(|t| t.to_string()).collect(),
+			limit: CHOICES_LIMIT,
+			offset,
+			..Query::new(schema)
+		};
+		of_types.section_order(schema);
+		// a tree needs the other types as parents
+		let mut q = of_types.clone();
+		if schema
+			.get_section(section)
+			.is_some_and(|s| s.kind == SectionKind::Structure)
+		{
+			q.types = vec![];
+		}
+
+		let count = ChoiceCount {
+			entries: count(conn, &q)?,
+			pickable: count(conn, &of_types)?,
+		};
+		out.totals.insert(section.to_string(), count);
+		out.entries.extend(to_choices(conn, select(conn, &q)?)?);
+	}
+	Ok(out)
+}
+
+/// The entries of the types in some sections that have all the words of
+/// `search`, like the studio's search, the best first; at most
+/// [`CHOICES_LIMIT`], with their parents.
+pub fn search_choices(
+	conn: &Connection,
+	schema: &Schema,
+	types: &[&str],
+	sections: &[&str],
+	site: &str,
+	search: &str,
+) -> Result<Choices> {
+	if schema.get_site(site).is_none() {
+		return Err(Error::Request(format!("unknown site {site}")));
+	}
+	let q = Query {
+		site: site.into(),
+		types: types.iter().map(|t| t.to_string()).collect(),
+		text: Some(search.into()),
+		order: query::Order::Relevance,
+		desc: false,
+		limit: CHOICES_LIMIT,
+		..Query::new(schema)
+	};
+
+	let mut totals = BTreeMap::new();
+	for section in sections {
+		let n = count(
+			conn,
+			&Query {
+				section: Some(section.to_string()),
+				..q.clone()
+			},
+		)?;
+		let count = ChoiceCount {
+			entries: n,
+			pickable: n,
+		};
+		totals.insert(section.to_string(), count);
+	}
+	let found = select(
+		conn,
+		&Query {
+			sections: Some(sections.iter().map(|s| s.to_string()).collect()),
+			..q
+		},
+	)?;
+
+	// the parents a level at a time, up to the top
+	let mut parents = vec![];
+	let mut known: HashSet<i64> = found.iter().map(|e| e.id).collect();
+	let mut up: Vec<i64> = found.iter().filter_map(|e| e.parent_id).collect();
+	loop {
+		up.retain(|id| known.insert(*id));
+		if up.is_empty() {
+			break;
+		}
+		let q = Query {
+			site: site.into(),
+			ids: Some(std::mem::take(&mut up)),
 			limit: query::MAX_LIMIT,
 			..Query::new(schema)
 		};
-		q.section_order(schema);
-		let entries = select(conn, &q)?;
-		let ids: Vec<i64> = entries.iter().map(|e| e.id).collect();
-		let drafts = with_drafts(conn, &ids)?;
-		all.extend(entries.into_iter().map(|e| EntryChoice {
+		let level = select(conn, &q)?;
+		up = level.iter().filter_map(|e| e.parent_id).collect();
+		parents.extend(level);
+	}
+
+	Ok(Choices {
+		entries: to_choices(conn, found)?,
+		totals,
+		parents: to_choices(conn, parents)?,
+	})
+}
+
+/// The entries as choices, with whether they have a draft.
+fn to_choices(
+	conn: &Connection,
+	entries: Vec<Entry>,
+) -> Result<Vec<EntryChoice>> {
+	let ids: Vec<i64> = entries.iter().map(|e| e.id).collect();
+	let drafts = with_drafts(conn, &ids)?;
+	Ok(entries
+		.into_iter()
+		.map(|e| EntryChoice {
 			draft: drafts.contains(&e.id),
 			id: e.id,
 			section: e.section,
@@ -233,9 +369,8 @@ pub fn choices(
 			published: e.published,
 			parent_id: e.parent_id,
 			dates: e.dates,
-		}));
-	}
-	Ok(all)
+		})
+		.collect())
 }
 
 /// The fields of a single as published in a site, null if it isn't.
@@ -399,7 +534,7 @@ pub fn refs(
 ) -> Result<BTreeMap<i64, EntryRef>> {
 	let sql = format!(
 		"SELECT DISTINCT e.id, e.section, e.type, s.title, s.slug, s.uri,
-			s.published
+			s.published, e.post_date, e.expiry_date
 		FROM entry_relations r
 		JOIN entries e ON e.id = r.target_id
 		JOIN entry_sites s ON s.entry_id = e.id AND s.site = r.site
@@ -421,7 +556,8 @@ pub fn refs_of(
 	site: &str,
 ) -> Result<BTreeMap<i64, EntryRef>> {
 	let sql = format!(
-		"SELECT e.id, e.section, e.type, s.title, s.slug, s.uri, s.published
+		"SELECT e.id, e.section, e.type, s.title, s.slug, s.uri, s.published,
+			e.post_date, e.expiry_date
 		FROM entries e JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?
 		WHERE e.deleted_at IS NULL AND e.id IN ({})",
 		marks(ids.len())

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { layer } from './layers';
+	import { listKey } from './listKeys';
 
 	/**
 	 * A box under the button that opens it: menus, pickers, the block
@@ -125,13 +126,8 @@
 		if (!menu || !box) return;
 		const items = [...box.querySelectorAll<HTMLElement>('[role=menuitem]')];
 		const i = items.indexOf(document.activeElement as HTMLElement);
-		const to = {
-			ArrowDown: (i + 1) % items.length,
-			ArrowUp: (i - 1 + items.length) % items.length,
-			Home: 0,
-			End: items.length - 1,
-		}[e.key];
-		if (to === undefined || !items.length) return;
+		const to = listKey(e.key, i, items.length, true);
+		if (to === undefined) return;
 		e.preventDefault();
 		items[to].focus();
 	}

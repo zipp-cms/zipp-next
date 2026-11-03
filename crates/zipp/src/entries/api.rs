@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::{Entry, EntryChoice, EntryInput, EntryRef};
+use super::{Choices, Entry, EntryInput, EntryRef};
 use crate::request;
 
 /// Entries of a [`Query`](crate::entries::query::Query): its params as pairs,
@@ -32,7 +32,8 @@ request!(ListReq, GET "/entries" => ListResp);
 
 /// The entries a picker offers for some types (`type=page,event`): the
 /// sections that have them, as many as the role sees; only some of them
-/// with `section=pages,news`, the limit of a field.
+/// with `section=pages,news`, the limit of a field. More of a section
+/// from `offset`; with `search` the entries that have its words.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChoicesReq {
 	#[serde(rename = "type")]
@@ -41,14 +42,11 @@ pub struct ChoicesReq {
 	pub sections: Option<String>,
 	/// default the primary site
 	pub site: Option<String>,
+	pub offset: Option<i64>,
+	pub search: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ChoicesResp {
-	pub entries: Vec<EntryChoice>,
-}
-
-request!(ChoicesReq, GET "/entries/choices" => ChoicesResp);
+request!(ChoicesReq, GET "/entries/choices" => Choices);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetReq {

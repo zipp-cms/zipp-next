@@ -41,7 +41,6 @@ export default {
 	'setup.role': 'Role',
 	'setup.may': 'May',
 	'setup.allRoles': 'All roles',
-	'setup.unpublishedChanges': 'Unpublished changes',
 	'setup.theFirst': 'The first {n}.',
 	'setup.openInContent': 'Open in Content',
 	'setup.other': 'Other',

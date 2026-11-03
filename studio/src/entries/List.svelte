@@ -38,21 +38,15 @@
 	import { untrack } from 'svelte';
 	import SearchInput from 'zipp-ui/SearchInput.svelte';
 	import { Latest } from '../core/latest.svelte';
-	import SiteBadges from './SiteBadges.svelte';
+	import EntryBadges from './EntryBadges.svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import { can } from '../core/access';
 	import { sectionCrumbs } from '../core/paths';
 	import { entryUrl, type Schema } from '../core/schema';
-	import {
-		dateState,
-		deleteEntry,
-		listEntries,
-		moveEntry,
-		type Entry,
-	} from './api';
+	import { deleteEntry, listEntries, moveEntry, type Entry } from './api';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
-	import { date, time } from '../core/format';
+	import { date } from '../core/format';
 	import { ancestors, depths as depthsOf } from '../core/tree';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
@@ -236,34 +230,12 @@
 				</a>
 			</span>
 			<span class="status">
-				<SiteBadges {schema} published={published[e.id]} />
-				{#if drafts.includes(e.id)}
-					<span
-						class="badge changes"
-						title={t('entries.unpublishedChanges')}
-					>
-						{t('common.draft')}
-					</span>
-				{/if}
-				{#if dateState(e) === 'pending'}
-					<span
-						class="badge draft"
-						title={t('entries.liveFrom', {
-							time: time(e.postDate!),
-						})}
-					>
-						{t('entries.pending')}
-					</span>
-				{:else if dateState(e) === 'expired'}
-					<span
-						class="badge draft"
-						title={t('entries.expiredAt', {
-							time: time(e.expiryDate!),
-						})}
-					>
-						{t('entries.expired')}
-					</span>
-				{/if}
+				<EntryBadges
+					{schema}
+					published={published[e.id] ?? {}}
+					draft={drafts.includes(e.id)}
+					dates={e}
+				/>
 			</span>
 			{#if types}
 				<span class="type hide-small">

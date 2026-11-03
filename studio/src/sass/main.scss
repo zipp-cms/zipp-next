@@ -391,6 +391,25 @@ button,
 	background: var(--changed);
 }
 
+// the status of an entry (choiceState): live, published but out of its
+// dates, not published
+.state-dot {
+	display: inline-block;
+	flex-shrink: 0;
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	background: var(--subtle);
+
+	&.live {
+		background: var(--ok);
+	}
+
+	&.waiting {
+		background: var(--changed);
+	}
+}
+
 // secondary text, and the small grey notes next to things
 .muted {
 	color: var(--muted);

@@ -159,8 +159,9 @@ bar at the top names them (Settings / Header).
 ## Entries and images in other fields
 
 Relations and entry links choose in a flyout, like the asset library:
-on the left the sections of their types as the nav groups them (a
-select on a phone, none with only one section), the last one opens
+on the left the sections of their types as the nav groups them with
+their counts (a row above the list on a phone, none with only one
+section), the last one opens
 again; on the right the entries of one with their status, a structure
 as its tree (the second level and below closed, open with the arrow or
 → and ←), a channel newest first with its dates. The search above them
@@ -169,9 +170,14 @@ each match with its path (Über uns › Team) and section. Chosen entries
 have a check, entries of other types (parents in a tree) show but can't
 be chosen; ↑ ↓ and Enter pick without the mouse. A link takes one and
 closes, a relation toggles several up to its max and counts them, Done
-closes. The picker loads its entries once per open
+closes. The picker loads the first 1000 entries of each section
 (`/api/entries/choices?type=page,event`, the sections of a field's
-limit with `&section=pages,news`). A chosen entry or image opens in a flyout from
+limit with `&section=pages,news`), the rest of a section as it scrolls
+(`&offset=1000`, a tree keeps its children below their parent). While a
+section isn't whole the search asks the server (`&search=team`, the
+words of the studio's search, the first 1000, with their parents for
+the path), else it searches what is there. Enter in an empty search
+picks nothing. A chosen entry or image opens in a flyout from
 the right, like Craft's slideout: the entry with its whole editor, an image
 with its details (below); Done or Escape closes it and the
 page behind stays as it was. In rich text, a button is a link like the

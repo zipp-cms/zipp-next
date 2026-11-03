@@ -1,6 +1,12 @@
 import type { Schema, Section } from '../core/schema';
 import { componentName } from '../core/schema';
-import { dateState, type Choice } from './api';
+import {
+	dateState,
+	type Choice,
+	type ChoiceCount,
+	type Choices,
+	type EntryRef,
+} from './api';
 import { visibleNav } from '../core/access';
 import { ancestors } from '../core/tree';
 import { plain } from '../core/format';
@@ -9,7 +15,8 @@ import { t } from '../i18n/index.svelte';
 /**
  * What the entry picker shows: the sections of the types grouped like
  * the nav, a structure as its tree, a channel newest first; a search
- * over all of them with the path of each match.
+ * over all of them with the path of each match. The state of the
+ * picker is in `entryPicker.svelte.ts`.
  */
 
 /** "Choose Seite" with one type, "Choose entry" with several. */
@@ -24,83 +31,72 @@ export type Row = {
 	depth: number;
 	/** the titles above it in its tree */
 	path: string[];
+	/** the ids above it, for what is open */
+	parents: number[];
 	/** whether entries are below it */
 	parent: boolean;
 	/** of one of the types; the others are there as parents in a tree */
 	pickable: boolean;
 };
 
-export type Group = { section: Section; rows: Row[] };
+/** The rows of a section, of as many as there are. */
+export type Group = { section: Section; rows: Row[]; total: ChoiceCount };
+
+/** The rows of entries, their parents in `byId`. */
+function toRows(
+	entries: Choice[],
+	byId: Map<number, Choice>,
+	types: string[],
+): Row[] {
+	const withChildren = new Set([...byId.values()].map(e => e.parentId));
+	return entries.map(e => {
+		const up = ancestors(byId, e);
+		return {
+			e,
+			depth: up.length,
+			path: up.map(a => a.title).reverse(),
+			parents: up.map(a => a.id),
+			parent: withChildren.has(e.id),
+			pickable: types.includes(e.type),
+		};
+	});
+}
 
 /** The rows of each section in the schema's order, as the server sent them. */
 export function groupChoices(
 	schema: Schema,
 	entries: Choice[],
 	types: string[],
+	totals: Record<string, ChoiceCount>,
 ): Group[] {
 	const byId = new Map(entries.map(e => [e.id, e]));
-	const parents = new Set(entries.map(e => e.parentId));
-
-	const pathOf = (e: Choice) =>
-		ancestors(byId, e)
-			.map(a => a.title)
-			.reverse();
+	const rows = toRows(entries, byId, types);
 
 	return schema.sections
-		.map(section => {
-			const tree = section.kind === 'structure';
-			const rows = entries
-				.filter(e => e.section === section.handle)
-				// only a tree needs the other types, as parents
-				.filter(e => tree || types.includes(e.type))
-				.map(e => {
-					const path = pathOf(e);
-					return {
-						e,
-						depth: path.length,
-						path,
-						parent: parents.has(e.id),
-						pickable: types.includes(e.type),
-					};
-				});
-			return { section, rows };
-		})
+		.map(section => ({
+			section,
+			rows: rows.filter(r => r.e.section === section.handle),
+			total: totals[section.handle] ?? { entries: 0, pickable: 0 },
+		}))
 		.filter(g => g.rows.length);
 }
 
-/** The rows of a group not inside a closed one. */
-export function openRows(rows: Row[], closed: Set<number>): Row[] {
-	const hidden = new Set<number>();
-	return rows.filter(r => {
-		const p = r.e.parentId;
-		if (p !== null && (hidden.has(p) || closed.has(p))) {
-			hidden.add(r.e.id);
-			return false;
-		}
-		return true;
-	});
+/** The found ones of a search of the server, with their paths. */
+export function foundRows(r: Choices, types: string[]): Row[] {
+	const byId = new Map([...r.parents, ...r.entries].map(e => [e.id, e]));
+	return toRows(r.entries, byId, types);
 }
 
 /**
  * What is closed at first: what has entries below it from the second
  * level on, so a big tree starts short; not the way to a chosen one.
  */
-export function initiallyClosed(groups: Group[], chosen: number[]) {
-	const closed = new Set<number>();
-	const open = new Set<number>();
-	for (const g of groups) {
-		for (const r of g.rows) {
-			if (r.parent && r.depth > 0) closed.add(r.e.id);
-		}
-		// the parents of a chosen one stay open
-		const byId = new Map(g.rows.map(r => [r.e.id, r.e]));
-		for (const id of chosen) {
-			const e = byId.get(id);
-			if (e) for (const a of ancestors(byId, e)) open.add(a.id);
-		}
-	}
-	for (const id of open) closed.delete(id);
-	return closed;
+export function initiallyClosed(rows: Row[], chosen: number[]): Set<number> {
+	const open = new Set(
+		rows.filter(r => chosen.includes(r.e.id)).flatMap(r => r.parents),
+	);
+	const closed = rows.filter(r => r.parent && r.depth > 0);
+	return new Set(closed.map(r => r.e.id).filter(id => !open.has(id)));
 }
 
 /** The rows of all groups whose title or slug has every word of `q`. */
@@ -155,14 +151,11 @@ export function startSection(
 	return groups[0]?.section.handle ?? null;
 }
 
-/** How many entries of a group can be picked, for the nav. */
-export const pickable = (g: Group) => g.rows.filter(r => r.pickable).length;
-
 /**
  * The status dot of an entry: live, published but out of its dates, or
  * not published.
  */
-export function choiceState(e: Choice): {
+export function choiceState(e: EntryRef): {
 	state: 'live' | 'waiting' | 'off';
 	label: string;
 } {

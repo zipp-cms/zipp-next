@@ -75,7 +75,6 @@ export default {
 	'fields.aFile': 'Eine Datei',
 	'fields.target': 'Ziel',
 	'fields.chooseAnotherEntry': 'Anderen Eintrag auswählen',
-	'fields.notPublished': 'Nicht veröffentlicht',
 	'fields.removeEntry': 'Eintrag entfernen',
 	'fields.anotherFile': 'Andere Datei',
 	'fields.chooseFile': 'Datei auswählen',

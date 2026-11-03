@@ -1,6 +1,7 @@
 import { untrack } from 'svelte';
 import { createFolder, deleteFolder, updateFolder, type Folder } from './api';
 import { folderRows } from './folders';
+import { visibleRows } from '../core/tree';
 import { t } from '../i18n/index.svelte';
 
 /**
@@ -14,9 +15,7 @@ export class FolderTreeState {
 	error = $state('');
 	readonly all = $derived.by(() => folderRows(this.o.folders()));
 	/** The rows whose parents are all open. */
-	readonly rows = $derived(
-		this.all.filter(r => r.parents.every(p => this.open.has(p))),
-	);
+	readonly rows = $derived(visibleRows(this.all, id => this.open.has(id)));
 	private openedFor: number | null = null;
 
 	constructor(

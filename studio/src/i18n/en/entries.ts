@@ -35,6 +35,8 @@ export default {
 	'entries.fieldFull': 'The field is full, take one back first',
 	'entries.chosen': '{n} chosen',
 	'entries.chosenOf': '{n} of {max} chosen',
+	'entries.loadMore': 'Load more',
+	'entries.firstFound': 'The first {n}, more words narrow it down.',
 	'entries.openInFlyout': 'Open in the flyout',
 
 	// the sites

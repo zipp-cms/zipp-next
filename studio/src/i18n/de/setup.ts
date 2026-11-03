@@ -44,7 +44,6 @@ export default {
 	'setup.role': 'Rolle',
 	'setup.may': 'Darf',
 	'setup.allRoles': 'Alle Rollen',
-	'setup.unpublishedChanges': 'Nicht veröffentlichte Änderungen',
 	'setup.theFirst': 'Die ersten {n}.',
 	'setup.openInContent': 'In Inhalte öffnen',
 	'setup.other': 'Weitere',

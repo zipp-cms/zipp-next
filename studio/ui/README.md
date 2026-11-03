@@ -9,6 +9,7 @@ in scss: a module bundles them with `pluginConfig` of `zipp-ui/vite`
 What a module may import is in `exports` of `package.json`, nothing
 else: the components (`zipp-ui/Table.svelte`, …), `zipp-ui/sortable`
 (dragging rows), `zipp-ui/layers` (Escape closes the top one),
+`zipp-ui/listKeys` (the arrow keys of a list),
 `zipp-ui/field` (the contract of a field editor: `FieldProps`,
 `FieldModule`, `fieldModule(Component)` for its `mount`) and
 `zipp-ui/vars.scss` (the breakpoints and mixins: `@include hover`,

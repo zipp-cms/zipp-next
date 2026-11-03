@@ -38,6 +38,8 @@ export default {
 	'entries.fieldFull': 'Das Feld ist voll, zuerst einen entfernen',
 	'entries.chosen': '{n} ausgewählt',
 	'entries.chosenOf': '{n} von {max} ausgewählt',
+	'entries.loadMore': 'Mehr laden',
+	'entries.firstFound': 'Die ersten {n}, mehr Wörter grenzen die Suche ein.',
 	'entries.openInFlyout': 'Im Seitenfenster öffnen',
 
 	// the sites

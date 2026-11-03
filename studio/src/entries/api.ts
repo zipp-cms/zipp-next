@@ -32,7 +32,7 @@ export type Entry = Dates & {
 	updatedAt: number;
 };
 
-export type EntryRef = {
+export type EntryRef = Dates & {
 	id: number;
 	section: string;
 	type: string;
@@ -45,24 +45,38 @@ export type EntryRef = {
 
 export type Refs = Record<number, EntryRef>;
 
+/** An entry to choose, with its parent for the tree and its draft. */
+export type Choice = EntryRef & { parentId: number | null; draft: boolean };
+
 /**
- * An entry to choose, with its parent for the tree, its dates and
- * whether it has a draft for its status.
+ * How many entries of a section there are: `entries` in its order (a
+ * structure with its other types), `pickable` of the types.
  */
-export type Choice = EntryRef &
-	Dates & { parentId: number | null; draft: boolean };
+export type ChoiceCount = { entries: number; pickable: number };
+
+export type Choices = {
+	entries: Choice[];
+	/** per section, also of what wasn't sent */
+	totals: Record<string, ChoiceCount>;
+	/** in a search the parents of the found ones, for their paths */
+	parents: Choice[];
+};
 
 /**
  * The entries of the sections that have one of the types, only of
- * `sections` if any.
+ * `sections` if any: up to a limit per section, more from `offset`;
+ * with `search` the ones that have its words.
  */
 export function listChoices(
 	types: string[],
 	site: string,
 	sections: string[] = [],
-): Promise<{ entries: Choice[] }> {
+	more: { offset?: number; search?: string } = {},
+): Promise<Choices> {
 	const params = new URLSearchParams({ type: types.join(','), site });
 	if (sections.length) params.set('section', sections.join(','));
+	if (more.offset) params.set('offset', String(more.offset));
+	if (more.search) params.set('search', more.search);
 	return request('GET', '/entries/choices?' + params);
 }
 

@@ -384,6 +384,8 @@ async fn choices_for_a_picker() {
 		types: "page".into(),
 		sections: None,
 		site: Some("en".into()),
+		offset: None,
+		search: None,
 	};
 	let got = admin.call(&req).await.unwrap().entries;
 	let ids: Vec<i64> = got.iter().map(|e| e.id).collect();
@@ -402,6 +404,8 @@ async fn choices_for_a_picker() {
 		types: "page,event".into(),
 		sections: None,
 		site: None,
+		offset: None,
+		search: None,
 	};
 	assert_eq!(admin.call(&both).await.unwrap().entries.len(), 5);
 
@@ -410,6 +414,8 @@ async fn choices_for_a_picker() {
 		types: "page,event".into(),
 		sections: Some("pages,events".into()),
 		site: None,
+		offset: None,
+		search: None,
 	};
 	let got = admin.call(&pages).await.unwrap().entries;
 	assert_eq!(got.len(), 4);
@@ -418,6 +424,8 @@ async fn choices_for_a_picker() {
 		types: "page".into(),
 		sections: Some("nope".into()),
 		site: None,
+		offset: None,
+		search: None,
 	};
 	let err = admin.call(&wrong).await.unwrap_err();
 	assert!(matches!(err, Error::Request(_)));
@@ -426,6 +434,8 @@ async fn choices_for_a_picker() {
 		types: "nope".into(),
 		sections: None,
 		site: None,
+		offset: None,
+		search: None,
 	};
 	let err = admin.call(&unknown).await.unwrap_err();
 	assert!(matches!(err, Error::Request(_)));
@@ -476,4 +486,106 @@ async fn saving_tells_nothing_of_hidden_entries_and_assets() {
 	let e = guest.call(&update).await.unwrap();
 	assert_eq!(e.fields["page"], json!([page.id]));
 	assert_eq!(e.fields["image"], json!([image.id]));
+}
+
+fn choices_req(types: &str, sections: Option<&str>) -> ChoicesReq {
+	ChoicesReq {
+		types: types.into(),
+		sections: sections.map(Into::into),
+		site: None,
+		offset: None,
+		search: None,
+	}
+}
+
+#[tokio::test]
+async fn choices_past_the_limit_come_with_an_offset() {
+	// the tests send 3 of a section at a time
+	assert_eq!(super::CHOICES_LIMIT, 3);
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	let create = async |section, ty, title, parent| {
+		let mut i = input(section, ty, title, json!({}));
+		i.parent_id = parent;
+		admin.call(&CreateReq(i)).await.unwrap().id
+	};
+	let mut events = vec![];
+	for title in ["Jazz 1", "Jazz 2", "Jazz 3", "Jazz 4", "Rock"] {
+		events.push(create("events", "event", title, None).await);
+	}
+	let about = create("pages", "page", "About", None).await;
+	create("pages", "page", "Team", Some(about)).await;
+	create("pages", "page", "Contact", None).await;
+	let jobs = create("pages", "page", "Jobs", None).await;
+	let intern = create("pages", "page", "Intern", Some(jobs)).await;
+
+	// the first of each section and how many there are
+	let req = choices_req("event,page", Some("events,pages,"));
+	let got = admin.call(&req).await.unwrap();
+	assert_eq!(got.entries.len(), 6);
+	assert_eq!(got.totals["events"].entries, 5);
+	assert_eq!(got.totals["pages"].pickable, 5);
+	assert!(!got.totals.contains_key("home"));
+
+	// the rest of a channel, newest first
+	let more = ChoicesReq {
+		offset: Some(3),
+		..choices_req("event", Some("events"))
+	};
+	let rest = admin.call(&more).await.unwrap().entries;
+	let ids: Vec<i64> = rest.iter().map(|e| e.id).collect();
+	assert_eq!(ids, [events[1], events[0]]);
+
+	// the rest of a tree keeps its children below their parent
+	let more = ChoicesReq {
+		offset: Some(3),
+		..choices_req("page", Some("pages"))
+	};
+	let rest = admin.call(&more).await.unwrap().entries;
+	let ids: Vec<i64> = rest.iter().map(|e| e.id).collect();
+	assert_eq!(ids, [jobs, intern]);
+	assert_eq!(rest[1].parent_id, Some(jobs));
+
+	// a search looks at all of them, at most the limit
+	let search = ChoicesReq {
+		search: Some("jazz".into()),
+		..choices_req("event,page", None)
+	};
+	let found = admin.call(&search).await.unwrap();
+	assert_eq!(found.entries.len(), 3);
+	assert_eq!(found.totals["events"].entries, 4);
+	assert_eq!(found.totals["pages"].entries, 0);
+	let search = ChoicesReq {
+		search: Some("intern".into()),
+		..choices_req("page", None)
+	};
+	let found = admin.call(&search).await.unwrap();
+	assert_eq!(found.entries[0].id, intern);
+	assert_eq!(found.parents[0].id, jobs);
+
+	// an author doesn't see home, its search doesn't either
+	let author = ts.user(Some("author"));
+	let found = author.call(&search).await.unwrap();
+	assert!(found.totals.keys().all(|s| s == "pages"));
+	let err = ts.anonymous().call(&search).await.unwrap_err();
+	assert_eq!(err, Error::MissingSessionToken);
+}
+
+#[tokio::test]
+async fn choices_skip_empty_parts_of_a_list() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	admin
+		.call(&CreateReq(input("events", "event", "Jazz", json!({}))))
+		.await
+		.unwrap();
+	for (types, sections) in [("event,", Some("events,")), ("event", Some(""))]
+	{
+		let req = choices_req(types, sections);
+		let got = admin.call(&req).await.unwrap();
+		assert_eq!(got.entries.len(), 1, "{types} {sections:?}");
+	}
+	// no types, nothing
+	let none = admin.call(&choices_req("", None)).await.unwrap();
+	assert!(none.entries.is_empty());
 }

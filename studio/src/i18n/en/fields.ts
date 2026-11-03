@@ -72,7 +72,6 @@ export default {
 	'fields.aFile': 'A file',
 	'fields.target': 'Target',
 	'fields.chooseAnotherEntry': 'Choose another entry',
-	'fields.notPublished': 'Not published',
 	'fields.removeEntry': 'Remove the entry',
 	'fields.anotherFile': 'Another file',
 	'fields.chooseFile': 'Choose file',

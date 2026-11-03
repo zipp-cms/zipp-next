@@ -8,6 +8,7 @@
 	import AssetPicker from '../../assets/AssetPicker.svelte';
 	import EntryPicker from '../../entries/EntryPicker.svelte';
 	import { chooseLabel } from '../../entries/picker';
+	import EntryState from '../../entries/EntryState.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
 	import { chosenAssets } from '../../assets/chosen.svelte';
@@ -129,13 +130,7 @@
 						aria-haspopup="dialog"
 						onclick={() => (pickingEntry = true)}
 					>
-						<span
-							class="changed-dot"
-							class:live={entry.published}
-							title={entry.published
-								? t('common.published')
-								: t('fields.notPublished')}
-						></span>
+						<EntryState {entry} />
 						<span class="truncate">{entry.title}</span>
 						<span class="note">
 							{sectionOf(schema, entry.section)?.name ?? ''}
@@ -322,18 +317,6 @@
 			&:hover .truncate {
 				color: var(--accent);
 			}
-		}
-	}
-
-	.changed-dot {
-		width: 0.5rem;
-		height: 0.5rem;
-		flex-shrink: 0;
-		border-radius: 50%;
-		background: var(--subtle);
-
-		&.live {
-			background: var(--ok);
 		}
 	}
 

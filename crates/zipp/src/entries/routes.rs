@@ -51,18 +51,23 @@ async fn list_route(
 	}))
 }
 
+/// The parts of a list `a,b`; a trailing comma adds nothing, like in
+/// `parse_ids`.
+fn parts(list: &str) -> impl Iterator<Item = &str> {
+	list.split(',').filter(|s| !s.is_empty())
+}
+
 async fn choices_route(
 	State(state): State<AppState>,
 	auth: Authed,
 	Req(req): Req<ChoicesReq>,
 ) -> ApiResult<ChoicesReq> {
 	let schema = &state.schema;
-	let types: Vec<&str> = req.types.split(',').collect();
+	let types: Vec<&str> = parts(&req.types).collect();
 	if let Some(t) = types.iter().find(|t| schema.entry_type(t).is_none()) {
 		return Err(Error::Request(format!("unknown entry type {t}")));
 	}
-	let only: Vec<&str> =
-		req.sections.iter().flat_map(|s| s.split(',')).collect();
+	let only: Vec<&str> = req.sections.iter().flat_map(|s| parts(s)).collect();
 	if let Some(s) = only.iter().find(|s| schema.get_section(s).is_none()) {
 		return Err(Error::Request(format!("unknown section {s}")));
 	}
@@ -77,8 +82,15 @@ async fn choices_route(
 		.filter(|s| auth.can(schema, &s.handle, Access::View))
 		.map(|s| s.handle.as_str())
 		.collect();
-	let entries = choices(&state.db.conn(), schema, &sections, &site)?;
-	Ok(Json(ChoicesResp { entries }))
+	let conn = state.db.conn();
+	let search = req.search.as_deref().map(str::trim).unwrap_or_default();
+	Ok(Json(match search {
+		"" => {
+			let offset = req.offset.unwrap_or(0).max(0);
+			choices(&conn, schema, &types, &sections, &site, offset)?
+		}
+		q => search_choices(&conn, schema, &types, &sections, &site, q)?,
+	}))
 }
 
 async fn get_route(

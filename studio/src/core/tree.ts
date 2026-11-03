@@ -30,3 +30,14 @@ export function ancestors<N extends Node>(byId: Map<number, N>, e: Node): N[] {
 	}
 	return out;
 }
+
+/**
+ * The rows of a tree that show: those whose parents are all open. Each
+ * row has the ids of all its parents.
+ */
+export function visibleRows<R extends { parents: number[] }>(
+	rows: R[],
+	open: (id: number) => boolean,
+): R[] {
+	return rows.filter(r => r.parents.every(open));
+}

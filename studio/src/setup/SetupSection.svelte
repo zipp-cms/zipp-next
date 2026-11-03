@@ -2,7 +2,7 @@
 	import { gqlType, uriOf, visibleRoles } from './setup';
 	import { componentPath, entryPath, sectionPath } from '../core/paths';
 	import { depths } from '../core/tree';
-	import SiteBadges from '../entries/SiteBadges.svelte';
+	import EntryBadges from '../entries/EntryBadges.svelte';
 	import { entryUrl, navGroups, type Schema } from '../core/schema';
 	import type { EntryList } from '../entries/api';
 	import { accessOf, accessText, isAdmin } from '../core/access';
@@ -235,15 +235,11 @@
 				{#each entries as e, i (e.id)}
 					<li style:padding-left="{entryDepths[i] * 0.75}rem">
 						<a href={entryPath(handle, e.id)}>{e.title}</a>
-						{#if drafts.includes(e.id)}
-							<span
-								class="badge changes"
-								title={t('setup.unpublishedChanges')}
-							>
-								{t('common.draft')}
-							</span>
-						{/if}
-						<SiteBadges {schema} published={published[e.id]} />
+						<EntryBadges
+							{schema}
+							published={published[e.id] ?? {}}
+							draft={drafts.includes(e.id)}
+						/>
 					</li>
 				{/each}
 			</ul>

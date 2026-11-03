@@ -71,6 +71,8 @@ fn saves_and_queries() {
 	let (events, _) = list(&conn, &query(&[("type", "event")])).unwrap();
 	let r = refs(&conn, &[events[0].id], "de", true).unwrap();
 	assert_eq!(r[&about.id].uri.as_deref(), Some("über-uns"));
+	// with its dates, a chip shows whether it is live
+	assert!(r[&about.id].dates.post_date.is_some());
 }
 
 #[test]
@@ -624,14 +626,60 @@ fn choices_are_in_the_order_of_their_section() {
 	};
 	crate::drafts::put_draft(&conn, &s, ids[1], "de", doc, None, None).unwrap();
 
-	let all = choices(&conn, &s, &["pages"], "de").unwrap();
+	let got = choices(&conn, &s, &["page"], &["pages"], "de", 0).unwrap();
+	let all = got.entries;
 	let titles: Vec<&str> = all.iter().map(|c| c.title.as_str()).collect();
 	assert_eq!(titles, ["A", "B"]);
 	let drafts: Vec<bool> = all.iter().map(|c| c.draft).collect();
 	assert_eq!(drafts, [false, true]);
 	// published gets a post date, the status shows it
 	assert!(all[0].dates.post_date.is_some());
-	assert!(choices(&conn, &s, &["pages"], "fr").is_err());
+	let count = ChoiceCount {
+		entries: 2,
+		pickable: 2,
+	};
+	assert_eq!(got.totals["pages"], count);
+	assert!(choices(&conn, &s, &["page"], &["pages"], "fr", 0).is_err());
+}
+
+#[test]
+fn choices_of_a_tree_count_its_types_and_search_with_parents() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site().section(Section::structure("docs", ["page", "event"]));
+	let mut parent = None;
+	let mut ids = vec![];
+	for (ty, title) in [("page", "Guide"), ("event", "Jazz"), ("page", "Late")]
+	{
+		let mut i = input("docs", ty, title, json!({}));
+		i.parent_id = parent;
+		let id = save(&conn, &s, None, i, None).unwrap().id;
+		parent = Some(id);
+		ids.push(id);
+	}
+
+	// the event is there as a parent, but only pages count to pick
+	let got = choices(&conn, &s, &["page"], &["docs"], "de", 0).unwrap();
+	assert_eq!(got.entries.len(), 3);
+	let count = ChoiceCount {
+		entries: 3,
+		pickable: 2,
+	};
+	assert_eq!(got.totals["docs"], count);
+
+	// a search finds only pages, with all their parents for the path
+	let found =
+		search_choices(&conn, &s, &["page"], &["docs"], "de", "late").unwrap();
+	let titles: Vec<&str> =
+		found.entries.iter().map(|c| c.title.as_str()).collect();
+	assert_eq!(titles, ["Late"]);
+	let mut parents: Vec<i64> = found.parents.iter().map(|c| c.id).collect();
+	parents.sort();
+	assert_eq!(parents, ids[..2]);
+	assert_eq!(found.totals["docs"].pickable, 1);
+	let none =
+		search_choices(&conn, &s, &["page"], &["docs"], "de", "jazz").unwrap();
+	assert!(none.entries.is_empty());
 }
 
 #[test]
