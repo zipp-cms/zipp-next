@@ -1,0 +1,3705 @@
+{
+  "ops": [
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "formSettings",
+        "name": "Forms",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "contactTo",
+            "label": "Contact: send to",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "One or more addresses, separated by commas. Without one the form can't send.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "contactSubject",
+            "label": "Contact: subject",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "Empty: *New message: Contact*",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "contactSuccess",
+            "label": "Contact: message after sending",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "Empty: *Thank you, your message is sent.*",
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "seoSettings",
+        "name": "SEO",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "siteName",
+            "label": "Site name, set it: else the name of the site (Deutsch)",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "titlePattern",
+            "label": "Title pattern, empty: {title} | {siteName}",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "image",
+            "label": "Image for sharing",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "robots",
+            "label": "Robots, empty: index, follow",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "index, follow",
+                "label": "Index, follow links"
+              },
+              {
+                "value": "noindex, follow",
+                "label": "No index, follow links"
+              },
+              {
+                "value": "index, nofollow",
+                "label": "Index, don't follow links"
+              },
+              {
+                "value": "noindex, nofollow",
+                "label": "No index, don't follow links"
+              }
+            ]
+          },
+          {
+            "handle": "twitterHandle",
+            "label": "X handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "robotsTxt",
+            "label": "robots.txt, empty: allow everything",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "organization",
+            "label": "Structured data",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "group",
+            "component": "seoOrganization"
+          },
+          {
+            "handle": "overrides",
+            "label": "Per section and entry type",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "seoOverride"
+            ],
+            "min": null,
+            "max": null
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "seoOrganization",
+        "name": "Organization",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "type",
+            "label": "Type",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Organization",
+                "label": "Organization"
+              },
+              {
+                "value": "Corporation",
+                "label": "Corporation"
+              },
+              {
+                "value": "LocalBusiness",
+                "label": "LocalBusiness"
+              },
+              {
+                "value": "ProfessionalService",
+                "label": "ProfessionalService"
+              },
+              {
+                "value": "MedicalBusiness",
+                "label": "MedicalBusiness"
+              },
+              {
+                "value": "MedicalClinic",
+                "label": "MedicalClinic"
+              },
+              {
+                "value": "Physician",
+                "label": "Physician"
+              },
+              {
+                "value": "Dentist",
+                "label": "Dentist"
+              },
+              {
+                "value": "LegalService",
+                "label": "LegalService"
+              },
+              {
+                "value": "FinancialService",
+                "label": "FinancialService"
+              },
+              {
+                "value": "RealEstateAgent",
+                "label": "RealEstateAgent"
+              },
+              {
+                "value": "Store",
+                "label": "Store"
+              },
+              {
+                "value": "Restaurant",
+                "label": "Restaurant"
+              },
+              {
+                "value": "LodgingBusiness",
+                "label": "LodgingBusiness"
+              },
+              {
+                "value": "EducationalOrganization",
+                "label": "EducationalOrganization"
+              },
+              {
+                "value": "NGO",
+                "label": "NGO"
+              },
+              {
+                "value": "GovernmentOrganization",
+                "label": "GovernmentOrganization"
+              },
+              {
+                "value": "Person",
+                "label": "Person"
+              }
+            ]
+          },
+          {
+            "handle": "name",
+            "label": "Name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "alternateName",
+            "label": "Alternate name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "legalName",
+            "label": "Legal name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "url",
+            "label": "URL, empty: the site",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "logo",
+            "label": "Logo",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "email",
+            "label": "Email",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "telephone",
+            "label": "Telephone",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "street",
+            "label": "Street",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "postalCode",
+            "label": "Postal code",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "locality",
+            "label": "Locality",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "region",
+            "label": "Region",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "country",
+            "label": "Country",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "latitude",
+            "label": "Latitude",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "number",
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "longitude",
+            "label": "Longitude",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "number",
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "priceRange",
+            "label": "Price range",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "openingHours",
+            "label": "Opening hours",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "blocks",
+            "types": [
+              "seoOpeningHours"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "sameAs",
+            "label": "Profiles, one url per line",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "creatorName",
+            "label": "Made by",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "creatorType",
+            "label": "Creator type",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Organization",
+                "label": "Organization"
+              },
+              {
+                "value": "Person",
+                "label": "Person"
+              }
+            ]
+          },
+          {
+            "handle": "creatorUrl",
+            "label": "Creator url",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "seoOverride",
+        "name": "Section or entry type",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "appliesTo",
+            "label": "For",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "section:pages",
+                "label": "Section Pages"
+              },
+              {
+                "value": "section:news",
+                "label": "Section News"
+              },
+              {
+                "value": "section:events",
+                "label": "Section Events"
+              },
+              {
+                "value": "type:page",
+                "label": "Entry type Page"
+              },
+              {
+                "value": "type:home",
+                "label": "Entry type Home"
+              },
+              {
+                "value": "type:news",
+                "label": "Entry type News"
+              },
+              {
+                "value": "type:article",
+                "label": "Entry type Article"
+              },
+              {
+                "value": "type:event",
+                "label": "Entry type Event"
+              }
+            ]
+          },
+          {
+            "handle": "titlePattern",
+            "label": "Title pattern, like {title} – Events | {siteName}",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "image",
+            "label": "Image for sharing",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "robots",
+            "label": "Robots",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "index, follow",
+                "label": "Index, follow links"
+              },
+              {
+                "value": "noindex, follow",
+                "label": "No index, follow links"
+              },
+              {
+                "value": "index, nofollow",
+                "label": "Index, don't follow links"
+              },
+              {
+                "value": "noindex, nofollow",
+                "label": "No index, don't follow links"
+              }
+            ]
+          },
+          {
+            "handle": "sitemap",
+            "label": "Sitemap",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "yes",
+                "label": "In the sitemap"
+              },
+              {
+                "value": "no",
+                "label": "Not in the sitemap"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "seoOpeningHours",
+        "name": "Opening hours",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "day",
+            "label": "Day",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Monday",
+                "label": "Monday"
+              },
+              {
+                "value": "Tuesday",
+                "label": "Tuesday"
+              },
+              {
+                "value": "Wednesday",
+                "label": "Wednesday"
+              },
+              {
+                "value": "Thursday",
+                "label": "Thursday"
+              },
+              {
+                "value": "Friday",
+                "label": "Friday"
+              },
+              {
+                "value": "Saturday",
+                "label": "Saturday"
+              },
+              {
+                "value": "Sunday",
+                "label": "Sunday"
+              }
+            ]
+          },
+          {
+            "handle": "opens",
+            "label": "Opens (09:00)",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "closes",
+            "label": "Closes (18:00)",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "translations",
+        "name": "Translations",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "common",
+            "label": "Common",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "texts",
+            "keys": [
+              [
+                "nav.home",
+                "Startseite"
+              ],
+              [
+                "footer.made",
+                "Ein crelte-Frontend, die Inhalte kommen von zipp."
+              ],
+              [
+                "events.none",
+                "Keine Veranstaltungen"
+              ],
+              [
+                "events.soldOut",
+                "Ausverkauft"
+              ],
+              [
+                "news.all",
+                "Alle"
+              ],
+              [
+                "news.none",
+                "Noch keine Neuigkeiten"
+              ],
+              [
+                "contact.name",
+                "Name"
+              ],
+              [
+                "contact.email",
+                "E-Mail"
+              ],
+              [
+                "contact.phone",
+                "Telefon"
+              ],
+              [
+                "contact.message",
+                "Nachricht"
+              ],
+              [
+                "contact.send",
+                "Senden"
+              ],
+              [
+                "contact.failed",
+                "Das hat nicht geklappt, bitte später nochmals."
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "asset",
+        "name": "Asset",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "credit",
+            "label": "Credit",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Who made it, shown under the image.",
+            "width": 50,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "licence",
+            "label": "Licence",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "width": 50,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "own",
+                "label": "Own"
+              },
+              {
+                "value": "cc",
+                "label": "CC BY"
+              },
+              {
+                "value": "press",
+                "label": "Press image"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "home",
+        "name": "Home",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "text",
+              "images",
+              "video",
+              "button",
+              "events",
+              "contact"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
+            "name": "Content",
+            "fields": [
+              "content"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "house"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "page",
+        "name": "Page",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "text",
+              "images",
+              "video",
+              "button",
+              "events",
+              "contact"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
+            "name": "Content",
+            "fields": [
+              "content"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "file-text"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "news",
+        "name": "News",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "newspaper"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "article",
+        "name": "Article",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "categories",
+            "label": "Categories",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "category"
+            ],
+            "max": 3
+          },
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "text",
+              "images",
+              "video",
+              "button",
+              "events",
+              "contact"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero",
+              "categories"
+            ],
+            "card": true
+          },
+          {
+            "name": "Content",
+            "fields": [
+              "content"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "notebook-pen"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "category",
+        "name": "Category",
+        "entry": true,
+        "fields": [],
+        "icon": {
+          "lucide": "tag"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "event",
+        "name": "Event",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "date",
+            "label": "Date",
+            "required": true,
+            "indexed": true,
+            "translatable": false,
+            "instructions": "Past events leave the list of upcoming ones.",
+            "width": 25,
+            "kind": "date",
+            "time": false
+          },
+          {
+            "handle": "doors",
+            "label": "Doors open",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Empty: the website shows none.",
+            "width": 50,
+            "when": {
+              "test": "oneOf",
+              "field": "genre",
+              "values": [
+                "concert"
+              ]
+            },
+            "kind": "date",
+            "time": true
+          },
+          {
+            "handle": "city",
+            "label": "City",
+            "required": true,
+            "indexed": true,
+            "translatable": false,
+            "width": 25,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "genre",
+            "label": "Genre",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "buttonGroup",
+            "options": [
+              {
+                "value": "concert",
+                "label": "Konzert",
+                "color": "#2b6cb0"
+              },
+              {
+                "value": "reading",
+                "label": "Lesung",
+                "color": "#2f855a"
+              },
+              {
+                "value": "theatre",
+                "label": "Theater",
+                "color": "#c05621"
+              }
+            ]
+          },
+          {
+            "handle": "audience",
+            "label": "Für wen",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "width": 50,
+            "kind": "checkboxes",
+            "options": [
+              {
+                "value": "kids",
+                "label": "Kinder"
+              },
+              {
+                "value": "adults",
+                "label": "Erwachsene"
+              },
+              {
+                "value": "families",
+                "label": "Familien"
+              }
+            ]
+          },
+          {
+            "handle": "spokenIn",
+            "label": "Sprache",
+            "required": false,
+            "indexed": true,
+            "translatable": false,
+            "default": "de",
+            "width": 50,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "de",
+                "label": "Deutsch"
+              },
+              {
+                "value": "ch",
+                "label": "Mundart"
+              },
+              {
+                "value": "fr",
+                "label": "Français"
+              },
+              {
+                "value": "it",
+                "label": "Italiano"
+              },
+              {
+                "value": "en",
+                "label": "English"
+              }
+            ]
+          },
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1,
+            "folder": "Events"
+          },
+          {
+            "handle": "tickets",
+            "label": "Tickets",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "group",
+            "component": "eventTickets"
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "markdown"
+          },
+          {
+            "handle": "page",
+            "label": "More info",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "page"
+            ],
+            "max": 1
+          }
+        ],
+        "card": true,
+        "icon": {
+          "lucide": "calendar"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "eventTickets",
+        "name": "Tickets",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "price",
+            "label": "Price",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "width": 50,
+            "kind": "number",
+            "min": 0.0,
+            "max": 1000.0,
+            "decimals": 2,
+            "unit": "CHF"
+          },
+          {
+            "handle": "soldOut",
+            "label": "Sold out",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "width": 50,
+            "kind": "boolean"
+          },
+          {
+            "handle": "categories",
+            "label": "Kategorien",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Leer: es gilt der Preis oben.",
+            "kind": "table",
+            "columns": [
+              {
+                "handle": "name",
+                "label": "Kategorie",
+                "kind": "text"
+              },
+              {
+                "handle": "price",
+                "label": "Preis",
+                "kind": "number",
+                "decimals": 2,
+                "unit": "CHF"
+              },
+              {
+                "handle": "soldOut",
+                "label": "Ausverkauft",
+                "kind": "boolean"
+              }
+            ]
+          },
+          {
+            "handle": "waitlist",
+            "label": "Warteliste",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "when": {
+              "test": "oneOf",
+              "field": "soldOut",
+              "values": [
+                true
+              ]
+            },
+            "kind": "link",
+            "to": [
+              "url",
+              "email"
+            ],
+            "labels": true,
+            "newTab": true
+          },
+          {
+            "handle": "program",
+            "label": "Programm (PDF)",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": false,
+            "max": 1,
+            "folder": "Events/Programs",
+            "extensions": [
+              "pdf"
+            ]
+          }
+        ],
+        "part_of": "event"
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "header",
+        "name": "Header",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "navigation",
+            "label": "Main navigation",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "navigation",
+            "to": [
+              "entry",
+              "url",
+              "asset"
+            ],
+            "depth": 2,
+            "sections": [
+              "pages"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "footer",
+        "name": "Footer",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "text",
+            "label": "Text",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "email",
+            "label": "Contact email",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "email"
+          },
+          {
+            "handle": "links",
+            "label": "Links",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "table",
+            "columns": [
+              {
+                "handle": "label",
+                "label": "Label",
+                "kind": "text"
+              },
+              {
+                "handle": "url",
+                "label": "Url",
+                "kind": "url"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "text",
+        "name": "Text",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "text",
+            "label": "Text",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "richText",
+            "headings": [
+              2,
+              3
+            ],
+            "lists": true,
+            "links": true,
+            "buttons": true,
+            "blocks": [
+              "images"
+            ],
+            "styles": [
+              {
+                "class": "lead",
+                "label": "Lead",
+                "inline": false
+              },
+              {
+                "class": "highlight",
+                "label": "Highlight",
+                "inline": true
+              }
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "text"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "images",
+        "name": "Images",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "images",
+            "label": "Images",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": null
+          },
+          {
+            "handle": "caption",
+            "label": "Caption",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 200,
+            "multiline": false
+          },
+          {
+            "handle": "width",
+            "label": "Width",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "default": "wide",
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "small",
+                "label": "Small"
+              },
+              {
+                "value": "wide",
+                "label": "Wide"
+              },
+              {
+                "value": "full",
+                "label": "Full width"
+              }
+            ]
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Content",
+            "fields": [
+              "images",
+              "caption"
+            ]
+          },
+          {
+            "name": "Layout",
+            "fields": [
+              "width"
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "images"
+        },
+        "title_field": "caption"
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "video",
+        "name": "Video",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "video",
+            "label": "Video",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": false,
+            "max": 1,
+            "extensions": [
+              "mp4",
+              "webm",
+              "mov"
+            ]
+          },
+          {
+            "handle": "poster",
+            "label": "Poster",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown until it plays, empty: its first frame.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "loop",
+            "label": "Loop",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Plays muted and over again, like a moving image.",
+            "kind": "boolean"
+          }
+        ],
+        "icon": {
+          "lucide": "video"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "button",
+        "name": "Button",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "link",
+            "label": "Link",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "link",
+            "to": [
+              "entry",
+              "url",
+              "email",
+              "phone",
+              "asset"
+            ],
+            "labels": true,
+            "newTab": true
+          }
+        ],
+        "icon": {
+          "lucide": "mouse-pointer-click"
+        },
+        "title_field": "link"
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "events",
+        "name": "Upcoming events",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "city",
+            "label": "Only in city",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ],
+        "icon": {
+          "lucide": "calendar-days"
+        },
+        "title_field": "city"
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "contact",
+        "name": "Contact form",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "title",
+            "label": "Title",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Above the form, empty: none.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ],
+        "icon": {
+          "lucide": "mail"
+        }
+      }
+    },
+    {
+      "op": "addSite",
+      "site": {
+        "handle": "de",
+        "name": "Deutsch",
+        "language": "de-CH"
+      }
+    },
+    {
+      "op": "addSite",
+      "site": {
+        "handle": "en",
+        "name": "English",
+        "language": "en"
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "pages",
+        "name": "Pages",
+        "kind": "structure",
+        "types": [
+          "page",
+          "home",
+          "news"
+        ],
+        "uri": "{parent.uri}/{slug}",
+        "type_uris": {
+          "home": ""
+        }
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "news",
+        "name": "News",
+        "kind": "channel",
+        "types": [
+          "article"
+        ],
+        "uri": "news/{slug}"
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "categories",
+        "name": "Categories",
+        "kind": "structure",
+        "types": [
+          "category"
+        ],
+        "uri": null,
+        "max_level": 2
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "events",
+        "name": "Events",
+        "kind": "channel",
+        "types": [
+          "event"
+        ],
+        "uri": "events/{slug}"
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "header",
+        "name": "Header",
+        "kind": "single",
+        "types": [
+          "header"
+        ],
+        "uri": null
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "footer",
+        "name": "Footer",
+        "kind": "single",
+        "types": [
+          "footer"
+        ],
+        "uri": null
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "formSettings",
+        "name": "Forms",
+        "kind": "single",
+        "types": [
+          "formSettings"
+        ],
+        "uri": null
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "seoSettings",
+        "name": "SEO",
+        "kind": "single",
+        "types": [
+          "seoSettings"
+        ],
+        "uri": null
+      }
+    },
+    {
+      "op": "addSection",
+      "section": {
+        "handle": "translations",
+        "name": "Translations",
+        "kind": "single",
+        "types": [
+          "translations"
+        ],
+        "uri": null
+      }
+    }
+  ],
+  "schema": {
+    "sites": [
+      {
+        "handle": "de",
+        "name": "Deutsch",
+        "language": "de-CH"
+      },
+      {
+        "handle": "en",
+        "name": "English",
+        "language": "en"
+      }
+    ],
+    "sections": [
+      {
+        "handle": "pages",
+        "name": "Pages",
+        "kind": "structure",
+        "types": [
+          "page",
+          "home",
+          "news"
+        ],
+        "uri": "{parent.uri}/{slug}",
+        "type_uris": {
+          "home": ""
+        }
+      },
+      {
+        "handle": "news",
+        "name": "News",
+        "kind": "channel",
+        "types": [
+          "article"
+        ],
+        "uri": "news/{slug}"
+      },
+      {
+        "handle": "categories",
+        "name": "Categories",
+        "kind": "structure",
+        "types": [
+          "category"
+        ],
+        "uri": null,
+        "max_level": 2
+      },
+      {
+        "handle": "events",
+        "name": "Events",
+        "kind": "channel",
+        "types": [
+          "event"
+        ],
+        "uri": "events/{slug}"
+      },
+      {
+        "handle": "header",
+        "name": "Header",
+        "kind": "single",
+        "types": [
+          "header"
+        ],
+        "uri": null
+      },
+      {
+        "handle": "footer",
+        "name": "Footer",
+        "kind": "single",
+        "types": [
+          "footer"
+        ],
+        "uri": null
+      },
+      {
+        "handle": "formSettings",
+        "name": "Forms",
+        "kind": "single",
+        "types": [
+          "formSettings"
+        ],
+        "uri": null
+      },
+      {
+        "handle": "seoSettings",
+        "name": "SEO",
+        "kind": "single",
+        "types": [
+          "seoSettings"
+        ],
+        "uri": null
+      },
+      {
+        "handle": "translations",
+        "name": "Translations",
+        "kind": "single",
+        "types": [
+          "translations"
+        ],
+        "uri": null
+      }
+    ],
+    "components": [
+      {
+        "handle": "formSettings",
+        "name": "Forms",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "contactTo",
+            "label": "Contact: send to",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "One or more addresses, separated by commas. Without one the form can't send.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "contactSubject",
+            "label": "Contact: subject",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "Empty: *New message: Contact*",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "contactSuccess",
+            "label": "Contact: message after sending",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "Empty: *Thank you, your message is sent.*",
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          }
+        ]
+      },
+      {
+        "handle": "seoSettings",
+        "name": "SEO",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "siteName",
+            "label": "Site name, set it: else the name of the site (Deutsch)",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "titlePattern",
+            "label": "Title pattern, empty: {title} | {siteName}",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "image",
+            "label": "Image for sharing",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "robots",
+            "label": "Robots, empty: index, follow",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "index, follow",
+                "label": "Index, follow links"
+              },
+              {
+                "value": "noindex, follow",
+                "label": "No index, follow links"
+              },
+              {
+                "value": "index, nofollow",
+                "label": "Index, don't follow links"
+              },
+              {
+                "value": "noindex, nofollow",
+                "label": "No index, don't follow links"
+              }
+            ]
+          },
+          {
+            "handle": "twitterHandle",
+            "label": "X handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "robotsTxt",
+            "label": "robots.txt, empty: allow everything",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "organization",
+            "label": "Structured data",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "group",
+            "component": "seoOrganization"
+          },
+          {
+            "handle": "overrides",
+            "label": "Per section and entry type",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "seoOverride"
+            ],
+            "min": null,
+            "max": null
+          }
+        ]
+      },
+      {
+        "handle": "seoOrganization",
+        "name": "Organization",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "type",
+            "label": "Type",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Organization",
+                "label": "Organization"
+              },
+              {
+                "value": "Corporation",
+                "label": "Corporation"
+              },
+              {
+                "value": "LocalBusiness",
+                "label": "LocalBusiness"
+              },
+              {
+                "value": "ProfessionalService",
+                "label": "ProfessionalService"
+              },
+              {
+                "value": "MedicalBusiness",
+                "label": "MedicalBusiness"
+              },
+              {
+                "value": "MedicalClinic",
+                "label": "MedicalClinic"
+              },
+              {
+                "value": "Physician",
+                "label": "Physician"
+              },
+              {
+                "value": "Dentist",
+                "label": "Dentist"
+              },
+              {
+                "value": "LegalService",
+                "label": "LegalService"
+              },
+              {
+                "value": "FinancialService",
+                "label": "FinancialService"
+              },
+              {
+                "value": "RealEstateAgent",
+                "label": "RealEstateAgent"
+              },
+              {
+                "value": "Store",
+                "label": "Store"
+              },
+              {
+                "value": "Restaurant",
+                "label": "Restaurant"
+              },
+              {
+                "value": "LodgingBusiness",
+                "label": "LodgingBusiness"
+              },
+              {
+                "value": "EducationalOrganization",
+                "label": "EducationalOrganization"
+              },
+              {
+                "value": "NGO",
+                "label": "NGO"
+              },
+              {
+                "value": "GovernmentOrganization",
+                "label": "GovernmentOrganization"
+              },
+              {
+                "value": "Person",
+                "label": "Person"
+              }
+            ]
+          },
+          {
+            "handle": "name",
+            "label": "Name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "alternateName",
+            "label": "Alternate name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "legalName",
+            "label": "Legal name",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "url",
+            "label": "URL, empty: the site",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "logo",
+            "label": "Logo",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "email",
+            "label": "Email",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "telephone",
+            "label": "Telephone",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "street",
+            "label": "Street",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "postalCode",
+            "label": "Postal code",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "locality",
+            "label": "Locality",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "region",
+            "label": "Region",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "country",
+            "label": "Country",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "latitude",
+            "label": "Latitude",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "number",
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "longitude",
+            "label": "Longitude",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "number",
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "priceRange",
+            "label": "Price range",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "openingHours",
+            "label": "Opening hours",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "blocks",
+            "types": [
+              "seoOpeningHours"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "sameAs",
+            "label": "Profiles, one url per line",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "creatorName",
+            "label": "Made by",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "creatorType",
+            "label": "Creator type",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Organization",
+                "label": "Organization"
+              },
+              {
+                "value": "Person",
+                "label": "Person"
+              }
+            ]
+          },
+          {
+            "handle": "creatorUrl",
+            "label": "Creator url",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      },
+      {
+        "handle": "seoOverride",
+        "name": "Section or entry type",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "appliesTo",
+            "label": "For",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "section:pages",
+                "label": "Section Pages"
+              },
+              {
+                "value": "section:news",
+                "label": "Section News"
+              },
+              {
+                "value": "section:events",
+                "label": "Section Events"
+              },
+              {
+                "value": "type:page",
+                "label": "Entry type Page"
+              },
+              {
+                "value": "type:home",
+                "label": "Entry type Home"
+              },
+              {
+                "value": "type:news",
+                "label": "Entry type News"
+              },
+              {
+                "value": "type:article",
+                "label": "Entry type Article"
+              },
+              {
+                "value": "type:event",
+                "label": "Entry type Event"
+              }
+            ]
+          },
+          {
+            "handle": "titlePattern",
+            "label": "Title pattern, like {title} – Events | {siteName}",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          },
+          {
+            "handle": "image",
+            "label": "Image for sharing",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "robots",
+            "label": "Robots",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "index, follow",
+                "label": "Index, follow links"
+              },
+              {
+                "value": "noindex, follow",
+                "label": "No index, follow links"
+              },
+              {
+                "value": "index, nofollow",
+                "label": "Index, don't follow links"
+              },
+              {
+                "value": "noindex, nofollow",
+                "label": "No index, don't follow links"
+              }
+            ]
+          },
+          {
+            "handle": "sitemap",
+            "label": "Sitemap",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "yes",
+                "label": "In the sitemap"
+              },
+              {
+                "value": "no",
+                "label": "Not in the sitemap"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "handle": "seoOpeningHours",
+        "name": "Opening hours",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "day",
+            "label": "Day",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "Monday",
+                "label": "Monday"
+              },
+              {
+                "value": "Tuesday",
+                "label": "Tuesday"
+              },
+              {
+                "value": "Wednesday",
+                "label": "Wednesday"
+              },
+              {
+                "value": "Thursday",
+                "label": "Thursday"
+              },
+              {
+                "value": "Friday",
+                "label": "Friday"
+              },
+              {
+                "value": "Saturday",
+                "label": "Saturday"
+              },
+              {
+                "value": "Sunday",
+                "label": "Sunday"
+              }
+            ]
+          },
+          {
+            "handle": "opens",
+            "label": "Opens (09:00)",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "closes",
+            "label": "Closes (18:00)",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      },
+      {
+        "handle": "translations",
+        "name": "Translations",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "common",
+            "label": "Common",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "texts",
+            "keys": [
+              [
+                "nav.home",
+                "Startseite"
+              ],
+              [
+                "footer.made",
+                "Ein crelte-Frontend, die Inhalte kommen von zipp."
+              ],
+              [
+                "events.none",
+                "Keine Veranstaltungen"
+              ],
+              [
+                "events.soldOut",
+                "Ausverkauft"
+              ],
+              [
+                "news.all",
+                "Alle"
+              ],
+              [
+                "news.none",
+                "Noch keine Neuigkeiten"
+              ],
+              [
+                "contact.name",
+                "Name"
+              ],
+              [
+                "contact.email",
+                "E-Mail"
+              ],
+              [
+                "contact.phone",
+                "Telefon"
+              ],
+              [
+                "contact.message",
+                "Nachricht"
+              ],
+              [
+                "contact.send",
+                "Senden"
+              ],
+              [
+                "contact.failed",
+                "Das hat nicht geklappt, bitte später nochmals."
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "handle": "asset",
+        "name": "Asset",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "credit",
+            "label": "Credit",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Who made it, shown under the image.",
+            "width": 50,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "licence",
+            "label": "Licence",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "width": 50,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "own",
+                "label": "Own"
+              },
+              {
+                "value": "cc",
+                "label": "CC BY"
+              },
+              {
+                "value": "press",
+                "label": "Press image"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "handle": "home",
+        "name": "Home",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "text",
+              "images",
+              "video",
+              "button",
+              "events",
+              "contact"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
+            "name": "Content",
+            "fields": [
+              "content"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "house"
+        }
+      },
+      {
+        "handle": "page",
+        "name": "Page",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "text",
+              "images",
+              "video",
+              "button",
+              "events",
+              "contact"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
+            "name": "Content",
+            "fields": [
+              "content"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "file-text"
+        }
+      },
+      {
+        "handle": "news",
+        "name": "News",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "newspaper"
+        }
+      },
+      {
+        "handle": "article",
+        "name": "Article",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "intro",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "The first lines of the page, also its description for search engines.",
+            "kind": "richText",
+            "headings": [],
+            "lists": false,
+            "links": true,
+            "buttons": false,
+            "blocks": []
+          },
+          {
+            "handle": "hero",
+            "label": "Hero",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Wide, at least **1600 px**; it is cropped around the focal point.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "categories",
+            "label": "Categories",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "category"
+            ],
+            "max": 3
+          },
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "blocks",
+            "types": [
+              "text",
+              "images",
+              "video",
+              "button",
+              "events",
+              "contact"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "SEO",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "custom",
+            "type": "seo",
+            "options": null
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Intro",
+            "fields": [
+              "intro",
+              "hero",
+              "categories"
+            ],
+            "card": true
+          },
+          {
+            "name": "Content",
+            "fields": [
+              "content"
+            ]
+          },
+          {
+            "name": "SEO",
+            "fields": [
+              "seo"
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "notebook-pen"
+        }
+      },
+      {
+        "handle": "category",
+        "name": "Category",
+        "entry": true,
+        "fields": [],
+        "icon": {
+          "lucide": "tag"
+        }
+      },
+      {
+        "handle": "event",
+        "name": "Event",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "date",
+            "label": "Date",
+            "required": true,
+            "indexed": true,
+            "translatable": false,
+            "instructions": "Past events leave the list of upcoming ones.",
+            "width": 25,
+            "kind": "date",
+            "time": false
+          },
+          {
+            "handle": "doors",
+            "label": "Doors open",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Empty: the website shows none.",
+            "width": 50,
+            "when": {
+              "test": "oneOf",
+              "field": "genre",
+              "values": [
+                "concert"
+              ]
+            },
+            "kind": "date",
+            "time": true
+          },
+          {
+            "handle": "city",
+            "label": "City",
+            "required": true,
+            "indexed": true,
+            "translatable": false,
+            "width": 25,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "genre",
+            "label": "Genre",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "buttonGroup",
+            "options": [
+              {
+                "value": "concert",
+                "label": "Konzert",
+                "color": "#2b6cb0"
+              },
+              {
+                "value": "reading",
+                "label": "Lesung",
+                "color": "#2f855a"
+              },
+              {
+                "value": "theatre",
+                "label": "Theater",
+                "color": "#c05621"
+              }
+            ]
+          },
+          {
+            "handle": "audience",
+            "label": "Für wen",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "width": 50,
+            "kind": "checkboxes",
+            "options": [
+              {
+                "value": "kids",
+                "label": "Kinder"
+              },
+              {
+                "value": "adults",
+                "label": "Erwachsene"
+              },
+              {
+                "value": "families",
+                "label": "Familien"
+              }
+            ]
+          },
+          {
+            "handle": "spokenIn",
+            "label": "Sprache",
+            "required": false,
+            "indexed": true,
+            "translatable": false,
+            "default": "de",
+            "width": 50,
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "de",
+                "label": "Deutsch"
+              },
+              {
+                "value": "ch",
+                "label": "Mundart"
+              },
+              {
+                "value": "fr",
+                "label": "Français"
+              },
+              {
+                "value": "it",
+                "label": "Italiano"
+              },
+              {
+                "value": "en",
+                "label": "English"
+              }
+            ]
+          },
+          {
+            "handle": "imageHint",
+            "label": "Image hint",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "note",
+            "text": "**Bild** im Querformat (3:2), mindestens 1600 px breit: es steht in der Liste und oben auf der Seite."
+          },
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1,
+            "folder": "Events"
+          },
+          {
+            "handle": "tickets",
+            "label": "Tickets",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "group",
+            "component": "eventTickets"
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "markdown"
+          },
+          {
+            "handle": "page",
+            "label": "More info",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "page"
+            ],
+            "max": 1
+          }
+        ],
+        "card": true,
+        "icon": {
+          "lucide": "calendar"
+        }
+      },
+      {
+        "handle": "eventTickets",
+        "name": "Tickets",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "price",
+            "label": "Price",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "width": 50,
+            "kind": "number",
+            "min": 0.0,
+            "max": 1000.0,
+            "decimals": 2,
+            "unit": "CHF"
+          },
+          {
+            "handle": "soldOut",
+            "label": "Sold out",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "width": 50,
+            "kind": "boolean"
+          },
+          {
+            "handle": "categories",
+            "label": "Kategorien",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Leer: es gilt der Preis oben.",
+            "kind": "table",
+            "columns": [
+              {
+                "handle": "name",
+                "label": "Kategorie",
+                "kind": "text"
+              },
+              {
+                "handle": "price",
+                "label": "Preis",
+                "kind": "number",
+                "decimals": 2,
+                "unit": "CHF"
+              },
+              {
+                "handle": "soldOut",
+                "label": "Ausverkauft",
+                "kind": "boolean"
+              }
+            ]
+          },
+          {
+            "handle": "waitlist",
+            "label": "Warteliste",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "when": {
+              "test": "oneOf",
+              "field": "soldOut",
+              "values": [
+                true
+              ]
+            },
+            "kind": "link",
+            "to": [
+              "url",
+              "email"
+            ],
+            "labels": true,
+            "newTab": true
+          },
+          {
+            "handle": "program",
+            "label": "Programm (PDF)",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": false,
+            "max": 1,
+            "folder": "Events/Programs",
+            "extensions": [
+              "pdf"
+            ]
+          }
+        ],
+        "part_of": "event"
+      },
+      {
+        "handle": "header",
+        "name": "Header",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "navigation",
+            "label": "Main navigation",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "navigation",
+            "to": [
+              "entry",
+              "url",
+              "asset"
+            ],
+            "depth": 2,
+            "sections": [
+              "pages"
+            ]
+          }
+        ]
+      },
+      {
+        "handle": "footer",
+        "name": "Footer",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "text",
+            "label": "Text",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "email",
+            "label": "Contact email",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "email"
+          },
+          {
+            "handle": "links",
+            "label": "Links",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "table",
+            "columns": [
+              {
+                "handle": "label",
+                "label": "Label",
+                "kind": "text"
+              },
+              {
+                "handle": "url",
+                "label": "Url",
+                "kind": "url"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "handle": "text",
+        "name": "Text",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "text",
+            "label": "Text",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "richText",
+            "headings": [
+              2,
+              3
+            ],
+            "lists": true,
+            "links": true,
+            "buttons": true,
+            "blocks": [
+              "images"
+            ],
+            "styles": [
+              {
+                "class": "lead",
+                "label": "Lead",
+                "inline": false
+              },
+              {
+                "class": "highlight",
+                "label": "Highlight",
+                "inline": true
+              }
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "text"
+        }
+      },
+      {
+        "handle": "images",
+        "name": "Images",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "images",
+            "label": "Images",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": null
+          },
+          {
+            "handle": "caption",
+            "label": "Caption",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 200,
+            "multiline": false
+          },
+          {
+            "handle": "width",
+            "label": "Width",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "default": "wide",
+            "kind": "dropdown",
+            "options": [
+              {
+                "value": "small",
+                "label": "Small"
+              },
+              {
+                "value": "wide",
+                "label": "Wide"
+              },
+              {
+                "value": "full",
+                "label": "Full width"
+              }
+            ]
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Content",
+            "fields": [
+              "images",
+              "caption"
+            ]
+          },
+          {
+            "name": "Layout",
+            "fields": [
+              "width"
+            ]
+          }
+        ],
+        "icon": {
+          "lucide": "images"
+        },
+        "title_field": "caption"
+      },
+      {
+        "handle": "video",
+        "name": "Video",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "video",
+            "label": "Video",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": false,
+            "max": 1,
+            "extensions": [
+              "mp4",
+              "webm",
+              "mov"
+            ]
+          },
+          {
+            "handle": "poster",
+            "label": "Poster",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown until it plays, empty: its first frame.",
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "loop",
+            "label": "Loop",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Plays muted and over again, like a moving image.",
+            "kind": "boolean"
+          }
+        ],
+        "icon": {
+          "lucide": "video"
+        }
+      },
+      {
+        "handle": "button",
+        "name": "Button",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "link",
+            "label": "Link",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "link",
+            "to": [
+              "entry",
+              "url",
+              "email",
+              "phone",
+              "asset"
+            ],
+            "labels": true,
+            "newTab": true
+          }
+        ],
+        "icon": {
+          "lucide": "mouse-pointer-click"
+        },
+        "title_field": "link"
+      },
+      {
+        "handle": "events",
+        "name": "Upcoming events",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "city",
+            "label": "Only in city",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ],
+        "icon": {
+          "lucide": "calendar-days"
+        },
+        "title_field": "city"
+      },
+      {
+        "handle": "contact",
+        "name": "Contact form",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "title",
+            "label": "Title",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Above the form, empty: none.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ],
+        "icon": {
+          "lucide": "mail"
+        }
+      }
+    ],
+    "transforms": [
+      {
+        "handle": "seoSocial",
+        "width": 1200,
+        "height": 630,
+        "crop": true,
+        "format": null
+      },
+      {
+        "handle": "hero",
+        "width": 1600,
+        "height": 700,
+        "crop": true,
+        "format": "webp"
+      },
+      {
+        "handle": "small",
+        "width": 600,
+        "height": null,
+        "crop": false,
+        "format": null
+      },
+      {
+        "handle": "medium",
+        "width": 1200,
+        "height": null,
+        "crop": false,
+        "format": null
+      },
+      {
+        "handle": "thumb",
+        "width": 160,
+        "height": 120,
+        "crop": true,
+        "format": null
+      }
+    ],
+    "nav": [
+      {
+        "name": "Content",
+        "sections": [
+          "readme",
+          "pages",
+          "news",
+          "categories",
+          "events"
+        ],
+        "icon": {
+          "lucide": "folder-open"
+        }
+      },
+      {
+        "name": "Settings",
+        "sections": [
+          "header",
+          "footer",
+          "translations",
+          "seoSettings",
+          "formSettings"
+        ],
+        "icon": {
+          "lucide": "sliders-horizontal"
+        }
+      }
+    ]
+  }
+}

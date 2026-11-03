@@ -446,3 +446,69 @@ fn the_sections_of_a_relation_need_a_migration() {
 	assert!(matches!(&ops[..], [Op::ChangeField { .. }]), "{ops:?}");
 	assert_eq!(apply_all(&s, &ops), s2);
 }
+
+/// Files as earlier zipps wrote them: the example's first migration
+/// (written before the format field), a migration with every op and a
+/// data migration. They are what sites have in their `migrations/`,
+/// never regenerate them.
+const FIXTURES: &[(&str, &[u8])] = &[
+	("0001_initial", include_bytes!("fixtures/0001_initial.json")),
+	("0002_changes", include_bytes!("fixtures/0002_changes.json")),
+	("0003_fill", include_bytes!("fixtures/0003_fill.json")),
+];
+
+/// Everything of `old` is in `new` unchanged; `new` may have more.
+fn keeps(old: &Value, new: &Value, path: &str) {
+	match (old, new) {
+		(Value::Object(old), Value::Object(new)) => {
+			for (k, v) in old {
+				let Some(n) = new.get(k) else {
+					panic!("{path}.{k} is no longer written");
+				};
+				keeps(v, n, &format!("{path}.{k}"));
+			}
+		}
+		(Value::Array(old), Value::Array(new)) => {
+			assert_eq!(old.len(), new.len(), "{path}");
+			for (i, (o, n)) in old.iter().zip(new).enumerate() {
+				keeps(o, n, &format!("{path}[{i}]"));
+			}
+		}
+		_ => assert_eq!(old, new, "{path}"),
+	}
+}
+
+/// A rename in the serde shape of a migration, its ops or the schema
+/// breaks the files of every site. Fails here instead.
+#[test]
+fn released_migration_files_still_read() {
+	for (name, data) in FIXTURES {
+		let m = Migration::from_file(name, data).unwrap();
+		assert_eq!(&m.name, name);
+
+		let old: Value = serde_json::from_slice(data).unwrap();
+		let new: Value = serde_json::from_str(&m.to_file()).unwrap();
+		keeps(&old, &new, name);
+	}
+
+	let m = Migration::from_file(FIXTURES[1].0, FIXTURES[1].1).unwrap();
+	assert_eq!(m.ops.len(), 12, "every kind of op");
+	let m = Migration::from_file(FIXTURES[2].0, FIXTURES[2].1).unwrap();
+	assert!(m.data && m.ops.is_empty());
+}
+
+#[test]
+fn migration_files_have_a_format() {
+	let m = Migration {
+		schema: site(),
+		..Default::default()
+	};
+	let file = m.to_file();
+	assert!(file.starts_with("{\n  \"format\": 1,"), "{file}");
+
+	// a file of a newer zipp says so, not what field it misses
+	let newer = r#"{"format": 2, "changes": []}"#;
+	let err = Migration::from_file("0004", newer.as_bytes()).unwrap_err();
+	assert!(err.contains("format 2"), "{err}");
+	assert!(err.contains("update zipp"), "{err}");
+}

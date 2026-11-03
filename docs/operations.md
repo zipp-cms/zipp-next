@@ -154,7 +154,7 @@ replaces the database and the files folder and refuses while a server
 has the database open. By hand it is the same: stop, copy `zipp.db` to
 `--db` (delete an old `zipp.db-wal` and `-shm`), copy `files/` to
 `--files`, start. A backup of an older version of the cms is migrated
-by `serve` like any database.
+by `serve` like any database, one of a newer zipp is refused.
 
 A release build is a single binary with the api, the studio and the
 migrations; debug builds read the migrations from disk.
@@ -261,6 +261,13 @@ the top), drafts and revisions of a type that goes take their entry's
 type, a field of another kind (also a group of another component)
 starts over with its default, and content that doesn't parse stops the
 migration instead of being emptied; it runs in one transaction.
+
+The files start with `"format": 1`, the version of their format (a file
+without one is 1). A newer zipp reads the files of older ones; an older
+zipp refuses a file of a newer format and says to update. zipp's own
+tables have their own migrations, applied at the start too: a database
+or backup of a newer zipp is refused, so a downgrade never writes into
+tables it doesn't know.
 
 ## Data migrations
 

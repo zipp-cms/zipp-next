@@ -136,6 +136,60 @@ pub struct Migration {
 	pub step: Option<DataStep>,
 }
 
+/// The version of the migration files' format, written first into each
+/// file. Bump it when the shape of [`Migration`] (also of [`Op`] and the
+/// schema it holds) changes in a way old files don't parse, and read the
+/// older ones still. A file without one is format 1.
+pub const FORMAT: u32 = 1;
+
+/// The format of a file, read before the rest: a file of a newer zipp
+/// gets a clear error instead of one about a field.
+#[derive(Deserialize)]
+struct Head {
+	#[serde(default = "first_format")]
+	format: u32,
+}
+
+fn first_format() -> u32 {
+	1
+}
+
+#[derive(Serialize)]
+struct File<'a> {
+	format: u32,
+	#[serde(flatten)]
+	migration: &'a Migration,
+}
+
+impl Migration {
+	/// The json of its file.
+	pub fn to_file(&self) -> String {
+		let file = File {
+			format: FORMAT,
+			migration: self,
+		};
+		serde_json::to_string_pretty(&file).unwrap() + "\n"
+	}
+
+	/// Reads a file, `name` is the file's name without `.json`.
+	pub fn from_file(name: &str, data: &[u8]) -> Result<Self, String> {
+		let head: Head = serde_json::from_slice(data)
+			.map_err(|e| format!("migration {name}: {e}"))?;
+		if head.format > FORMAT {
+			return Err(format!(
+				"migration {name} has format {}, this zipp reads up to \
+				{FORMAT}: update zipp",
+				head.format
+			));
+		}
+
+		let mut m: Migration = serde_json::from_slice(data)
+			.map_err(|e| format!("migration {name}: {e}"))?;
+		m.name = name.into();
+		Ok(m)
+	}
+}
+
 /// The migration files of a site, see [`migrations!`](crate::migrations).
 pub struct Migrations {
 	/// `migrations/` of the site's crate, where new ones are written
@@ -191,10 +245,7 @@ impl Migrations {
 			let Some(name) = file.strip_suffix(".json") else {
 				continue;
 			};
-			let mut m: Migration = serde_json::from_slice(data)
-				.map_err(|e| format!("migration {file}: {e}"))?;
-			m.name = name.into();
-			migrations.push(m);
+			migrations.push(Migration::from_file(name, data)?);
 		}
 
 		migrations.sort_by(|a, b| a.name.cmp(&b.name));

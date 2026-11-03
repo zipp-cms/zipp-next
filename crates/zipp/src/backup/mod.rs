@@ -2,6 +2,11 @@
 //! folder per backup, `<dir>/2026-11-01T08-00-00/` with `zipp.db` and
 //! `files/`. Files that didn't change since the last backup are hard
 //! links to it, so a big asset library takes its space once.
+//!
+//! That layout is the format of a backup, the version of its content is
+//! the one of the database (`PRAGMA user_version`, see `db.rs`): a
+//! backup of an older zipp is migrated on start, one of a newer is
+//! refused.
 
 use std::fs;
 use std::io;
@@ -10,7 +15,7 @@ use std::time::SystemTime;
 
 use rusqlite::Connection;
 
-use crate::db::{iso, parse_iso};
+use crate::db::{MIGRATIONS, iso, newer, parse_iso, version_of};
 
 #[cfg(test)]
 mod tests;
@@ -202,6 +207,13 @@ pub fn restore(from: &Path, db: &Path, files: &Path) -> Result<(), String> {
 	let backup_files = from.join(FILES);
 	if !backup_db.is_file() || !backup_files.is_dir() {
 		return Err(format!("{} is no backup", from.display()));
+	}
+	// checked before anything is replaced
+	let version = Connection::open(&backup_db)
+		.and_then(|c| version_of(&c))
+		.map_err(|e| format!("the database: {e}"))?;
+	if version > MIGRATIONS.len() {
+		return Err(newer(version).to_string());
 	}
 
 	// leaving WAL mode needs the only connection: it fails while a

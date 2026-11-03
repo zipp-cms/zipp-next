@@ -5,10 +5,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use rusqlite::Connection;
 
 /// Tables of zipp itself, every entry is applied once, tracked with
-/// `PRAGMA user_version`. While zipp is not live the first one is changed
-/// in place (see AGENT.md), after that only append. Changes of the
-/// content model are schema migrations (`migrate/`), not these.
-const MIGRATIONS: &[&str] = &[r#"
+/// `PRAGMA user_version`. Released entries are frozen, sites run them:
+/// never change one, append a new entry instead (`db_tests.rs` pins
+/// them). Changes of the content model are schema migrations
+/// (`migrate/`), not these.
+pub(crate) const MIGRATIONS: &[&str] = &[r#"
 	CREATE TABLE entries (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		section TEXT NOT NULL,
@@ -281,8 +282,10 @@ impl Db {
 			"PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;",
 		)?;
 
-		let version: usize =
-			conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+		let version = version_of(&conn)?;
+		if version > MIGRATIONS.len() {
+			return Err(newer(version));
+		}
 		// each with its version in one transaction: a failed one can run
 		// again after the fix
 		for (i, sql) in MIGRATIONS.iter().enumerate().skip(version) {
@@ -302,6 +305,23 @@ impl Db {
 	pub fn conn(&self) -> MutexGuard<'_, Connection> {
 		self.conn.lock().unwrap_or_else(PoisonError::into_inner)
 	}
+}
+
+/// The version of zipp's tables in a database, 0 for a new one.
+pub(crate) fn version_of(conn: &Connection) -> rusqlite::Result<usize> {
+	conn.query_row("PRAGMA user_version", [], |r| r.get(0))
+}
+
+/// A database of a newer zipp: its tables may have changed in ways this
+/// one doesn't know, it must not write to them.
+pub(crate) fn newer(version: usize) -> rusqlite::Error {
+	let msg = format!(
+		"the database is of a newer zipp (tables version {version}, this \
+		one knows {}): update zipp",
+		MIGRATIONS.len()
+	);
+	let code = rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR);
+	rusqlite::Error::SqliteFailure(code, Some(msg))
 }
 
 /// 128 random bits as hex, for sessions and preview links.
@@ -382,3 +402,7 @@ pub fn now() -> i64 {
 		.unwrap()
 		.as_millis() as i64
 }
+
+#[cfg(test)]
+#[path = "db_tests.rs"]
+mod tests;

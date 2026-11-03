@@ -1,0 +1,288 @@
+{
+  "format": 1,
+  "data": true,
+  "ops": [],
+  "schema": {
+    "sites": [
+      {
+        "handle": "de",
+        "name": "Deutsch",
+        "language": "de-CH"
+      },
+      {
+        "handle": "en",
+        "name": "English",
+        "language": "en"
+      }
+    ],
+    "sections": [
+      {
+        "handle": "home",
+        "name": "Home",
+        "kind": "single",
+        "types": [
+          "page"
+        ],
+        "uri": ""
+      },
+      {
+        "handle": "pages",
+        "name": "Pages",
+        "kind": "structure",
+        "types": [
+          "page"
+        ],
+        "uri": "{parent.uri}/{slug}"
+      },
+      {
+        "handle": "events",
+        "name": "Events",
+        "kind": "channel",
+        "types": [
+          "event"
+        ],
+        "uri": "events/{slug}"
+      }
+    ],
+    "components": [
+      {
+        "handle": "page",
+        "name": "Page",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "lead",
+            "label": "Intro",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "text",
+            "max": null,
+            "multiline": true
+          },
+          {
+            "handle": "body",
+            "label": "Body",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "blocks",
+            "types": [
+              "paragraph",
+              "button"
+            ],
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "seo",
+            "label": "Seo",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "group",
+            "component": "seo"
+          },
+          {
+            "handle": "story",
+            "label": "Story",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "kind": "richText",
+            "headings": [
+              2,
+              3
+            ],
+            "lists": false,
+            "links": true,
+            "buttons": true,
+            "blocks": [
+              "text"
+            ]
+          }
+        ]
+      },
+      {
+        "handle": "event",
+        "name": "Event",
+        "entry": true,
+        "fields": [
+          {
+            "handle": "city",
+            "label": "City",
+            "required": false,
+            "indexed": true,
+            "translatable": false,
+            "kind": "number",
+            "min": null,
+            "max": null
+          },
+          {
+            "handle": "price",
+            "label": "Price",
+            "required": false,
+            "indexed": true,
+            "translatable": false,
+            "kind": "number",
+            "min": null,
+            "max": null,
+            "decimals": 2
+          },
+          {
+            "handle": "page",
+            "label": "Page",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "page"
+            ],
+            "max": 1
+          },
+          {
+            "handle": "image",
+            "label": "Image",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "assets",
+            "images": true,
+            "max": 1
+          },
+          {
+            "handle": "notes",
+            "label": "Notes",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "markdown"
+          },
+          {
+            "handle": "ticket",
+            "label": "Ticket",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "link",
+            "to": [
+              "url",
+              "entry",
+              "email"
+            ],
+            "labels": true,
+            "newTab": true
+          },
+          {
+            "handle": "contact",
+            "label": "Contact",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "email"
+          },
+          {
+            "handle": "listed",
+            "label": "Listed",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "default": true,
+            "kind": "boolean"
+          },
+          {
+            "handle": "howto",
+            "label": "Howto",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "width": 50,
+            "kind": "note",
+            "text": "Images in **landscape**."
+          }
+        ]
+      },
+      {
+        "handle": "paragraph",
+        "name": "Text",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "content",
+            "label": "Content",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      },
+      {
+        "handle": "seo",
+        "name": "SEO",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "title",
+            "label": "Title",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": 60,
+            "multiline": false
+          },
+          {
+            "handle": "description",
+            "label": "Description",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ]
+      },
+      {
+        "handle": "button",
+        "name": "Button",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "link",
+            "label": "Link",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "page"
+            ],
+            "max": 1
+          }
+        ]
+      }
+    ],
+    "transforms": [
+      {
+        "handle": "small",
+        "width": 100,
+        "height": null,
+        "crop": false,
+        "format": null
+      },
+      {
+        "handle": "square",
+        "width": 50,
+        "height": 50,
+        "crop": true,
+        "format": null
+      }
+    ],
+    "nav": []
+  }
+}

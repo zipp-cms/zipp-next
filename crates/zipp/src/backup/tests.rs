@@ -117,3 +117,24 @@ fn a_file_gone_during_the_backup_is_left_out() {
 	assert!(w.dir.join("files/1/photo.jpg").exists());
 	assert!(!w.dir.join("files/2/a.jpg").exists());
 }
+
+#[test]
+fn a_backup_of_a_newer_zipp_is_refused() {
+	let root = tempfile::tempdir().unwrap();
+	let (db, db_path, files) = site(root.path());
+	let to = root.path().join("backups");
+	let w = backup(&db_path, &files, &to, NOW).unwrap();
+	drop(db);
+
+	let conn = Connection::open(w.dir.join(DB)).unwrap();
+	conn.pragma_update(None, "user_version", MIGRATIONS.len() + 1)
+		.unwrap();
+	drop(conn);
+
+	let err = restore(&w.dir, &db_path, &files).unwrap_err();
+	assert!(err.contains("newer zipp"), "{err}");
+	// nothing was replaced
+	let db = Db::open(&db_path).unwrap();
+	assert_eq!(users(&db.conn()), ["anna@example.ch"]);
+	assert!(files.join("1/photo.jpg").exists());
+}

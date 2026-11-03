@@ -15,10 +15,17 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   (`entry_values`, `entry_relations`), written on every save and rebuilt
   after migrations, never a second copy that can drift.
 - `db.rs` holds the tables of zipp itself, changes of a site's content
-  model are schema migrations (`migrate/`). While zipp is not live,
-  `db.rs`' first migration and the example's `0001_initial` are edited in
-  place instead of adding new ones; real migrations start with the first
-  live site.
+  model are schema migrations (`migrate/`). Since 0.1.0 sites run
+  `db.rs`' migrations: they are frozen (`db_tests.rs` pins their hash),
+  a change of zipp's tables is a new entry at the end. The example isn't
+  live, its `0001_initial` is still regenerated instead of adding new
+  ones.
+- The serde shape of a migration file (`Migration`, `Op` and the schema
+  in it: `Schema`, `Section`, `Component`, `Field`, ...) is a format
+  sites keep in git; the studio reads the same shape from `/schema`.
+  Only add fields with a default; a rename or a change needs a new
+  `migrate::FORMAT` that still reads the old files. The files in
+  `migrate/fixtures/` are as released and are never regenerated.
 - Rust is formatted with `cargo fmt` (hard tabs, max width 80), checked
   with `cargo clippy --all-targets`. Svelte and TypeScript use prettier
   (tabs, single quotes) and `npm run check`.

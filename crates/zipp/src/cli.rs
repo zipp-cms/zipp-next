@@ -300,8 +300,7 @@ fn write_migration(
 		step: None,
 	};
 	fs::create_dir_all(dir)?;
-	let json = serde_json::to_string_pretty(&m).unwrap() + "\n";
-	fs::write(dir.join(format!("{name}.json")), json)?;
+	fs::write(dir.join(format!("{name}.json")), m.to_file())?;
 	Ok(())
 }
 
