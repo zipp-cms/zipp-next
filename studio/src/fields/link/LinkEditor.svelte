@@ -31,6 +31,7 @@
 		to,
 		labels = false,
 		newTab,
+		sections = [],
 		onchange,
 		ondone,
 		onremove,
@@ -42,6 +43,8 @@
 		labels?: boolean;
 		/** whether it opens in a new tab now */
 		newTab: boolean;
+		/** links only to entries of these sections, none: all */
+		sections?: string[];
 		onchange: (link: Link) => void;
 		ondone?: () => void;
 		/** a way to remove it, like a link of a rich text */
@@ -148,7 +151,7 @@
 				</span>
 			{:else}
 				<AddButton onclick={() => (pickingEntry = true)}>
-					{chooseLabel(schema, linkableTypes(schema))}
+					{chooseLabel(schema, linkableTypes(schema, sections))}
 				</AddButton>
 			{/if}
 		{:else if link.type === 'asset'}
@@ -253,7 +256,8 @@
 {#if pickingEntry}
 	<EntryPicker
 		{schema}
-		types={linkableTypes(schema)}
+		types={linkableTypes(schema, sections)}
+		{sections}
 		chosen={entry ? [entry.id] : []}
 		onpick={pickEntry}
 		onclose={() => (pickingEntry = false)}

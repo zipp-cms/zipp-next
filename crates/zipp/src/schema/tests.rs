@@ -607,3 +607,69 @@ fn entries_are_saved_as_a_type_of_their_section() {
 	assert!(err.to_string().ends_with("no type page in section events"));
 	assert!(s.section_type("nothing", "event").is_err());
 }
+
+#[test]
+fn sections_of_relations_and_links() {
+	let with = |f: Field| {
+		site()
+			.section(Section::channel("news", ["page"]))
+			.block("x", "X", [f])
+			.check()
+	};
+	let rel = || Field::relation("r", ["page"]);
+	with(rel().sections(["pages", "home"])).unwrap();
+	assert_eq!(
+		with(rel().sections(["nope"])).unwrap_err(),
+		"x.r: unknown section nope"
+	);
+	assert_eq!(
+		with(rel().sections(["pages", "pages"])).unwrap_err(),
+		"x.r: section pages is there twice"
+	);
+	assert_eq!(
+		with(rel().sections(["events"])).unwrap_err(),
+		"x.r: page is in none of the sections"
+	);
+	assert_eq!(
+		with(Field::relation("r", ["page", "event"]).sections(["pages"]))
+			.unwrap_err(),
+		"x.r: event is in none of the sections"
+	);
+	assert_eq!(
+		with(Field::relation("r", ["event"]).sections(["events", "pages"]))
+			.unwrap_err(),
+		"x.r: section pages has none of the types"
+	);
+	// a relation may take entries without a page
+	with(rel().sections(["news"])).unwrap();
+
+	let link = |to: &[LinkKind]| Field::link("l", to.iter().copied());
+	with(link(&[LinkKind::Entry, LinkKind::Url]).sections(["pages"])).unwrap();
+	assert_eq!(
+		with(link(&[LinkKind::Url]).sections(["pages"])).unwrap_err(),
+		"x.l: sections are for links to entries"
+	);
+	assert_eq!(
+		with(link(&[LinkKind::Entry]).sections(["news"])).unwrap_err(),
+		"x.l: section news has no pages"
+	);
+	let nav = Field::navigation("n", [LinkKind::Entry]).sections(["events"]);
+	with(nav).unwrap();
+	let nav = Field::navigation("n", [LinkKind::Url]).sections(["events"]);
+	assert_eq!(
+		with(nav).unwrap_err(),
+		"x.n: sections are for links to entries"
+	);
+
+	with(Field::rich_text("t").buttons().sections(["pages"])).unwrap();
+	assert_eq!(
+		with(Field::rich_text("t").sections(["pages"])).unwrap_err(),
+		"x.t: sections are for links and buttons"
+	);
+
+	// none is the default and stays out of the JSON
+	let json = serde_json::to_value(rel()).unwrap();
+	assert!(json.get("sections").is_none());
+	let json = serde_json::to_value(rel().sections(["pages"])).unwrap();
+	assert_eq!(json["sections"], serde_json::json!(["pages"]));
+}

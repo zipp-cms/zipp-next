@@ -203,7 +203,7 @@ pub(super) fn validate_value(
 			let empty = out.is_empty();
 			return filled(Value::Array(out), empty, required, path, errors);
 		}
-		(FieldKind::Navigation { to, depth }, Value::Array(items)) => {
+		(FieldKind::Navigation { to, depth, .. }, Value::Array(items)) => {
 			let out = validate_navigation(to, *depth, items, path, errors);
 			let empty = out.is_empty();
 			return filled(Value::Array(out), empty, required, path, errors);

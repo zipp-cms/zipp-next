@@ -1431,7 +1431,10 @@
               "url",
               "asset"
             ],
-            "depth": 2
+            "depth": 2,
+            "sections": [
+              "pages"
+            ]
           }
         ]
       }
@@ -3356,7 +3359,10 @@
               "url",
               "asset"
             ],
-            "depth": 2
+            "depth": 2,
+            "sections": [
+              "pages"
+            ]
           }
         ]
       },

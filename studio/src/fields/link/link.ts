@@ -88,9 +88,15 @@ export function linkSummary(
 /** What the links and buttons of a rich text go to. */
 export const BUTTON_LINKS: LinkKind[] = ['entry', 'url', 'email', 'phone'];
 
-/** The entry types with a page, only they can be linked to. */
-export function linkableTypes(schema: Schema): string[] {
-	return schema.sections.filter(hasPages).flatMap(s => s.types);
+/**
+ * The entry types with a page, only they can be linked to; only those of
+ * `sections` if any.
+ */
+export function linkableTypes(schema: Schema, sections: string[] = []) {
+	return schema.sections
+		.filter(hasPages)
+		.filter(s => !sections.length || sections.includes(s.handle))
+		.flatMap(s => s.types);
 }
 
 /** Like the website: external urls and files open in a new tab. */

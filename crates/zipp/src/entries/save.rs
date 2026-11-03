@@ -257,11 +257,12 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 	Ok(id)
 }
 
-/// Relations must point to entries of the allowed types, asset fields to
-/// assets (images if they only take images, files with the allowed
-/// extensions). Those to entries and assets in the trash or deleted are
-/// taken out of `fields` (see [`drop_links`]), the website leaves them
-/// out already and they mustn't block saving what links to them.
+/// Relations must point to entries of the allowed types and sections,
+/// asset fields to assets (images if they only take images, files with
+/// the allowed extensions). Those to entries and assets in the trash or
+/// deleted are taken out of `fields` (see [`drop_links`]), the website
+/// leaves them out already and they mustn't block saving what links to
+/// them.
 pub(crate) fn check_relations(
 	conn: &Connection,
 	schema: &Schema,
@@ -272,7 +273,7 @@ pub(crate) fn check_relations(
 	let mut gone = vec![];
 	for rel in relations(schema, comp, fields) {
 		let (kind, table) = match rel.target {
-			Target::Entries(_) => (LinkKind::Entry, "entries"),
+			Target::Entries { .. } => (LinkKind::Entry, "entries"),
 			Target::Assets { .. } => (LinkKind::Asset, "assets"),
 		};
 		for id in rel.ids {
@@ -304,8 +305,9 @@ pub(crate) fn check_relations(
 
 	for rel in relations(schema, comp, fields) {
 		let (sql, what) = match rel.target {
-			Target::Entries(_) => (
-				"SELECT type FROM entries
+			// the section after the type, for the limit of sections
+			Target::Entries { .. } => (
+				"SELECT type || ' ' || section FROM entries
 					WHERE id = ?1 AND deleted_at IS NULL",
 				"entry",
 			),
@@ -320,8 +322,17 @@ pub(crate) fn check_relations(
 				conn.query_row(sql, [id], |r| r.get(0)).optional()?;
 			let error = match (&rel.target, found) {
 				(_, None) => format!("{what} {id} doesn't exist"),
-				(Target::Entries(types), Some(t)) if !types.contains(&t) => {
-					format!("entry {id} is a {t}, not allowed here")
+				(Target::Entries { types, sections }, Some(found)) => {
+					let (t, s) = found.split_once(' ').unwrap_or_default();
+					if !types.iter().any(|x| x == t) {
+						format!("entry {id} is a {t}, not allowed here")
+					} else if !sections.is_empty()
+						&& !sections.iter().any(|x| x == s)
+					{
+						format!("entry {id} is in {s}, not allowed here")
+					} else {
+						continue;
+					}
 				}
 				(Target::Assets { images: true, .. }, Some(k))
 					if !k.starts_with("image ") =>
@@ -414,7 +425,7 @@ pub fn reindex(
 	}
 	for rel in rels
 		.iter()
-		.filter(|r| matches!(r.target, Target::Entries(_)))
+		.filter(|r| matches!(r.target, Target::Entries { .. }))
 	{
 		for (pos, target) in rel.ids.iter().enumerate() {
 			conn.execute(

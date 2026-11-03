@@ -365,6 +365,7 @@ async fn choices_for_a_picker() {
 	// the sections with pages, a structure in its tree order
 	let req = ChoicesReq {
 		types: "page".into(),
+		sections: None,
 		site: Some("en".into()),
 	};
 	let got = admin.call(&req).await.unwrap().entries;
@@ -382,12 +383,31 @@ async fn choices_for_a_picker() {
 	// several types
 	let both = ChoicesReq {
 		types: "page,event".into(),
+		sections: None,
 		site: None,
 	};
 	assert_eq!(admin.call(&both).await.unwrap().entries.len(), 5);
 
+	// only the sections of a field
+	let pages = ChoicesReq {
+		types: "page,event".into(),
+		sections: Some("pages,events".into()),
+		site: None,
+	};
+	let got = admin.call(&pages).await.unwrap().entries;
+	assert_eq!(got.len(), 4);
+	assert!(got.iter().all(|e| e.section != "home"));
+	let wrong = ChoicesReq {
+		types: "page".into(),
+		sections: Some("nope".into()),
+		site: None,
+	};
+	let err = admin.call(&wrong).await.unwrap_err();
+	assert!(matches!(err, Error::Request(_)));
+
 	let unknown = ChoicesReq {
 		types: "nope".into(),
+		sections: None,
 		site: None,
 	};
 	let err = admin.call(&unknown).await.unwrap_err();

@@ -351,6 +351,7 @@ impl Schema {
 		field: &Field,
 	) -> Result<(), String> {
 		self.check_kind(comp, &field.kind)?;
+		self.check_limit(&field.kind)?;
 
 		if ![25, 50, 75, 100].contains(&field.width) {
 			return Err("the width is 25, 50, 75 or 100".into());
@@ -498,7 +499,7 @@ impl Schema {
 				}
 				Ok(())
 			}
-			FieldKind::Navigation { to, depth }
+			FieldKind::Navigation { to, depth, .. }
 				if to.is_empty() || *depth == 0 =>
 			{
 				Err("a navigation needs link kinds and a depth".into())
@@ -529,6 +530,65 @@ impl Schema {
 			}
 			_ => Ok(()),
 		}
+	}
+
+	/// The sections a field takes entries of, see [`Field::sections`].
+	fn check_limit(&self, kind: &FieldKind) -> Result<(), String> {
+		let (sections, links) = match kind {
+			FieldKind::Relation { sections, .. } => (sections, false),
+			FieldKind::Link { sections, to, .. }
+			| FieldKind::Navigation { sections, to, .. } => {
+				if !sections.is_empty() && !to.contains(&LinkKind::Entry) {
+					return Err("sections are for links to entries".into());
+				}
+				(sections, true)
+			}
+			FieldKind::RichText {
+				sections,
+				links,
+				buttons,
+				..
+			} => {
+				if !sections.is_empty() && !links && !buttons {
+					return Err("sections are for links and buttons".into());
+				}
+				(sections, true)
+			}
+			_ => return Ok(()),
+		};
+
+		for handle in sections {
+			let Some(s) = self.get_section(handle) else {
+				return Err(format!("unknown section {handle}"));
+			};
+			// links go to pages, a section without them gives none
+			if links && s.uri.is_none() && s.type_uris.is_empty() {
+				return Err(format!("section {handle} has no pages"));
+			}
+		}
+		if let Some(s) = first_twice(sections, |a, b| a == b) {
+			return Err(format!("section {s} is there twice"));
+		}
+
+		// every type and every section must give something to pick
+		if let FieldKind::Relation { types, .. } = kind
+			&& !sections.is_empty()
+		{
+			let of = |s: &String| &self.get_section(s).unwrap().types;
+			if let Some(t) = types
+				.iter()
+				.find(|t| !sections.iter().any(|s| of(s).contains(t)))
+			{
+				return Err(format!("{t} is in none of the sections"));
+			}
+			if let Some(s) = sections
+				.iter()
+				.find(|s| !of(s).iter().any(|t| types.contains(t)))
+			{
+				return Err(format!("section {s} has none of the types"));
+			}
+		}
+		Ok(())
 	}
 
 	/// The components a relation (`entry`) or blocks field holds.

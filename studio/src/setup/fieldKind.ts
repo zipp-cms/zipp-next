@@ -6,6 +6,10 @@ import { t } from '../i18n/index.svelte';
 export function describeField(f: Field): string {
 	const list = (xs: string[]) => xs.join(', ');
 	const max = (n?: number | null) => (n ? `, ${t('fields.max', { n })}` : '');
+	// the limit of entries and links to entries
+	const inSections = (s?: string[]) =>
+		s?.length ? t('fields.inSections', { sections: list(s) }) : '';
+	const only = (s?: string[]) => (s?.length ? `, ${inSections(s)}` : '');
 	switch (f.kind) {
 		case 'text':
 			return [
@@ -37,7 +41,9 @@ export function describeField(f: Field): string {
 			return t('fields.kindEmail');
 		case 'relation':
 			return (
-				t('fields.kindRelation', { types: list(f.types) }) + max(f.max)
+				t('fields.kindRelation', { types: list(f.types) }) +
+				only(f.sections) +
+				max(f.max)
 			);
 		case 'assets':
 			return (
@@ -52,6 +58,7 @@ export function describeField(f: Field): string {
 		case 'link':
 			return (
 				t('fields.kindLink', { to: list(f.to) }) +
+				only(f.sections) +
 				(f.newTab ? '' : `, ${t('fields.sameTab')}`)
 			);
 		case 'richText': {
@@ -60,6 +67,7 @@ export function describeField(f: Field): string {
 				f.lists ? t('fields.lists') : '',
 				f.links ? t('fields.links') : '',
 				f.buttons ? t('fields.buttons') : '',
+				inSections(f.sections),
 				f.blocks.length
 					? t('fields.blocksOf', { types: list(f.blocks) })
 					: '',
@@ -83,7 +91,10 @@ export function describeField(f: Field): string {
 				columns: list(f.columns.map(c => c.handle)),
 			});
 		case 'navigation':
-			return t('fields.kindNavigation', { to: list(f.to), n: f.depth });
+			return (
+				t('fields.kindNavigation', { to: list(f.to), n: f.depth }) +
+				only(f.sections)
+			);
 		case 'dropdown':
 			return t('fields.kindDropdown', {
 				options: list(f.options.map(o => o.value)),

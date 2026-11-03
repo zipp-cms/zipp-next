@@ -44,7 +44,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | A field type of another crate | Events → Genre | `crates/zipp-button-group`: Craft's button group with a color per option, its own editor and GraphQL type |
 | Boolean, number, indexed fields | Events | *sold out*, price (CHF, two decimals) in the tickets; the website sorts by date and filters by city |
 | Date, date and time | Events → Date, Doors open | the date picker; a day or a day and time, the website sorts events by the date |
-| Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them; the picker is a flyout with the sections on the left and the pages as their tree, search "team" for a match with its path; an article takes up to 3 categories (`.max(3)`) |
+| Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them; the picker is a flyout with the sections on the left and the pages as their tree, search "team" for a match with its path; an article takes up to 3 categories (`.max(3)`); the header's navigation links only to pages (`.sections(["pages"])`), its picker has no News or Events |
 | Images and transforms | Assets | click an image to set the focal point; crops follow it; the hero transform is WebP (`.format(Format::Webp)`), the website's hero srcset too |
 | Alt text per site | Assets → an image → Alt text, switch the site | each site its own alt text, a site without has the primary site's |
 | Asset fields | Assets → an image → Credit, Licence | fields of every asset beside title and alt (`.asset_fields`); the website shows the credit under the images |

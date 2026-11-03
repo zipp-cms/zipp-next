@@ -31,11 +31,14 @@ pub struct ListResp {
 request!(ListReq, GET "/entries" => ListResp);
 
 /// The entries a picker offers for some types (`type=page,event`): the
-/// sections that have them, as many as the role sees.
+/// sections that have them, as many as the role sees; only some of them
+/// with `section=pages,news`, the limit of a field.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChoicesReq {
 	#[serde(rename = "type")]
 	pub types: String,
+	#[serde(rename = "section")]
+	pub sections: Option<String>,
 	/// default the primary site
 	pub site: Option<String>,
 }

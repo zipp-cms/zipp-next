@@ -22,6 +22,7 @@
 		labels = false,
 		newTab: externalInNewTab = true,
 		required = false,
+		sections = [],
 		onchange,
 		onremove,
 		removeLabel,
@@ -37,6 +38,8 @@
 		/** external links open in a new tab, unless it's set */
 		newTab?: boolean;
 		required?: boolean;
+		/** links only to entries of these sections, none: all */
+		sections?: string[];
 		onchange: (link: Link) => void;
 		/** removes what holds the link, like a button of a rich text */
 		onremove?: () => void;
@@ -120,6 +123,7 @@
 					{to}
 					{labels}
 					{newTab}
+					{sections}
 					{onchange}
 					ondone={() => (editing = false)}
 				/>

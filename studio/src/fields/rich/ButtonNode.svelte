@@ -15,6 +15,7 @@
 		attrs,
 		schema,
 		refs,
+		sections,
 		editable,
 		update,
 		remove,
@@ -32,6 +33,7 @@
 			link={attrs.link}
 			to={BUTTON_LINKS}
 			labels
+			{sections}
 			onchange={link => update({ link })}
 			onremove={remove}
 			removeLabel={t('fields.deleteButton')}

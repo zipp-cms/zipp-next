@@ -24,5 +24,6 @@
 	items={valueOf(values, field) ?? []}
 	to={field.to}
 	depth={field.depth}
+	sections={field.sections}
 	onchange={items => (values[field.handle] = items.length ? items : null)}
 />

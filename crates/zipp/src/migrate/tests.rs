@@ -413,3 +413,19 @@ fn only_what_the_studio_shows_needs_no_migration() {
 	assert!(matches!(ops[0], Op::ChangeField { .. }), "{ops:?}");
 	assert!(matches!(ops[1], Op::ChangeSection { .. }), "{ops:?}");
 }
+
+#[test]
+fn the_sections_of_a_relation_need_a_migration() {
+	let s = site();
+	let mut s2 = s.clone();
+	let event = s2.get_mut("event").unwrap();
+	let page = event
+		.fields
+		.iter_mut()
+		.find(|f| f.handle == "page")
+		.unwrap();
+	*page = page.clone().sections(["pages"]);
+	let ops = diff(&s, &s2, &[]).unwrap();
+	assert!(matches!(&ops[..], [Op::ChangeField { .. }]), "{ops:?}");
+	assert_eq!(apply_all(&s, &ops), s2);
+}

@@ -16,6 +16,7 @@
 		schema,
 		refs,
 		link,
+		sections = [],
 		onclose,
 	}: {
 		editor: Editor;
@@ -23,6 +24,8 @@
 		refs: Refs;
 		/** the link when it opens */
 		link: Link;
+		/** links only to entries of these sections, none: all */
+		sections?: string[];
 		onclose: () => void;
 	} = $props();
 
@@ -40,6 +43,7 @@
 	link={draft}
 	to={BUTTON_LINKS}
 	newTab={opensInNewTab(schema, draft, true)}
+	{sections}
 	onchange={l => (draft = l)}
 	ondone={() => apply($state.snapshot(draft) as Link)}
 	onremove={() => apply({ type: 'url', value: null })}

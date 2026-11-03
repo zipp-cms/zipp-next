@@ -183,6 +183,7 @@
 					{schema}
 					{refs}
 					{link}
+					sections={opts.sections}
 					onclose={() => (linking = false)}
 				/>
 			</div>

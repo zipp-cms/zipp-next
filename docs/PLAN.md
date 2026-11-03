@@ -173,7 +173,7 @@ commit.
       only on its text (operator 2026-11-01)
 - [ ] The entry picker as a flyout: sections on the left like the Content
       nav, the nested structure on the right (operator 2026-11-03)
-- [ ] Limit which sections a relation field and a link field's entry links
+- [x] Limit which sections a relation field and a link field's entry links
       (and rich text / navigation links) may pick from, besides the types
       (operator 2026-11-03)
 - textrem's forms (contact, Mappenabo, orders with prices from the cms)

@@ -102,6 +102,10 @@ pub enum FieldKind {
 	Relation {
 		types: Vec<String>,
 		max: Option<u32>,
+		/// only entries of these sections, none: all, see
+		/// [`Field::sections`]
+		#[serde(default, skip_serializing_if = "Vec::is_empty")]
+		sections: Vec<String>,
 	},
 	/// Ids of assets, with `images` only images, with `extensions` only
 	/// files that end so; new ones go into `folder` (a path, `Photos/
@@ -123,6 +127,10 @@ pub enum FieldKind {
 		labels: bool,
 		#[serde(rename = "newTab")]
 		new_tab: bool,
+		/// only entries of these sections, none: all, see
+		/// [`Field::sections`]
+		#[serde(default, skip_serializing_if = "Vec::is_empty")]
+		sections: Vec<String>,
 	},
 	/// Text with formatting, stored as TipTap's JSON. Bold and italic are
 	/// always there; headings of the given levels, lists, links, rows of
@@ -136,6 +144,10 @@ pub enum FieldKind {
 		blocks: Vec<String>,
 		#[serde(default, skip_serializing_if = "Vec::is_empty")]
 		styles: Vec<Style>,
+		/// only entries of these sections, none: all, see
+		/// [`Field::sections`]
+		#[serde(default, skip_serializing_if = "Vec::is_empty")]
+		sections: Vec<String>,
 	},
 	/// The fields of another component (a block or an entry type), kept
 	/// together under one name, like zandi's `pageIntro`. The value is an
@@ -158,6 +170,10 @@ pub enum FieldKind {
 	Navigation {
 		to: Vec<LinkKind>,
 		depth: u32,
+		/// only entries of these sections, none: all, see
+		/// [`Field::sections`]
+		#[serde(default, skip_serializing_if = "Vec::is_empty")]
+		sections: Vec<String>,
 	},
 	/// Texts of the frontend by key, `{ "nav.home": "Home" }`; the keys
 	/// and the texts of the primary site come from the code, see
@@ -304,6 +320,7 @@ impl Field {
 			FieldKind::Relation {
 				types: types.into_iter().map(Into::into).collect(),
 				max: None,
+				sections: vec![],
 			},
 		)
 	}
@@ -316,6 +333,7 @@ impl Field {
 				to: to.into_iter().collect(),
 				labels: true,
 				new_tab: true,
+				sections: vec![],
 			},
 		)
 	}
@@ -350,6 +368,7 @@ impl Field {
 				buttons: false,
 				blocks: vec![],
 				styles: vec![],
+				sections: vec![],
 			},
 		)
 	}
@@ -511,7 +530,14 @@ impl Field {
 		to: impl IntoIterator<Item = LinkKind>,
 	) -> Self {
 		let to = to.into_iter().collect();
-		Self::new(handle, FieldKind::Navigation { to, depth: 2 })
+		Self::new(
+			handle,
+			FieldKind::Navigation {
+				to,
+				depth: 2,
+				sections: vec![],
+			},
+		)
 	}
 
 	/// Levels of a navigation.
@@ -711,6 +737,28 @@ impl Field {
 					.collect()
 			}
 			_ => panic!("{}: extensions are only for assets", self.handle),
+		}
+		self
+	}
+
+	/// Entries only of these sections, for a relation and the links to
+	/// entries of a link, navigation or rich text: `["pages", "news"]`.
+	pub fn sections<'a>(
+		mut self,
+		handles: impl IntoIterator<Item = &'a str>,
+	) -> Self {
+		match &mut self.kind {
+			FieldKind::Relation { sections, .. }
+			| FieldKind::Link { sections, .. }
+			| FieldKind::Navigation { sections, .. }
+			| FieldKind::RichText { sections, .. } => {
+				*sections = handles.into_iter().map(Into::into).collect()
+			}
+			_ => panic!(
+				"{}: sections are for relations, links, navigations and \
+				rich text",
+				self.handle
+			),
 		}
 		self
 	}

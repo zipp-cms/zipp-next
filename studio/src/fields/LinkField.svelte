@@ -30,5 +30,6 @@
 	labels={field.labels}
 	newTab={field.newTab}
 	required={field.required}
+	sections={field.sections}
 	onchange={l => (values[field.handle] = l)}
 />

@@ -316,11 +316,13 @@ pub fn schema() -> Schema {
 		.entry(
 			"header",
 			"Header",
-			// a menu with a second level, to pages, anywhere or a file
+			// a menu with a second level, to pages (not to articles or
+			// events), anywhere or a file
 			[Field::navigation(
 				"navigation",
 				[LinkKind::Entry, LinkKind::Url, LinkKind::Asset],
 			)
+			.sections(["pages"])
 			.translatable()
 			.label("Main navigation")],
 		)

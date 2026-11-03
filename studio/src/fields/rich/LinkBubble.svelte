@@ -19,12 +19,15 @@
 		tick,
 		schema,
 		refs,
+		sections = [],
 	}: {
 		editor: Editor;
 		/** changes with the selection */
 		tick: number;
 		schema: Schema;
 		refs: Refs;
+		/** links only to entries of these sections, none: all */
+		sections?: string[];
 	} = $props();
 
 	let editing = $state(false);
@@ -146,6 +149,7 @@
 				{schema}
 				{refs}
 				link={start}
+				{sections}
 				onclose={() => (editing = false)}
 			/>
 		{:else}

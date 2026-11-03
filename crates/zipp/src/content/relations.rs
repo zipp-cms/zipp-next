@@ -11,8 +11,11 @@ pub struct RelationRef {
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum Target {
-	/// entries of these types
-	Entries(Vec<String>),
+	/// entries of these types, only of these sections if any
+	Entries {
+		types: Vec<String>,
+		sections: Vec<String>,
+	},
 	/// assets, only images if `images`, only these extensions if any
 	Assets {
 		images: bool,
@@ -31,21 +34,24 @@ pub fn relations(
 	out
 }
 
-/// The relation of one link, to an entry or an asset.
+/// The relation of one link, to an entry (of `sections` if any) or an
+/// asset.
 pub(super) fn link_relation(
 	schema: &Schema,
 	link: &Value,
+	sections: &[String],
 	path: &str,
 ) -> Option<RelationRef> {
 	let target = match link_kind(link)? {
-		LinkKind::Entry => Target::Entries(
-			schema
+		LinkKind::Entry => Target::Entries {
+			types: schema
 				.components
 				.iter()
 				.filter(|c| c.entry)
 				.map(|c| c.handle.clone())
 				.collect(),
-		),
+			sections: sections.to_vec(),
+		},
 		LinkKind::Asset => Target::Assets {
 			images: false,
 			extensions: vec![],
@@ -74,13 +80,16 @@ pub(super) fn collect_relations(
 
 		// the field's own, every kind says
 		match &field.kind {
-			FieldKind::Relation { types, .. } if value.is_array() => {
-				out.push(RelationRef {
-					path: path.clone(),
-					target: Target::Entries(types.clone()),
-					ids: ids(),
-				})
-			}
+			FieldKind::Relation {
+				types, sections, ..
+			} if value.is_array() => out.push(RelationRef {
+				path: path.clone(),
+				target: Target::Entries {
+					types: types.clone(),
+					sections: sections.clone(),
+				},
+				ids: ids(),
+			}),
 			FieldKind::Assets {
 				images, extensions, ..
 			} if value.is_array() => out.push(RelationRef {
@@ -92,16 +101,16 @@ pub(super) fn collect_relations(
 				ids: ids(),
 			}),
 			// a link to an entry or an asset is a relation too
-			FieldKind::Link { .. } => {
-				out.extend(link_relation(schema, value, &path))
+			FieldKind::Link { sections, .. } => {
+				out.extend(link_relation(schema, value, sections, &path))
 			}
-			FieldKind::RichText { .. } => {
+			FieldKind::RichText { sections, .. } => {
 				for link in richtext::links(value) {
-					out.extend(link_relation(schema, link, &path));
+					out.extend(link_relation(schema, link, sections, &path));
 				}
 			}
-			FieldKind::Navigation { .. } => {
-				nav_relations(schema, value, &path, out)
+			FieldKind::Navigation { sections, .. } => {
+				nav_relations(schema, value, sections, &path, out)
 			}
 			// and so is one in a cell of a table
 			FieldKind::Table { columns } => {
@@ -113,6 +122,7 @@ pub(super) fn collect_relations(
 							out.extend(link_relation(
 								schema,
 								&row[&c.handle],
+								&[],
 								&p,
 							));
 						}
@@ -161,13 +171,15 @@ pub(super) fn collect_relations(
 fn nav_relations(
 	schema: &Schema,
 	items: &Value,
+	sections: &[String],
 	path: &str,
 	out: &mut Vec<RelationRef>,
 ) {
 	for (i, item) in items.as_array().into_iter().flatten().enumerate() {
 		let p = format!("{path}.{i}");
-		out.extend(link_relation(schema, item, &p));
-		nav_relations(schema, &item["children"], &format!("{p}.children"), out);
+		out.extend(link_relation(schema, item, sections, &p));
+		let children = format!("{p}.children");
+		nav_relations(schema, &item["children"], sections, &children, out);
 	}
 }
 

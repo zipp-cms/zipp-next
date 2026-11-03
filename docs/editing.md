@@ -170,7 +170,8 @@ have a check, entries of other types (parents in a tree) show but can't
 be chosen; ↑ ↓ and Enter pick without the mouse. A link takes one and
 closes, a relation toggles several up to its max and counts them, Done
 closes. The picker loads its entries once per open
-(`/api/entries/choices?type=page,event`). A chosen entry or image opens in a flyout from
+(`/api/entries/choices?type=page,event`, the sections of a field's
+limit with `&section=pages,news`). A chosen entry or image opens in a flyout from
 the right, like Craft's slideout: the entry with its whole editor, an image
 with its details (below); Done or Escape closes it and the
 page behind stays as it was. In rich text, a button is a link like the

@@ -40,6 +40,7 @@
 	let {
 		schema,
 		types,
+		sections = [],
 		chosen = [],
 		multiple = false,
 		max = null,
@@ -49,6 +50,8 @@
 		schema: Schema;
 		/** the entry types to choose from */
 		types: string[];
+		/** only entries of these sections, none: all */
+		sections?: string[];
 		chosen?: number[];
 		multiple?: boolean;
 		max?: number | null;
@@ -83,6 +86,7 @@
 	listChoices(
 		untrack(() => types),
 		site.current,
+		untrack(() => sections),
 	)
 		.then(r => {
 			entries = r.entries;

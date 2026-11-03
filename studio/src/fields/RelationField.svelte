@@ -82,6 +82,7 @@
 	<EntryPicker
 		{schema}
 		{types}
+		sections={field.sections}
 		chosen={ids}
 		multiple={max !== 1}
 		{max}

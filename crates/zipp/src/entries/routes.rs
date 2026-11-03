@@ -61,6 +61,11 @@ async fn choices_route(
 	if let Some(t) = types.iter().find(|t| schema.entry_type(t).is_none()) {
 		return Err(Error::Request(format!("unknown entry type {t}")));
 	}
+	let only: Vec<&str> =
+		req.sections.iter().flat_map(|s| s.split(',')).collect();
+	if let Some(s) = only.iter().find(|s| schema.get_section(s).is_none()) {
+		return Err(Error::Request(format!("unknown section {s}")));
+	}
 	let site = schema.site_or_primary(req.site);
 
 	// the sections that have one of the types, of those the role sees
@@ -68,6 +73,7 @@ async fn choices_route(
 		.sections
 		.iter()
 		.filter(|s| s.types.iter().any(|t| types.contains(&t.as_str())))
+		.filter(|s| only.is_empty() || only.contains(&s.handle.as_str()))
 		.filter(|s| auth.can(schema, &s.handle, Access::View))
 		.map(|s| s.handle.as_str())
 		.collect();

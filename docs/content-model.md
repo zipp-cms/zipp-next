@@ -51,6 +51,15 @@ A number (`Field::number("price")`) takes `.range(0.0, 1000.0)`,
 numbers; the server refuses more, the studio shows them, `12.50`), and
 `.unit("CHF")`, shown after the input. GraphQL gives numbers as `Float`,
 also with `decimals(0)`.
+A relation (`Field::relation("speakers", ["person"])`) takes entries
+of its types, `.sections(["team"])` only those of some sections; links
+to entries take it too (a link field, a navigation, the links and
+buttons of a rich text), `.sections(["pages"])` for a menu only of
+pages. The studio's picker shows only these sections, saving refuses
+an entry of another one. The schema check refuses an unknown section,
+one without pages for links, and a relation whose types and sections
+don't fit (a type in none of them, a section with none of the types).
+Like the types, a change of the sections is a migration.
 `Field::email("formEmail")` takes one address, `name@host.tld` without
 spaces (the server refuses anything else, the same check as email links
 and table columns), a `String` in GraphQL.

@@ -98,7 +98,7 @@ pub fn draft_refs(
 			continue;
 		};
 		for r in crate::content::relations(schema, comp, &doc.fields) {
-			if let crate::content::Target::Entries(_) = r.target {
+			if let crate::content::Target::Entries { .. } = r.target {
 				ids.extend(r.ids);
 			}
 		}

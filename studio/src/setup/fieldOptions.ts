@@ -1,12 +1,13 @@
 import {
 	componentOf,
+	sectionName,
 	type Component,
 	type Condition,
 	type Field,
 	type Schema,
 } from '../core/schema';
 import { linkName } from '../fields/link/link';
-import { componentPath } from '../core/paths';
+import { componentPath, setupPath } from '../core/paths';
 import { t } from '../i18n/index.svelte';
 
 /**
@@ -31,6 +32,18 @@ function components(schema: Schema, handles: string[]) {
 			href: componentPath(c ?? { handle: h, entry: true }),
 		};
 	});
+}
+
+/** The sections entries come from, all when there are none. */
+function sectionsOption(schema: Schema, handles: string[] = []): FieldOption {
+	return {
+		name: t('fields.optSections'),
+		value: handles.length ? '' : t('fields.allSections'),
+		links: handles.map(h => ({
+			text: sectionName(schema, h),
+			href: setupPath('sections', h),
+		})),
+	};
 }
 
 export function fieldOptions(
@@ -113,6 +126,7 @@ export function fieldOptions(
 			break;
 		case 'relation':
 			add(t('fields.optEntryTypes'), '', components(schema, f.types));
+			out.push(sectionsOption(schema, f.sections));
 			add(t('fields.optMaxEntries'), or(f.max, t('fields.any')));
 			break;
 		case 'assets':
@@ -129,6 +143,8 @@ export function fieldOptions(
 			break;
 		case 'link':
 			add(t('fields.optLinksTo'), f.to.map(linkName).join(', '));
+			if (f.to.includes('entry'))
+				out.push(sectionsOption(schema, f.sections));
 			add(t('fields.label'), yes(f.labels));
 			add(
 				t('fields.optExternalLinks'),
@@ -137,6 +153,8 @@ export function fieldOptions(
 			break;
 		case 'navigation':
 			add(t('fields.optLinksTo'), f.to.map(linkName).join(', '));
+			if (f.to.includes('entry'))
+				out.push(sectionsOption(schema, f.sections));
 			add(t('fields.optLevels'), String(f.depth));
 			break;
 		case 'richText':
@@ -149,6 +167,8 @@ export function fieldOptions(
 			add(t('fields.optLists'), yes(f.lists));
 			add(t('fields.optLinks'), yes(f.links));
 			add(t('fields.optButtons'), yes(f.buttons));
+			if (f.links || f.buttons)
+				out.push(sectionsOption(schema, f.sections));
 			add(
 				t('fields.optBlocksInText'),
 				f.blocks.length ? '' : t('common.no'),

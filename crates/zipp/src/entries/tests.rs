@@ -3,7 +3,7 @@ use serde_json::json;
 use super::*;
 use crate::db::{DAY_MS as DAY, Db};
 use crate::fixtures::site;
-use crate::schema::Field;
+use crate::schema::{Field, Section};
 use crate::testing::input;
 
 fn query(params: &[(&str, &str)]) -> Query {
@@ -603,4 +603,55 @@ fn choices_are_in_the_order_of_their_section() {
 	// published gets a post date, the status shows it
 	assert!(all[0].dates.post_date.is_some());
 	assert!(choices(&conn, &s, &["pages"], "fr").is_err());
+}
+
+#[test]
+fn links_go_only_to_the_sections_of_their_field() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let mut s =
+		site().section(Section::channel("news", ["page"]).uri("news/{slug}"));
+	let event = s.get_mut("event").unwrap();
+	event.fields.extend([
+		Field::relation("pages", ["page"]).sections(["pages"]),
+		Field::link("go", [LinkKind::Entry]).sections(["pages"]),
+		Field::navigation("menu", [LinkKind::Entry]).sections(["pages"]),
+		Field::rich_text("text").links().sections(["pages"]),
+	]);
+	s.check().unwrap();
+	let new = |section: &str| {
+		let page = input(section, "page", section, json!({}));
+		save(&conn, &s, None, page, None).unwrap().id
+	};
+	let page = new("pages");
+	let news = new("news");
+
+	let to = |id: i64| json!({ "type": "entry", "value": id });
+	let fields = |id: i64| {
+		json!({
+			"pages": [id],
+			"go": to(id),
+			"menu": [{ "type": "entry", "value": id, "label": "M" }],
+			"text": { "type": "doc", "content": [
+				{ "type": "paragraph", "content": [{ "type": "text",
+					"text": "see", "marks": [{ "type": "link",
+					"attrs": { "link": to(id) } }] }] },
+			] },
+		})
+	};
+	let event = |title: &str, id: i64| {
+		let e = input("events", "event", title, fields(id));
+		save(&conn, &s, None, e, None)
+	};
+
+	event("Pages", page).unwrap();
+	let Err(Error::Invalid(errs)) = event("News", news) else {
+		panic!("should fail");
+	};
+	let paths: Vec<&str> = errs.iter().map(|e| e.path.as_str()).collect();
+	assert_eq!(paths, ["pages", "go", "menu.0", "text"]);
+	assert_eq!(
+		errs[0].message,
+		format!("entry {news} is in news, not allowed here")
+	);
 }

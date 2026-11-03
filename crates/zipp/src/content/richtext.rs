@@ -50,6 +50,7 @@ impl<'a> Allowed<'a> {
 				buttons,
 				blocks,
 				styles,
+				..
 			} => Some(Self {
 				headings,
 				lists: *lists,

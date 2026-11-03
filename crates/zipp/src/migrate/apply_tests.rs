@@ -286,7 +286,10 @@ impl crate::FieldType for Pages {
 	) -> Vec<crate::FieldRelation> {
 		let ids = value.as_array().into_iter().flatten();
 		let ids = ids.filter_map(Value::as_i64).collect();
-		let pages = crate::Target::Entries(vec!["page".into()]);
+		let pages = crate::Target::Entries {
+			types: vec!["page".into()],
+			sections: vec![],
+		};
 		vec![crate::FieldRelation::new(pages, ids)]
 	}
 

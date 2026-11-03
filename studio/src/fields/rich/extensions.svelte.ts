@@ -129,6 +129,8 @@ export const InlineStyle = Mark.create<{ styles: Style[] }>({
 type Options = {
 	schema: Schema;
 	refs: () => Refs;
+	/** of the field, buttons link only to entries of them */
+	sections: string[];
 	/** moves the nodes of the text, see RichTextField */
 	sortable: () => Sortable;
 };
@@ -138,6 +140,7 @@ export type NodeProps<A> = {
 	attrs: A;
 	schema: Schema;
 	refs: Refs;
+	sections: string[];
 	editable: boolean;
 	update: (attrs: Record<string, unknown>) => void;
 	remove: () => void;
@@ -162,6 +165,7 @@ function svelteView(component: Component<NodeProps<any>>, options: Options) {
 			attrs: node.attrs,
 			schema: options.schema,
 			refs: options.refs(),
+			sections: options.sections,
 			sortable: options.sortable(),
 			// its place among the nodes of the text, it changes with them
 			index: () => editor.state.doc.resolve(getPos() ?? 0).index(),
@@ -231,6 +235,7 @@ export const Button = Node.create<Options>({
 		return {
 			schema: null as any,
 			refs: () => ({}),
+			sections: [] as string[],
 			sortable: null as any,
 		};
 	},
@@ -263,6 +268,7 @@ export const Block = Node.create<Options>({
 		return {
 			schema: null as any,
 			refs: () => ({}),
+			sections: [] as string[],
 			sortable: null as any,
 		};
 	},

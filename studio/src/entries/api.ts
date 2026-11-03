@@ -52,12 +52,17 @@ export type Refs = Record<number, EntryRef>;
 export type Choice = EntryRef &
 	Dates & { parentId: number | null; draft: boolean };
 
-/** The entries of the sections that have one of the types. */
+/**
+ * The entries of the sections that have one of the types, only of
+ * `sections` if any.
+ */
 export function listChoices(
 	types: string[],
 	site: string,
+	sections: string[] = [],
 ): Promise<{ entries: Choice[] }> {
 	const params = new URLSearchParams({ type: types.join(','), site });
+	if (sections.length) params.set('section', sections.join(','));
 	return request('GET', '/entries/choices?' + params);
 }
 

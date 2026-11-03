@@ -22,6 +22,7 @@
 		items,
 		to,
 		depth,
+		sections = [],
 		onchange,
 	}: {
 		schema: Schema;
@@ -30,6 +31,8 @@
 		to: LinkKind[];
 		/** the levels */
 		depth: number;
+		/** links only to entries of these sections, none: all */
+		sections?: string[];
 		onchange: (items: NavItem[]) => void;
 	} = $props();
 
@@ -125,6 +128,7 @@
 						{to}
 						labels
 						newTab={opensInNewTab(schema, link, true)}
+						{sections}
 						onchange={l => change(next => setRowLink(next, i, l))}
 						ondone={() => (editing = null)}
 					/>

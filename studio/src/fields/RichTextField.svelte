@@ -128,7 +128,7 @@
 	{/if}
 	<div class="editor" bind:this={el}><SortLine sortable={sort} /></div>
 	{#if editor && opts.links}
-		<LinkBubble {editor} {tick} {schema} {refs} />
+		<LinkBubble {editor} {tick} {schema} {refs} sections={opts.sections} />
 	{/if}
 </div>
 

@@ -149,6 +149,7 @@ impl Column {
 				to: to.clone(),
 				labels: false,
 				new_tab: true,
+				sections: vec![],
 			},
 		};
 		Field::new(&self.handle, kind)

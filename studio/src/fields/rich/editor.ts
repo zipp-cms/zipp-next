@@ -62,6 +62,7 @@ export function createEditor(o: {
 	const nodeOptions = {
 		schema: o.schema,
 		refs: () => o.refs,
+		sections: opts.sections ?? [],
 		sortable: () => o.sortable,
 	};
 	return new Editor({

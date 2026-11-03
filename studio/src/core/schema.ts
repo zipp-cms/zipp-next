@@ -46,7 +46,13 @@ type FieldKind =
 	  }
 	| { kind: 'boolean' }
 	| { kind: 'email' }
-	| { kind: 'relation'; types: string[]; max: number | null }
+	| {
+			kind: 'relation';
+			types: string[];
+			max: number | null;
+			/** only entries of these sections, none: all */
+			sections?: string[];
+	  }
 	| {
 			kind: 'assets';
 			images: boolean;
@@ -56,7 +62,14 @@ type FieldKind =
 			/** only these, lowercase without the dot */
 			extensions?: string[];
 	  }
-	| { kind: 'link'; to: LinkKind[]; labels: boolean; newTab: boolean }
+	| {
+			kind: 'link';
+			to: LinkKind[];
+			labels: boolean;
+			newTab: boolean;
+			/** links only to entries of these sections, none: all */
+			sections?: string[];
+	  }
 	| { kind: 'group'; component: string }
 	| { kind: 'markdown' }
 	/** `2026-11-14`, with `time` `2026-11-14T20:00`, no time zone */
@@ -66,7 +79,13 @@ type FieldKind =
 	| { kind: 'dropdown'; options: { value: string; label: string }[] }
 	| { kind: 'checkboxes'; options: { value: string; label: string }[] }
 	| { kind: 'table'; columns: Column[] }
-	| { kind: 'navigation'; to: LinkKind[]; depth: number }
+	| {
+			kind: 'navigation';
+			to: LinkKind[];
+			depth: number;
+			/** links only to entries of these sections, none: all */
+			sections?: string[];
+	  }
 	| {
 			kind: 'richText';
 			headings: number[];
@@ -75,6 +94,8 @@ type FieldKind =
 			buttons: boolean;
 			blocks: string[];
 			styles?: Style[];
+			/** links only to entries of these sections, none: all */
+			sections?: string[];
 	  }
 	| {
 			kind: 'blocks';
