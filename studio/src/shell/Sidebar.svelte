@@ -70,7 +70,7 @@
 		{#each groups as g (g.name)}
 			{@const open = !other && g === group}
 			<a
-				class="item"
+				class="item nav-item"
 				href={navHref(schema, g.sections[0])}
 				class:active={open}
 			>
@@ -92,7 +92,7 @@
 		{/each}
 		{#if canAssets(schema, 'view')}
 			<a
-				class="item"
+				class="item nav-item"
 				href="/admin/assets"
 				class:active={page === 'assets'}
 			>
@@ -101,14 +101,22 @@
 			</a>
 		{/if}
 		{#if (schema.aiModels.length || hasAgent(schema)) && canAi(schema)}
-			<a class="item" href="/admin/ai" class:active={page === 'ai'}>
+			<a
+				class="item nav-item"
+				href="/admin/ai"
+				class:active={page === 'ai'}
+			>
 				<Icon name="sparkles" />
 				{t('shell.ai')}
 			</a>
 		{/if}
 		<hr />
 		<!-- read only for everyone, a role sees its part -->
-		<a class="item" href="/admin/setup" class:active={page === 'setup'}>
+		<a
+			class="item nav-item"
+			href="/admin/setup"
+			class:active={page === 'setup'}
+		>
 			<Icon name="settings" />
 			{t('shell.setup')}
 		</a>
@@ -126,12 +134,16 @@
 			</div>
 		{/if}
 		{#if isAdmin(schema)}
-			<a class="item" href="/admin/users" class:active={page === 'users'}>
+			<a
+				class="item nav-item"
+				href="/admin/users"
+				class:active={page === 'users'}
+			>
 				<Icon name="users" />
 				{t('shell.users')}
 			</a>
 			<a
-				class="item"
+				class="item nav-item"
 				href="/admin/graphql"
 				class:active={page === 'graphql'}
 			>
@@ -140,7 +152,11 @@
 			</a>
 		{/if}
 		{#if canTrash(schema)}
-			<a class="item" href="/admin/trash" class:active={page === 'trash'}>
+			<a
+				class="item nav-item"
+				href="/admin/trash"
+				class:active={page === 'trash'}
+			>
 				<Icon name="delete" />
 				{t('shell.trash')}
 			</a>
@@ -215,22 +231,8 @@
 		align-items: center;
 		gap: 0.625rem;
 		padding: 0.4375rem 0.625rem;
-		border-radius: var(--radius);
-		color: var(--text-2);
 		font-weight: 500;
 		text-decoration: none;
-
-		@include hover {
-			&:hover {
-				color: var(--text);
-				background: var(--hover);
-			}
-		}
-
-		&.active {
-			color: var(--accent);
-			background: var(--accent-soft);
-		}
 	}
 
 	.sub {

@@ -6,6 +6,7 @@
 	import { fromDrop, type Upload } from './files';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
+	import TreeCaret from 'zipp-ui/TreeCaret.svelte';
 	import NameInput from './NameInput.svelte';
 	import { t } from '../i18n/index.svelte';
 
@@ -124,7 +125,7 @@
 
 {#snippet input(depth: number)}
 	<div class="row editing" style:--depth={depth}>
-		<span class="chevron"></span>
+		<TreeCaret />
 		<Icon name="folder" size={15} />
 		<NameInput
 			value={tree.editedName}
@@ -140,7 +141,7 @@
 {/snippet}
 
 <nav class="tree" aria-label={t('assets.folders')}>
-	<div class="head">
+	<div class="head overline">
 		<span>{t('assets.folders')}</span>
 		{#if editable}
 			<button
@@ -150,13 +151,17 @@
 				aria-label={t('assets.newFolder')}
 				onclick={() => tree.startNew(current)}
 			>
-				<Icon name="folder-plus" size={16} />
+				<Icon name="folder-plus" />
 			</button>
 		{/if}
 	</div>
+	<!-- a failed delete; one of adding or renaming shows at its input -->
+	{#if tree.error && !tree.editing}
+		<p class="error" style:--depth={0}>{tree.error}</p>
+	{/if}
 
 	<div
-		class="row"
+		class="row nav-item"
 		class:active={!searching && current === null}
 		class:over={over === 'top'}
 		role="presentation"
@@ -164,7 +169,7 @@
 		ondragleave={() => (over = null)}
 		ondrop={e => drop(e, null)}
 	>
-		<span class="chevron"></span>
+		<TreeCaret />
 		<button type="button" class="name" onclick={() => onselect(null)}>
 			<Icon name="dashboard" size={15} />
 			<span class="label">{root()}</span>
@@ -183,7 +188,7 @@
 			{@render input(depth)}
 		{:else}
 			<div
-				class="row"
+				class="row nav-item"
 				class:active={!searching && current === f.id}
 				class:over={over === f.id}
 				style:--depth={depth}
@@ -194,26 +199,12 @@
 				ondragleave={() => (over = null)}
 				ondrop={e => drop(e, f.id)}
 			>
-				{#if tree.hasChildren(f.id)}
-					<button
-						type="button"
-						class="chevron"
-						aria-label={tree.open.has(f.id)
-							? t('assets.collapse')
-							: t('assets.expand')}
-						aria-expanded={tree.open.has(f.id)}
-						onclick={() => tree.toggle(f.id)}
-					>
-						<Icon
-							name={tree.open.has(f.id)
-								? 'chevron-down'
-								: 'chevron-right'}
-							size={14}
-						/>
-					</button>
-				{:else}
-					<span class="chevron"></span>
-				{/if}
+				<TreeCaret
+					open={tree.hasChildren(f.id)
+						? tree.open.has(f.id)
+						: undefined}
+					onclick={() => tree.toggle(f.id)}
+				/>
 				<button
 					type="button"
 					class="name"
@@ -245,11 +236,6 @@
 		justify-content: space-between;
 		margin-bottom: 0.25rem;
 		padding-left: 0.5rem;
-		color: var(--muted);
-		font-size: var(--fs-xs);
-		font-weight: 600;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
 	}
 
 	.row {
@@ -258,37 +244,11 @@
 		align-items: center;
 		min-height: 2rem;
 		padding-left: calc(var(--depth) * 1rem);
-		border-radius: var(--radius);
-		color: var(--text-2);
-
-		@include hover {
-			&:hover {
-				color: var(--text);
-				background: var(--hover);
-			}
-		}
-
-		&.active {
-			color: var(--accent);
-			background: var(--accent-soft);
-		}
 
 		&.over {
 			@include focus-ring(-1px);
 			background: var(--accent-soft);
 		}
-	}
-
-	.chevron {
-		display: grid;
-		flex-shrink: 0;
-		place-items: center;
-		width: 1.25rem;
-		height: 1.25rem;
-		padding: 0;
-		border: none;
-		background: none;
-		color: inherit;
 	}
 
 	.name {

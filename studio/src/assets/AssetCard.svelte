@@ -46,6 +46,7 @@
 		type="button"
 		class="tile plain"
 		title={openTitle ?? asset.filename}
+		aria-label={openTitle ?? asset.filename}
 		onclick={onopen}
 		draggable={draggable ? 'true' : undefined}
 		{ondragstart}

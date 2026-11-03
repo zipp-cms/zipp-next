@@ -72,6 +72,7 @@
 				class="icon"
 				onclick={onremove}
 				title={t('entries.moveToTrash')}
+				aria-label={t('entries.moveToTrash')}
 			>
 				<Icon name="delete" />
 			</button>

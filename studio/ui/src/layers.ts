@@ -1,26 +1,36 @@
 /**
  * The open popups and flyouts, the last one on top. Escape closes only
- * the top one, so a popup in a flyout closes before the flyout.
+ * the top one, so a popup in a flyout closes before the flyout. A plugin
+ * bundles its own zipp-ui, so the stack lives on `globalThis` (like
+ * `texts.svelte.ts`): Escape in a plugin's popover closes only that.
  */
-const layers: (() => void)[] = [];
+type Layers = { stack: (() => void)[]; onkeydown: (e: KeyboardEvent) => void };
 
-function onkeydown(e: KeyboardEvent) {
-	if (e.key !== 'Escape' || !layers.length) return;
-	// a modal dialog (the session ended) is above every layer, the
-	// layers under it stay as they are
-	if (document.querySelector('dialog:modal')) return;
-	e.preventDefault();
-	layers[layers.length - 1]();
-}
+const KEY = Symbol.for('zipp-ui-layers');
+const global = globalThis as { [KEY]?: Layers };
+
+const layers: Layers = (global[KEY] ??= {
+	stack: [],
+	onkeydown(e: KeyboardEvent) {
+		const stack = layers.stack;
+		if (e.key !== 'Escape' || !stack.length) return;
+		// a modal dialog (the session ended) is above every layer, the
+		// layers under it stay as they are
+		if (document.querySelector('dialog:modal')) return;
+		e.preventDefault();
+		stack[stack.length - 1]();
+	},
+});
 
 /** Adds a layer that `close` closes, the result removes it again. */
-export function pushLayer(close: () => void): () => void {
-	if (!layers.length) window.addEventListener('keydown', onkeydown);
-	layers.push(close);
+function pushLayer(close: () => void): () => void {
+	const { stack, onkeydown } = layers;
+	if (!stack.length) window.addEventListener('keydown', onkeydown);
+	stack.push(close);
 	return () => {
-		const i = layers.indexOf(close);
-		if (i >= 0) layers.splice(i, 1);
-		if (!layers.length) window.removeEventListener('keydown', onkeydown);
+		const i = stack.indexOf(close);
+		if (i >= 0) stack.splice(i, 1);
+		if (!stack.length) window.removeEventListener('keydown', onkeydown);
 	};
 }
 

@@ -6,6 +6,7 @@ import {
 	token,
 	tokenRemembered,
 } from './client';
+import { userPath } from './paths';
 
 /** A user of the studio, `role` null is an admin. */
 export type User = {
@@ -174,7 +175,7 @@ export class Session {
 	async backToOwnAccount() {
 		const id = this.user?.id;
 		const ok = await this.endLoginAs();
-		location.assign(ok ? `/admin/users/${id}` : '/admin/login');
+		location.assign(ok && id !== undefined ? userPath(id) : '/admin/login');
 	}
 
 	async logout() {

@@ -101,12 +101,13 @@ export class FolderTreeState {
 	/** Deletes an empty folder, after asking. */
 	async remove(f: Folder) {
 		if (!confirm(t('assets.confirmDeleteFolder', { name: f.name }))) return;
+		this.error = '';
 		try {
 			await deleteFolder(f.id);
 			if (this.o.current() === f.id) this.o.onselect(f.parentId);
 			this.o.onchange?.();
 		} catch (err) {
-			alert((err as Error).message);
+			this.error = (err as Error).message;
 		}
 	}
 }

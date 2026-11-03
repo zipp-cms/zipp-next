@@ -1,7 +1,7 @@
 # the search page: the pages with the words, the best match first, and
 # how many there are for the pages of results
-query ($query: String!, $siteId: [QueryArgument], $offset: Int) {
-	hits: search(query: $query, siteId: $siteId, limit: 10, offset: $offset) {
+query ($query: String!, $siteId: [QueryArgument], $limit: Int, $offset: Int) {
+	hits: search(query: $query, siteId: $siteId, limit: $limit, offset: $offset) {
 		# the words around the match, the matched ones in <mark>
 		excerptHtml
 		entry {

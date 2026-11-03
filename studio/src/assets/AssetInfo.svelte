@@ -62,7 +62,7 @@
 			{time(asset.createdAt)}
 			{#if asset.uploadedBy}
 				<span class="note">
-					{t('assets.uploadedBy', {
+					{t('common.byEmail', {
 						email: asset.uploadedBy,
 					})}
 				</span>

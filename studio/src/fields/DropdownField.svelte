@@ -8,8 +8,11 @@
 	 * One of the options: up to three as buttons, more as a select. A
 	 * click on the picked button clears it unless the field is required.
 	 */
-	let { field, values }: { field: FieldOf<'dropdown'>; values: Values } =
-		$props();
+	let {
+		field,
+		values,
+		path,
+	}: { field: FieldOf<'dropdown'>; values: Values; path: string } = $props();
 
 	const options = $derived(field.options);
 	const value = $derived(valueOf(values, field) ?? null);
@@ -23,6 +26,7 @@
 	<Segmented {options} {value} onchange={pick} label={field.label} />
 {:else}
 	<select
+		id={path}
 		value={value ?? ''}
 		onchange={e => (values[field.handle] = e.currentTarget.value || null)}
 	>

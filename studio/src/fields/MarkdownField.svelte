@@ -5,6 +5,7 @@
 	import { valueOf } from '../core/schema';
 	import Segmented from 'zipp-ui/Segmented.svelte';
 	import { t } from '../i18n/index.svelte';
+	import { labelId } from './labels';
 
 	/**
 	 * Markdown: shown rendered when there is text, so it reads like docs,
@@ -33,7 +34,13 @@
 		/>
 	</div>
 	{#if writing}
-		<textarea {id} rows="14" bind:value={values[field.handle]}></textarea>
+		<!-- the id for a plugin's FieldRow, the label's id in the studio -->
+		<textarea
+			{id}
+			aria-labelledby={labelId(id)}
+			rows="14"
+			bind:value={values[field.handle]}
+		></textarea>
 	{:else}
 		<div class="markdown-body">{@html html}</div>
 	{/if}

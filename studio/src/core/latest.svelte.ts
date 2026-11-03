@@ -1,5 +1,5 @@
 /** How long a search waits after the last key before it asks. */
-export const SEARCH_DELAY_MS = 250;
+const SEARCH_DELAY_MS = 250;
 
 /**
  * Loads that can overlap, like a search as you type or a list that loads

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
 	import { accessText } from '../core/access';
+	import { sitesPath } from '../core/paths';
 	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
 
@@ -29,7 +30,7 @@
 	<p class="note">
 		<Sentence key="users.levels" params={{ setup: t('users.setup') }}>
 			{#snippet param(p)}
-				<a href="/admin/setup/sites#roles">{p.text}</a>
+				<a href={sitesPath('roles')}>{p.text}</a>
 			{/snippet}
 		</Sentence>
 	</p>

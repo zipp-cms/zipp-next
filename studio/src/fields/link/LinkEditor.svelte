@@ -33,7 +33,7 @@
 		to,
 		labels = false,
 		newTab,
-		sections = [],
+		sections,
 		onchange,
 		ondone,
 		onremove,
@@ -46,7 +46,7 @@
 		/** whether it opens in a new tab now */
 		newTab: boolean;
 		/** links only to entries of these sections, none: all */
-		sections?: string[];
+		sections: string[];
 		onchange: (link: Link) => void;
 		ondone?: () => void;
 		/** a way to remove it, like a link of a rich text */
@@ -124,9 +124,7 @@
 					<button
 						type="button"
 						class="chosen plain"
-						title={pickingEntry
-							? undefined
-							: t('fields.chooseAnotherEntry')}
+						title={t('fields.chooseAnotherEntry')}
 						aria-haspopup="dialog"
 						onclick={() => (pickingEntry = true)}
 					>
@@ -140,6 +138,7 @@
 						type="button"
 						class="icon"
 						title={t('fields.removeEntry')}
+						aria-label={t('fields.removeEntry')}
 						onclick={() => set({ value: null })}
 					>
 						<Icon name="close" size={14} />
@@ -160,6 +159,7 @@
 							type="button"
 							class="icon"
 							title={t('fields.anotherFile')}
+							aria-label={t('fields.anotherFile')}
 							onclick={() => set({ value: null })}
 						>
 							<Icon name="close" size={14} />
@@ -176,6 +176,7 @@
 				type={input.type}
 				class:mono={link.type === 'url'}
 				placeholder={input.placeholder}
+				aria-label={linkName(link.type)}
 				value={link.value ?? ''}
 				oninput={e => set({ value: e.currentTarget.value })}
 			/>
@@ -186,6 +187,7 @@
 		<span class="label">{t('fields.label')}</span>
 		<input
 			placeholder={t('fields.fromTarget')}
+			aria-label={t('fields.label')}
 			value={link.label ?? ''}
 			oninput={e => set({ label: e.currentTarget.value })}
 		/>
@@ -199,6 +201,7 @@
 				<input
 					class="mono"
 					placeholder={t('fields.anchorPlaceholder')}
+					aria-label={t('fields.anchor')}
 					value={link.anchor ?? ''}
 					oninput={e =>
 						set({
@@ -213,7 +216,7 @@
 	<span></span>
 	<div class="end">
 		<Checkbox checked={newTab} onchange={on => set({ newTab: on })}>
-			{t('fields.openInNewTab')}
+			{t('common.openInNewTab')}
 		</Checkbox>
 		{#if link.type === 'asset'}
 			<Checkbox

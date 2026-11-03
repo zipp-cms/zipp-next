@@ -151,7 +151,15 @@
 </FieldGroup>
 
 <style>
+	/* a mock-up of Google's result: its colors and sizes, not the
+	   studio's tokens, so it looks like the real one */
 	.preview {
+		--serp-url: #4d5156;
+		--serp-title: #1a0dab;
+		--serp-text: #4d5156;
+		--serp-fs-url: 0.8125rem;
+		--serp-fs-title: 1.1875rem;
+		--serp-fs-text: 0.875rem;
 		display: grid;
 		gap: 2px;
 		padding: 0.75rem 0.875rem;
@@ -162,18 +170,18 @@
 	}
 
 	.url {
-		font-size: 0.8125rem;
-		color: #4d5156;
+		font-size: var(--serp-fs-url);
+		color: var(--serp-url);
 	}
 
 	.title {
-		font-size: 1.1875rem;
-		color: #1a0dab;
+		font-size: var(--serp-fs-title);
+		color: var(--serp-title);
 	}
 
 	.description {
-		font-size: 0.875rem;
-		color: #4d5156;
+		font-size: var(--serp-fs-text);
+		color: var(--serp-text);
 	}
 
 	.over {

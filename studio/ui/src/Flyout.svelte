@@ -56,7 +56,7 @@
 				aria-label={ui.texts.close}
 				onclick={onclose}
 			>
-				<Icon name="close" size={16} />
+				<Icon name="close" />
 			</button>
 		{:else}
 			<strong class="truncate">{title}</strong>

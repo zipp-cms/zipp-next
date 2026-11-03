@@ -174,7 +174,7 @@
 						aria-label={t('ai.send')}
 						disabled={chat.busy || !input.trim()}
 					>
-						<Icon name="arrow-up" size={16} />
+						<Icon name="arrow-up" />
 					</button>
 				</div>
 			</div>

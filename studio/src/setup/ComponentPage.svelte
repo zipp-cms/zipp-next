@@ -140,7 +140,7 @@
 		{/each}
 	</div>
 	<aside class="card">
-		<h2>{t('setup.usedIn')}</h2>
+		<h2>{t('common.usedIn')}</h2>
 		<ul class="plain">
 			{#each usedIn(schema, c) as u (u.text)}
 				<li><a href={u.href}>{u.text}</a></li>

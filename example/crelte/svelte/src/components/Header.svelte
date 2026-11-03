@@ -1,5 +1,5 @@
 <script>
-	import { getEntry, getGlobal, getRouter, getSite } from 'crelte';
+	import { getEntry, getGlobal, getRoute, getRouter, getSite } from 'crelte';
 	import { getTranslations } from 'crelte/translations';
 	import { searchTitle, searchUrl } from '@/search.js';
 
@@ -10,6 +10,7 @@
 	const site = getSite();
 	const sites = getRouter().sites;
 	const entry = getEntry();
+	const route = getRoute();
 
 	// the url of this page in the other sites; where it isn't live the
 	// switch goes to the site's home page
@@ -41,10 +42,16 @@
 	</nav>
 	<nav>
 		<!-- a plain form: the search page reads `q` from the url -->
-		<form action={searchUrl($site)} role="search">
+		<form
+			action={searchUrl($site)}
+			role="search"
+			aria-label={searchTitle($site)}
+		>
+			<!-- on the search page it shows the words searched for -->
 			<input
 				type="search"
 				name="q"
+				value={$route?.getSearchParam('q') ?? ''}
 				aria-label={searchTitle($site)}
 				placeholder={searchTitle($site)}
 			/>

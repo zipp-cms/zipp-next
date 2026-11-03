@@ -22,13 +22,17 @@
 </p>
 {#if entry.tickets?.categories.length}
 	<table class="prices">
-		{#each entry.tickets.categories as c, i (i)}
-			<tr class:sold={c.soldOut}>
-				<td>{c.name ?? ''}</td>
-				<td>{c.price != null ? `CHF ${c.price.toFixed(2)}` : ''}</td>
-				<td>{c.soldOut ? $t('events.soldOut') : ''}</td>
-			</tr>
-		{/each}
+		<tbody>
+			{#each entry.tickets.categories as c, i (i)}
+				<tr class:sold={c.soldOut}>
+					<td>{c.name ?? ''}</td>
+					<td>
+						{c.price != null ? `CHF ${c.price.toFixed(2)}` : ''}
+					</td>
+					<td>{c.soldOut ? $t('events.soldOut') : ''}</td>
+				</tr>
+			{/each}
+		</tbody>
 	</table>
 {/if}
 {#if entry.description}{@html entry.description.html}{/if}

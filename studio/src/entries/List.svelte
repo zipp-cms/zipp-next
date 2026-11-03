@@ -1,6 +1,6 @@
 <script module lang="ts">
 	import { sectionOf, type Schema as SchemaT } from '../core/schema';
-	import { listEntries as list, type EntryList } from './api';
+	import { listEntries, type EntryList } from './api';
 	import { go, site, type LoadProps } from '../core/router.svelte';
 	import { entryPath } from '../core/paths';
 	import { t } from '../i18n/index.svelte';
@@ -13,7 +13,7 @@
 		const sec = sectionOf(props.schema, props.section);
 		if (!sec)
 			throw new Error(t('entries.noSection', { section: props.section }));
-		const first = await list(
+		const first = await listEntries(
 			listParams(sec.kind, props.section, site.current, ''),
 		);
 		if (sec.kind === 'single' && first.entries[0])
@@ -38,12 +38,13 @@
 	import { untrack } from 'svelte';
 	import SearchInput from 'zipp-ui/SearchInput.svelte';
 	import { Latest } from '../core/latest.svelte';
+	import { Busy } from '../core/busy.svelte';
 	import EntryBadges from './EntryBadges.svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import { can } from '../core/access';
 	import { sectionCrumbs } from '../core/paths';
 	import { entryUrl, type Schema } from '../core/schema';
-	import { deleteEntry, listEntries, moveEntry, type Entry } from './api';
+	import { deleteEntry, moveEntry, type Entry } from './api';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { date } from '../core/format';
@@ -76,7 +77,8 @@
 	const types = $derived(sec.types.length > 1);
 
 	let total = $state(untrack(() => first.total));
-	let error = $state('');
+	// moving and deleting
+	const action = new Busy();
 
 	/**
 	 * Loads the list again: after a search, a move, a delete. Only the
@@ -90,7 +92,7 @@
 		total = r.total;
 		published = r.published;
 		drafts = r.drafts;
-		error = '';
+		action.error = '';
 	}
 	const load = () => loads.run(ask, show);
 
@@ -118,13 +120,11 @@
 		onmove: async (from, drop) => {
 			const to = placeIn(depths, from, drop);
 			const parentId = to.parent === null ? null : entries[to.parent].id;
-			try {
+			await action.run(async () => {
 				await moveEntry(entries[from].id, parentId, to.index);
 				// the handle keeps the focus in the new order
 				await load();
-			} catch (err: any) {
-				error = err.message;
-			}
+			});
 		},
 	});
 
@@ -164,12 +164,10 @@
 			? t('entries.confirmTrashBelow', { title: e.title, n: below })
 			: t('entries.confirmTrash', { title: e.title });
 		if (!confirm(question)) return;
-		try {
+		await action.run(async () => {
 			await deleteEntry(e.id);
 			load();
-		} catch (err: any) {
-			error = err.message;
-		}
+		});
 	}
 </script>
 
@@ -187,7 +185,9 @@
 	{/snippet}
 </PageTop>
 
-{#if loads.error || error}<p class="error">{loads.error || error}</p>{/if}
+{#if loads.error || action.error}
+	<p class="error">{loads.error || action.error}</p>
+{/if}
 
 <div class="card list" bind:this={rows}>
 	<div class="search">
@@ -200,7 +200,7 @@
 		<span class="note total">{t('common.entries', { n: total })}</span>
 	</div>
 	{#if entries.length}
-		<div class="row columns" class:types>
+		<div class="row columns overline" class:types>
 			<span>{t('common.title')}</span>
 			<span>{t('entries.status')}</span>
 			{#if types}<span class="hide-small">{t('entries.type')}</span>{/if}
@@ -311,11 +311,6 @@
 
 	.columns {
 		min-height: 2rem;
-		color: var(--muted);
-		font-size: var(--fs-xs);
-		font-weight: 600;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
 		background: var(--surface-2);
 	}
 

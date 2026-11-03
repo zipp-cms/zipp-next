@@ -209,7 +209,9 @@
 						</p>
 					{/if}
 				{:else if picker.group}
-					<div class="title">{picker.group.section.name}</div>
+					<div class="title overline">
+						{picker.group.section.name}
+					</div>
 					{#each picker.rows as r (r.e.id)}
 						<PickerRow
 							{picker}
@@ -279,11 +281,6 @@
 
 	.title {
 		padding: 0.25rem 0.625rem 0.375rem;
-		color: var(--muted);
-		font-size: var(--fs-xs);
-		font-weight: 600;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
 	}
 
 	.more {

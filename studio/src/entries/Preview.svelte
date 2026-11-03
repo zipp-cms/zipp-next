@@ -23,10 +23,8 @@
 	 * browser), open in a new tab. `resizing`: the width next to it is
 	 * dragged, the frame may not take the pointer.
 	 */
-	let {
-		preview,
-		resizing = false,
-	}: { preview: SitePreview; resizing?: boolean } = $props();
+	let { preview, resizing }: { preview: SitePreview; resizing: boolean } =
+		$props();
 
 	let frame: HTMLIFrameElement;
 
@@ -88,8 +86,8 @@
 				href={preview.withToken(preview.view)}
 				target="_blank"
 				rel="noreferrer"
-				title={t('entries.openInNewTab')}
-				aria-label={t('entries.openInNewTab')}
+				title={t('common.openInNewTab')}
+				aria-label={t('common.openInNewTab')}
 			>
 				<Icon name="external" size={15} />
 			</a>

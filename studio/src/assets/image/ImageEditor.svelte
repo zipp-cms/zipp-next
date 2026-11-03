@@ -130,6 +130,7 @@
 				type="button"
 				class="icon"
 				title={t('assets.rotateLeft')}
+				aria-label={t('assets.rotateLeft')}
 				onclick={() => rotate(-90)}
 			>
 				<Icon name="rotate-left" />
@@ -138,6 +139,7 @@
 				type="button"
 				class="icon"
 				title={t('assets.rotateRight')}
+				aria-label={t('assets.rotateRight')}
 				onclick={() => rotate(90)}
 			>
 				<Icon name="rotate-right" />
@@ -147,6 +149,7 @@
 				class="icon"
 				class:active={edits.flipH}
 				title={t('assets.flipH')}
+				aria-label={t('assets.flipH')}
 				onclick={() => (edits = flipped(edits, 'flipH'))}
 			>
 				<Icon name="flip-h" />
@@ -156,6 +159,7 @@
 				class="icon"
 				class:active={edits.flipV}
 				title={t('assets.flipV')}
+				aria-label={t('assets.flipV')}
 				onclick={() => (edits = flipped(edits, 'flipV'))}
 			>
 				<Icon name="flip-v" />

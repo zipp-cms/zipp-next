@@ -2,6 +2,7 @@
 	import type { Schema } from '../core/schema';
 	import { roleName } from '../core/access';
 	import { session } from '../core/session.svelte';
+	import { userPath } from '../core/paths';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { displayName } from '../users/api';
 	import Avatar from '../users/Avatar.svelte';
@@ -15,14 +16,23 @@
 </script>
 
 <div class="me">
-	<a href="/admin/users/{session.user?.id}" title={t('common.yourAccount')}>
+	<a
+		href={session.user ? userPath(session.user.id) : undefined}
+		title={t('common.yourAccount')}
+	>
 		{#if session.user}<Avatar user={session.user} small />{/if}
 		<span class="who">
 			<strong class="truncate">{name}</strong>
 			<small>{roleName(schema)}</small>
 		</span>
 	</a>
-	<button class="icon" onclick={onlogout} title={t('common.logOut')}>
+	<button
+		type="button"
+		class="icon"
+		onclick={onlogout}
+		title={t('common.logOut')}
+		aria-label={t('common.logOut')}
+	>
 		<Icon name="logout" />
 	</button>
 </div>

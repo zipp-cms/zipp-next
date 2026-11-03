@@ -6,7 +6,7 @@ import { describeField } from './fieldKind';
 import { session } from '../core/session.svelte';
 import { t } from '../i18n/index.svelte';
 import { ASSET_FIELDS } from '../assets/api';
-import { componentPath, fieldPath, setupPath } from '../core/paths';
+import { componentPath, fieldPath, setupPath, sitesPath } from '../core/paths';
 
 /** What Setup shows of the schema: only what the role may see. */
 
@@ -261,7 +261,7 @@ export function pluginParts(
 			name: t('setup.transformsShort'),
 			links: p.transforms.map(tr => ({
 				text: tr,
-				href: '/admin/setup/sites',
+				href: sitesPath(),
 			})),
 		},
 	].filter(x => x.links.length);

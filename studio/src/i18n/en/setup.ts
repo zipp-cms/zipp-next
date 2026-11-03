@@ -13,7 +13,6 @@ export default {
 	'setup.entryTypes': 'Entry types',
 	'setup.entries': 'Entries',
 	'setup.youMay': 'You may',
-	'setup.usedIn': 'Used in',
 	'setup.nothing': 'nothing',
 	'setup.nothingHidden': 'nothing, hidden',
 	'setup.admins': 'Admins (no role)',

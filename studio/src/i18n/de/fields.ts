@@ -4,7 +4,6 @@ import type en from '../en/fields';
 export default {
 	// fields
 	'fields.notHosted': '{kind}-Felder können Plugins nicht einbinden',
-	'fields.changed': 'Geändert',
 	'fields.translated': 'Übersetzt: jede Website hat ihren eigenen Wert',
 	'fields.inSetup': 'Das Feld in der Einrichtung',
 	'fields.chooseOption': 'Auswählen…',
@@ -83,11 +82,9 @@ export default {
 	'fields.anchor': 'Anker',
 	'fields.anchorPlaceholder': 'optional, z. B. kontakt',
 	'fields.anchorNote': 'Springt zu einem Abschnitt der Zielseite.',
-	'fields.openInNewTab': 'In einem neuen Tab öffnen',
 	'fields.downloadInstead': 'Herunterladen statt öffnen',
 	'fields.requiredNoLink': 'Pflichtfeld – noch kein Link.',
 	'fields.noLink': 'Noch kein Link.',
-	'fields.actions': 'Aktionen',
 	'fields.closeSettings': 'Einstellungen schliessen',
 	'fields.editLink': 'Link bearbeiten',
 	'fields.newTab': 'Neuer Tab',

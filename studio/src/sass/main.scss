@@ -530,6 +530,35 @@ ol.plain {
 	}
 }
 
+// a row of a nav, the sidebar's pages and the trees of folders and
+// sections; the component sets its padding
+.nav-item {
+	border-radius: var(--radius);
+	background: none;
+	color: var(--text-2);
+
+	@include hover {
+		&:hover {
+			color: var(--text);
+			background: var(--hover);
+		}
+	}
+
+	&.active {
+		color: var(--accent);
+		background: var(--accent-soft);
+	}
+}
+
+// the small heading over a list or a column
+.overline {
+	color: var(--muted);
+	font-size: var(--fs-xs);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
 // a row that is dragged, see zipp-ui's sortable.svelte.ts
 .sort-dragging {
 	opacity: 0.4;

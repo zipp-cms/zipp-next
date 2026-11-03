@@ -85,7 +85,7 @@
 	onkeydown={e => box && trapTab(e, box)}
 >
 	<label class="input">
-		<Icon name="search" size={16} />
+		<Icon name="search" />
 		<input
 			type="search"
 			placeholder={t('search.placeholder')}
@@ -122,7 +122,7 @@
 			{#each s.groups as g (g.name)}
 				<!-- a listbox has only groups and options, the group is named -->
 				<div role="group" aria-label={g.name}>
-					<div class="name" aria-hidden="true">{g.name}</div>
+					<div class="name overline" aria-hidden="true">{g.name}</div>
 					{#each g.hits as hit (key(hit))}
 						{@const i = s.hits.indexOf(hit)}
 						<!-- chosen with the arrow keys, not Tab -->
@@ -243,10 +243,6 @@
 	.name {
 		margin: 0.625rem 0.625rem 0.25rem;
 		color: var(--subtle);
-		font-size: var(--fs-xs);
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
 	}
 
 	.empty,

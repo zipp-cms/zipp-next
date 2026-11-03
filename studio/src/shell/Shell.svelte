@@ -82,7 +82,7 @@
 		aria-expanded={sideNav.open}
 		onclick={() => (sideNav.open = true)}
 	>
-		<Icon name="sidebar" size={16} />
+		<Icon name="sidebar" />
 	</button>
 {/snippet}
 

@@ -1,7 +1,7 @@
 import { tick } from 'svelte';
 import { moved, stepDrop, subtree, type Drop, type Step } from './sortTree';
 
-export { moved, placeIn, type Drop, type Step } from './sortTree';
+export { placeIn, type Drop, type Step } from './sortTree';
 
 /**
  * Moving the items of a list or a tree: dragging a handle with the pointer
@@ -9,7 +9,7 @@ export { moved, placeIn, type Drop, type Step } from './sortTree';
  *
  * The rows are flat, in order, each with its depth (0 in a list); an item
  * moves with the rows under it. A move is a `Drop` (sortTree.ts), the
- * list turns it into its own data, `moved` and `placeIn` help.
+ * list turns it into its own data, `placeIn` helps.
  *
  * Dragging up and down picks the place, left and right the depth: a step
  * of `indent` pixels is a level, as deep as the row above allows.

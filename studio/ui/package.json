@@ -43,6 +43,7 @@
 		"./SplitHandle.svelte": "./src/SplitHandle.svelte",
 		"./Switch.svelte": "./src/Switch.svelte",
 		"./Table.svelte": "./src/Table.svelte",
+		"./TreeCaret.svelte": "./src/TreeCaret.svelte",
 		"./UploadButton.svelte": "./src/UploadButton.svelte"
 	},
 	"peerDependencies": {

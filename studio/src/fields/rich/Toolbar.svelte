@@ -160,9 +160,10 @@
 			class:on={active(b.name)}
 			aria-pressed={active(b.name)}
 			title={b.title}
+			aria-label={b.title}
 			onclick={b.run}
 		>
-			<Icon name={b.icon} size={16} />
+			<Icon name={b.icon} />
 		</button>
 	{/each}
 	{#if opts.links}
@@ -172,9 +173,10 @@
 					type="button"
 					class:on={active('link')}
 					title={t('fields.link')}
+					aria-label={t('fields.link')}
 					onclick={() => openLink(toggle)}
 				>
-					<Icon name="link" size={16} />
+					<Icon name="link" />
 				</button>
 			{/snippet}
 			<div class="link">

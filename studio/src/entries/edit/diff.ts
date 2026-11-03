@@ -6,7 +6,7 @@ import { clean, isBlocks, isObject } from '../../core/values';
  * The paths of the fields that differ, like the error paths: `intro`,
  * `body`, `body.2` for a new block, `body.2.content` inside a block.
  */
-export function changedPaths(
+function changedPaths(
 	old: Values,
 	now: Values,
 	prefix = '',

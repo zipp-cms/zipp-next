@@ -33,13 +33,18 @@
 			step={column.decimals === undefined
 				? undefined
 				: 10 ** -column.decimals}
+			aria-label={column.label}
 			bind:value={() => value as number | null, v => onchange(v ?? null)}
 		/>
 		{#if column.unit}<span class="unit">{column.unit}</span>{/if}
 	</div>
 {:else if column.kind === 'boolean'}
 	<!-- no is nothing, like the server stores it -->
-	<Switch checked={value === true} onchange={c => onchange(c || null)} />
+	<Switch
+		checked={value === true}
+		label={column.label}
+		onchange={c => onchange(c || null)}
+	/>
 {:else if column.kind === 'date'}
 	<DatePicker
 		value={(value as string | null) ?? ''}
@@ -49,6 +54,7 @@
 {:else if column.kind === 'dropdown'}
 	<select
 		value={value ?? ''}
+		aria-label={column.label}
 		onchange={e => onchange(e.currentTarget.value || null)}
 	>
 		<option value="">–</option>
@@ -73,6 +79,7 @@
 		type={column.kind === 'email' ? 'email' : 'text'}
 		placeholder={column.kind === 'url' ? 'https://…' : ''}
 		value={value ?? ''}
+		aria-label={column.label}
 		oninput={e => onchange(e.currentTarget.value)}
 	/>
 {/if}

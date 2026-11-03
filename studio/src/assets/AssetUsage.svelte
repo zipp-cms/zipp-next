@@ -18,7 +18,7 @@
 </script>
 
 <div class="card">
-	<h3>{t('assets.usedIn')}</h3>
+	<h3>{t('common.usedIn')}</h3>
 	{#if usage === null}
 		<p class="empty">{t('common.loading')}</p>
 	{:else}

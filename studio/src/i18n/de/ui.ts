@@ -11,7 +11,7 @@ export default {
 	'ui.close': 'Schliessen',
 	'ui.collapse': 'Zuklappen',
 	'ui.date': 'Datum',
-	'ui.disabled': 'Ausgeschaltet',
+	'ui.disabled': 'Deaktiviert',
 	'ui.dragOrClick': 'ziehen oder klicken für die Schritte',
 	'ui.done': 'Fertig',
 	'ui.duplicate': 'Duplizieren',

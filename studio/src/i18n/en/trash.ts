@@ -1,4 +1,5 @@
 export default {
+	'trash.confirmDelete': "Delete {name} for good? It can't be restored.",
 	'trash.title': 'Trash',
 	'trash.note': 'Deleted entries and assets, for {days} days',
 	'trash.empty': 'Empty trash',
@@ -15,15 +16,12 @@ export default {
 		one: 'and {n} entry below',
 		other: 'and {n} entries below',
 	},
-	'trash.by': 'by {email}',
 	'trash.deleteForGood': 'Delete for good',
 	'trash.deleteNameForGood': 'Delete {name} for good',
-	'trash.confirmEntry': "Delete {name} for good? It can't be restored.",
 	'trash.confirmEntryChildren': {
 		one: "Delete {name} for good? And {n} entry below it. It can't be restored.",
 		other: "Delete {name} for good? And {n} entries below it. It can't be restored.",
 	},
-	'trash.confirmAsset': "Delete {name} for good? It can't be restored.",
 	'trash.confirmAll': {
 		one: "Delete {n} item for good? They can't be restored.",
 		other: "Delete {n} items for good? They can't be restored.",

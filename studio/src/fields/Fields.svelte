@@ -4,6 +4,7 @@
 	import { isShown } from './conditions';
 	import FieldLabel from './FieldLabel.svelte';
 	import { fieldComponent } from './registry';
+	import { hasControl, labelId } from './labels';
 	import FieldGroup from 'zipp-ui/FieldGroup.svelte';
 
 	/**
@@ -92,7 +93,13 @@
 						changed={changed.has(path)}
 					/>
 				{/if}
-				<div class="value">
+				<div
+					class="value"
+					role={hasControl(field) ? undefined : 'group'}
+					aria-labelledby={hasControl(field) || field.kind === 'note'
+						? undefined
+						: labelId(path)}
+				>
 					<Input
 						{schema}
 						{field}

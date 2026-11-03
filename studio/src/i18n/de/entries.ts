@@ -53,7 +53,6 @@ export default {
 	'entries.mobile': 'Mobil',
 	'entries.reload': 'Neu laden',
 	'entries.websiteWidth': 'Breite der Website',
-	'entries.openInNewTab': 'In einem neuen Tab öffnen',
 	'entries.website': 'Website',
 
 	// the editor
@@ -95,9 +94,7 @@ export default {
 	'entries.fromTitle': 'aus dem Titel',
 	'entries.outlineOf': 'Übersicht von {field}',
 	'entries.outline': 'Übersicht · {field}',
-	'entries.disabled': 'Deaktiviert',
 	'entries.missing': 'Fehlt',
-	'entries.changed': 'Geändert',
 	'entries.errors': { one: '{n} Fehler', other: '{n} Fehler' },
 	'entries.copyContent': 'Inhalt kopieren',
 	'entries.fromOtherSite': 'Von einer anderen Website…',

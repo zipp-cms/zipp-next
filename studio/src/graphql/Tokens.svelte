@@ -124,6 +124,7 @@
 					onclick={() => revoke(token)}
 					disabled={action.busy}
 					title={t('graphql.revoke')}
+					aria-label={t('graphql.revoke')}
 				>
 					<Icon name="delete" />
 				</button>

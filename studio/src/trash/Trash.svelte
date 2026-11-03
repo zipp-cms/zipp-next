@@ -58,13 +58,13 @@
 	function purgeEntry(e: TrashedEntry) {
 		const question = e.children
 			? t('trash.confirmEntryChildren', { name: e.title, n: e.children })
-			: t('trash.confirmEntry', { name: e.title });
+			: t('trash.confirmDelete', { name: e.title });
 		if (!confirm(question)) return;
 		run(() => purge('entries', e.id));
 	}
 
 	function purgeAsset(a: TrashedAsset) {
-		if (!confirm(t('trash.confirmAsset', { name: a.filename }))) return;
+		if (!confirm(t('trash.confirmDelete', { name: a.filename }))) return;
 		run(() => purge('assets', a.id));
 	}
 
@@ -107,7 +107,7 @@
 	<td class="muted">
 		{time(item.deletedAt)}
 		{#if item.deletedBy}<span class="by">
-				{t('trash.by', { email: item.deletedBy })}
+				{t('common.byEmail', { email: item.deletedBy })}
 			</span>{/if}
 	</td>
 {/snippet}

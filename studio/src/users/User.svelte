@@ -17,15 +17,17 @@
 	import { displayName } from './api';
 	import { UserForm } from './userForm.svelte';
 	import RoleAccess from './RoleAccess.svelte';
+	import UserAccess from './UserAccess.svelte';
 	import Avatar from './Avatar.svelte';
+	import PasswordInput from '../auth/PasswordInput.svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import Checkbox from 'zipp-ui/Checkbox.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
 	import { go } from '../core/router.svelte';
+	import { userPath } from '../core/paths';
 	import { guardLeave } from '../core/leave';
 	import { isAdmin, roleNameOf } from '../core/access';
-	import { time } from '../core/format';
 	import { browserLang, LANGUAGES, t, type Lang } from '../i18n/index.svelte';
 
 	/**
@@ -76,19 +78,12 @@
 	async function save(e?: SubmitEvent) {
 		e?.preventDefault();
 		const created = await form.save();
-		if (created !== null) go(`/admin/users/${created}`, true);
+		if (created !== null) go(userPath(created), true);
 	}
 
 	async function remove() {
 		if (!confirm(t('users.confirmDelete', { name: title }))) return;
 		if (await form.remove()) go('/admin/users');
-	}
-
-	function endSessions() {
-		const what = form.own
-			? t('users.confirmEndOwn')
-			: t('users.confirmEnd', { name: title });
-		if (confirm(what)) form.endSessions();
 	}
 
 	function onkeydown(e: KeyboardEvent) {
@@ -104,11 +99,9 @@
 {#snippet currentPassword()}
 	<label class="stacked">
 		{t('users.currentPassword')}
-		<input
-			type="password"
+		<PasswordInput
 			autocomplete="current-password"
 			bind:value={form.currentPassword}
-			required
 		/>
 		{#if form.fields.currentPassword}
 			<span class="error">{form.fields.currentPassword}</span>
@@ -125,7 +118,13 @@
 	{/snippet}
 	{#snippet actions()}
 		{#if admin && form.account && !form.own}
-			<button class="icon" onclick={remove} title={t('users.delete')}>
+			<button
+				type="button"
+				class="icon"
+				onclick={remove}
+				title={t('users.delete')}
+				aria-label={t('users.delete')}
+			>
 				<Icon name="delete" />
 			</button>
 		{/if}
@@ -185,7 +184,7 @@
 		<div class="card">
 			<h2>{t('users.role')}</h2>
 			{#if admin && !form.own}
-				<select bind:value={form.role}>
+				<select bind:value={form.role} aria-label={t('users.role')}>
 					<option value={null}>{t('common.admin')}</option>
 					{#each schema.roles as r (r.handle)}
 						<option value={r.handle}>{r.name}</option>
@@ -210,11 +209,11 @@
 			{/if}
 			<label class="stacked">
 				{isNew ? t('common.password') : t('common.newPassword')}
-				<input
-					type="password"
+				<PasswordInput
 					autocomplete="new-password"
 					placeholder={t('common.passwordPlaceholder')}
 					bind:value={form.password}
+					required={false}
 				/>
 				{#if form.fields.password}
 					<span class="error">{form.fields.password}</span>
@@ -244,78 +243,7 @@
 			</div>
 		</div>
 		{#if form.account}
-			<dl>
-				<dt>{t('users.created')}</dt>
-				<dd>{time(form.account.createdAt)}</dd>
-				<dt>{t('users.lastLogin')}</dt>
-				<dd>
-					{form.account.lastLoginAt
-						? time(form.account.lastLoginAt)
-						: t('common.never')}
-				</dd>
-				<dt>{t('users.loggedIn')}</dt>
-				<dd>
-					{form.account.sessions === 0
-						? t('users.notLoggedIn')
-						: t('users.browsers', { n: form.account.sessions })}
-				</dd>
-			</dl>
-			{#if form.account.sessions > (form.own ? 1 : 0)}
-				<button onclick={endSessions} disabled={form.busy}>
-					<Icon name="logout" />
-					{form.own ? t('users.endOwn') : t('users.end')}
-				</button>
-			{/if}
-			{#if admin && !form.own}
-				<div class="access">
-					<h3>{t('users.access')}</h3>
-					{#if form.account.invited}
-						<p class="note">{t('users.invitedNote')}</p>
-					{/if}
-					<div class="buttons">
-						<button
-							onclick={() => form.link(true)}
-							disabled={form.busy}
-						>
-							<Icon name="mail" />
-							{form.account.invited
-								? t('users.sendInviteAgain')
-								: t('users.sendReset')}
-						</button>
-						<button
-							class="light"
-							onclick={() => form.link(false)}
-							disabled={form.busy}
-						>
-							<Icon name="copy-url" />
-							{form.account.invited
-								? t('users.copyInvite')
-								: t('users.copyReset')}
-						</button>
-						{#if form.account.role !== null}
-							<button
-								onclick={() => form.loginAs(false)}
-								disabled={form.busy}
-							>
-								<Icon name="users" />
-								{t('users.loginAs', { name: title })}
-							</button>
-							<button
-								class="light"
-								onclick={() => form.loginAs(true)}
-								disabled={form.busy}
-								title={t('users.copyLoginTitle')}
-							>
-								<Icon name="copy-url" />
-								{t('users.copyLogin')}
-							</button>
-						{/if}
-					</div>
-					{#if form.linkNote}
-						<p class="note" role="status">{form.linkNote}</p>
-					{/if}
-				</div>
-			{/if}
+			<UserAccess {form} account={form.account} {admin} {title} />
 		{/if}
 	</aside>
 </div>
@@ -368,44 +296,5 @@
 			display: flex;
 			flex-direction: column;
 		}
-	}
-
-	dl {
-		display: grid;
-		grid-template-columns: max-content 1fr;
-		gap: 0.375rem 1rem;
-		margin: 0;
-		font-size: var(--fs-md);
-	}
-
-	dt {
-		color: var(--muted);
-	}
-
-	dd {
-		margin: 0;
-	}
-
-	aside button {
-		align-self: flex-start;
-	}
-
-	.access {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		padding-top: 0.875rem;
-		border-top: 1px solid var(--line);
-
-		p {
-			margin: 0;
-		}
-	}
-
-	.buttons {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.375rem;
 	}
 </style>

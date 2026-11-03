@@ -81,7 +81,7 @@
 		</span>
 		<span class="end">
 			<LinkAdd {to} onadd={add} />
-			<Menu items={removeItem} label={t('fields.actions')} />
+			<Menu items={removeItem} label={t('ui.actions')} />
 		</span>
 	</div>
 {:else}

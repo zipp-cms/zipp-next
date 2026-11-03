@@ -50,7 +50,6 @@ export default {
 	'entries.mobile': 'Mobile',
 	'entries.reload': 'Reload',
 	'entries.websiteWidth': 'Width of the website',
-	'entries.openInNewTab': 'Open in a new tab',
 	'entries.website': 'Website',
 
 	// the editor
@@ -91,9 +90,7 @@ export default {
 	'entries.fromTitle': 'from the title',
 	'entries.outlineOf': 'Outline of {field}',
 	'entries.outline': 'Outline · {field}',
-	'entries.disabled': 'Disabled',
 	'entries.missing': 'Missing',
-	'entries.changed': 'Changed',
 	'entries.errors': { one: '{n} error', other: '{n} errors' },
 	'entries.copyContent': 'Copy content',
 	'entries.fromOtherSite': 'From another site…',

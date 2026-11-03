@@ -98,16 +98,16 @@
 		top: 0;
 		bottom: 0;
 		z-index: var(--z-raised);
-		width: 7px;
+		width: 0.4375rem;
 		cursor: col-resize;
 		touch-action: none;
 
 		&.start {
-			right: -4px;
+			right: -0.25rem;
 		}
 
 		&.end {
-			left: -4px;
+			left: -0.25rem;
 		}
 
 		&::after {

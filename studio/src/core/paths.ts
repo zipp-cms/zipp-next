@@ -34,6 +34,16 @@ export function fieldPath(
 	return `${componentPath(c)}#field-${handle}`;
 }
 
+/** The sites page of Setup, at its roles or its mail. */
+export function sitesPath(part?: 'roles' | 'mail'): string {
+	return '/admin/setup/sites' + (part ? '#' + part : '');
+}
+
+/** A user's account, `new` for the form of a new one. */
+export function userPath(id: number | 'new'): string {
+	return '/admin/users/' + id;
+}
+
 /** The page of a section or a doc. */
 export function navHref(schema: Schema, handle: string): string {
 	if (schema.docs.some(d => d.handle === handle))

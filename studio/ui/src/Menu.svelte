@@ -68,7 +68,7 @@
 				onclick={toggle}
 				bind:this={button}
 			>
-				<Icon name="more" size={16} />
+				<Icon name="more" />
 			</button>
 		{/snippet}
 		{#each items as item, i (i)}

@@ -29,6 +29,7 @@
 			type="button"
 			class="icon"
 			title={off ? ui.texts.show : ui.texts.hide}
+			aria-label={off ? ui.texts.show : ui.texts.hide}
 			aria-pressed={off}
 			onclick={onswitch}
 		>
@@ -40,6 +41,7 @@
 			type="button"
 			class="icon"
 			title={ui.texts.duplicate}
+			aria-label={ui.texts.duplicate}
 			onclick={onduplicate}
 		>
 			<Icon name="copy" size={15} />
@@ -49,6 +51,7 @@
 		type="button"
 		class="icon remove"
 		title={removeLabel ?? ui.texts.remove}
+		aria-label={removeLabel ?? ui.texts.remove}
 		onclick={onremove}
 	>
 		<Icon name="delete" size={15} />

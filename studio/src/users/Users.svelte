@@ -16,6 +16,7 @@
 	import { roleNameOf } from '../core/access';
 	import { session } from '../core/session.svelte';
 	import { go } from '../core/router.svelte';
+	import { userPath } from '../core/paths';
 	import { time } from '../core/format';
 	import { t } from '../i18n/index.svelte';
 
@@ -29,7 +30,7 @@
 
 <PageTop title={t('users.title')}>
 	{#snippet actions()}
-		<button class="primary" onclick={() => go('/admin/users/new')}>
+		<button class="primary" onclick={() => go(userPath('new'))}>
 			<Icon name="add" />
 			{t('users.new')}
 		</button>
@@ -41,11 +42,11 @@
 		rows={users}
 		key={u => u.id}
 		columns={[t('users.user'), t('users.role'), t('users.lastLogin')]}
-		href={u => `/admin/users/${u.id}`}
+		href={u => userPath(u.id)}
 	>
 		{#snippet row(u)}
 			<td>
-				<a href="/admin/users/{u.id}">{displayName(u)}</a>
+				<a href={userPath(u.id)}>{displayName(u)}</a>
 				{#if u.name}<span class="note">{u.email}</span>{/if}
 				{#if u.id === session.user?.id}
 					<span class="muted">{t('users.you')}</span>

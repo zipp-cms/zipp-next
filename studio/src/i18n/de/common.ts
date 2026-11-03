@@ -4,6 +4,7 @@ import type en from '../en/common';
 export default {
 	'common.admin': 'Admin',
 	'common.backToAccount': 'Zurück zu Ihrem Konto',
+	'common.byEmail': 'von {email}',
 	'common.cancel': 'Abbrechen',
 	'common.choose': 'Auswählen',
 	'common.confirmLeave': 'Verlassen, ohne die Änderungen zu speichern?',
@@ -25,6 +26,7 @@ export default {
 	'common.no': 'Nein',
 	'common.none': 'Keine',
 	'common.open': 'Öffnen',
+	'common.openInNewTab': 'In einem neuen Tab öffnen',
 	'common.password': 'Passwort',
 	'common.passwordPlaceholder': 'Mindestens 8 Zeichen',
 	'common.preview': 'Vorschau',
@@ -36,6 +38,7 @@ export default {
 	'common.saving': 'Speichert…',
 	'common.title': 'Titel',
 	'common.upload': 'Hochladen',
+	'common.usedIn': 'Verwendet in',
 	'common.view': 'Ansehen',
 	'common.yes': 'Ja',
 	'common.yourAccount': 'Ihr Konto',

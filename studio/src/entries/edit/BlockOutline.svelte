@@ -33,9 +33,7 @@
 					type="button"
 					class="block plain"
 					class:off={b.enabled === false}
-					title={b.enabled === false
-						? t('entries.disabled')
-						: undefined}
+					title={b.enabled === false ? t('ui.disabled') : undefined}
 					onclick={() => showBlock(field.handle, i)}
 				>
 					<span class="n">{String(i + 1).padStart(2, '0')}</span>

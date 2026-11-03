@@ -13,7 +13,12 @@
 		usedIn,
 		componentLink,
 	} from './setup';
-	import { componentPath, fieldPath, setupPath } from '../core/paths';
+	import {
+		componentPath,
+		fieldPath,
+		setupPath,
+		sitesPath,
+	} from '../core/paths';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -169,7 +174,7 @@
 					</li>
 				{/if}
 				<li>
-					<a href="/admin/setup/sites#roles">{t('setup.roles')}</a>
+					<a href={sitesPath('roles')}>{t('setup.roles')}</a>
 					<span class="muted">{t('setup.rolesNote')}</span>
 				</li>
 				<li>
@@ -179,7 +184,7 @@
 				</li>
 				{#if isAdmin(schema)}
 					<li>
-						<a href="/admin/setup/sites#mail">{t('setup.mail')}</a>
+						<a href={sitesPath('mail')}>{t('setup.mail')}</a>
 						<span class="muted">{t('setup.mailNote')}</span>
 					</li>
 					<li>

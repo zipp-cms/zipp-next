@@ -42,7 +42,7 @@
 	import EntryHead from './EntryHead.svelte';
 	import EntrySidebar from './EntrySidebar.svelte';
 	import EntryStatus from './EntryStatus.svelte';
-	import LivePane from './LivePane.svelte';
+	import LivePane, { liveSetting, toggleLive } from './LivePane.svelte';
 	import RevisionView from './RevisionView.svelte';
 	import TabBar from '../../fields/TabBar.svelte';
 	import { SitePreview } from '../preview.svelte';
@@ -82,13 +82,11 @@
 	const card = $derived(!!(ed.comp?.card || tabs.card));
 	const url = $derived(entryUrl(schema, ed.site, ed.uri));
 
-	// the website next to the editor, on or off in this browser; an entry
-	// in the flyout or without a page (or an id) has none
-	const LIVE_KEY = 'zipp-live-preview';
-	let liveOn = $state(localStorage.getItem(LIVE_KEY) === '1');
+	// the website next to the editor; an entry in the flyout or without
+	// a page (or an id) has none
 	const canLive = $derived(!onclose && id !== null && !!url);
 	const live = $derived(
-		canLive && liveOn
+		canLive && liveSetting.on
 			? untrack(
 					() =>
 						new SitePreview(schema, ed.site, url, () =>
@@ -104,11 +102,6 @@
 	const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
 	let editorWidth = $state(0);
 	const narrow = $derived((editorWidth || innerWidth) < 56 * rem);
-
-	function toggleLive() {
-		liveOn = !liveOn;
-		localStorage.setItem(LIVE_KEY, liveOn ? '1' : '');
-	}
 
 	// every change goes into the draft, a moment after the last key
 	$effect(() => {

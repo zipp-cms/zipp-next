@@ -52,6 +52,7 @@
 					type="button"
 					class="insert"
 					title={t('fields.addBlockHere')}
+					aria-label={t('fields.addBlockHere')}
 					onclick={() => toggle(show)}
 				>
 					<Icon name="add" size={14} />

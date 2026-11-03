@@ -2,6 +2,7 @@
 export default {
 	'common.admin': 'Admin',
 	'common.backToAccount': 'Back to your account',
+	'common.byEmail': 'by {email}',
 	'common.cancel': 'Cancel',
 	'common.choose': 'Choose',
 	'common.confirmLeave': 'Leave without saving the changes?',
@@ -23,6 +24,7 @@ export default {
 	'common.no': 'No',
 	'common.none': 'None',
 	'common.open': 'Open',
+	'common.openInNewTab': 'Open in a new tab',
 	'common.password': 'Password',
 	'common.passwordPlaceholder': 'At least 8 characters',
 	'common.preview': 'Preview',
@@ -34,6 +36,7 @@ export default {
 	'common.saving': 'Saving…',
 	'common.title': 'Title',
 	'common.upload': 'Upload',
+	'common.usedIn': 'Used in',
 	'common.view': 'View',
 	'common.yes': 'Yes',
 	'common.yourAccount': 'Your account',

@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { gqlType, uriOf, visibleRoles } from './setup';
-	import { componentPath, entryPath, sectionPath } from '../core/paths';
+	import {
+		componentPath,
+		entryPath,
+		sectionPath,
+		sitesPath,
+	} from '../core/paths';
 	import { depths } from '../core/tree';
 	import EntryBadges from '../entries/EntryBadges.svelte';
 	import { entryUrl, navGroups, type Schema } from '../core/schema';
@@ -219,7 +224,7 @@
 					{/snippet}
 				</Table>
 				<p class="muted">
-					<a href="/admin/setup/sites#roles">{t('setup.allRoles')}</a>
+					<a href={sitesPath('roles')}>{t('setup.allRoles')}</a>
 				</p>
 			</div>
 

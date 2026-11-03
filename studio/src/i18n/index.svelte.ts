@@ -95,7 +95,7 @@ export function tParts(key: Key, params: Params): Part[] {
 }
 
 /** The texts of zipp-ui's components in the language, for `ui.texts`. */
-export function uiTexts(): UiTexts {
+function uiTexts(): UiTexts {
 	// the keys of our file, not of `ui.texts`: an effect sets that
 	const keys = Object.keys(enUi).map(k => k.slice(3) as keyof UiTexts);
 	return Object.fromEntries(keys.map(k => [k, t(`ui.${k}`)])) as UiTexts;

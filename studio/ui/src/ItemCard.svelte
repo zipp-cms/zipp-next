@@ -70,6 +70,7 @@
 			type="button"
 			class="icon"
 			title={open ? ui.texts.collapse : ui.texts.expand}
+			aria-label={open ? ui.texts.collapse : ui.texts.expand}
 			onclick={toggle}
 		>
 			<Icon name={open ? 'chevron-down' : 'chevron-right'} />

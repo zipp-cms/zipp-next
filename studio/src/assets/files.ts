@@ -61,7 +61,7 @@ export async function fromDrop(data: DataTransfer): Promise<Upload[]> {
 type Allowed = { images: boolean; extensions?: string[] };
 
 /** Whether a file fits the field. */
-export function allows(allowed: Allowed, file: File): boolean {
+function allows(allowed: Allowed, file: File): boolean {
 	if (allowed.images && !file.type.startsWith('image/')) return false;
 	const exts = allowed.extensions ?? [];
 	const ext = file.name.split('.').pop()?.toLowerCase() ?? '';

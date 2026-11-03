@@ -11,6 +11,7 @@
 		onchange,
 		id,
 		disabled = false,
+		label,
 		children,
 	}: {
 		checked?: boolean;
@@ -18,6 +19,8 @@
 		onchange?: (checked: boolean) => void;
 		id?: string;
 		disabled?: boolean;
+		/** its name when it has no text, in a table's cell */
+		label?: string;
 		children?: Snippet;
 	} = $props();
 </script>
@@ -27,6 +30,7 @@
 		{id}
 		type="checkbox"
 		role="switch"
+		aria-label={label}
 		bind:checked
 		{disabled}
 		onchange={e => onchange?.(e.currentTarget.checked)}

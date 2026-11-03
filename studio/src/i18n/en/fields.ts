@@ -1,7 +1,6 @@
 export default {
 	// fields
 	'fields.notHosted': "{kind} fields can't be mounted by plugins",
-	'fields.changed': 'Changed',
 	'fields.translated': 'Translated: each site has its own',
 	'fields.inSetup': 'The field in Setup',
 	'fields.chooseOption': 'Choose…',
@@ -80,11 +79,9 @@ export default {
 	'fields.anchor': 'Anchor',
 	'fields.anchorPlaceholder': 'optional, e.g. contact',
 	'fields.anchorNote': 'Jumps to a section of the target page.',
-	'fields.openInNewTab': 'Open in a new tab',
 	'fields.downloadInstead': 'Download instead of opening',
 	'fields.requiredNoLink': 'Required – no link yet.',
 	'fields.noLink': 'No link yet.',
-	'fields.actions': 'Actions',
 	'fields.closeSettings': 'Close its settings',
 	'fields.editLink': 'Edit the link',
 	'fields.newTab': 'New tab',

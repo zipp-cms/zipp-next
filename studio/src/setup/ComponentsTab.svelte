@@ -26,7 +26,7 @@
 			t('common.name'),
 			t('setup.handle'),
 			t('setup.fields'),
-			t('setup.usedIn'),
+			t('common.usedIn'),
 			'GraphQL',
 		]}
 		href={componentPath}

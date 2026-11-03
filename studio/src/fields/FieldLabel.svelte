@@ -5,6 +5,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { markdownInline } from '../core/markdown';
 	import { t } from '../i18n/index.svelte';
+	import { hasControl, labelId } from './labels';
 
 	/**
 	 * The label of a field: a dot when the draft changed it, required,
@@ -32,11 +33,17 @@
 	);
 </script>
 
-<label for={path}>
+<!-- a label of the input, or the name of a group (Fields.svelte) -->
+<svelte:element
+	this={hasControl(field) ? 'label' : 'span'}
+	class="label"
+	for={hasControl(field) ? path : undefined}
+	id={hasControl(field) ? undefined : labelId(path)}
+>
 	<span class="name">
 		{#if changed}<span
 				class="changed-dot"
-				title={t('fields.changed')}
+				title={t('ui.changed')}
 			></span>{/if}{field.label}{#if field.required}<span class="req">
 				*
 			</span>{/if}
@@ -62,10 +69,10 @@
 			{@html markdownInline(field.instructions)}
 		</span>
 	{/if}
-</label>
+</svelte:element>
 
 <style lang="scss">
-	label {
+	.label {
 		display: flex;
 		align-items: baseline;
 		gap: 0.375rem;

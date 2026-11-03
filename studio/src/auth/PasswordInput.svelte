@@ -8,11 +8,14 @@
 		autocomplete,
 		placeholder,
 		autofocus = false,
+		required = true,
 	}: {
 		value?: string;
 		autocomplete: 'current-password' | 'new-password';
 		placeholder?: string;
 		autofocus?: boolean;
+		/** not for a new password that may stay as it is */
+		required?: boolean;
 	} = $props();
 
 	let shown = $state(false);
@@ -27,12 +30,13 @@
 		{placeholder}
 		{autofocus}
 		bind:value
-		required
+		{required}
 	/>
 	<button
 		type="button"
 		class="icon"
 		title={shown ? t('auth.hidePassword') : t('auth.showPassword')}
+		aria-label={shown ? t('auth.hidePassword') : t('auth.showPassword')}
 		onclick={() => (shown = !shown)}
 	>
 		<Icon name={shown ? 'hide' : 'view'} />

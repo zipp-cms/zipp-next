@@ -1,6 +1,7 @@
 <script module>
 	import searchQuery from '@/queries/search.graphql';
 
+	// the only place of the page size, the query takes it as `$limit`
 	const PER_PAGE = 10;
 
 	// `?q=konzert&page=2`; without words nothing is searched
@@ -11,6 +12,7 @@
 		if (!q) return { q, page, hits: [], total: 0 };
 		const data = await cr.query(searchQuery, {
 			query: q,
+			limit: PER_PAGE,
 			offset: (page - 1) * PER_PAGE,
 		});
 		return { q, page, .../** @type {object} */ (data) };
@@ -21,6 +23,7 @@
 	const TEXTS = {
 		de: {
 			label: 'Suchbegriff',
+			form: 'Neue Suche',
 			submit: 'Suchen',
 			empty: 'Gib ein Wort ein, zum Beispiel «Konzert».',
 			none: 'Nichts gefunden für «{q}».',
@@ -30,6 +33,7 @@
 		},
 		en: {
 			label: 'Search term',
+			form: 'New search',
 			submit: 'Search',
 			empty: 'Type a word, for example “concert”.',
 			none: 'Nothing found for “{q}”.',
@@ -51,8 +55,11 @@
 	let t = $derived(TEXTS[$site.language.startsWith('de') ? 'de' : 'en']);
 	let pages = $derived(Math.ceil(total / PER_PAGE));
 
+	// `{n}` first, so a `{n}` in the words stays; a function, so `$&` in
+	// the words isn't a replacement pattern
 	/** @param {string} text */
-	const fill = text => text.replace('{q}', q).replace('{n}', String(total));
+	const fill = text =>
+		text.replace('{n}', String(total)).replace('{q}', () => q);
 
 	/** @param {number} n */
 	const pageUrl = n =>
@@ -61,7 +68,7 @@
 
 <h1>{searchTitle($site)}</h1>
 
-<form action={searchUrl($site)} role="search">
+<form action={searchUrl($site)} role="search" aria-label={t.form}>
 	<input
 		type="search"
 		name="q"
@@ -74,7 +81,8 @@
 
 {#if !q}
 	<p class="meta">{t.empty}</p>
-{:else if !total}
+{:else if !hits.length}
+	<!-- also `?page=99`, past the last page -->
 	<p class="meta">{fill(t.none)}</p>
 {:else}
 	<p class="meta">{fill(t.found)}</p>

@@ -60,7 +60,7 @@
 
 {#snippet content()}
 	<span class="kind" class:entry={link.type === 'entry'}>
-		<Icon name={LINK_ICONS[link.type]} size={16} />
+		<Icon name={LINK_ICONS[link.type]} />
 	</span>
 	<span class="text">
 		<strong class="truncate">{summary.title}</strong>

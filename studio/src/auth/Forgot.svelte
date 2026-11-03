@@ -6,6 +6,7 @@
 <script lang="ts">
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { forgotPassword } from './api';
+	import { Busy } from '../core/busy.svelte';
 	import AuthLayout from './AuthLayout.svelte';
 	import { t } from '../i18n/index.svelte';
 
@@ -15,21 +16,14 @@
 	 */
 	let email = $state('');
 	let sent = $state(false);
-	let error = $state('');
-	let busy = $state(false);
+	const send = new Busy();
 
 	async function onsubmit(e: SubmitEvent) {
 		e.preventDefault();
-		error = '';
-		busy = true;
-		try {
+		await send.run(async () => {
 			await forgotPassword(email);
 			sent = true;
-		} catch (e: any) {
-			error = e.message;
-		} finally {
-			busy = false;
-		}
+		});
 	}
 </script>
 
@@ -54,9 +48,9 @@
 				/>
 			</label>
 
-			{#if error}<p class="error">{error}</p>{/if}
+			{#if send.error}<p class="error">{send.error}</p>{/if}
 
-			<button class="primary submit" disabled={busy}>
+			<button class="primary submit" disabled={send.busy}>
 				{t('auth.sendLink')}
 				<Icon name="arrow-right" />
 			</button>

@@ -16,7 +16,6 @@ export default {
 	'setup.entryTypes': 'Eintragstypen',
 	'setup.entries': 'Einträge',
 	'setup.youMay': 'Sie dürfen',
-	'setup.usedIn': 'Verwendet in',
 	'setup.nothing': 'nichts',
 	'setup.nothingHidden': 'nichts, ausgeblendet',
 	'setup.admins': 'Admins (ohne Rolle)',

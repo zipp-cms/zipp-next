@@ -100,7 +100,7 @@
 			aria-label={view === 'days' ? ui.texts.monthBefore : ui.texts.back}
 			onclick={() => move(-1)}
 		>
-			<Icon name="chevron-left" size={16} />
+			<Icon name="chevron-left" />
 		</button>
 		<button
 			type="button"
@@ -121,7 +121,7 @@
 				: ui.texts.forward}
 			onclick={() => move(1)}
 		>
-			<Icon name="chevron-right" size={16} />
+			<Icon name="chevron-right" />
 		</button>
 	</div>
 

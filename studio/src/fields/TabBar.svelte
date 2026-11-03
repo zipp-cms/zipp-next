@@ -35,7 +35,7 @@
 		{@const errs = count(tab, Object.keys(errors))}
 		{#if count(tab, changed)}<span
 				class="changed-dot"
-				title={t('entries.changed')}
+				title={t('ui.changed')}
 			></span>{/if}
 		{value}
 		{#if errs}
