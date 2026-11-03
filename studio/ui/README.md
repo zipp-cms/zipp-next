@@ -1,17 +1,27 @@
 # zipp-ui
 
-The components of the zipp studio: the studio is built of them, and the
-editors of field types and the studio modules of plugins use them to
-look the same (see `docs/extending.md`). Svelte 5 components as source,
-in scss: a module bundles them with `pluginConfig` of `zipp-ui/vite`
-(its `vite.config.js`) and `sass`, like `crates/zipp-seo/studio`.
+The components of the studio of [zipp](https://github.com/zipp-cms/zipp-next),
+a code-first CMS in Rust: the studio is built of them, and the editors
+of field types and the studio modules of plugins use them to look the
+same. How to write such a module is in
+[docs/extending.md](https://github.com/zipp-cms/zipp-next/blob/code-first/docs/extending.md#a-studio-module-from-scratch).
+
+```sh
+npm install -D zipp-ui svelte sass vite @sveltejs/vite-plugin-svelte
+```
+
+It is Svelte 5 and TypeScript source in scss, not built: a module
+bundles it with vite, `@sveltejs/vite-plugin-svelte` and `sass` (its
+peer dependencies), with `pluginConfig` of `zipp-ui/vite` as its
+`vite.config.js`, like `crates/zipp-seo/studio`.
 
 What a module may import is in `exports` of `package.json`, nothing
 else: the components (`zipp-ui/Table.svelte`, …), `zipp-ui/sortable`
 (dragging rows), `zipp-ui/layers` (Escape closes the top one),
 `zipp-ui/listKeys` (the arrow keys of a list),
 `zipp-ui/field` (the contract of a field editor: `FieldProps`,
-`FieldModule`, `fieldModule(Component)` for its `mount`) and
+`FieldModule`, `fieldModule(Component)` for its `mount`, `Host` and
+`ApiErrorLike`, what `host.request` throws) and
 `zipp-ui/vars.scss` (the breakpoints and mixins: `@include hover`,
 `max-tablet`, `focus-ring`, `visually-hidden`) and `zipp-ui/vite` (the
 vite config of a module).
@@ -55,3 +65,14 @@ They are part of the contract: renaming one of them breaks modules.
 A component's own classes are scoped, a module's too.
 
 A component imports nothing of the studio.
+
+## Versions
+
+zipp-ui has the version of zipp, a module built with zipp-ui 0.1 runs
+in the studio of zipp 0.1. Before 1.0 a new minor version (0.2) may
+break modules: the exports and their props, `zipp-ui/field` and the
+CSS variables and classes above. A patch version doesn't.
+
+## License
+
+MIT or Apache-2.0, at your option.

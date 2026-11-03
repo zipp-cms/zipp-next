@@ -1,3 +1,4 @@
+import type { ApiErrorLike } from 'zipp-ui/field';
 import { t } from '../i18n/index.svelte';
 
 export type FieldError = { path: string; message: string };
@@ -16,8 +17,11 @@ export type ErrorType =
 	| { type: 'INVALID'; detail: FieldError[] }
 	| { type: 'INTERNAL' | 'REQUEST' | 'CONFLICT'; detail: string };
 
-/** An error of a request: the server's message and what it is. */
-export class ApiError extends Error {
+/**
+ * An error of a request: the server's message and what it is. Modules
+ * get it from `host.request` as zipp-ui's `ApiErrorLike`.
+ */
+export class ApiError extends Error implements ApiErrorLike {
 	constructor(
 		message: string,
 		readonly inner: ErrorType,

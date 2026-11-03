@@ -53,14 +53,14 @@ A module imports only what `exports` of its `package.json` lists:
 import Table from 'zipp-ui/Table.svelte';
 ```
 
-The crates of this repository link it (`"zipp-ui":
-"file:../../../studio/ui"`), so a change of a component reaches them
-with their next build; others will get it from npm with the version of
-zipp. The module's `vite.config.js` is `pluginConfig` of `zipp-ui/vite`
-(one ES module in `../assets`, Svelte with `vitePreprocess`); the
-components are scss, so it needs `sass` too, like `crates/zipp-seo/studio`.
-Its own styles get the breakpoints and mixins with `@use
-'zipp-ui/vars.scss' as *;`.
+zipp-ui is on npm with the version of zipp, a module bundles it, so it
+is a devDependency. The crates of this repository link the copy in the
+repository instead (`"zipp-ui": "file:../../../studio/ui"`), so a change
+of a component reaches them with their next build. The module's
+`vite.config.js` is `pluginConfig` of `zipp-ui/vite` (one ES module in
+`../assets`, Svelte with `vitePreprocess`); the components are scss, so
+it needs `sass` too, like `crates/zipp-seo/studio`. Its own styles get
+the breakpoints and mixins with `@use 'zipp-ui/vars.scss' as *;`.
 
 The components write their few own texts (Today, Close, Nothing found)
 and dates in the user's language: the studio sets them in
@@ -74,6 +74,91 @@ body)` calls the api as the logged in user, `host.mountField(target, {
 field, value, onchange })` mounts one of the studio's own fields (images
 and files, texts, dropdowns, checkboxes, tables, markdown, dates), like
 the image picker.
+
+## A studio module from scratch
+
+The editor of a field type in a crate of its own, in Svelte. Next to the
+crate's `Cargo.toml`, a folder `studio` with this `package.json`:
+
+```json
+{
+	"name": "my-field-studio",
+	"private": true,
+	"type": "module",
+	"scripts": { "build": "vite build" },
+	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "^7.0.0",
+		"sass": "^1.63.4",
+		"svelte": "^5.0.0",
+		"vite": "^8.0.0",
+		"zipp-ui": "^0.1.0"
+	}
+}
+```
+
+zipp-ui is Svelte and TypeScript source, not built: it needs vite,
+vite-plugin-svelte and sass (its peer dependencies; vite 6 to 8). Its
+`vite.config.js`:
+
+```js
+import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import { pluginConfig } from 'zipp-ui/vite';
+
+export default pluginConfig({ svelte, vitePreprocess, file: 'my-field.js' });
+```
+
+`src/index.svelte.js` is the module, `src/MyField.svelte` the editor:
+
+```js
+import { fieldModule } from 'zipp-ui/field';
+import MyField from './MyField.svelte';
+
+export const mount = fieldModule(MyField);
+```
+
+`npm run build` writes `../assets/my-field.js`, one ES module with its
+Svelte and css. Commit it: the crate embeds it, so the crate builds
+without node. Its `FieldType` returns it:
+
+```rust
+fn studio(&self) -> StudioModule {
+	StudioModule::new(include_str!("../assets/my-field.js"))
+}
+```
+
+The studio loads it from `/_fields/<type>.js` and calls `mount` with
+`FieldProps` (`zipp-ui/field`). What the editor needs to know:
+
+- `onchange(value)` sends a value, `null` for none. The studio sends a
+  value back with `update` only when it changed elsewhere (a restore,
+  another site); `fieldModule` does that.
+- `error` is what the server says is wrong with the value. The studio
+  already shows it under the field; the editor needn't, but may mark
+  its input (`aria-invalid`).
+- Read-only (a revision, a role that may not edit): the field is in a
+  disabled `<fieldset>`, so the browser disables its inputs and buttons.
+  `readonly` says it for the rest, like a contenteditable or a drag
+  handle.
+- `host.request(method, path, body)` calls `/api<path>` as the user. A
+  failed one throws an `ApiErrorLike` (`zipp-ui/field`): `message` in
+  the user's language, `type` (`INVALID`, `FORBIDDEN`, `NOT_FOUND`, …),
+  `fields` of `INVALID` and `status`; a plain `Error` when the network
+  is down. The editor shows the message where it asked.
+- Texts: zipp-ui's components write their own (Today, Close) in the
+  user's language. The editor's own texts are its own, picked by
+  `document.documentElement.lang` (`en` or `de`).
+- The editor has its own Svelte and zipp-ui, not the studio's: Svelte
+  state isn't shared between them, only what goes through the props
+  and `host`.
+
+A plugin's module (`PluginStudio`) is made the same way and exports
+`sectionSetup` too, like `crates/zipp-seo/studio`.
+
+What breaks a module, so it changes only with a new minor version of
+zipp and zipp-ui before 1.0 (0.2), and a major one after: `FieldProps`,
+`Host` and `ApiErrorLike`, the exports of zipp-ui and their props, and
+the CSS variables and classes of the studio that `studio/ui/README.md`
+lists. A module built with zipp-ui 0.1 runs in the studio of zipp 0.1.
 
 ## Plugins
 

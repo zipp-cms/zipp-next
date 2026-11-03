@@ -28,7 +28,10 @@ export type FieldProps<V = unknown> = {
 
 /** What the studio lends a module: its api and some of its fields. */
 export type Host = {
-	/** a request to `/api<path>` as the logged in user */
+	/**
+	 * A request to `/api<path>` as the logged in user. A failed one
+	 * throws an `ApiErrorLike`, a plain `Error` when the network is down.
+	 */
 	request<T = unknown>(
 		method: string,
 		path: string,
@@ -42,6 +45,19 @@ export type Host = {
 		update(props: Partial<HostFieldProps>): void;
 		destroy(): void;
 	};
+};
+
+/**
+ * What `host.request` throws when the server says no: its message (in
+ * the user's language) and `Error` of zipp's error.rs.
+ */
+export type ApiErrorLike = Error & {
+	/** `INVALID`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `REQUEST`, … */
+	type: string;
+	/** the values `INVALID` names, `path` like `seo.title` */
+	fields: { path: string; message: string }[];
+	/** the HTTP status */
+	status: number;
 };
 
 /** A field of the studio a module mounts with `host.mountField`. */
