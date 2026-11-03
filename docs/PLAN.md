@@ -50,6 +50,18 @@
       SQL in entries.rs, auth.rs and query.rs; the index tables stay the
       same in both
 
+## Release 0.1.0 (operator 2026-11-03)
+
+- Published on crates.io as `zipp-cms` (`[lib] name = "zipp"`, so `use zipp::`
+  stays; whether the name `zipp` can be had is checked separately), the
+  plugins as `zipp-seo`, `zipp-forms`, `zipp-agent`, `zipp-button-group`
+- License MIT OR Apache-2.0
+- zipp-ui is published on npm too, for plugin authors
+- Order: the fixes of the reviews first (zipp-tools reviews release-0.1,
+  sec-0.1, svelte-review-0.1), then API narrowing, freezing zipp's tables
+  and the migration format, packaging, then check readiness; publishing
+  only after the operator's go
+
 ## Structure (2026-10-30)
 
 - [x] The rest api as typed requests (`request!`, `Req`, `.api::<R, _>`),
