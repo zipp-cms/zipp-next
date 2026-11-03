@@ -43,7 +43,7 @@
       a new adapter in crelte (no craft/.env, no Craft variable names); no
       hacks in the textrem port meanwhile (operator 2026-11-01)
 - [x] Full text search in the studio (FTS5 over the live texts of entries,
-      assets by name); for the website still open
+      assets by name) and for the website (`search`, `entries(search:)`)
 - [ ] Storage backends: SQLite (today), in memory (SQLite `:memory:`,
       already used by the tests; for previews and throwaway instances),
       Postgres for bigger sites. Needs a small store interface around the
@@ -142,7 +142,7 @@ commit.
       and blocks, `.styles([Style::block("lead", "Lead")])`)
 - [x] Headings in the rich text: `.headings([2, 3])`
 - [x] Switching off a block (`"enabled": false`), e6ac8e3
-- [x] Search: full text in the studio (Cmd/Ctrl+K); for the website see Next
+- [x] Search: full text in the studio (Cmd/Ctrl+K) and on the website
 - [x] GraphQL tokens like Craft's schemas: several, each with what it may
       read, made by admins in the studio
 - [x] Logging in as a user (impersonation), 4d556eb

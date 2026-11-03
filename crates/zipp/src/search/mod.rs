@@ -2,7 +2,8 @@
 //! texts in a site, assets by filename, title and alt text. Every save
 //! writes an entry's texts to `entry_texts` (see [`index`]), a full text
 //! index (SQLite's FTS5) over them finds the words. Only what is live is
-//! searched, drafts are not.
+//! searched, drafts are not. The website's search is the same index
+//! through GraphQL, see [`hits`].
 
 use rusqlite::{Connection, params, params_from_iter};
 use serde::{Deserialize, Serialize};
@@ -12,6 +13,8 @@ use crate::assets::Asset;
 use crate::auth::Authed;
 use crate::content::{inner, markdown_text, richtext};
 use crate::db::marks;
+use crate::entries::query::Query;
+use crate::entries::{COLUMNS, Entry, from_row};
 use crate::error::Result;
 use crate::schema::{Access, ColumnKind, Component, FieldKind, Schema};
 
@@ -47,6 +50,22 @@ pub struct EntryHit {
 	pub snippet: Option<String>,
 	/// its editor in the studio
 	pub path: String,
+}
+
+/// Around the matched words of an excerpt of the website's search.
+pub const OPEN: char = '\u{1}';
+pub const CLOSE: char = '\u{2}';
+
+/// An entry the website's search found, see [`hits`].
+#[derive(Debug, Clone)]
+pub struct Hit {
+	pub entry: Entry,
+	/// the words around the match in its texts, the matched words
+	/// between [`OPEN`] and [`CLOSE`]; the start of the texts when only
+	/// the title or the slug matched, none without texts
+	pub excerpt: Option<String>,
+	/// how well it matches, higher is better
+	pub score: f64,
 }
 
 /// What a search found, the best first.
@@ -148,13 +167,17 @@ pub(crate) fn words(q: &str) -> Vec<String> {
 
 /// The words as an FTS5 query: each word the start of a word, all of
 /// them somewhere in the title, slug or texts.
-fn fts_query(words: &[String]) -> String {
+pub(crate) fn fts_query(words: &[String]) -> String {
 	let quoted: Vec<String> = words
 		.iter()
 		.map(|w| format!("\"{}\"*", w.replace('"', "\"\"")))
 		.collect();
 	quoted.join(" ")
 }
+
+/// The rank of a match, the best first: the title counts most, then the
+/// slug.
+pub(crate) const RANK: &str = "bm25(entry_search, 10.0, 5.0, 1.0)";
 
 /// Searches the entries of the sections the user may view in a site and
 /// the assets, if they may view them.
@@ -204,7 +227,7 @@ fn find_entries(
 		JOIN entry_sites s ON s.entry_id = t.entry_id AND s.site = t.site
 		WHERE entry_search MATCH ? AND t.site = ? AND e.deleted_at IS NULL
 		AND e.section IN ({})
-		ORDER BY bm25(entry_search, 10.0, 5.0, 1.0) LIMIT {LIMIT}",
+		ORDER BY {RANK} LIMIT {LIMIT}",
 		marks(sections.len())
 	);
 	let mut values = vec![fts_query(words), site.to_string()];
@@ -227,6 +250,41 @@ fn find_entries(
 				snippet: snippet
 					.contains(MARK)
 					.then(|| snippet.replace(MARK, "")),
+			})
+		})?
+		.collect::<rusqlite::Result<_>>()?;
+	Ok(hits)
+}
+
+/// The entries of a query with `text`, the website's search: with an
+/// excerpt of their texts and their score.
+pub fn hits(conn: &Connection, q: &Query) -> Result<Vec<Hit>> {
+	// without words nothing matches, and there is no index to rank
+	if words(q.text.as_deref().unwrap_or_default()).is_empty() {
+		return Ok(vec![]);
+	}
+	let (with, mut params) = q.with();
+	let (from, more) = q.from_where();
+	params.extend(more);
+
+	let sql = format!(
+		"{with}SELECT {COLUMNS},
+		snippet(entry_search, 2, char(1), char(2), '…', 24), {RANK}
+		{from} {} LIMIT {} OFFSET {}",
+		q.order_by(),
+		q.limit,
+		q.offset
+	);
+	let mut stmt = conn.prepare(&sql)?;
+	let hits = stmt
+		.query_map(params_from_iter(&params), |r| {
+			let excerpt: String = r.get(14)?;
+			let rank: f64 = r.get(15)?;
+			Ok(Hit {
+				entry: from_row(r)?,
+				excerpt: (!excerpt.trim().is_empty()).then_some(excerpt),
+				// bm25 is negative, the best the lowest
+				score: -rank,
 			})
 		})?
 		.collect::<rusqlite::Result<_>>()?;

@@ -5,6 +5,8 @@
 //! - `ids=1,2,3`: only these entries
 //! - `parent=5`: the children of entry 5 in a structure
 //! - `search`: part of the title
+//! - `text`: full text, all the words in the title, slug or texts (see
+//!   `search/`), the best match first unless an order is asked for
 //! - `related=5`: entries that link to entry 5, also from inside blocks
 //! - `f.<field>[.<op>]=value`: an indexed field, op is one of eq (default),
 //!   ne, lt, lte, gt, gte; needs `type`
@@ -60,6 +62,8 @@ pub struct Query {
 	/// of several entries at once
 	pub parents: Vec<i64>,
 	pub search: Option<String>,
+	/// full text, the words of the website's search
+	pub text: Option<String>,
 	pub related: Option<i64>,
 	/// by a relation field of the entries, `r.offerCategory=5`
 	pub relations: Vec<RelationFilter>,
@@ -107,6 +111,8 @@ pub enum Order {
 	Structure,
 	/// indexed field, true when it is stored in `num`
 	Field(String, bool),
+	/// how well the entry matches `text`
+	Relevance,
 }
 
 /// The order of the entries of the structures, depth first, from their
@@ -141,6 +147,7 @@ impl Query {
 			ids: None,
 			parents: vec![],
 			search: None,
+			text: None,
 			related: None,
 			relations: vec![],
 			filters: vec![],
@@ -213,6 +220,7 @@ impl Query {
 				"slug" => q.slug = Some(value.clone()),
 				"uri" => q.uri = Some(value.trim_matches('/').into()),
 				"search" => q.search = Some(value.clone()),
+				"text" => q.text = Some(value.clone()),
 				"parent" => q.parents = vec![int(key, value)?],
 				"related" => q.related = Some(int(key, value)?),
 				_ if key.starts_with("r.") => {
@@ -271,7 +279,10 @@ impl Query {
 			}
 		}
 
-		if !ordered {
+		if !ordered && q.text.is_some() {
+			q.order = Order::Relevance;
+			q.desc = false;
+		} else if !ordered {
 			q.section_order(schema);
 		}
 
@@ -435,6 +446,20 @@ impl Query {
 			let like = format!("%{}%", escape_like(search));
 			cond("s.title LIKE ? ESCAPE '\\'".into(), vec![like.into()]);
 		}
+		if let Some(text) = &self.text {
+			// signs alone find nothing
+			let words = crate::search::words(text);
+			match words.is_empty() {
+				true => cond("0".into(), vec![]),
+				false => {
+					joins += " JOIN entry_texts x ON x.entry_id = e.id \
+						AND x.site = s.site \
+						JOIN entry_search ON entry_search.rowid = x.id";
+					let fts = crate::search::fts_query(&words);
+					cond("entry_search MATCH ?".into(), vec![fts.into()]);
+				}
+			}
+		}
 		if let Some(id) = self.related {
 			let sql = "e.id IN (SELECT entry_id FROM entry_relations \
 				WHERE target_id = ? AND site = s.site)";
@@ -509,7 +534,7 @@ impl Query {
 			Order::Structure if self.tree() => {
 				joins += " JOIN tree t ON t.id = e.id"
 			}
-			Order::Structure | Order::Column(_) => {}
+			Order::Structure | Order::Column(_) | Order::Relevance => {}
 		}
 
 		let sql = format!(
@@ -535,6 +560,7 @@ impl Query {
 			Order::Structure => "e.parent_id, e.position".into(),
 			Order::Field(_, true) => "o.num".into(),
 			Order::Field(_, false) => "o.text".into(),
+			Order::Relevance => crate::search::RANK.into(),
 		};
 		let dir = if self.desc { "DESC" } else { "ASC" };
 		format!("ORDER BY {col} {dir}, e.id {dir}")

@@ -99,6 +99,13 @@ fn orders_by_our_names_and_crafts() {
 		Ok((Order::Column("post_date"), true))
 	);
 	assert_eq!(order(""), Ok((Order::Column("updated_at"), true)));
+	// a full text search the best match first, also in a section
+	let best = Ok((Order::Relevance, false));
+	assert_eq!(order("text=konzert&section=events"), best);
+	assert_eq!(
+		order("text=konzert&order=title"),
+		Ok((Order::Column("title"), false))
+	);
 }
 
 #[test]

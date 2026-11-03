@@ -58,6 +58,9 @@ mod loaders;
 mod query;
 mod rich;
 mod routes;
+mod search;
+#[cfg(test)]
+mod search_tests;
 #[cfg(test)]
 pub(crate) mod tests;
 mod texts;
@@ -73,6 +76,7 @@ use loaders::*;
 use query::*;
 use rich::*;
 pub use routes::routes;
+use search::*;
 use texts::*;
 pub use tokens::Scope;
 
@@ -300,6 +304,7 @@ pub fn build(
 			|ctx| value_field(ctx, "buttons"),
 		)))
 		.register(chunk_union(&schema))
+		.register(search_hit_object())
 		.register(
 			Object::new("Markdown")
 				.field(GqlField::new(
@@ -325,6 +330,9 @@ pub fn build(
 		builder = builder.register(obj);
 	}
 	let mut query = query_object(&schema);
+	for field in search_fields() {
+		query = query.field(field);
+	}
 	for field in root_fields {
 		query = query.field(field);
 	}

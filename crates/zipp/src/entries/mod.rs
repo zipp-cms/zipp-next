@@ -150,11 +150,11 @@ fn entry_ref(r: &rusqlite::Row) -> rusqlite::Result<EntryRef> {
 	})
 }
 
-const COLUMNS: &str = "e.id, e.section, e.type, s.site, s.title, s.slug, \
+pub(crate) const COLUMNS: &str = "e.id, e.section, e.type, s.site, s.title, s.slug, \
 	s.uri, s.published, e.parent_id, s.fields, e.created_at, s.updated_at, \
 	e.post_date, e.expiry_date";
 
-fn from_row(row: &Row) -> rusqlite::Result<Entry> {
+pub(crate) fn from_row(row: &Row) -> rusqlite::Result<Entry> {
 	let fields: String = row.get(9)?;
 	Ok(Entry {
 		id: row.get(0)?,

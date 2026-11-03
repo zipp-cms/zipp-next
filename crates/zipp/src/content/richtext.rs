@@ -483,7 +483,7 @@ fn anchor(url: &str, target: Option<&str>, inner: &str) -> String {
 	}
 }
 
-fn escape(s: &str) -> String {
+pub(crate) fn escape(s: &str) -> String {
 	s.replace('&', "&amp;")
 		.replace('<', "&lt;")
 		.replace('>', "&gt;")

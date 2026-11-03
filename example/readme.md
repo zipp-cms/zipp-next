@@ -68,6 +68,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 ## On the website
 
 - One GraphQL query per page, in Craft's shape, so crelte runs unchanged: `entry(uri: $uri, siteId: $siteId)`, `globalSet`, `crelteSites`.
+- The search in the header goes to `/suche?q=konzert` (`/en/search` in English): the pages with the words, the best first, with the words around the match marked; a route of the frontend, not a section in zipp (`src/search.js`, `templates/search.svelte`).
 - Rich text comes as `html` or as `chunks`: html, a row of buttons, an embedded block. Empty paragraphs are removed when publishing, so no margin hacks.
 - Each page takes about 1–2 ms in zipp.
 

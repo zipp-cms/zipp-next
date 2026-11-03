@@ -1,6 +1,7 @@
 <script>
 	import { getEntry, getGlobal, getRouter, getSite } from 'crelte';
 	import { getTranslations } from 'crelte/translations';
+	import { searchTitle, searchUrl } from '@/search.js';
 
 	const t = getTranslations();
 
@@ -39,6 +40,15 @@
 		{/each}
 	</nav>
 	<nav>
+		<!-- a plain form: the search page reads `q` from the url -->
+		<form action={searchUrl($site)} role="search">
+			<input
+				type="search"
+				name="q"
+				aria-label={searchTitle($site)}
+				placeholder={searchTitle($site)}
+			/>
+		</form>
 		{#each sites as s (s.id)}
 			<a
 				href={localized.get(s.id) ?? s.url.href}
@@ -64,6 +74,14 @@
 
 	.active {
 		font-weight: bold;
+	}
+
+	input {
+		width: 8rem;
+		padding: 0 0.5rem;
+		border: 1px solid #ccc;
+		border-radius: 0.3rem;
+		font: inherit;
 	}
 
 	.item {

@@ -3,6 +3,7 @@
 		createGlobalLoader,
 		createTranslations,
 	} from 'crelte/translations';
+	import { searchEntry } from './search.js';
 
 	export const templates = import.meta.glob('@/templates/*.svelte');
 
@@ -10,6 +11,12 @@
 	export const plugins = [
 		createTranslations({ loader: createGlobalLoader() }),
 	];
+
+	// the search page isn't an entry of zipp, see search.js
+	/** @param {import('crelte').Crelte} crelte */
+	export function init(crelte) {
+		crelte.events.on('loadEntry', searchEntry);
+	}
 
 	/** @type {import('crelte').Config} */
 	export const config = {

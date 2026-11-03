@@ -155,6 +155,8 @@ pub(super) fn params_from_args(
 					params.push((format!("f.{field}.{op}"), v.into()));
 				}
 			}
+			// full text, like Craft's
+			"search" => params.push(("text".into(), value.string()?.into())),
 			"parent" | "related" | "limit" | "offset" => {
 				params.push((name.into(), value.i64()?.to_string()))
 			}

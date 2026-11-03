@@ -24,8 +24,23 @@ deep, a complexity of 2000, and at most 10000 loaded entries and assets
 (each list, relation and `children` counts as one more); past it the
 answer is an error. A list takes at most 1000 entries (`limit`), an
 entry's `children` are the first 500, `id` and `ids` at most 1000 ids.
-`search` matches its text, `%` and `_` are no wildcards. Pages of real
-sites load a few hundred.
+Pages of real sites load a few hundred.
+
+The website's search is full text like Craft's `search`, over the same
+index as the studio's (the live texts of entries, not drafts): every
+word the start of a word in the title, slug or texts, accents and
+umlauts folded (`konz` finds *Konzert*, `zurich` *Zürich*), signs like
+`"`, `*` or `OR` are no syntax. `entries(search: "konzert")` and
+`entryCount(search:)` take it with the other filters, the best match
+first unless `orderBy` asks for another order; the title counts most,
+then the slug. A search page asks
+`search(query: $q, siteId: $siteId, section: "news", limit: 10, offset: 10)
+{ excerpt excerptHtml score entry { title url } }`: only entries with a
+url, `excerpt` the words around the match (the start of the texts when
+only the title matched), `excerptHtml` the same escaped with the
+matched words in `<mark>`; `searchCount` with the same arguments counts
+the hits for the pages. What a viewer may see counts like everywhere
+(published, the token's sections and sites, a preview's drafts).
 
 Relations, links, parents, `children`, `localized` and assets load
 together per request: the images of 30 events are one query, not 30,
