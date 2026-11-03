@@ -302,7 +302,7 @@ async fn asset_fields_and_videos() {
 		save(&conn, &s, None, e, None).unwrap();
 	}
 
-	// a frontend knows a video by its type, the event in the site asked
+	// a frontend knows a video by its kind, the event in the site asked
 	let data = run(
 		&gql,
 		r#"{ entry(uri: "events/film", site: "en") {
@@ -315,7 +315,7 @@ async fn asset_fields_and_videos() {
 	assert_eq!(
 		data["entry"]["clip"][0],
 		json!({
-			"kind": "file",
+			"kind": "video",
 			"mimeType": "video/mp4",
 			"size": 1,
 			"credit": "Anna",

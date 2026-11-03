@@ -51,6 +51,9 @@ pub(crate) mod api;
 #[cfg(test)]
 mod api_tests;
 mod asset;
+mod asset_list;
+#[cfg(test)]
+mod asset_list_tests;
 mod entry;
 pub mod ext;
 #[cfg(test)]
@@ -74,6 +77,7 @@ mod viewer_tests;
 
 pub(crate) use crate::content::markdown_html;
 use asset::*;
+use asset_list::*;
 use entry::*;
 use link::*;
 use loaders::*;
@@ -124,6 +128,9 @@ pub(crate) const ASSET_FIELDS: &[&str] = &[
 	"focalY",
 	"focalPoint",
 	"title",
+	"folderId",
+	"folder",
+	"path",
 	"url",
 	"width",
 	"height",
@@ -171,6 +178,8 @@ struct Loaded {
 	count: std::sync::atomic::AtomicUsize,
 	/// the loaders, made on first use, see [`Loaders`]
 	loaders: std::sync::OnceLock<Loaders>,
+	/// the paths of the asset folders by id, read on first use
+	folders: std::sync::OnceLock<std::collections::HashMap<i64, String>>,
 }
 
 /// The most entries and assets a request may load, each query counts as
@@ -323,7 +332,7 @@ pub(crate) fn build(
 		builder = builder.register(obj);
 	}
 	let mut query = query_object(&schema);
-	for field in search_fields() {
+	for field in search_fields().into_iter().chain(asset_list_fields()) {
 		query = query.field(field);
 	}
 	for field in root_fields {

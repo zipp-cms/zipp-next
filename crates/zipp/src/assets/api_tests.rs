@@ -451,7 +451,8 @@ async fn lists_files_by_kind() {
 	assert_eq!(of("image").await.unwrap(), ["a.png"]);
 	assert_eq!(of("video").await.unwrap(), ["clip.mp4"]);
 	assert_eq!(of("document").await.unwrap(), ["form.pdf"]);
-	assert_eq!(of("file").await.unwrap().len(), 3);
+	assert_eq!(of("file").await.unwrap(), ["form.pdf", "song.mp3"]);
+	assert_eq!(of("pdf").await.unwrap(), ["form.pdf"]);
 	let err = of("movie").await.unwrap_err();
 	assert!(matches!(err, Error::Request(m) if m.contains("kind movie")));
 }

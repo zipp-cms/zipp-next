@@ -410,3 +410,32 @@ async fn sites_have_the_urls_of_serve() {
 	assert_eq!(body["data"]["sites"][0]["baseUrl"], "https://x.ch");
 	assert_eq!(ts.state.site_urls["de"], "https://x.ch");
 }
+
+#[tokio::test]
+async fn frontends_list_the_assets() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	let png = crate::fixtures::png(2, 2);
+	let resp = admin.upload("/assets", &[("logo.png", &png)]).await;
+	assert!(resp.status().is_success());
+	let anon = ts.anonymous();
+	let query = r#"{ assets(kind: "image") { filename }
+		de: assetCount(site: "de") }"#;
+	let body = &json!({ "query": query }).to_string();
+
+	// like entries: with a token, nothing of the sites it doesn't read
+	let (status, _) = graphql(&anon, "/api/graphql", body, None).await;
+	assert_eq!(status, StatusCode::UNAUTHORIZED);
+	let (_, data) = graphql(&anon, "/api/graphql", body, ENV).await;
+	assert_eq!(
+		data["data"],
+		json!({ "assets": [{ "filename": "logo.png" }], "de": 1 })
+	);
+	let only_en = Scope {
+		sites: Some(vec!["en".into()]),
+		..Scope::ALL
+	};
+	let token = new_token(&admin, only_en, None).await;
+	let (_, data) = graphql(&anon, "/api/graphql", body, Some(&token)).await;
+	assert_eq!(data["data"], json!({ "assets": [], "de": 0 }));
+}

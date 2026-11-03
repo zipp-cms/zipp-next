@@ -11,7 +11,6 @@ use crate::db::escape_like;
 use crate::entries::{check_relations, links_of};
 use crate::schema::{ASSET, Schema};
 
-/// The newest assets whose filename contains `search`, of a kind.
 /// Where to look for assets: all folders, or one (`None` the top).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum InFolder {
@@ -19,8 +18,7 @@ pub(crate) enum InFolder {
 	Folder(Option<i64>),
 }
 
-/// With `kind` only `image`s, `file`s (no images), `video`s or
-/// `document`s (files but videos and audio); with `extensions` only
+/// With `kind` only assets of it (see [`Kind`]); with `extensions` only
 /// files that end so (lowercase, without dot).
 pub(crate) fn search(
 	conn: &Connection,
@@ -30,19 +28,8 @@ pub(crate) fn search(
 	extensions: &[String],
 ) -> Result<Vec<Asset>> {
 	let kind = match kind {
-		None => "",
-		Some("image") => "AND kind = 'image'",
-		Some("file") => "AND kind = 'file'",
-		Some("video") => "AND kind = 'file' AND mime LIKE 'video/%'",
-		Some("document") => {
-			"AND kind = 'file' AND mime NOT LIKE 'video/%' \
-			AND mime NOT LIKE 'audio/%'"
-		}
-		Some(k) => {
-			return Err(Error::Request(format!(
-				"kind {k}: image, file, video or document"
-			)));
-		}
+		None => String::new(),
+		Some(k) => format!("AND {}", Kind::parse(k)?.sql()),
 	};
 	let (any, folder) = match folder {
 		InFolder::All => (true, None),
@@ -76,6 +63,179 @@ pub(crate) fn search(
 	Ok(assets)
 }
 
+/// What assets are, to filter by: the kinds of [`Asset`] and Craft's
+/// kinds of files a site asks for.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum Kind {
+	Image,
+	Video,
+	/// neither an image nor a video
+	File,
+	/// a file but audio, the studio's documents
+	Document,
+	Pdf,
+	/// Word documents
+	Word,
+}
+
+/// The extensions of Craft's kind `word`.
+const WORD: &[&str] = &["doc", "docx", "docm", "dot", "dotm", "dotx", "odt"];
+
+impl Kind {
+	pub(crate) fn parse(kind: &str) -> Result<Kind> {
+		Ok(match kind {
+			"image" => Kind::Image,
+			"video" => Kind::Video,
+			"file" => Kind::File,
+			"document" => Kind::Document,
+			"pdf" => Kind::Pdf,
+			"word" => Kind::Word,
+			k => {
+				return Err(Error::Request(format!(
+					"kind {k}: image, video, file, document, pdf or word"
+				)));
+			}
+		})
+	}
+
+	/// The condition on a row of `assets`, without values.
+	fn sql(self) -> String {
+		let ends = |exts: &[&str]| {
+			let likes: Vec<String> = exts
+				.iter()
+				.map(|e| format!("lower(filename) LIKE '%.{e}'"))
+				.collect();
+			format!("({})", likes.join(" OR "))
+		};
+		match self {
+			Kind::Image => "kind = 'image'".into(),
+			Kind::Video => "kind = 'video'".into(),
+			Kind::File => "kind = 'file'".into(),
+			Kind::Document => {
+				"(kind = 'file' AND mime NOT LIKE 'audio/%')".into()
+			}
+			Kind::Pdf => ends(&["pdf"]),
+			Kind::Word => ends(WORD),
+		}
+	}
+
+	pub(crate) fn of(self, a: &Asset) -> bool {
+		let ext = a
+			.filename
+			.rsplit_once('.')
+			.map(|(_, e)| e.to_ascii_lowercase())
+			.unwrap_or_default();
+		match self {
+			Kind::Image => a.kind == "image",
+			Kind::Video => a.kind == "video",
+			Kind::File => a.kind == "file",
+			Kind::Document => a.kind == "file" && !a.mime.starts_with("audio/"),
+			Kind::Pdf => ext == "pdf",
+			Kind::Word => WORD.contains(&ext.as_str()),
+		}
+	}
+}
+
+/// Assets of some folders, kinds and words, for GraphQL's `assets`.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct AssetList {
+	/// the ids of folders, `None` all
+	pub folders: Option<Vec<i64>>,
+	/// any of them, none all
+	pub kinds: Vec<Kind>,
+	/// each in the filename, title or alt text
+	pub words: Vec<String>,
+	/// `title`, `filename`, `dateCreated`, `size` or `id`, maybe with
+	/// `ASC` or `DESC`, the newest first without
+	pub order_by: Option<String>,
+	pub limit: Option<i64>,
+	pub offset: Option<i64>,
+}
+
+impl AssetList {
+	/// The `WHERE` and its values.
+	fn filter(&self) -> (String, Vec<String>) {
+		let mut and = vec!["deleted_at IS NULL".to_string()];
+		if let Some(folders) = &self.folders {
+			let ids: Vec<String> = folders.iter().map(i64::to_string).collect();
+			and.push(format!("folder_id IN ({})", ids.join(", ")));
+		}
+		if !self.kinds.is_empty() {
+			let any: Vec<String> = self.kinds.iter().map(|k| k.sql()).collect();
+			and.push(format!("({})", any.join(" OR ")));
+		}
+		and.extend((1..=self.words.len()).map(word_sql));
+		let values = self.words.iter().map(|w| format!("%{}%", escape_like(w)));
+		(and.join(" AND "), values.collect())
+	}
+
+	/// Craft's `orderBy`, as SQL.
+	fn order(&self) -> Result<String> {
+		let Some(o) = &self.order_by else {
+			return Ok("created_at DESC, id DESC".into());
+		};
+		let mut words = o.split_whitespace();
+		let column = match words.next().unwrap_or_default() {
+			// an asset without a title has the one of its filename
+			"title" => {
+				"CASE title WHEN '' THEN filename ELSE title END \
+				COLLATE NOCASE"
+			}
+			"filename" => "filename COLLATE NOCASE",
+			"dateCreated" | "createdAt" => "created_at",
+			"size" => "size",
+			"id" => "id",
+			c => {
+				return Err(Error::Request(format!(
+					"orderBy {c}: title, filename, dateCreated, size or id"
+				)));
+			}
+		};
+		let dir = match words.next().map(str::to_ascii_uppercase).as_deref() {
+			None | Some("ASC") => "ASC",
+			Some("DESC") => "DESC",
+			Some(d) => return Err(Error::Request(format!("orderBy {d}"))),
+		};
+		Ok(format!("{column} {dir}, id {dir}"))
+	}
+}
+
+/// The assets of a list, in its order.
+pub(crate) fn list(conn: &Connection, q: &AssetList) -> Result<Vec<Asset>> {
+	let (filter, values) = q.filter();
+	// SQLite needs a limit before an offset, -1 is none
+	let sql = format!(
+		"SELECT {COLUMNS} FROM assets WHERE {filter} ORDER BY {}
+		LIMIT {} OFFSET {}",
+		q.order()?,
+		q.limit.unwrap_or(-1),
+		q.offset.unwrap_or(0).max(0),
+	);
+	let mut stmt = conn.prepare(&sql)?;
+	let assets = stmt
+		.query_map(rusqlite::params_from_iter(values), from_row)?
+		.collect::<rusqlite::Result<_>>()?;
+	Ok(assets)
+}
+
+/// How many assets a list has, without its limit.
+pub(crate) fn count(conn: &Connection, q: &AssetList) -> Result<i64> {
+	let (filter, values) = q.filter();
+	let sql = format!("SELECT COUNT(*) FROM assets WHERE {filter}");
+	let n =
+		conn.query_row(&sql, rusqlite::params_from_iter(values), |r| r.get(0))?;
+	Ok(n)
+}
+
+/// That the filename, title or alt text contain the word of value `i`.
+fn word_sql(i: usize) -> String {
+	format!(
+		"(filename LIKE ?{i} ESCAPE '\\' OR title LIKE ?{i} ESCAPE '\\' \
+		OR EXISTS (SELECT 1 FROM json_each(alt) \
+			WHERE value LIKE ?{i} ESCAPE '\\'))"
+	)
+}
+
 /// Assets whose filename, title or alt text contain every word, the
 /// newest first, for the studio's search.
 pub(crate) fn find(
@@ -86,15 +246,7 @@ pub(crate) fn find(
 	if words.is_empty() {
 		return Ok(vec![]);
 	}
-	let likes: Vec<String> = (1..=words.len())
-		.map(|i| {
-			format!(
-				"(filename LIKE ?{i} ESCAPE '\\' OR title LIKE ?{i} ESCAPE '\\' \
-				OR EXISTS (SELECT 1 FROM json_each(alt) \
-					WHERE value LIKE ?{i} ESCAPE '\\'))"
-			)
-		})
-		.collect();
+	let likes: Vec<String> = (1..=words.len()).map(word_sql).collect();
 	let sql = format!(
 		"SELECT {COLUMNS} FROM assets WHERE deleted_at IS NULL AND {}
 		ORDER BY id DESC LIMIT {limit}",

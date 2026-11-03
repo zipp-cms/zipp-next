@@ -42,14 +42,15 @@ pub(crate) use edits::Edits;
 #[cfg(test)]
 use edits::{Canvas, Crop, Resize};
 pub(crate) use folders::{
-	Folder, check_folder, create_folder, delete_folder, folders, move_assets,
-	top_count, update_folder,
+	Folder, check_folder, create_folder, delete_folder, folder_paths, folders,
+	folders_under, move_assets, top_count, update_folder,
 };
 use folders::{folder, folder_named};
 #[cfg(feature = "craft")]
 pub(crate) use manage::check_fields;
 pub(crate) use manage::{
-	AssetChange, InFolder, Usage, delete, find, replace, search, update, usage,
+	AssetChange, AssetList, InFolder, Kind, Usage, count, delete, find, list,
+	replace, search, update, usage,
 };
 
 #[cfg(test)]
@@ -65,7 +66,7 @@ use transform::*;
 pub struct Asset {
 	pub id: i64,
 	pub filename: String,
-	/// `image` or `file`
+	/// `image`, `video` or `file`
 	pub kind: String,
 	pub mime: String,
 	pub size: i64,
@@ -371,7 +372,15 @@ fn inspect(filename: &str, file: &FsPath) -> Result<Upload> {
 		Some((f, w, h)) => {
 			("image", f.to_mime_type().to_string(), Some(w), Some(h))
 		}
-		None => ("file", file_mime(&filename).to_string(), None, None),
+		None => {
+			let mime = file_mime(&filename);
+			// Craft's kinds, a video plays where an image shows
+			let kind = match mime.starts_with("video/") {
+				true => "video",
+				false => "file",
+			};
+			(kind, mime.to_string(), None, None)
+		}
 	};
 	if let (Some(w), Some(h)) = (width, height)
 		&& (u64::from(w) * u64::from(h) > MAX_PIXELS

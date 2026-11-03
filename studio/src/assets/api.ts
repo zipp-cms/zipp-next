@@ -5,7 +5,7 @@ import { t } from '../i18n/index.svelte';
 export type Asset = {
 	id: number;
 	filename: string;
-	kind: 'image' | 'file';
+	kind: 'image' | 'video' | 'file';
 	mime: string;
 	size: number;
 	width: number | null;

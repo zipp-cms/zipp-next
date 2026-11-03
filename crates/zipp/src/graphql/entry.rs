@@ -128,8 +128,11 @@ pub(super) fn content_field(
 	let ty = type_of(comp, field, custom.as_ref().map(|(t, _)| t.as_ref()))?;
 	let handle = field.handle.clone();
 	let kind = field.kind.clone();
+	// Craft's `images(kind: "image")`, see [`kinds_of`]
+	let kind_arg = matches!(kind, FieldKind::Assets { .. })
+		.then(|| InputValue::new("kind", TypeRef::named_list(TypeRef::STRING)));
 
-	Some(GqlField::new(field.handle.clone(), ty, move |ctx| {
+	let f = GqlField::new(field.handle.clone(), ty, move |ctx| {
 		let handle = handle.clone();
 		let kind = kind.clone();
 		let custom = custom.clone();
@@ -147,7 +150,11 @@ pub(super) fn content_field(
 			let value = fields.get(&handle).cloned().unwrap_or(Value::Null);
 			resolve_value(&ctx, kind, custom, value, site).await
 		})
-	}))
+	});
+	Some(match kind_arg {
+		Some(arg) => f.argument(arg),
+		None => f,
+	})
 }
 
 /// The GraphQL type of a field; none for a note.
@@ -219,7 +226,11 @@ async fn resolve_value<'a>(
 				.as_array()
 				.map(|a| a.iter().filter_map(Value::as_i64).collect())
 				.unwrap_or_default();
-			let assets = assets_by_id(ctx, &ids).await?;
+			let mut assets = assets_by_id(ctx, &ids).await?;
+			let kinds = kinds_of(ctx)?;
+			if !kinds.is_empty() {
+				assets.retain(|a| kinds.iter().any(|k| k.of(a)));
+			}
 			Ok(Some(FieldValue::list(
 				assets.into_iter().map(|a| asset_value(a, &site)),
 			)))

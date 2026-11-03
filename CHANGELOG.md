@@ -16,6 +16,14 @@
   `relatedTo` and `relatedToEntries`, and `children(...)` the arguments
   about the children (`limit`, `type`, `orderBy`, ...). Blocks have a
   `slug` of their title field, for anchors.
+- GraphQL lists the assets of the library like Craft's: `assets` and
+  `assetCount` with `folder` (Craft's `volume`), `folderId`, `kind`,
+  `search`, `orderBy`, `limit` and `offset`; assets have `folderId`,
+  `folder` and `path`, so asset fields can't take these names anymore.
+- Asset fields in GraphQL take Craft's `kind`: `images(kind: "image")`,
+  also a list and `video`, `file`, `pdf` and `word`.
+- Videos are the asset kind `video` like in Craft, they were `file`;
+  `GET /api/assets?kind=file` lists files without the videos now.
 
 ## 0.1.0 (2026-11-03)
 

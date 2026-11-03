@@ -2,6 +2,8 @@
 //! Only the database has them, the files stay where they are, so moving is
 //! no copy and urls don't change.
 
+use std::collections::HashMap;
+
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
@@ -210,4 +212,43 @@ pub(crate) fn move_assets(
 		}
 	}
 	Ok(())
+}
+
+/// The path of every folder by id, `Clubs/Bern`.
+pub(crate) fn folder_paths(conn: &Connection) -> Result<HashMap<i64, String>> {
+	let all = folders(conn)?;
+	let by_id: HashMap<i64, &Folder> = all.iter().map(|f| (f.id, f)).collect();
+	let mut paths = HashMap::new();
+	for f in &all {
+		let mut names = vec![f.name.as_str()];
+		let mut at = f.parent_id;
+		// a parent is never in itself, see update_folder
+		while let Some(p) = at.and_then(|p| by_id.get(&p)) {
+			names.push(&p.name);
+			at = p.parent_id;
+		}
+		names.reverse();
+		paths.insert(f.id, names.join("/"));
+	}
+	Ok(paths)
+}
+
+/// The folder of a path and every folder in it, like a volume of Craft
+/// with its folders; names match like [`check_name`] compares them.
+pub(crate) fn folders_under(
+	paths: &HashMap<i64, String>,
+	path: &str,
+) -> Vec<i64> {
+	let path = path.trim_matches('/').to_lowercase();
+	let inner = format!("{path}/");
+	let mut ids: Vec<i64> = paths
+		.iter()
+		.filter(|(_, p)| {
+			let p = p.to_lowercase();
+			p == path || p.starts_with(&inner)
+		})
+		.map(|(id, _)| *id)
+		.collect();
+	ids.sort();
+	ids
 }

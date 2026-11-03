@@ -269,7 +269,8 @@ library can be unpacked into folders (`POST /api/assets/unzip`: folders
 of the same name merge, hidden files and `__MACOSX` stay out, at most
 2000 files, 500 folders 20 deep and 1 GB unpacked; folder names have no
 `/` or `\`). The library filters by type: images,
-videos or documents (`GET /api/assets?kind=video`).
+videos or documents (`GET /api/assets?kind=video`). Frontends list the
+assets of a folder through GraphQL, `assets(folder: "Partners")`.
 
 Assets can have fields of their own beside title and alt, like Craft's
 asset field layout: `.asset_fields([Field::text("credit"),
@@ -282,9 +283,10 @@ Their values are the same in all sites (unlike the alt text), they have
 no defaults and can't be indexed; their relations don't count as the
 usage of an asset or entry.
 
-Videos are files: `Field::videos("clip")` takes mp4, webm and mov
-(`.extensions` of those), GraphQL's `kind` is `file` and `mimeType`
-`video/mp4`, so a frontend knows to show a `<video>`. The studio plays
+Videos are a kind of their own like in Craft: `Field::videos("clip")`
+takes mp4, webm and mov (`.extensions` of those), GraphQL's `kind` is
+`video` and `mimeType` `video/mp4`, so a frontend knows to show a
+`<video>`. The studio plays
 them in the asset panel and shows their first frame and length in the
 library. The files are served with ranges, so a video seeks without
 loading all of it. The server makes no posters; a frontend takes the

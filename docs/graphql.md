@@ -76,8 +76,9 @@ A token reads only its sections and sites: `entries`, `entry`,
 the other entries, `sites` and `crelteSites` the other sites (the ids
 stay). Plugins load entries the same way: the SEO plugin's `seoJson`
 reads its settings from the section `seoSettings`, a token without it
-gets the defaults. Assets aren't scoped, a token gets the assets of the
-entries it reads.
+gets the defaults. Assets aren't scoped, their files are public by
+url: a token gets the assets of the entries it reads, and `assets`
+lists the library for a site it reads.
 
 ## GraphiQL
 
@@ -128,9 +129,24 @@ the token; a preview shows its entry in every site). Images have
 `url(transform: "hero", format: "webp")` and `srcset(transforms: [...],
 format: "webp")` in another type (`webp`, `jpg`, `png`), and `alt` of
 the site asked, else of the primary site.
-Every asset has `kind` (`image` or `file`), `mimeType` (`video/mp4`
-for a video) and `size`, and the schema's asset fields
-(`image { url credit }`).
+Every asset has `kind` (`image`, `video` or `file`), `mimeType`
+(`video/mp4`) and `size`, the schema's asset fields (`image { url
+credit }`), `folderId`, `folder` (the path of its folder,
+`Timetables/2025`, null on the top) and Craft's `path`, the one in its
+volume: below its top folder, `2025/1a.pdf`. An asset field takes
+Craft's `kind`, `images(kind: "image")` or `media(kind: ["image",
+"video"])`, also `file` (neither), `pdf` and `word`.
+
+The library is `assets` like Craft's, `assetCount` with the same
+arguments: `assets(folder: "Clubs", kind: "image", orderBy: "title")
+{ title url alt }`. Craft's `volume` is `folder` (the import makes a
+folder of each volume): a path, any case, with the folders in it,
+several in a list; `folderId` only the folder itself. `search` matches
+every word in the filename, title or alt text; `orderBy` is `title`,
+`filename`, `dateCreated`, `size` or `id` with `ASC` or `DESC`, the
+newest first without; `limit` and `offset` page it. `site` or `siteId`
+is the site of the alt texts, the primary site without. Each asset
+counts against the 10000 of a request.
 
 ## crelte
 

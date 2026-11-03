@@ -9,7 +9,8 @@ use rusqlite::Connection;
 /// never change one, append a new entry instead (`db_tests.rs` pins
 /// them). Changes of the content model are schema migrations
 /// (`migrate/`), not these.
-pub(crate) const MIGRATIONS: &[&str] = &[r#"
+pub(crate) const MIGRATIONS: &[&str] = &[
+	r#"
 	CREATE TABLE entries (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		section TEXT NOT NULL,
@@ -246,7 +247,13 @@ pub(crate) const MIGRATIONS: &[&str] = &[r#"
 		name TEXT PRIMARY KEY,
 		applied_at INTEGER NOT NULL
 	);
-"#];
+"#,
+	// videos are a kind of their own, like Craft's
+	r#"
+	UPDATE assets SET kind = 'video'
+	WHERE kind = 'file' AND mime LIKE 'video/%';
+"#,
+];
 
 /// `?, ?, ?` for an `IN` of `n` values.
 pub(crate) fn marks(n: usize) -> String {

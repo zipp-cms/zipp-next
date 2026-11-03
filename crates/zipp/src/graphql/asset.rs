@@ -85,6 +85,33 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 			TypeRef::named_nn_list_nn(TypeRef::FLOAT),
 		))
 		.field(plain("title", s()))
+		.field(GqlField::new(
+			"folderId",
+			TypeRef::named(TypeRef::INT),
+			|ctx| {
+				FieldFuture::new(async move {
+					let id = asset_of(&ctx)?.folder_id;
+					Ok(id.map(FieldValue::value))
+				})
+			},
+		))
+		// the path of its folder, `Clubs/Bern`
+		.field(GqlField::new(
+			"folder",
+			TypeRef::named(TypeRef::STRING),
+			|ctx| {
+				FieldFuture::new(async move {
+					let folder = folder_of(&ctx, asset_of(&ctx)?)?;
+					Ok(folder.map(FieldValue::value))
+				})
+			},
+		))
+		.field(GqlField::new("path", s(), |ctx| {
+			FieldFuture::new(async move {
+				let path = path_of(&ctx, asset_of(&ctx)?)?;
+				Ok(Some(FieldValue::value(path)))
+			})
+		}))
 		.field(
 			GqlField::new("url", s(), |ctx| {
 				FieldFuture::new(async move {

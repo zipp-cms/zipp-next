@@ -17,8 +17,8 @@ pub(crate) struct ListReq {
 	pub search: Option<String>,
 	/// `1,2,3`, in this order
 	pub ids: Option<String>,
-	/// `image`, `file` (no image), `video` or `document` (a file but
-	/// no video or audio)
+	/// `image`, `video`, `file` (neither), `document` (a file but audio),
+	/// `pdf` or `word`
 	pub kind: Option<String>,
 	/// a folder's id, `top` for the ones in none
 	pub folder: Option<String>,

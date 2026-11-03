@@ -78,6 +78,8 @@ fn stores_and_transforms_an_image() {
 
 	let f = store(&db.conn(), dir, "notes.txt", b"hello", None).unwrap();
 	assert_eq!((f.kind.as_str(), f.mime.as_str()), ("file", "text/plain"));
+	let v = store(&db.conn(), dir, "clip.mp4", b"v", None).unwrap();
+	assert_eq!((v.kind.as_str(), v.mime.as_str()), ("video", "video/mp4"));
 	// html is no type of ours, whatever the upload says
 	let f = store(&db.conn(), dir, "x.html", b"<script>", None).unwrap();
 	assert_eq!(f.mime, "application/octet-stream");
@@ -408,4 +410,63 @@ fn a_zip_that_holds_more_than_it_says_stores_nothing() {
 	assert_eq!(n, 0);
 	let left = fs::read_dir(dir).map(|d| d.count()).unwrap_or(0);
 	assert_eq!(left, 0);
+}
+
+#[test]
+fn kinds_match_in_sql_like_in_rust() {
+	let db = crate::db::Db::memory().unwrap();
+	let tmp = tempfile::tempdir().unwrap();
+	let dir = tmp.path();
+	let conn = db.conn();
+	for (name, data) in [
+		("a.png", png(2, 2)),
+		("clip.MOV", b"v".to_vec()),
+		("song.mp3", b"a".to_vec()),
+		("Plan.PDF", b"%PDF".to_vec()),
+		("old.doc", b"w".to_vec()),
+		("notes.txt", b"t".to_vec()),
+	] {
+		store(&conn, dir, name, &data, None).unwrap();
+	}
+	let all = list(&conn, &AssetList::default()).unwrap();
+	for (kind, want) in [
+		("image", vec!["a.png"]),
+		("video", vec!["clip.MOV"]),
+		("file", vec!["notes.txt", "old.doc", "Plan.PDF", "song.mp3"]),
+		("document", vec!["notes.txt", "old.doc", "Plan.PDF"]),
+		("pdf", vec!["Plan.PDF"]),
+		("word", vec!["old.doc"]),
+	] {
+		let k = Kind::parse(kind).unwrap();
+		let q = AssetList {
+			kinds: vec![k],
+			..Default::default()
+		};
+		let names = |l: Vec<&Asset>| -> Vec<String> {
+			l.into_iter().map(|a| a.filename.clone()).collect()
+		};
+		let in_sql = list(&conn, &q).unwrap();
+		assert_eq!(names(in_sql.iter().collect()), want, "{kind}");
+		let in_rust = all.iter().filter(|a| k.of(a)).collect();
+		assert_eq!(names(in_rust), want, "{kind}");
+		assert_eq!(count(&conn, &q).unwrap(), want.len() as i64);
+	}
+	assert!(Kind::parse("movie").is_err());
+}
+
+#[test]
+fn folders_have_paths() {
+	let db = crate::db::Db::memory().unwrap();
+	let conn = db.conn();
+	let clubs = create_folder(&conn, None, "Clubs").unwrap().id;
+	let bern = create_folder(&conn, Some(clubs), "Bern").unwrap().id;
+	let other = create_folder(&conn, None, "Clubs old").unwrap().id;
+	let paths = folder_paths(&conn).unwrap();
+	assert_eq!(paths[&bern], "Clubs/Bern");
+	assert_eq!(paths[&other], "Clubs old");
+
+	// with the ones in it, not the ones that only start alike
+	assert_eq!(folders_under(&paths, "clubs/"), [clubs, bern]);
+	assert_eq!(folders_under(&paths, "Clubs/bern"), [bern]);
+	assert!(folders_under(&paths, "Bern").is_empty());
 }
