@@ -210,7 +210,7 @@ pub(super) async fn list_route(
 
 pub(super) async fn update_route(
 	State(state): State<AppState>,
-	_access: AssetAccess<Edit>,
+	access: AssetAccess<Edit>,
 	Req(req): Req<UpdateReq>,
 ) -> ApiResult<UpdateReq> {
 	let conn = state.db.conn();
@@ -220,6 +220,7 @@ pub(super) async fn update_route(
 		&state.schema,
 		req.id,
 		req.change,
+		Some(access.auth.user_id),
 	)?))
 }
 

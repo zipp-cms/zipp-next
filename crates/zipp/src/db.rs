@@ -80,7 +80,9 @@ const MIGRATIONS: &[&str] = &[r#"
 	CREATE VIRTUAL TABLE entry_search USING fts5(
 		title, slug, body,
 		content = 'entry_texts', content_rowid = 'id',
-		tokenize = 'unicode61 remove_diacritics 2'
+		tokenize = 'unicode61 remove_diacritics 2',
+		-- short starts of words are searched as you type
+		prefix = '2 3'
 	);
 	CREATE TRIGGER entry_texts_insert AFTER INSERT ON entry_texts BEGIN
 		INSERT INTO entry_search (rowid, title, slug, body)
@@ -194,14 +196,15 @@ const MIGRATIONS: &[&str] = &[r#"
 		-- using the studio pushes it back
 		expires_at INTEGER NOT NULL,
 		-- 0: it ends when it ends, see auth::short_session and login_as_session
-		renews INTEGER NOT NULL DEFAULT 1,
+		renews INTEGER NOT NULL DEFAULT 0,
 		-- an admin who logged in as the user, see auth/links.rs
 		impersonated_by INTEGER REFERENCES users(id) ON DELETE CASCADE
 	);
 
 	-- one-time links of a user: invite, password reset, logging in as
 	CREATE TABLE user_links (
-		token TEXT PRIMARY KEY,
+		-- sha256 of the token as hex like sessions, the mail has the token
+		token_hash TEXT PRIMARY KEY,
 		user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 		kind TEXT NOT NULL,
 		-- the admin who made it, for logging in as

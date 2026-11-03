@@ -12,7 +12,7 @@ pub fn save(
 	input: EntryInput,
 	user_id: Option<i64>,
 ) -> Result<Entry> {
-	let c = check(conn, schema, id, input)?;
+	let c = check(conn, schema, id, input, user_id)?;
 	let tx = conn.unchecked_transaction()?;
 	let id = write(&tx, schema, &c)?;
 	record_revision(&tx, id, user_id)?;
@@ -20,12 +20,14 @@ pub fn save(
 	get_entry(conn, id, &c.site)
 }
 
-/// Validates a save without writing anything.
+/// Validates a save of `user_id` (`None`: the system) without writing
+/// anything.
 pub fn check(
 	conn: &Connection,
 	schema: &Schema,
 	id: Option<i64>,
 	mut input: EntryInput,
+	user_id: Option<i64>,
 ) -> Result<Checked> {
 	let site = schema.site_or_primary(input.site.clone());
 	if schema.get_site(&site).is_none() {
@@ -110,7 +112,18 @@ pub fn check(
 		}
 	};
 	if errors.is_empty() {
-		errors.extend(check_relations(conn, schema, &input.ty, &mut fields)?);
+		let before = match id {
+			Some(id) => linked(conn, id)?,
+			None => vec![],
+		};
+		errors.extend(check_relations(
+			conn,
+			schema,
+			&input.ty,
+			&mut fields,
+			user_id,
+			&before,
+		)?);
 	}
 	if let Dates {
 		post_date: Some(post),
@@ -262,30 +275,42 @@ pub fn write(conn: &Connection, schema: &Schema, c: &Checked) -> Result<i64> {
 /// the allowed extensions). Those to entries and assets in the trash or
 /// deleted are taken out of `fields` (see [`drop_links`]), the website
 /// leaves them out already and they mustn't block saving what links to
-/// them.
+/// them. What the user `user_id` may not view counts as deleted, so a
+/// save tells nothing about hidden sections or assets; what it linked to
+/// `before` stays, someone who sees it chose it.
 pub(crate) fn check_relations(
 	conn: &Connection,
 	schema: &Schema,
 	ty: &str,
 	fields: &mut Value,
+	user_id: Option<i64>,
+	before: &[(LinkKind, i64)],
 ) -> Result<Vec<FieldError>> {
 	let comp = schema.get(ty).unwrap();
+	let user = crate::auth::user_of(conn, user_id)?;
 	let mut gone = vec![];
 	for rel in relations(schema, comp, fields) {
-		let (kind, table) = match rel.target {
-			Target::Entries { .. } => (LinkKind::Entry, "entries"),
-			Target::Assets { .. } => (LinkKind::Asset, "assets"),
+		let (kind, sql) = match rel.target {
+			Target::Entries { .. } => (
+				LinkKind::Entry,
+				"SELECT section FROM entries
+				WHERE id = ?1 AND deleted_at IS NULL",
+			),
+			Target::Assets { .. } => (
+				LinkKind::Asset,
+				"SELECT '' FROM assets WHERE id = ?1 AND deleted_at IS NULL",
+			),
 		};
 		for id in rel.ids {
-			let found: bool = conn.query_row(
-				&format!(
-					"SELECT COUNT(*) FROM {table}
-					WHERE id = ?1 AND deleted_at IS NULL"
-				),
-				[id],
-				|r| r.get(0),
-			)?;
-			if !found {
+			let section: Option<String> =
+				conn.query_row(sql, [id], |r| r.get(0)).optional()?;
+			let visible = section.is_some_and(|s| match (&user, kind) {
+				(None, _) => true,
+				_ if before.contains(&(kind, id)) => true,
+				(Some(u), LinkKind::Entry) => u.can(schema, &s, Access::View),
+				(Some(u), _) => u.can_assets(schema, Access::View),
+			});
+			if !visible {
 				gone.push((kind, id));
 			}
 		}
@@ -352,6 +377,41 @@ pub(crate) fn check_relations(
 	}
 
 	Ok(errors)
+}
+
+/// What an entry links to in any of its sites, see [`check_relations`].
+fn linked(conn: &Connection, id: i64) -> Result<Vec<(LinkKind, i64)>> {
+	let mut stmt = conn.prepare(
+		"SELECT 'entry', target_id FROM entry_relations WHERE entry_id = ?1
+		UNION SELECT 'asset', asset_id FROM asset_relations
+		WHERE entry_id = ?1",
+	)?;
+	let rows = stmt.query_map([id], |r| {
+		let kind: String = r.get(0)?;
+		let kind = match kind.as_str() {
+			"entry" => LinkKind::Entry,
+			_ => LinkKind::Asset,
+		};
+		Ok((kind, r.get(1)?))
+	})?;
+	Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// The links of field values, the `before` of [`check_relations`].
+pub(crate) fn links_of(
+	schema: &Schema,
+	comp: &Component,
+	fields: &Value,
+) -> Vec<(LinkKind, i64)> {
+	let mut out = vec![];
+	for rel in relations(schema, comp, fields) {
+		let kind = match rel.target {
+			Target::Entries { .. } => LinkKind::Entry,
+			Target::Assets { .. } => LinkKind::Asset,
+		};
+		out.extend(rel.ids.into_iter().map(|id| (kind, id)));
+	}
+	out
 }
 
 /// Whether a filename ends with one of the extensions (lowercase).

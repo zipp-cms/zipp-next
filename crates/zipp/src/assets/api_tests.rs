@@ -10,7 +10,7 @@ use super::api::*;
 use super::*;
 use crate::entries::save;
 use crate::fixtures::{png, site_with_roles};
-use crate::schema::{Field, Format, Role};
+use crate::schema::{Access, Field, Format, Role};
 
 use crate::testing::{Client, TestServer, input};
 
@@ -596,4 +596,50 @@ async fn search_takes_percent_and_underscore_as_they_are() {
 	let found = editor.call(&find("a_b")).await.unwrap();
 	assert_eq!(found.len(), 1, "{found:?}");
 	assert!(editor.call(&find("%")).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn asset_fields_leave_out_hidden_entries() {
+	let uploader = Role::new("uploader", "Uploader").assets(Access::Edit);
+	let schema = site_with_roles()
+		.asset_fields([Field::relation("page", ["page"])])
+		.role(uploader);
+	let ts = TestServer::new(schema);
+	let admin = ts.admin();
+	let uploader = ts.user(Some("uploader"));
+	let page = admin
+		.call(&crate::entries::api::CreateReq(input(
+			"pages",
+			"page",
+			"Hidden",
+			json!({}),
+		)))
+		.await
+		.unwrap();
+	let file = upload(&uploader, "a.txt", b"a").await.unwrap();
+
+	// the uploader can't view pages: the page is left out like a missing one
+	let change = |fields: Value| UpdateReq {
+		id: file.id,
+		change: AssetChange {
+			fields: Some(fields),
+			..Default::default()
+		},
+	};
+	let saved = uploader
+		.call(&change(json!({ "page": [page.id] })))
+		.await
+		.unwrap();
+	assert_eq!(saved.fields, json!({}));
+	let saved = admin
+		.call(&change(json!({ "page": [page.id] })))
+		.await
+		.unwrap();
+	assert_eq!(saved.fields, json!({ "page": [page.id] }));
+	// it stays when the uploader saves the fields again
+	let saved = uploader
+		.call(&change(json!({ "page": [page.id] })))
+		.await
+		.unwrap();
+	assert_eq!(saved.fields, json!({ "page": [page.id] }));
 }

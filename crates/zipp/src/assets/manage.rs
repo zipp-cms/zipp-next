@@ -8,7 +8,7 @@ use serde_json::Value;
 use super::*;
 use crate::content::validate;
 use crate::db::escape_like;
-use crate::entries::check_relations;
+use crate::entries::{check_relations, links_of};
 use crate::schema::{ASSET, Schema};
 
 /// The newest assets whose filename contains `search`, of a kind.
@@ -130,17 +130,22 @@ pub struct AssetChange {
 
 /// Changes an asset: a new name moves the file, new edits or a new
 /// focal point delete the transforms. The values of the asset fields
-/// are checked like those of a block.
+/// are checked like those of a block, for the user `user_id` (`None`: the
+/// system).
 pub fn update(
 	conn: &Connection,
 	files: &FsPath,
 	schema: &Schema,
 	id: i64,
 	change: AssetChange,
+	user_id: Option<i64>,
 ) -> Result<Asset> {
 	let old = get_asset(conn, id)?;
 	let fields = match &change.fields {
-		Some(v) => Some(check_fields(conn, schema, v)?.to_string()),
+		Some(v) => {
+			let fields = check_fields(conn, schema, v, &old.fields, user_id)?;
+			Some(fields.to_string())
+		}
 		None => None,
 	};
 	let (fx, fy) = (
@@ -214,12 +219,16 @@ fn check_fields(
 	conn: &Connection,
 	schema: &Schema,
 	fields: &Value,
+	old: &Value,
+	user_id: Option<i64>,
 ) -> Result<Value> {
 	let Some(comp) = schema.get(ASSET) else {
 		return Ok(Value::Object(Default::default()));
 	};
 	let mut fields = validate(schema, comp, fields).map_err(Error::Invalid)?;
-	let errors = check_relations(conn, schema, ASSET, &mut fields)?;
+	let before = links_of(schema, comp, old);
+	let errors =
+		check_relations(conn, schema, ASSET, &mut fields, user_id, &before)?;
 	if !errors.is_empty() {
 		return Err(Error::Invalid(errors));
 	}

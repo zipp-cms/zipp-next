@@ -141,11 +141,18 @@ async fn links_end_with_a_new_password_or_email() {
 	assert!(matches!(gone(&token).await, Error::Request(_)));
 
 	// an invite once the user has a password
-	ts.state.db.conn()
+	ts.state
+		.db
+		.conn()
 		.execute(
-			"INSERT INTO user_links (token, user_id, kind, created_at, expires_at)
-			VALUES ('inv', ?1, 'invite', 0, ?2)",
-			rusqlite::params![id, now() + 100_000],
+			"INSERT INTO user_links
+			(token_hash, user_id, kind, created_at, expires_at)
+			VALUES (?1, ?2, 'invite', 0, ?3)",
+			rusqlite::params![
+				crate::db::token_hash("inv"),
+				id,
+				now() + 100_000
+			],
 		)
 		.unwrap();
 	assert!(matches!(gone("inv").await, Error::Request(_)));
@@ -224,6 +231,18 @@ async fn admins_log_in_as_a_user() {
 		.await
 		.unwrap();
 	assert_eq!(again.session.expires_at, auth.session.expires_at);
+	// not even when its row says it renews
+	ts.state
+		.db
+		.conn()
+		.execute("UPDATE sessions SET renews = 1", [])
+		.unwrap();
+	let again = ts
+		.with_token(&auth.session.token)
+		.call(&SessionReq {})
+		.await
+		.unwrap();
+	assert_eq!(again.session.expires_at, auth.session.expires_at);
 	// once
 	assert!(ts.anonymous().call(&req).await.is_err());
 
@@ -254,4 +273,24 @@ fn new_links_need_the_url_of_the_cms() {
 	assert_eq!(links::get_link(&conn, token).unwrap().kind, kind);
 	// one reset every few minutes
 	assert_eq!(links::reset_target(&conn, "a@x.ch").unwrap(), None);
+}
+
+#[test]
+fn links_keep_only_the_hash() {
+	let db = crate::db::Db::memory().unwrap();
+	let conn = db.conn();
+	add_user(&conn, "h@x.ch", "password1", None).unwrap();
+	let id = crate::users::list(&conn).unwrap()[0].user.id;
+	let (token, _) =
+		links::create_link(&conn, id, links::Kind::Reset, None).unwrap();
+
+	// a copy of the database doesn't open the link
+	let stored: String = conn
+		.query_row("SELECT token_hash FROM user_links", [], |r| r.get(0))
+		.unwrap();
+	assert_eq!(stored, crate::db::token_hash(&token));
+	assert!(links::get_link(&conn, &stored).is_err());
+	assert_eq!(links::get_link(&conn, &token).unwrap().user_id, id);
+	links::take_link(&conn, &token, &[links::Kind::Reset]).unwrap();
+	assert!(links::get_link(&conn, &token).is_err());
 }

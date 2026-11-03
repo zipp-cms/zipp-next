@@ -163,7 +163,7 @@ async fn assets_with_transforms() {
 			focal_y: 0.5,
 			..Default::default()
 		};
-		crate::assets::update(&conn, dir, &s, a.id, alt).unwrap();
+		crate::assets::update(&conn, dir, &s, a.id, alt, None).unwrap();
 	}
 
 	let data = run(
@@ -241,7 +241,7 @@ async fn assets_with_transforms() {
 			focal_y: 0.5,
 			..Default::default()
 		};
-		let a = crate::assets::update(&conn, dir, &s, 1, both).unwrap();
+		let a = crate::assets::update(&conn, dir, &s, 1, both, None).unwrap();
 		// trimmed, of the sites there are
 		assert_eq!(
 			a.alt,
@@ -296,7 +296,7 @@ async fn asset_fields_and_videos() {
 			fields: Some(json!({ "credit": "Anna", "event": [jazz.id] })),
 			..Default::default()
 		};
-		crate::assets::update(&conn, dir, &s, a.id, change).unwrap();
+		crate::assets::update(&conn, dir, &s, a.id, change, None).unwrap();
 		let fields = json!({ "clip": [a.id] });
 		let e = input("events", "event", "Film", fields);
 		save(&conn, &s, None, e, None).unwrap();

@@ -334,5 +334,8 @@ structure) < Delete per section and for assets, and `.ai()` for the
 chat. Which user has which role is in the database (`user <email>
 --role author`, or the Users page of an admin); a user without a role
 is an admin. The server checks every request, the AI can only do what
-its user can, the studio hides the rest. Only admins see drafts in
-GraphQL with their session.
+its user can, the studio hides the rest. A relation or link to an
+entry of a section the role can't view (or to an asset without asset
+access) is left out on save like one to a deleted entry, unless the
+entry linked to it before. Only admins see drafts in GraphQL with their
+session.

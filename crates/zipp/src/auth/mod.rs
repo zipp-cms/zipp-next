@@ -259,6 +259,22 @@ pub(crate) fn token_of(headers: &HeaderMap) -> Result<Option<&str>> {
 	}
 }
 
+/// The user `user_id` as [`Authed`], for checks inside a save that only
+/// get the id; `None` (the system: migrations, the import) may do all.
+pub(crate) fn user_of(
+	conn: &Connection,
+	user_id: Option<i64>,
+) -> Result<Option<Authed>> {
+	let Some(user_id) = user_id else {
+		return Ok(None);
+	};
+	Ok(Some(Authed {
+		user_id,
+		role: role_of(conn, user_id)?,
+		token: String::new(),
+	}))
+}
+
 /// The role of a user, `None` is an admin.
 pub fn role_of(conn: &Connection, user_id: i64) -> Result<Option<String>> {
 	Ok(conn.query_row(

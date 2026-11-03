@@ -235,7 +235,7 @@ fn edits_stay_within_the_pixel_limit() {
 		..Default::default()
 	};
 	let schema = crate::schema::Schema::new();
-	let err = update(&conn, dir, &schema, a.id, change).unwrap_err();
+	let err = update(&conn, dir, &schema, a.id, change, None).unwrap_err();
 	assert!(err.to_string().contains("40 megapixels"), "{err}");
 
 	// edits that got in anyway fail their transform, nothing is decoded

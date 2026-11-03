@@ -118,6 +118,20 @@ async fn short_sessions_aren_t_renewed() {
 	end_session(&ts.state.db.conn(), &short.token).unwrap();
 	let err = user.call(&SessionReq {}).await.unwrap_err();
 	assert_eq!(err, Error::InvalidSessionToken);
+
+	// a row that doesn't say it renews doesn't
+	let token = "no-renews";
+	ts.state
+		.db
+		.conn()
+		.execute(
+			"INSERT INTO sessions (hash, user_id, created_at, expires_at)
+			VALUES (?1, ?2, 0, ?3)",
+			rusqlite::params![token_hash(token), id, now() + DAY],
+		)
+		.unwrap();
+	let s = ts.with_token(token).call(&SessionReq {}).await.unwrap();
+	assert!(s.session.expires_at < now() + 2 * DAY);
 }
 
 #[tokio::test]

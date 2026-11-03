@@ -249,10 +249,11 @@ async fn related_entries_of_hidden_sections_don_t_show() {
 	);
 	let home = admin.call(&list).await.unwrap().entries[0].id;
 
-	// an event of the author links to the home page they don't see
+	// an event links to the home page the author doesn't see (they
+	// couldn't link it themselves)
 	let mut live = input("events", "event", "Jazz", json!({ "page": [home] }));
 	live.published = false;
-	let event = author.call(&CreateReq(live)).await.unwrap().id;
+	let event = admin.call(&CreateReq(live)).await.unwrap().id;
 	let req = PutReq {
 		id: event,
 		site: "de".into(),
@@ -287,4 +288,42 @@ async fn related_entries_of_hidden_sections_don_t_show() {
 			.relations
 			.contains_key(&home)
 	);
+}
+
+#[tokio::test]
+async fn publishing_leaves_out_hidden_entries() {
+	use crate::schema::{Access, Role};
+	let guest = Role::new("guest", "Guest").section("events", Access::Publish);
+	let ts = TestServer::new(site_with_roles().role(guest));
+	let admin = ts.admin();
+	let guest = ts.user(Some("guest"));
+	let page = create(&admin, "pages", "page").await;
+	let event = create(&guest, "events", "event").await;
+
+	// a page the guest can't view is left out like a deleted one
+	let req = |id| PutReq {
+		id: event,
+		site: "de".into(),
+		base: None,
+		content: content("event", "E", json!({ "page": [id] })),
+	};
+	guest.call(&req(page)).await.unwrap();
+	guest.call(&PublishReq { id: event }).await.unwrap();
+	let got = guest
+		.call(&GetEntry {
+			id: event,
+			site: None,
+		})
+		.await;
+	assert!(got.unwrap().entry.fields.get("page").is_none());
+
+	admin.call(&req(page)).await.unwrap();
+	admin.call(&PublishReq { id: event }).await.unwrap();
+	let got = admin
+		.call(&GetEntry {
+			id: event,
+			site: None,
+		})
+		.await;
+	assert_eq!(got.unwrap().entry.fields["page"], json!([page]));
 }

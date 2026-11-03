@@ -205,3 +205,36 @@ fn finds_only_what_the_role_may_view() {
 	let found = search(&conn, &s, &user(None), "de", "100%").unwrap();
 	assert!(found.assets.is_empty());
 }
+
+#[test]
+fn searches_stay_cheap() {
+	let words = |q: &str| fts_query(&words(q));
+	// a single letter is no start of a word, it would read most words
+	assert_eq!(words("a bc"), "\"a\" \"bc\"*");
+	assert_eq!(words("1 2 3 4 5 6 7"), "\"1\" \"2\" \"3\" \"4\" \"5\"");
+
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site_with_roles();
+	let fields = json!({ "intro": "Plan A for an apple" });
+	save(
+		&conn,
+		&s,
+		None,
+		input("pages", "page", "Plans", fields),
+		None,
+	)
+	.unwrap();
+	assert_eq!(titles(&conn, "de", "a"), ["Plans"]);
+	assert_eq!(titles(&conn, "de", "ap"), ["Plans"]);
+	assert_eq!(titles(&conn, "de", "app"), ["Plans"]);
+	assert!(titles(&conn, "de", "f").is_empty());
+}
+
+#[test]
+fn excerpt_marks_don_t_come_from_the_content() {
+	let s = site_with_roles();
+	let fields = json!({ "intro": "a\u{1}b\u{2}c" });
+	let comp = s.entry_type("page").unwrap();
+	assert_eq!(texts(&s, comp, &fields), "abc");
+}

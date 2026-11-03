@@ -156,7 +156,7 @@ fn save(
 	id: i64,
 	input: EntryInput,
 ) -> Result<()> {
-	let checked = entries::check(conn, schema, Some(id), input)?;
+	let checked = entries::check(conn, schema, Some(id), input, None)?;
 	entries::write(conn, schema, &checked)?;
 	Ok(())
 }

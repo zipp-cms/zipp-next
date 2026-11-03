@@ -107,7 +107,8 @@ pub(crate) fn texts(
 	let mut out = vec![];
 	collect(schema, comp, fields, &mut out);
 	out.retain(|t| !t.trim().is_empty());
-	out.join("\n")
+	// the marks of excerpts, they mustn't come from the content
+	out.join("\n").replace([OPEN, CLOSE], "")
 }
 
 fn collect(
@@ -156,21 +157,30 @@ fn collect(
 	}
 }
 
+/// The most words of a search: each one is a prefix query, and anyone
+/// may search the website.
+const MAX_WORDS: usize = 5;
+
 /// The words of a search; signs alone (`-`) find nothing, so they go.
 pub(crate) fn words(q: &str) -> Vec<String> {
 	q.split_whitespace()
 		.filter(|w| w.chars().any(char::is_alphanumeric))
-		.take(10)
+		.take(MAX_WORDS)
 		.map(String::from)
 		.collect()
 }
 
 /// The words as an FTS5 query: each word the start of a word, all of
-/// them somewhere in the title, slug or texts.
+/// them somewhere in the title, slug or texts. A single letter is only
+/// that word: as a start it would read most of the index (`entry_search`
+/// has prefix indexes for two and three letters).
 pub(crate) fn fts_query(words: &[String]) -> String {
 	let quoted: Vec<String> = words
 		.iter()
-		.map(|w| format!("\"{}\"*", w.replace('"', "\"\"")))
+		.map(|w| {
+			let star = if w.chars().count() > 1 { "*" } else { "" };
+			format!("\"{}\"{star}", w.replace('"', "\"\""))
+		})
 		.collect();
 	quoted.join(" ")
 }

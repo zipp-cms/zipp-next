@@ -63,7 +63,7 @@ password.
 | `--listen` | `ZIPP_LISTEN` | address, default `127.0.0.1:8090` |
 | `--files` | `ZIPP_FILES` | where uploads go, default `files` |
 | `--public-url` | `ZIPP_PUBLIC_URL` | put before asset urls when the frontend runs elsewhere |
-| `--site-url de=https://…` | `ZIPP_SITE_URL` | the url of each site (environment: separated by commas) |
+| `--site-url de=https://…` | `ZIPP_SITE_URL` | the url of each site (environment: separated by commas), another origin than the cms, see below |
 | `--graphql-token` | `ZIPP_GRAPHQL_TOKEN` | a token frontends send that reads everything; admins make more in the studio (GraphQL), see docs/graphql.md |
 | `--dev` | `ZIPP_DEV` | development: GraphQL open without a token, noindex |
 | `--noindex` | `ZIPP_NOINDEX` | a staging site: noindex everywhere, robots.txt disallows all |
@@ -121,6 +121,13 @@ plugins, no `<base>`, framed only by the cms and `--frame-ancestor`
 (an origin, `serve` refuses anything else). GraphiQL is bundled with
 the studio, nothing loads from other servers. The dev server of the
 studio (vite) sends none.
+
+The live preview shows the website in a frame that may run its scripts
+with its own origin (`allow-scripts allow-same-origin`); it is only kept
+apart from the studio while the sites have other origins than the cms
+(`https://example.ch` and `https://cms.example.ch`, not both on one
+host). The log of requests (`RUST_LOG=tower_http=debug`) has their urls
+with `?token=` of previews: keep it at the default level in production.
 
 ### Backups
 
@@ -227,6 +234,19 @@ file; instead of `GRAPHQL_TOKEN` an admin can make the token of the
 website in the studio (GraphQL), with only the sections and sites it
 needs. `./data` belongs to uid 1000 (`chown 1000:1000 data`). An update
 is a new image: `serve` applies its migrations at the start.
+
+### The website
+
+- Previews carry their token in the url (`?token=`, a site's lasts a
+  day). The website sends no more than the origin to other sites: the
+  example sets `<meta name="referrer"
+  content="strict-origin-when-cross-origin">` in `index.html`, or the
+  proxy sends the header `Referrer-Policy` with that.
+- Anyone may search the website, and every search page asks the cms
+  twice (`search`, `searchCount`). Limit how often one visitor may load
+  the search page (the example's `/suche`, `/en/search`) at the proxy
+  (traefik's `ratelimit` middleware, a few a second per address) or
+  cache its answers for a minute.
 
 ## Migrations from the code
 

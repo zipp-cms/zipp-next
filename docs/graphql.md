@@ -30,7 +30,9 @@ The website's search is full text like Craft's `search`, over the same
 index as the studio's (the live texts of entries, not drafts): every
 word the start of a word in the title, slug or texts, accents and
 umlauts folded (`konz` finds *Konzert*, `zurich` *Zürich*), signs like
-`"`, `*` or `OR` are no syntax. `entries(search: "konzert")` and
+`"`, `*` or `OR` are no syntax. A single letter only finds that word
+and only the first five words count, so a search stays cheap for
+anyone on the website (see "The website" in docs/operations.md). `entries(search: "konzert")` and
 `entryCount(search:)` take it with the other filters, the best match
 first unless `orderBy` asks for another order; the title counts most,
 then the slug. A search page asks

@@ -326,7 +326,7 @@ pub fn publish(
 			parent_id: None,
 			fields: sd.fields.clone(),
 		};
-		match check(conn, schema, Some(id), input) {
+		match check(conn, schema, Some(id), input, user_id) {
 			Ok(c) => checked.push(c),
 			Err(Error::Invalid(errors)) if site != primary => {
 				let errors = errors

@@ -58,7 +58,7 @@ pub fn renew_session(conn: &Connection, token: &str) -> Result<Session> {
 		.filter(|s| s.expires_at > now())
 		.ok_or(Error::InvalidSessionToken)?;
 	// logging in as someone ends when it ends, a short session too
-	if s.expires_at - now() < RENEW_BELOW_MS {
+	if s.expires_at - now() < RENEW_BELOW_MS && s.impersonated_by.is_none() {
 		let expires_at = now() + SESSION_DURATION_MS;
 		let n = conn.execute(
 			"UPDATE sessions SET expires_at = ?1 WHERE hash = ?2 AND renews",

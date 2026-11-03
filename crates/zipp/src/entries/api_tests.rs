@@ -5,7 +5,7 @@ use serde_json::json;
 use super::api::*;
 use crate::error::Error;
 use crate::fixtures::site_with_roles;
-use crate::schema::{Condition, Field};
+use crate::schema::{Access, Condition, Field, Role};
 use crate::testing::TestServer;
 use crate::testing::input;
 use crate::{Change, ChangeKind};
@@ -414,4 +414,49 @@ async fn choices_for_a_picker() {
 	assert!(matches!(err, Error::Request(_)));
 	let err = ts.anonymous().call(&req).await.unwrap_err();
 	assert_eq!(err, Error::MissingSessionToken);
+}
+
+#[tokio::test]
+async fn saving_tells_nothing_of_hidden_entries_and_assets() {
+	let guest = Role::new("guest", "Guest").section("events", Access::Publish);
+	let ts = TestServer::new(site_with_roles().role(guest));
+	let admin = ts.admin();
+	let guest = ts.user(Some("guest"));
+	let page = admin
+		.call(&CreateReq(input("pages", "page", "Hidden", json!({}))))
+		.await
+		.unwrap();
+	let png = crate::fixtures::png(4, 4);
+	let image = {
+		let conn = ts.state.db.conn();
+		crate::assets::store(&conn, &ts.state.files, "a.png", &png, None)
+			.unwrap()
+	};
+
+	// a page of a section the guest can't view and an asset without asset
+	// access save like ids that don't exist: left out, no error
+	let hidden = json!({ "page": [page.id], "image": [image.id] });
+	let missing = json!({ "page": [999], "image": [999] });
+	let save =
+		|title, fields| CreateReq(input("events", "event", title, fields));
+	let a = guest.call(&save("A", hidden.clone())).await.unwrap();
+	let b = guest.call(&save("B", missing)).await.unwrap();
+	assert_eq!(a.fields, b.fields);
+	assert!(a.fields.get("page").is_none(), "{}", a.fields);
+
+	// an admin sees them
+	let e = admin.call(&save("C", hidden.clone())).await.unwrap();
+	assert_eq!(e.fields["page"], json!([page.id]));
+	assert_eq!(e.fields["image"], json!([image.id]));
+
+	// what the entry links to already stays when the guest saves it
+	let mut again = input("events", "event", "C", hidden);
+	again.slug = e.slug.clone();
+	let update = UpdateReq {
+		id: e.id,
+		input: again,
+	};
+	let e = guest.call(&update).await.unwrap();
+	assert_eq!(e.fields["page"], json!([page.id]));
+	assert_eq!(e.fields["image"], json!([image.id]));
 }

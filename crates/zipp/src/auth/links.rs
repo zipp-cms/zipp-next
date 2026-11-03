@@ -9,7 +9,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
 use super::Session;
-use crate::db::{DAY_MS, HOUR_MS, MINUTE_MS, now, random_token};
+use crate::db::{DAY_MS, HOUR_MS, MINUTE_MS, now, random_token, token_hash};
 use crate::error::{Error, Result};
 use crate::mail::Mail;
 
@@ -84,9 +84,16 @@ pub fn create_link(
 	let expires_at = now() + kind.duration_ms();
 	conn.execute(
 		"INSERT INTO user_links
-		(token, user_id, kind, created_by, created_at, expires_at)
+		(token_hash, user_id, kind, created_by, created_at, expires_at)
 		VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-		params![token, user_id, kind.as_str(), created_by, now(), expires_at],
+		params![
+			token_hash(&token),
+			user_id,
+			kind.as_str(),
+			created_by,
+			now(),
+			expires_at
+		],
 	)?;
 	Ok((token, expires_at))
 }
@@ -136,8 +143,8 @@ pub fn get_link(conn: &Connection, token: &str) -> Result<Link> {
 	let row: Option<(i64, String, Option<i64>, i64, i64)> = conn
 		.query_row(
 			"SELECT user_id, kind, created_by, created_at, expires_at
-			FROM user_links WHERE token = ?1 AND expires_at > ?2",
-			params![token, now()],
+			FROM user_links WHERE token_hash = ?1 AND expires_at > ?2",
+			params![token_hash(token), now()],
 			|r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
 		)
 		.optional()?;
@@ -178,7 +185,10 @@ pub fn take_link(
 	if !kinds.contains(&link.kind) {
 		return Err(gone());
 	}
-	conn.execute("DELETE FROM user_links WHERE token = ?1", [token])?;
+	conn.execute(
+		"DELETE FROM user_links WHERE token_hash = ?1",
+		[token_hash(token)],
+	)?;
 	Ok(link)
 }
 

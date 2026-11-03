@@ -104,7 +104,7 @@ fn migrations_change_asset_fields() {
 		fields: Some(json!({ "credit": "Anna", "licence": "CC" })),
 		..Default::default()
 	};
-	crate::assets::update(&conn, dir, &s, a.id, change).unwrap();
+	crate::assets::update(&conn, dir, &s, a.id, change, None).unwrap();
 	let fields = || crate::assets::get_asset(&conn, a.id).unwrap().fields;
 
 	// credit is renamed to photographer, licence goes
