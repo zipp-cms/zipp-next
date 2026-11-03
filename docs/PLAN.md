@@ -166,6 +166,8 @@ commit.
 - [x] The studio in the user's language: English and German, per user
 - [x] The Craft import out of the main binary: zipp's feature `craft`
 - [x] A better page picker (the tree, search) for relations and links
+- [x] The entry picker as a flyout with the sections on the left and the
+      tree on the right, like the asset library (operator 2026-11-03)
 - [x] A login dialog when the session expires, so unsaved work stays, 4b457a1
 - [x] The link box of a link field clickable over its whole height, not
       only on its text (operator 2026-11-01)

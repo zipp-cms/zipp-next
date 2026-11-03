@@ -31,6 +31,10 @@ export default {
 	'entries.alreadyChosen': 'Already chosen',
 	'entries.searchTypes': 'Search {types}',
 	'entries.didntLoad': "The entries didn't load.",
+	'entries.sections': 'Sections',
+	'entries.fieldFull': 'The field is full, take one back first',
+	'entries.chosen': '{n} chosen',
+	'entries.chosenOf': '{n} of {max} chosen',
 	'entries.openInFlyout': 'Open in the flyout',
 
 	// the sites

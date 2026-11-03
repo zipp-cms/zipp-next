@@ -5,7 +5,8 @@
 	import AddButton from 'zipp-ui/AddButton.svelte';
 	import AssetChip from '../../assets/AssetChip.svelte';
 	import AssetPicker from '../../assets/AssetPicker.svelte';
-	import EntrySearch from '../../entries/EntrySearch.svelte';
+	import EntryPicker from '../../entries/EntryPicker.svelte';
+	import { chooseLabel } from '../../entries/picker';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
 	import { chosenAssets } from '../../assets/chosen.svelte';
@@ -59,6 +60,7 @@
 			: [],
 	);
 	let picking = $state(false);
+	let pickingEntry = $state(false);
 
 	function set(change: Partial<Link>) {
 		const next = { ...link, ...change };
@@ -114,35 +116,27 @@
 			{#if entry}
 				<span class="entry">
 					<!-- a click on it chooses another one -->
-					<EntrySearch
-						{schema}
-						types={linkableTypes(schema)}
-						chosen={[entry.id]}
-						onpick={pickEntry}
+					<button
+						type="button"
+						class="chosen plain"
+						title={pickingEntry
+							? undefined
+							: t('fields.chooseAnotherEntry')}
+						aria-haspopup="dialog"
+						onclick={() => (pickingEntry = true)}
 					>
-						{#snippet trigger({ toggle, open })}
-							<button
-								type="button"
-								class="chosen plain"
-								title={t('fields.chooseAnotherEntry')}
-								aria-expanded={open}
-								onclick={toggle}
-							>
-								<span
-									class="changed-dot"
-									class:live={entry.published}
-									title={entry.published
-										? t('common.published')
-										: t('fields.notPublished')}
-								></span>
-								<span class="truncate">{entry.title}</span>
-								<span class="note">
-									{sectionOf(schema, entry.section)?.name ??
-										''}
-								</span>
-							</button>
-						{/snippet}
-					</EntrySearch>
+						<span
+							class="changed-dot"
+							class:live={entry.published}
+							title={entry.published
+								? t('common.published')
+								: t('fields.notPublished')}
+						></span>
+						<span class="truncate">{entry.title}</span>
+						<span class="note">
+							{sectionOf(schema, entry.section)?.name ?? ''}
+						</span>
+					</button>
 					<button
 						type="button"
 						class="icon"
@@ -153,11 +147,9 @@
 					</button>
 				</span>
 			{:else}
-				<EntrySearch
-					{schema}
-					types={linkableTypes(schema)}
-					onpick={pickEntry}
-				/>
+				<AddButton onclick={() => (pickingEntry = true)}>
+					{chooseLabel(schema, linkableTypes(schema))}
+				</AddButton>
 			{/if}
 		{:else if link.type === 'asset'}
 			{@const chosen =
@@ -258,6 +250,16 @@
 	</div>
 </div>
 
+{#if pickingEntry}
+	<EntryPicker
+		{schema}
+		types={linkableTypes(schema)}
+		chosen={entry ? [entry.id] : []}
+		onpick={pickEntry}
+		onclose={() => (pickingEntry = false)}
+	/>
+{/if}
+
 {#if picking}
 	<AssetPicker
 		images={false}
@@ -302,19 +304,15 @@
 		border: 1px solid var(--border-strong);
 		border-radius: var(--radius);
 		background: var(--input);
-
-		// the chooser and its button fill the row
-		> :global(.popover) {
-			flex: 1;
-			min-width: 0;
-		}
 	}
 
+	// fills the row up to the ×
 	.chosen {
 		display: flex;
+		flex: 1;
 		align-items: center;
 		gap: 0.625rem;
-		width: 100%;
+		min-width: 0;
 		min-height: 2rem;
 		font-weight: 400;
 

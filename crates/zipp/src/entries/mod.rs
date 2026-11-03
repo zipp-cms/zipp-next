@@ -176,7 +176,8 @@ pub(crate) fn from_row(row: &Row) -> rusqlite::Result<Entry> {
 	})
 }
 
-/// An entry in a picker: an [`EntryRef`] with its parent for the tree.
+/// An entry in a picker: an [`EntryRef`] with its parent for the tree,
+/// its dates and whether it has unpublished changes, for its status.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EntryChoice {
@@ -190,6 +191,10 @@ pub struct EntryChoice {
 	/// in the site
 	pub published: bool,
 	pub parent_id: Option<i64>,
+	#[serde(flatten)]
+	pub dates: Dates,
+	/// it has a draft
+	pub draft: bool,
 }
 
 /// The entries of some sections to choose from, each section whole and in
@@ -215,7 +220,10 @@ pub fn choices(
 		};
 		q.section_order(schema);
 		let entries = select(conn, &q)?;
+		let ids: Vec<i64> = entries.iter().map(|e| e.id).collect();
+		let drafts = with_drafts(conn, &ids)?;
 		all.extend(entries.into_iter().map(|e| EntryChoice {
+			draft: drafts.contains(&e.id),
 			id: e.id,
 			section: e.section,
 			ty: e.ty,
@@ -224,6 +232,7 @@ pub fn choices(
 			uri: e.uri,
 			published: e.published,
 			parent_id: e.parent_id,
+			dates: e.dates,
 		}));
 	}
 	Ok(all)

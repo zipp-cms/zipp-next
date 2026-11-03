@@ -194,8 +194,12 @@ pub fn schema() -> Schema {
 			"article",
 			"Article",
 			tabs(
-				[intro(), vec![Field::relation("categories", ["category"])]]
-					.concat(),
+				[
+					intro(),
+					// an article is in a few categories, not in all
+					vec![Field::relation("categories", ["category"]).max(3)],
+				]
+				.concat(),
 				vec![content()],
 			),
 		)

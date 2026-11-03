@@ -45,8 +45,12 @@ export type EntryRef = {
 
 export type Refs = Record<number, EntryRef>;
 
-/** An entry to choose, with its parent for the tree. */
-export type Choice = EntryRef & { parentId: number | null };
+/**
+ * An entry to choose, with its parent for the tree, its dates and
+ * whether it has a draft for its status.
+ */
+export type Choice = EntryRef &
+	Dates & { parentId: number | null; draft: boolean };
 
 /** The entries of the sections that have one of the types. */
 export function listChoices(

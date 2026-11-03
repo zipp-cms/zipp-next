@@ -578,12 +578,29 @@ fn choices_are_in_the_order_of_their_section() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();
 	let s = site();
+	let mut ids = vec![];
 	for title in ["A", "B"] {
 		let i = input("pages", "page", title, json!({}));
-		save(&conn, &s, None, i, None).unwrap();
+		ids.push(save(&conn, &s, None, i, None).unwrap().id);
 	}
+
+	// B has unpublished changes
+	let doc = crate::drafts::SiteDoc {
+		ty: "page".into(),
+		dates: Default::default(),
+		title: "B new".into(),
+		slug: "b".into(),
+		published: true,
+		fields: json!({}),
+	};
+	crate::drafts::put_draft(&conn, &s, ids[1], "de", doc, None, None).unwrap();
+
 	let all = choices(&conn, &s, &["pages"], "de").unwrap();
 	let titles: Vec<&str> = all.iter().map(|c| c.title.as_str()).collect();
 	assert_eq!(titles, ["A", "B"]);
+	let drafts: Vec<bool> = all.iter().map(|c| c.draft).collect();
+	assert_eq!(drafts, [false, true]);
+	// published gets a post date, the status shows it
+	assert!(all[0].dates.post_date.is_some());
 	assert!(choices(&conn, &s, &["pages"], "fr").is_err());
 }

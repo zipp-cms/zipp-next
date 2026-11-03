@@ -4,7 +4,9 @@
 	import { valueOf } from '../core/schema';
 	import type { EntryRef, Refs } from '../entries/api';
 	import EntryChip from '../entries/EntryChip.svelte';
-	import EntrySearch from '../entries/EntrySearch.svelte';
+	import EntryPicker from '../entries/EntryPicker.svelte';
+	import { chooseLabel } from '../entries/picker';
+	import AddButton from 'zipp-ui/AddButton.svelte';
 	import ItemActions from 'zipp-ui/ItemActions.svelte';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
@@ -36,9 +38,14 @@
 		set,
 	);
 
-	function add(e: EntryRef) {
+	let picking = $state(false);
+
+	/** In the picker a click adds an entry, or takes a chosen one back. */
+	function toggle(e: EntryRef) {
 		refs[e.id] = e;
-		set(inserted(ids, e.id));
+		const i = ids.indexOf(e.id);
+		if (i >= 0) set(removed(ids, i));
+		else if (!isFull(ids.length, max)) set(inserted(ids, e.id));
 	}
 </script>
 
@@ -64,16 +71,24 @@
 
 	{#if !isFull(ids.length, max)}
 		<div class="choose">
-			<EntrySearch
-				{schema}
-				{types}
-				chosen={ids}
-				multiple={max !== 1}
-				onpick={add}
-			/>
+			<AddButton onclick={() => (picking = true)}>
+				{chooseLabel(schema, types)}
+			</AddButton>
 		</div>
 	{/if}
 </div>
+
+{#if picking}
+	<EntryPicker
+		{schema}
+		{types}
+		chosen={ids}
+		multiple={max !== 1}
+		{max}
+		onpick={toggle}
+		onclose={() => (picking = false)}
+	/>
+{/if}
 
 <style lang="scss">
 	.relation {

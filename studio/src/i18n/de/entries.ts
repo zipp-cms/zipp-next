@@ -34,6 +34,10 @@ export default {
 	'entries.alreadyChosen': 'Bereits ausgewählt',
 	'entries.searchTypes': '{types} suchen',
 	'entries.didntLoad': 'Die Einträge konnten nicht geladen werden.',
+	'entries.sections': 'Abschnitte',
+	'entries.fieldFull': 'Das Feld ist voll, zuerst einen entfernen',
+	'entries.chosen': '{n} ausgewählt',
+	'entries.chosenOf': '{n} von {max} ausgewählt',
 	'entries.openInFlyout': 'Im Seitenfenster öffnen',
 
 	// the sites

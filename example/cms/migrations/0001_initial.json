@@ -1070,7 +1070,7 @@
             "types": [
               "category"
             ],
-            "max": null
+            "max": 3
           },
           {
             "handle": "content",
@@ -2998,7 +2998,7 @@
             "types": [
               "category"
             ],
-            "max": null
+            "max": 3
           },
           {
             "handle": "content",
