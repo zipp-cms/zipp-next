@@ -4,47 +4,94 @@ use crate::entries::query::relation_field;
 /// The arguments of `entry`, `entries` and `entryCount`, the same as the
 /// rest api (see query.rs).
 pub(super) fn entries_args(field: GqlField, schema: &Schema) -> GqlField {
+	query_args(schema)
+		.into_iter()
+		.fold(field, |f, (name, ty)| f.argument(InputValue::new(name, ty)))
+}
+
+/// The arguments of `children`: the ones about the children themselves.
+pub(super) fn children_args(schema: &Schema) -> Vec<(String, TypeRef)> {
+	let not = [
+		"site", "siteId", "section", "uri", "parent", "level", "search",
+	];
+	let args = query_args(schema).into_iter();
+	args.filter(|(n, _)| !not.contains(&n.as_str())).collect()
+}
+
+/// The criteria of `relatedToEntries`, like Craft's: the arguments of
+/// `entries` without site, order and page, in the site of the query.
+pub(super) fn criteria_input(schema: &Schema) -> InputObject {
+	let not = ["site", "siteId", "order", "orderBy", "limit", "offset"];
+	let args = query_args(schema).into_iter();
+	args.filter(|(n, _)| !not.contains(&n.as_str()))
+		.fold(InputObject::new("EntryCriteria"), |obj, (name, ty)| {
+			obj.field(InputValue::new(name, ty))
+		})
+}
+
+fn query_args(schema: &Schema) -> Vec<(String, TypeRef)> {
 	let s = || TypeRef::named(TypeRef::STRING);
-	// lists like in Craft, so crelte's queries fit; one value is used
+	// lists like in Craft, so crelte's queries fit
 	let l = || TypeRef::named_list(TypeRef::STRING);
 	let i = || TypeRef::named(TypeRef::INT);
-	let mut field = field;
+	let q = || TypeRef::named_list("QueryArgument");
+	let args = vec![
+		("site", l()),
+		("siteId", q()),
+		// one, several or `["not", "news"]`, the same for types
+		("section", l()),
+		("type", l()),
+		("uri", l()),
+		("slug", l()),
+		// Craft's: an id, a list of them, or `["not", 1, 2]`
+		("id", q()),
+		("ids", TypeRef::named_nn_list(TypeRef::INT)),
+		("parent", i()),
+		("level", i()),
+		("related", i()),
+		// Craft's: `[1, 2]` either, `["and", 1, 2]` both
+		("relatedTo", q()),
+		// each of the list, like Craft
+		("relatedToEntries", TypeRef::named_nn_list("EntryCriteria")),
+		("search", s()),
+		("order", s()),
+		// Craft's `postDate DESC`
+		("orderBy", s()),
+		("limit", i()),
+		("offset", i()),
+		("where", TypeRef::named_nn_list("Where")),
+	];
+	let mut args: Vec<(String, TypeRef)> =
+		args.into_iter().map(|(n, t)| (n.to_string(), t)).collect();
 	// the relation fields like Craft's: ids, `:notempty:` or `:empty:`
 	for handle in relation_args(schema) {
-		field = field.argument(InputValue::new(
-			handle,
-			TypeRef::named_list("QueryArgument"),
-		));
+		args.push((handle, q()));
 	}
-	field
-		.argument(InputValue::new("site", l()))
-		.argument(InputValue::new(
-			"siteId",
-			TypeRef::named_list("QueryArgument"),
-		))
-		.argument(InputValue::new("section", l()))
-		.argument(InputValue::new("type", l()))
-		.argument(InputValue::new("uri", l()))
-		.argument(InputValue::new("slug", l()))
-		// Craft's: an id, a list of them, or `["not", 1, 2]`
-		.argument(InputValue::new("id", TypeRef::named_list("QueryArgument")))
-		.argument(InputValue::new("ids", TypeRef::named_nn_list(TypeRef::INT)))
-		.argument(InputValue::new("parent", i()))
-		.argument(InputValue::new("related", i()))
-		.argument(InputValue::new("search", s()))
-		.argument(InputValue::new("order", s()))
-		// Craft's `postDate DESC`
-		.argument(InputValue::new("orderBy", s()))
-		.argument(InputValue::new("limit", i()))
-		.argument(InputValue::new("offset", i()))
-		.argument(InputValue::new("where", TypeRef::named_nn_list("Where")))
+	args
 }
 
 /// The arguments of the entry queries, a relation field of the same name
 /// isn't one.
 pub(super) const TAKEN: &[&str] = &[
-	"site", "siteId", "section", "type", "uri", "slug", "id", "ids", "parent",
-	"related", "search", "order", "orderBy", "limit", "offset", "where",
+	"site",
+	"siteId",
+	"section",
+	"type",
+	"uri",
+	"slug",
+	"id",
+	"ids",
+	"parent",
+	"level",
+	"related",
+	"relatedTo",
+	"relatedToEntries",
+	"search",
+	"order",
+	"orderBy",
+	"limit",
+	"offset",
+	"where",
 ];
 
 /// The relation fields of entry types, unless an argument has the name.
@@ -117,8 +164,23 @@ pub(super) fn site_object() -> Object {
 pub(super) fn params_from_args(
 	ctx: &ResolverContext,
 ) -> async_graphql::Result<Vec<(String, String)>> {
+	let schema = ctx.data::<Arc<Schema>>()?;
+	params_of(schema, ctx.args.iter())
+}
+
+/// The parameters of the rest api of some arguments, also of the
+/// criteria of `relatedToEntries`.
+fn params_of<'a>(
+	schema: &Schema,
+	args: impl Iterator<
+		Item = (
+			&'a async_graphql::Name,
+			async_graphql::dynamic::ValueAccessor<'a>,
+		),
+	>,
+) -> async_graphql::Result<Vec<(String, String)>> {
 	let mut params = vec![];
-	for (name, value) in ctx.args.iter() {
+	for (name, value) in args {
 		let name = name.as_str();
 		if value.is_null() {
 			continue;
@@ -133,8 +195,44 @@ pub(super) fn params_from_args(
 					_ => params.push(("ids".into(), items.join(","))),
 				}
 			}
-			// several types
-			"type" => params.push(("type".into(), all(&value)?.join(","))),
+			// one or several, or Craft's `["not", "news"]`
+			"section" | "type" => {
+				let items = all(&value)?;
+				let not = if name == "type" {
+					"notTypes"
+				} else {
+					"notSections"
+				};
+				match items.split_first() {
+					Some((n, rest)) if n == "not" => {
+						params.push((not.into(), rest.join(",")))
+					}
+					_ => params.push((name.into(), items.join(","))),
+				}
+			}
+			// either of the list, `["and", ..]` each of them
+			"relatedTo" => {
+				let items = all(&value)?;
+				match items.split_first() {
+					Some((and, rest)) if and == "and" => {
+						for id in rest {
+							params.push((name.into(), id.clone()));
+						}
+					}
+					Some((or, rest)) if or == "or" => {
+						params.push((name.into(), rest.join(",")))
+					}
+					_ => params.push((name.into(), items.join(","))),
+				}
+			}
+			"relatedToEntries" => {
+				for criteria in value.list()?.iter() {
+					let criteria =
+						params_of(schema, criteria.object()?.iter())?;
+					let criteria = serde_urlencoded::to_string(&criteria)?;
+					params.push((name.into(), criteria));
+				}
+			}
 			"ids" => {
 				let ids: Vec<String> = value
 					.list()?
@@ -157,10 +255,10 @@ pub(super) fn params_from_args(
 			}
 			// full text, like Craft's
 			"search" => params.push(("text".into(), value.string()?.into())),
-			"parent" | "related" | "limit" | "offset" => {
+			"parent" | "level" | "related" | "limit" | "offset" => {
 				params.push((name.into(), value.i64()?.to_string()))
 			}
-			"site" | "section" | "uri" | "slug" | "handle" => {
+			"site" | "uri" | "slug" | "handle" => {
 				let Some(v) = first(&value)? else { continue };
 				let v = match v.as_str() {
 					// Craft's name of the home page
@@ -169,13 +267,12 @@ pub(super) fn params_from_args(
 				};
 				params.push((name.into(), v));
 			}
-			_ if relation_field(ctx.data::<Arc<Schema>>()?, name) => {
+			_ if relation_field(schema, name) => {
 				params.push((format!("r.{name}"), all(&value)?.join(",")));
 			}
 			// the position of a site, or its handle
 			"siteId" => {
 				let Some(v) = first(&value)? else { continue };
-				let schema = ctx.data::<Arc<Schema>>()?;
 				let site = match v.parse::<i64>() {
 					Ok(n) => schema.site_by_id(n),
 					Err(_) => schema.get_site(&v),

@@ -20,19 +20,19 @@ async fn list_route(
 ) -> ApiResult<ListReq> {
 	let conn = state.db.conn();
 	let mut q = Query::parse(&state.schema, &params).map_err(Error::Request)?;
-	if let Some(section) = &q.section {
+	for section in q.section.iter().chain(&q.any_sections) {
 		auth.check(&state.schema, section, Access::View)?;
 	}
 	// a search over all sections only finds what the role sees, also in
-	// the total, or a search would tell whether a hidden entry matches
+	// the total, or a search would tell whether a hidden entry matches;
+	// the entries of `relatedToEntries` too
 	if !auth.admin() {
 		let sections = state.schema.sections.iter();
-		q.sections = Some(
-			sections
-				.filter(|s| auth.can(&state.schema, &s.handle, Access::View))
-				.map(|s| s.handle.clone())
-				.collect(),
-		);
+		let sections: Vec<String> = sections
+			.filter(|s| auth.can(&state.schema, &s.handle, Access::View))
+			.map(|s| s.handle.clone())
+			.collect();
+		q.each_mut(&mut |q| q.sections = Some(sections.clone()));
 	}
 
 	let (entries, total) = list(&conn, &q)?;

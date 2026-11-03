@@ -118,3 +118,59 @@ fn published_queries_take_str_params() {
 	assert_eq!((&*q.site, q.ty.as_deref()), ("en", Some("event")));
 	assert!(Query::published(&site(), &[("site", "fr")]).is_err());
 }
+
+#[test]
+fn parses_craft_lists() {
+	let q = parse("section=pages,events&notTypes=event&level=2").unwrap();
+	assert_eq!(q.section, None);
+	assert_eq!(q.any_sections, ["pages", "events"]);
+	assert_eq!(q.not_types, ["event"]);
+	assert_eq!(q.level, Some(2));
+	let (sql, _) = q.sql_from();
+	assert!(sql.contains("e.section IN (?, ?)"), "{sql}");
+	assert!(sql.contains("e.type NOT IN (?)"), "{sql}");
+
+	let q = parse("notSections=pages").unwrap();
+	assert_eq!(q.not_sections, ["pages"]);
+	assert!(
+		parse("section=pages,news")
+			.unwrap_err()
+			.contains("unknown section news")
+	);
+	assert!(parse("notTypes=wiki").is_err());
+	assert!(parse("level=0").is_err());
+	assert!(parse("level=21").is_err());
+}
+
+#[test]
+fn related_to_entries_are_a_query_of_the_site() {
+	let params = [
+		("relatedToEntries", "section=pages"),
+		("site", "en"),
+		("relatedTo", "1,2"),
+	];
+	let q = Query::published(&site(), &params).unwrap();
+	let [Related::Entries(of), Related::Ids(ids)] = q.related_to.as_slice()
+	else {
+		panic!("{:?}", q.related_to);
+	};
+	assert_eq!(of.section.as_deref(), Some("pages"));
+	assert_eq!(of.site, "en");
+	// no tree, it only says which entries
+	assert_eq!(of.order, Order::Column("updated_at"));
+	assert_eq!(ids, &[1, 2]);
+	assert_eq!(q.with().0, "");
+
+	let news = [("relatedToEntries", "section=news")];
+	assert!(Query::published(&site(), &news).is_err());
+	assert!(parse("relatedTo=one").is_err());
+	assert!(parse("relatedTo=").unwrap().related_to.is_empty());
+}
+
+#[test]
+fn order_by_score_keeps_the_default() {
+	let q = parse("text=konzert&orderBy=score").unwrap();
+	assert_eq!(q.order, Order::Relevance);
+	let q = parse("section=pages&orderBy=score").unwrap();
+	assert_eq!(q.order, Order::Structure);
+}

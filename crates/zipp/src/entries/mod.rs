@@ -466,19 +466,17 @@ pub(crate) fn select(conn: &Connection, q: &Query) -> Result<Vec<Entry>> {
 	Ok(entries)
 }
 
-/// The children of the query's parents in their order, at most `each` of
-/// a parent; the query's own order and limit don't count.
-pub(crate) fn children(
-	conn: &Connection,
-	q: &Query,
-	each: i64,
-) -> Result<Vec<Entry>> {
+/// The children of the query's parents in the query's order, its limit
+/// and offset for each parent.
+pub(crate) fn children(conn: &Connection, q: &Query) -> Result<Vec<Entry>> {
 	let (from, params) = q.sql_from();
+	let order = q.order_by();
+	let (first, last) = (q.offset, q.offset + q.limit);
 	// the columns of the entries have different names
 	let sql = format!(
 		"SELECT * FROM (SELECT {COLUMNS}, ROW_NUMBER() OVER (
-			PARTITION BY e.parent_id ORDER BY e.position, e.id) AS n {from})
-		WHERE n <= {each} ORDER BY parent_id, n"
+			PARTITION BY e.parent_id {order}) AS n {from})
+		WHERE n > {first} AND n <= {last} ORDER BY parent_id, n"
 	);
 	let mut stmt = conn.prepare(&sql)?;
 	let entries = stmt

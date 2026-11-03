@@ -137,6 +137,8 @@ like Craft shows a nested entry: its head and the outline show
 dropdown and button group (its label), rich text, markdown, link (its label or target) and
 relation (the entry's title) fields can give it, the check refuses others.
 Without one, or while it is empty, a block shows its first text or link.
+GraphQL gives a block a `slug` of the text or number of that field, for
+anchors.
 
 ## Content is JSON
 
@@ -152,7 +154,9 @@ them and you can ask what links to an entry:
 `/api/entries?type=event&f.city=Bern&f.date.gte=2026-11-01&order=date`,
 `/api/entries?related=5`, `/api/entries?site=en&uri=about/team`,
 `/api/entries?section=pages&order=structure` (the tree; with
-`parent=5` the children in their order). See
+`parent=5` the children in their order, `level=1` the top entries),
+`/api/entries?section=pages,news&relatedTo=5` (both sections, linking
+to 5 or linked from it). See
 `crates/zipp/src/query.rs`.
 
 ## Rich text

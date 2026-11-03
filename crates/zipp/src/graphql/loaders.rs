@@ -31,8 +31,12 @@ struct Source {
 /// Entries by site and id.
 struct Entries(Arc<Source>);
 
-/// The children of entries by site and parent, in their order.
+/// The children of entries by site, the arguments of `children` and
+/// parent, in their order.
 struct Children(Arc<Source>);
+
+/// The site, the parameters of the arguments and the parent.
+type ChildrenKey = (String, Vec<(String, String)>, i64);
 
 struct Assets(Db);
 
@@ -96,25 +100,39 @@ impl Loader<(String, i64)> for Entries {
 	}
 }
 
-impl Loader<(String, i64)> for Children {
+impl Loader<ChildrenKey> for Children {
 	type Value = Vec<Entry>;
 	type Error = GqlError;
 
 	async fn load(
 		&self,
-		keys: &[(String, i64)],
-	) -> async_graphql::Result<HashMap<(String, i64), Vec<Entry>>> {
+		keys: &[ChildrenKey],
+	) -> async_graphql::Result<HashMap<ChildrenKey, Vec<Entry>>> {
 		let Source { db, schema, viewer } = &*self.0;
+		let mut by_args: BTreeMap<_, Vec<i64>> = BTreeMap::new();
+		for (site, args, parent) in keys {
+			by_args.entry((site, args)).or_default().push(*parent);
+		}
+
 		let mut out: HashMap<_, Vec<Entry>> = HashMap::new();
-		for (site, parents) in by_site(keys) {
-			let params = site_params(site, [("order", "structure".into())]);
+		for ((site, args), parents) in by_args {
+			// in their order and all of them, unless the arguments say
+			let mut params = site_params(
+				site,
+				[
+					("order", "structure".into()),
+					("limit", MAX_CHILDREN.to_string()),
+				],
+			);
+			params.extend(args.iter().cloned());
 			let mut q = viewer_query(schema, viewer, &params)?;
 			q.parents = parents;
+			q.limit = q.limit.min(MAX_CHILDREN);
 			let conn = db.conn();
-			let children = crate::entries::children(&conn, &q, MAX_CHILDREN)?;
+			let children = crate::entries::children(&conn, &q)?;
 			for e in with_drafts(&conn, viewer, children)? {
-				let parent = e.parent_id.unwrap_or_default();
-				out.entry((e.site.clone(), parent)).or_default().push(e);
+				let key = (site.clone(), args.clone(), e.parent_id.unwrap());
+				out.entry(key).or_default().push(e);
 			}
 		}
 		Ok(out)
@@ -149,35 +167,40 @@ pub(super) fn viewer_query(
 	params: &[(String, String)],
 ) -> async_graphql::Result<Query> {
 	let mut q = Query::parse(schema, params).map_err(GqlError::new)?;
-	q.published_only = viewer.published_only;
-	match &viewer.preview {
-		Some(Preview::Entry(id, _)) => q.preview_id = Some(*id),
-		Some(Preview::All(sections)) => q.preview_sections = sections.clone(),
-		None => {}
-	}
-	// a frontend gets nothing of an offline site, counts neither; the
-	// preview of one entry only that entry, its link opens no more
-	if schema.is_offline(&q.site) && viewer.published_only {
+	// the same for the entries of `relatedToEntries`
+	q.each_mut(&mut |q| {
+		q.published_only = viewer.published_only;
 		match &viewer.preview {
-			None => q.nothing = true,
-			Some(Preview::Entry(id, _)) => match &mut q.ids {
-				Some(ids) => ids.retain(|i| i == id),
-				None => q.ids = Some(vec![*id]),
-			},
-			Some(Preview::All(_)) => {}
+			Some(Preview::Entry(id, _)) => q.preview_id = Some(*id),
+			Some(Preview::All(sections)) => {
+				q.preview_sections = sections.clone()
+			}
+			None => {}
 		}
-	}
+		// a frontend gets nothing of an offline site, counts neither; the
+		// preview of one entry only that entry, its link opens no more
+		if schema.is_offline(&q.site) && viewer.published_only {
+			match &viewer.preview {
+				None => q.nothing = true,
+				Some(Preview::Entry(id, _)) => match &mut q.ids {
+					Some(ids) => ids.retain(|i| i == id),
+					None => q.ids = Some(vec![*id]),
+				},
+				Some(Preview::All(_)) => {}
+			}
+		}
 
-	// nor of what its token doesn't read
-	let scope = &viewer.scope;
-	match &q.section {
-		Some(s) if !scope.section(s) => q.nothing = true,
-		Some(_) => {}
-		None => q.sections = scope.sections.clone(),
-	}
-	if !scope.site(&q.site) {
-		q.nothing = true;
-	}
+		// nor of what its token doesn't read
+		let scope = &viewer.scope;
+		match &q.section {
+			Some(s) if !scope.section(s) => q.nothing = true,
+			Some(_) => {}
+			None => q.sections = scope.sections.clone(),
+		}
+		if !scope.site(&q.site) {
+			q.nothing = true;
+		}
+	});
 	Ok(q)
 }
 
@@ -265,14 +288,16 @@ pub(super) async fn entries_by_id(
 	Ok(entries)
 }
 
-/// The children of an entry the viewer sees, in their order.
+/// The children of an entry the viewer sees with the parameters of the
+/// arguments of `children`, in their order.
 pub(super) async fn children_of(
 	ctx: &ResolverContext<'_>,
 	site: &str,
 	id: i64,
+	args: Vec<(String, String)>,
 ) -> async_graphql::Result<Vec<Entry>> {
 	spend(ctx, 1)?;
-	let key = (site.to_string(), id);
+	let key = (site.to_string(), args, id);
 	let children = Loaders::of(ctx)?.children.load_one(key).await?;
 	let children = children.unwrap_or_default();
 	spend(ctx, children.len())?;

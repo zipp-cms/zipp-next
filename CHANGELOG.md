@@ -10,6 +10,12 @@
   TableMaker tables into table fields (by the order of the columns) and
   the fields of assets into the asset fields; each volume is a folder
   with Craft's folders in it (`--volume handle=folder:dir` names it).
+- GraphQL takes several sections (`section: ["news", "pages"]`, an
+  unknown one is an error instead of only the first counting), `["not",
+  ...]` for sections and types, `level`, `orderBy: "score"`, Craft's
+  `relatedTo` and `relatedToEntries`, and `children(...)` the arguments
+  about the children (`limit`, `type`, `orderBy`, ...). Blocks have a
+  `slug` of their title field, for anchors.
 
 ## 0.1.0 (2026-11-03)
 

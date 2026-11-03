@@ -94,12 +94,27 @@ servers.
 ## Craft's arguments and fields
 
 Queries take `id` (one, several or
-`["not", 1, 2]`), `type` (one or several) and `orderBy` (`postDate
-DESC`, `title`, an indexed field); without an order a channel is newest
-first and a structure in its order, like Craft. Every relation field
+`["not", 1, 2]`), `section` and `type` (one, several or `["not",
+"wikiList"]`, an unknown one is an error), `level` (of a structure, 1
+the top entries) and `orderBy` (`postDate DESC`, `title`, an indexed
+field, `score` the best match of `search` and without one ignored like
+in Craft); without an order a channel is newest first and a structure
+in its order, like Craft. Every relation field
 of the entry types is an argument too: `entries(section: "offers",
 offerCategory: 5)` the entries pointing to 5, `offerCategory:
-":notempty:"` to anything, `":empty:"` to nothing. Image transforms may
+":notempty:"` to anything, `":empty:"` to nothing. `relatedTo: [1, 2]`
+are the entries that point to 1 or 2 or that they point to, in any
+field, `["and", 1, 2]` to both; `relatedToEntries: [{ section: "wiki"
+}]` the same with the entries of criteria (the arguments of `entries`
+without site, order and page, in the site of the query and only what
+the viewer may see), each criteria of the list must hold, like Craft's.
+`children` takes the arguments of `entries` that are about the
+children (`type`, `id`, `slug`, `relatedTo`, `relatedToEntries`,
+relation fields, `where`, `orderBy`, `limit` and `offset` per parent):
+`children(relatedToEntries: [{ section: "wiki" }]) { title }`. A
+block has a `slug` for anchors, like a nested entry in Craft: of the
+text of its title field (`.block_title`), none without one or when the
+block has a field named so. Image transforms may
 have Craft's names like `land_w800`. Ids of entries and
 assets are strings (`ID`) like Craft's. Entries have
 `postDate`, `expiryDate`, `dateCreated`, `dateUpdated`, `language`,

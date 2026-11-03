@@ -1,18 +1,26 @@
 //! Listing entries: `?section=events&f.city=Bern&f.price.lt=20&order=-price`.
 //!
 //! - `site`: whose titles, uris and fields, default the primary site
-//! - `section`, `type`, `slug`, `uri`: exact match
+//! - `section`, `type`: one or several `a,b`; `notSections`,
+//!   `notTypes` leave them out
+//! - `slug`, `uri`: exact match
 //! - `ids=1,2,3`: only these entries
 //! - `parent=5`: the children of entry 5 in a structure
+//! - `level=1`: the entries at that level of a structure, 1 the top
 //! - `search`: part of the title
 //! - `text`: full text, all the words in the title, slug or texts (see
 //!   `search/`), the best match first unless an order is asked for
 //! - `related=5`: entries that link to entry 5, also from inside blocks
+//! - `relatedTo=1,2`: entries that link to or are linked from one of
+//!   them, like Craft's; each `relatedTo` more must hold too (and)
+//! - `relatedToEntries=section%3Dwiki`: the same with the entries of a
+//!   query (its parameters url encoded), in the site of the query
 //! - `f.<field>[.<op>]=value`: an indexed field, op is one of eq (default),
 //!   ne, lt, lte, gt, gte; needs `type`
 //! - `order`: `title`, `created`, `updated`, `structure` (the tree of a
 //!   structure, depth first; with `parent` the order of the children) or
-//!   an indexed field, `-` for descending, default `-updated`
+//!   an indexed field, `-` for descending, default `-updated`; Craft's
+//!   `orderBy` (`postDate DESC`, `score` the best match of `text`)
 //! - `limit` (default 100), `offset`
 
 use rusqlite::types::Value;
@@ -49,11 +57,17 @@ pub(crate) fn parse_ids(key: &str, list: &str) -> Result<Vec<i64>, String> {
 pub struct Query {
 	pub site: String,
 	pub section: Option<String>,
+	/// several sections, `section=a,b`
+	pub(crate) any_sections: Vec<String>,
+	/// sections left out, Craft's `section: ["not", "news"]`
+	pub(crate) not_sections: Vec<String>,
 	/// only these sections, what the token of a frontend reads
 	pub sections: Option<Vec<String>>,
 	pub ty: Option<String>,
 	/// several types, `type=a,b`; filters and order need a single one
 	pub types: Vec<String>,
+	/// types left out, Craft's `type: ["not", "wikiList"]`
+	pub(crate) not_types: Vec<String>,
 	/// entries left out, Craft's `id: ["not", 1]`
 	pub not_ids: Vec<i64>,
 	pub slug: Option<String>,
@@ -62,10 +76,14 @@ pub struct Query {
 	/// children of these entries, `parent=5`; GraphQL loads the children
 	/// of several entries at once
 	pub parents: Vec<i64>,
+	/// the level in a structure, 1 the top entries
+	pub(crate) level: Option<i64>,
 	pub search: Option<String>,
 	/// full text, the words of the website's search
 	pub text: Option<String>,
 	pub related: Option<i64>,
+	/// related to some entries, each of the list (Craft's `relatedTo`)
+	pub(crate) related_to: Vec<Related>,
 	/// by a relation field of the entries, `r.offerCategory=5`
 	pub(crate) relations: Vec<RelationFilter>,
 	pub(crate) filters: Vec<Filter>,
@@ -97,6 +115,19 @@ pub(crate) struct RelationFilter {
 	/// to nothing, `:empty:`
 	pub none: bool,
 }
+
+/// Entries that link to or are linked from one of some entries, in
+/// either direction like Craft's `relatedTo`.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum Related {
+	Ids(Vec<i64>),
+	/// the entries of a query, Craft's `relatedToEntries`
+	Entries(Box<Query>),
+}
+
+/// The deepest `level` of a structure, the query nests a select per
+/// level.
+const MAX_LEVEL: i64 = 20;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Filter {
@@ -139,17 +170,22 @@ impl Query {
 		Query {
 			site: schema.primary_site().handle.clone(),
 			section: None,
+			any_sections: vec![],
+			not_sections: vec![],
 			sections: None,
 			ty: None,
 			types: vec![],
+			not_types: vec![],
 			not_ids: vec![],
 			slug: None,
 			uri: None,
 			ids: None,
 			parents: vec![],
+			level: None,
 			search: None,
 			text: None,
 			related: None,
+			related_to: vec![],
 			relations: vec![],
 			filters: vec![],
 			order: Order::Column("updated_at"),
@@ -212,11 +248,54 @@ impl Query {
 					}
 					q.site = value.clone();
 				}
-				"section" => {
-					if schema.get_section(value).is_none() {
-						return Err(format!("unknown section {value}"));
+				"section" | "notSections" => {
+					let sections: Vec<String> =
+						value.split(',').map(Into::into).collect();
+					if let Some(s) = sections
+						.iter()
+						.find(|s| schema.get_section(s).is_none())
+					{
+						return Err(format!("unknown section {s}"));
 					}
-					q.section = Some(value.clone());
+					match (key.as_str(), sections.as_slice()) {
+						("notSections", _) => q.not_sections = sections,
+						(_, [one]) => q.section = Some(one.clone()),
+						_ => q.any_sections = sections,
+					}
+				}
+				"notTypes" => {
+					let types: Vec<String> =
+						value.split(',').map(Into::into).collect();
+					if let Some(t) =
+						types.iter().find(|t| schema.entry_type(t).is_none())
+					{
+						return Err(format!("unknown entry type {t}"));
+					}
+					q.not_types = types;
+				}
+				"level" => {
+					let level = int(key, value)?;
+					if !(1..=MAX_LEVEL).contains(&level) {
+						return Err(format!(
+							"level must be between 1 and {MAX_LEVEL}"
+						));
+					}
+					q.level = Some(level);
+				}
+				// none is no filter, like in Craft
+				"relatedTo" => match parse_ids(key, value)? {
+					ids if ids.is_empty() => {}
+					ids => q.related_to.push(Related::Ids(ids)),
+				},
+				"relatedToEntries" => {
+					let params: Vec<(String, String)> =
+						serde_urlencoded::from_str(value).map_err(|_| {
+							format!("{key} must be url encoded parameters")
+						})?;
+					let mut of = Self::parse(schema, &params)?;
+					// only which entries, no tree to order by
+					of.order = Order::Column("updated_at");
+					q.related_to.push(Related::Entries(Box::new(of)));
 				}
 				"slug" => q.slug = Some(value.clone()),
 				"uri" => q.uri = Some(value.trim_matches('/').into()),
@@ -255,6 +334,11 @@ impl Query {
 				"orderBy" => {
 					let mut words = value.split_whitespace();
 					let name = words.next().unwrap_or("postDate");
+					// Craft's relevance: the default with a search, without
+					// one it is ignored like in Craft
+					if name == "score" {
+						continue;
+					}
 					q.desc = words
 						.next()
 						.is_some_and(|d| d.eq_ignore_ascii_case("desc"));
@@ -280,6 +364,13 @@ impl Query {
 			}
 		}
 
+		// the entries related to are in the same site
+		for r in &mut q.related_to {
+			if let Related::Entries(of) = r {
+				of.each_mut(&mut |of| of.site = q.site.clone());
+			}
+		}
+
 		// signs alone search nothing, so there is no relevance to order by
 		let words = q
 			.text
@@ -293,6 +384,17 @@ impl Query {
 		}
 
 		Ok(q)
+	}
+
+	/// Calls `f` with the query and the queries of its `relatedToEntries`,
+	/// so what a viewer may see holds for them too.
+	pub(crate) fn each_mut(&mut self, f: &mut impl FnMut(&mut Query)) {
+		f(self);
+		for r in &mut self.related_to {
+			if let Related::Entries(of) = r {
+				of.each_mut(f);
+			}
+		}
 	}
 
 	/// The order of a name of `order` or Craft's `orderBy`, else of an
@@ -407,6 +509,18 @@ impl Query {
 		if self.section.is_some() {
 			cond("e.section = ?".into(), vec![text(&self.section)]);
 		}
+		if !self.any_sections.is_empty() {
+			let values =
+				self.any_sections.iter().map(|s| Value::Text(s.clone()));
+			let marks = marks(self.any_sections.len());
+			cond(format!("e.section IN ({marks})"), values.collect());
+		}
+		if !self.not_sections.is_empty() {
+			let values =
+				self.not_sections.iter().map(|s| Value::Text(s.clone()));
+			let marks = marks(self.not_sections.len());
+			cond(format!("e.section NOT IN ({marks})"), values.collect());
+		}
 		if let Some(sections) = &self.sections {
 			let values = sections.iter().map(|s| Value::Text(s.clone()));
 			// none of none
@@ -424,6 +538,15 @@ impl Query {
 			let values =
 				self.types.iter().map(|t| Value::Text(t.clone())).collect();
 			cond(format!("e.type IN ({marks})"), values);
+		}
+		if !self.not_types.is_empty() {
+			let marks = marks(self.not_types.len());
+			let values = self
+				.not_types
+				.iter()
+				.map(|t| Value::Text(t.clone()))
+				.collect();
+			cond(format!("e.type NOT IN ({marks})"), values);
 		}
 		if !self.not_ids.is_empty() {
 			let marks = marks(self.not_ids.len());
@@ -448,6 +571,17 @@ impl Query {
 				self.parents.iter().map(|i| Value::Integer(*i)).collect();
 			cond(format!("e.parent_id IN ({marks})"), values);
 		}
+		if let Some(level) = self.level {
+			// the parents of a level are the entries of the level above
+			let mut sql = "e.parent_id IS NULL".to_string();
+			for _ in 1..level {
+				sql = format!(
+					"e.parent_id IN (SELECT id FROM entries e \
+					WHERE {sql} AND e.deleted_at IS NULL)"
+				);
+			}
+			cond(sql, vec![]);
+		}
 		if let Some(search) = &self.search {
 			let like = format!("%{}%", escape_like(search));
 			cond("s.title LIKE ? ESCAPE '\\'".into(), vec![like.into()]);
@@ -470,6 +604,28 @@ impl Query {
 			let sql = "e.id IN (SELECT entry_id FROM entry_relations \
 				WHERE target_id = ? AND site = s.site)";
 			cond(sql.into(), vec![Value::Integer(id)]);
+		}
+		for r in &self.related_to {
+			let (of, values) = match r {
+				Related::Ids(ids) => (
+					marks(ids.len()),
+					ids.iter().map(|i| Value::Integer(*i)).collect(),
+				),
+				Related::Entries(q) => {
+					let (from, values) = q.sql_from();
+					(format!("SELECT e.id {from}"), values)
+				}
+			};
+			// to them or from them
+			let sql = format!(
+				"(e.id IN (SELECT entry_id FROM entry_relations \
+				WHERE site = s.site AND target_id IN ({of})) \
+				OR e.id IN (SELECT target_id FROM entry_relations \
+				WHERE site = s.site AND entry_id IN ({of})))"
+			);
+			let mut both = values.clone();
+			both.extend(values);
+			cond(sql, both);
 		}
 		for r in &self.relations {
 			let of = "SELECT entry_id FROM entry_relations \

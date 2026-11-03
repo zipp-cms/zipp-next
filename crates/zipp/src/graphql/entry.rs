@@ -96,7 +96,9 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 					return Ok(parent.into_iter().next().map(entry_value));
 				}
 				"children" => {
-					let children = children_of(&ctx, &e.site, e.id).await?;
+					let args = params_from_args(&ctx)?;
+					let children =
+						children_of(&ctx, &e.site, e.id, args).await?;
 					return Ok(Some(FieldValue::list(
 						children.into_iter().map(entry_value),
 					)));
@@ -411,7 +413,13 @@ pub(super) fn content_objects(
 			let mut obj = Object::new(format!("{}_Entry", comp.handle))
 				.implement("Entry");
 			for (name, _) in entry_common() {
-				obj = obj.field(entry_common_field(name));
+				let mut field = entry_common_field(name);
+				if name == "children" {
+					for (arg, ty) in children_args(schema) {
+						field = field.argument(InputValue::new(arg, ty));
+					}
+				}
+				obj = obj.field(field);
 			}
 			// the plugins', unless a field has the name
 			for f in entry_fields {
@@ -434,6 +442,10 @@ pub(super) fn content_objects(
 					|ctx| block_value(ctx, |b| GqlValue::from(b.ty.clone())),
 				))
 		};
+		// unless the block has a field named so
+		if !comp.entry && !comp.fields.iter().any(|f| f.handle == "slug") {
+			obj = obj.field(block_slug(comp.title_field.clone()));
+		}
 		for field in &comp.fields {
 			if let Some(f) = content_field(schema, &comp.handle, field) {
 				obj = obj.field(f);
@@ -442,6 +454,25 @@ pub(super) fn content_objects(
 		objects.push(obj);
 	}
 	objects
+}
+
+/// The slug of a block for anchors, like a nested entry's in Craft: of
+/// the text or number of its title field ([`Schema::block_title`]), none
+/// without one.
+fn block_slug(title_field: Option<String>) -> GqlField {
+	GqlField::new("slug", TypeRef::named(TypeRef::STRING), move |ctx| {
+		let title_field = title_field.clone();
+		FieldFuture::new(async move {
+			let b = ctx.parent_value.try_downcast_ref::<Block>()?;
+			let title = match title_field.map(|f| &b.fields[&f]) {
+				Some(Value::String(s)) => s.clone(),
+				Some(Value::Number(n)) => n.to_string(),
+				_ => return Ok(None),
+			};
+			let slug = crate::entries::slugify(&title);
+			Ok((!slug.is_empty()).then(|| FieldValue::value(slug)))
+		})
+	})
 }
 
 /// A cell of a table row, typed by its column: numbers as floats, a

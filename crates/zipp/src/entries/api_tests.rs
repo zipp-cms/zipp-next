@@ -344,6 +344,38 @@ async fn lists_tell_nothing_of_hidden_sections() {
 }
 
 #[tokio::test]
+async fn lists_of_several_sections_and_related_entries() {
+	let schema = site_with_roles()
+		.role(Role::new("reader", "Reader").section("pages", Access::View));
+	let ts = TestServer::new(schema);
+	let admin = ts.admin();
+	let page = admin
+		.call(&CreateReq(input("pages", "page", "About", json!({}))))
+		.await
+		.unwrap();
+	let fields = json!({ "page": [page.id] });
+	admin
+		.call(&CreateReq(input("events", "event", "Jazz", fields)))
+		.await
+		.unwrap();
+
+	let both = params(&[("section", "pages,events")]);
+	assert_eq!(admin.call(&both).await.unwrap().total, 2);
+	// each section needs its role
+	let author = ts.user(Some("author"));
+	let home = params(&[("section", "home,events")]);
+	assert_eq!(author.call(&home).await.unwrap_err(), Error::Forbidden);
+
+	// the pages events point to; a role that doesn't see events doesn't
+	// learn of them through the pages either
+	let related =
+		params(&[("section", "pages"), ("relatedToEntries", "section=events")]);
+	assert_eq!(admin.call(&related).await.unwrap().total, 1);
+	let reader = ts.user(Some("reader"));
+	assert_eq!(reader.call(&related).await.unwrap().total, 0);
+}
+
+#[tokio::test]
 async fn a_text_of_only_signs_finds_nothing() {
 	let ts = TestServer::new(site_with_roles());
 	let admin = ts.admin();

@@ -58,6 +58,8 @@ mod field_tests;
 mod link;
 mod loaders;
 mod query;
+#[cfg(test)]
+mod query_tests;
 mod rich;
 mod routes;
 mod search;
@@ -244,7 +246,13 @@ pub(crate) fn build(
 
 	let mut entry_iface = Interface::new("Entry");
 	for (name, ty) in entry_common() {
-		entry_iface = entry_iface.field(InterfaceField::new(name, ty));
+		let mut field = InterfaceField::new(name, ty);
+		if name == "children" {
+			for (arg, ty) in children_args(&schema) {
+				field = field.argument(InputValue::new(arg, ty));
+			}
+		}
+		entry_iface = entry_iface.field(field);
 	}
 	for f in &entry_fields {
 		// unless an entry type has a field of its own named so
@@ -271,6 +279,7 @@ pub(crate) fn build(
 		.register(entry_iface)
 		.register(block_iface)
 		.register(where_input())
+		.register(criteria_input(&schema))
 		.register(site_object())
 		.register(asset_object(&schema))
 		.register(link_object())
