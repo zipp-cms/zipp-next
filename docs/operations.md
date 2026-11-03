@@ -98,6 +98,19 @@ Sites, transforms and roles and send themselves one there. In
 development Mailpit catches them: `mailpit --smtp 127.0.0.1:1025`, its
 inbox on `http://127.0.0.1:8025`.
 
+In production we highly recommend an SMTP server with a login
+(`smtp://user:pass@host:587?tls=required`) over handing mails to the
+server's local MTA on port 25 without one (`smtp://127.0.0.1:25`).
+With a login the mail server knows who sends, may let the site send as
+its own domain and signs the mails with that domain's DKIM key; it also
+keeps the site's sender separate from everything else on the box.
+Unsigned mails over port 25 only pass SPF for the server's own domain
+and end up in spam more often. zipp doesn't sign mails itself: SPF,
+DKIM and DMARC are the mail server's and the domain's DNS. On a genco
+server that is the group's SMTP login on port 587, genco shows the DNS
+records the sender domain needs. Port 25 still works, for a quick start
+or when the box's MTA is set up to sign.
+
 ### Visitors' addresses
 
 The limits of logins and forms count the address of the connection. A
