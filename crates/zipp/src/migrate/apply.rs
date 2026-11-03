@@ -1,7 +1,8 @@
 //! Applies schema migrations to the stored content. Ops on components and
 //! fields change the JSON of every row, ops on sites and sections add or
-//! delete rows. Afterwards the entries of new singles are created and all
-//! indexes and uris are rebuilt.
+//! delete rows. The step of a data migration runs after its ops.
+//! Afterwards the entries of new singles are created and all indexes and
+//! uris are rebuilt.
 //!
 //! Deleting an entry here takes its children to its parent, they may be of
 //! a type that stays.
@@ -14,7 +15,7 @@ use crate::db::{marks, now};
 use crate::drafts::Doc;
 use crate::entries::{INDEX_TABLES, next_position, refresh_uris, reindex_all};
 use crate::error::{Error, Result};
-use crate::migrate::{Migration, Op, unmigrated};
+use crate::migrate::{DataTx, Migration, Op, unmigrated};
 use crate::schema::{ASSET, Schema, SectionKind};
 
 /// Brings the database up to the code before the server or a command
@@ -50,12 +51,7 @@ pub fn apply_migrations(
 	let tx = conn.unchecked_transaction()?;
 
 	for m in migrations {
-		let done: bool = tx.query_row(
-			"SELECT COUNT(*) FROM schema_migrations WHERE name = ?1",
-			[&m.name],
-			|r| r.get(0),
-		)?;
-		if done {
+		if is_applied(&tx, &m.name)? {
 			schema = m.schema.clone();
 			continue;
 		}
@@ -63,6 +59,15 @@ pub fn apply_migrations(
 		for op in &m.ops {
 			apply_op(&tx, &schema, op)?;
 			op.apply_schema(&mut schema);
+		}
+		if let Some(step) = &m.step {
+			let data = DataTx {
+				conn: &tx,
+				schema: &m.schema,
+			};
+			(step.0)(&data).map_err(|e| {
+				Error::Internal(format!("data migration {}: {e}", m.name))
+			})?;
 		}
 		tx.execute(
 			"INSERT INTO schema_migrations (name, applied_at) VALUES (?1, ?2)",
@@ -80,6 +85,15 @@ pub fn apply_migrations(
 	tx.commit()?;
 
 	Ok(applied)
+}
+
+/// Whether a migration ran already.
+pub fn is_applied(conn: &Connection, name: &str) -> Result<bool> {
+	Ok(conn.query_row(
+		"SELECT COUNT(*) FROM schema_migrations WHERE name = ?1",
+		[name],
+		|r| r.get(0),
+	)?)
 }
 
 /// One op, `schema` is the schema before it.

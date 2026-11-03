@@ -337,6 +337,7 @@ async fn answers_crelte_like_craft() {
 		name: "0001".into(),
 		ops: crate::migrate::diff(&Schema::new(), &s, &[]).unwrap(),
 		schema: (*s).clone(),
+		..Default::default()
 	};
 	crate::migrate::apply::apply_migrations(&db.conn(), &[first], &s).unwrap();
 

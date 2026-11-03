@@ -41,7 +41,7 @@ use axum::extract::FromRef;
 use clap::Parser;
 
 use crate::db::Db;
-use crate::migrate::Migrations;
+use crate::migrate::{DataResult, DataTx, Migrations};
 #[cfg(feature = "craft")]
 use cli::import_craft;
 use cli::{
@@ -248,6 +248,39 @@ impl Cms {
 		self
 	}
 
+	/// The step of a data migration, for what the ops of a schema
+	/// migration can't do. `name` is its file, which
+	/// `makemigration --data --name …` writes; the step runs once, after
+	/// the migrations before it and in their transaction.
+	///
+	/// ```no_run
+	/// # use zipp::{Cms, Schema};
+	/// # fn schema() -> Schema { Schema::new().site("de", "Deutsch", "de") }
+	/// use zipp::migrate::{DataResult, DataTx};
+	///
+	/// fn split_names(tx: &DataTx) -> DataResult {
+	///     tx.each("person", |c| {
+	///         let name: String = c.get("name").unwrap_or_default();
+	///         let (first, last) = name.split_once(' ').unwrap_or((&name, ""));
+	///         c.set("firstName", first);
+	///         c.set("lastName", last);
+	///         Ok(())
+	///     })
+	/// }
+	///
+	/// Cms::new(schema(), zipp::migrations!())
+	///     .data_migration("0003_split_names", split_names)
+	///     .run();
+	/// ```
+	pub fn data_migration(
+		mut self,
+		name: &str,
+		step: impl Fn(&DataTx) -> DataResult + Send + Sync + 'static,
+	) -> Self {
+		self.migrations = self.migrations.data(name, step);
+		self
+	}
+
 	/// The main of the cms crate: the commands and the server.
 	pub fn run(self) {
 		tracing_subscriber::fmt()
@@ -279,10 +312,16 @@ impl Cms {
 					(routes, hooks),
 				))
 			}
-			Cmd::Makemigration { rename, name } => {
-				makemigration(&schema, &migrations, &rename, name.as_deref())
+			Cmd::Makemigration { rename, name, data } => makemigration(
+				&schema,
+				&migrations,
+				&rename,
+				name.as_deref(),
+				data,
+			),
+			Cmd::Check { queries } => {
+				check(schema, &opts.db, &migrations, &queries)
 			}
-			Cmd::Check { queries } => check(schema, &migrations, &queries),
 			Cmd::Types => {
 				print!("{}", typescript::generate(&schema));
 				Ok(())

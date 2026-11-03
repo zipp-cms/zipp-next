@@ -10,7 +10,8 @@ SQLite database, default `zipp.db`):
 - `serve`: applies new migrations and serves the api, the studio on
   `/admin` and the assets
 - `makemigration [--name n] [--rename old=new]`: writes a migration from
-  the changed schema
+  the changed schema; `--data --name n` an empty data migration, see
+  below
 - `check [--queries dir]`: what CI runs before a deploy, see below
 - `user <email> [--role r]`: adds a user or sets a new password and role,
   reads the password from stdin; without a role an admin
@@ -240,6 +241,55 @@ the top), drafts and revisions of a type that goes take their entry's
 type, a field of another kind (also a group of another component)
 starts over with its default, and content that doesn't parse stops the
 migration instead of being emptied; it runs in one transaction.
+
+## Data migrations
+
+What the ops can't express is a step in Rust: fill a new field from old
+ones, split a name, turn a text into a dropdown value, set a value for
+old entries. `makemigration --data --name split_names` writes
+`0003_split_names.json`, a file without ops that only marks the place
+of the step among the migrations, and prints the code to register it:
+
+```rust
+use zipp::migrate::{DataResult, DataTx};
+
+fn split_names(tx: &DataTx) -> DataResult {
+	tx.each("person", |c| {
+		let name: String = c.get("name").unwrap_or_default();
+		let (first, last) = name.split_once(' ').unwrap_or((&name, ""));
+		c.set("firstName", first);
+		c.set("lastName", last);
+		Ok(())
+	})
+}
+
+Cms::new(schema(), zipp::migrations!())
+	.data_migration("0003_split_names", split_names)
+	.run();
+```
+
+The schema has to be migrated first, so a split is three migrations:
+one adds `firstName` and `lastName`, the data migration fills them,
+the next removes `name`. The step runs once, after the migrations
+before it and in their transaction: an error (`?` takes any) stops
+the start and rolls back all of them. It sees the schema of its file,
+so fields that a later migration removes are still there.
+
+`each(handle, f)` calls `f` with the fields of every entry of an entry
+type, or of every block or group of a component, in every site: the
+live content, drafts and revisions, also of entries in the trash, like
+the ops, so a draft published or a revision restored later has the new
+shape. `c.get::<T>(field)`, `c.set(field, value)` and `c.remove(field)`
+change the fields as JSON; `c.entry_id`, `c.site` and `c.title` say
+where. Values are written as they are, without the checks of a save.
+`tx.conn()` is the transaction for anything else in SQL. The indexes,
+the search and the uris are rebuilt from the code's schema after the
+migrations, as after the ops. Asset fields aren't reached yet.
+
+A data migration file without its step, or a step without its file,
+stops `serve` and fails `check`; the step stays in the code as long as
+its file. When the database (`--db`) is there, `check` also lists the
+migrations it hasn't applied yet, without changing it.
 
 ## Check before a deploy
 

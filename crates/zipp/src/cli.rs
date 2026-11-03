@@ -121,6 +121,9 @@ pub(super) enum Cmd {
 		rename: Vec<String>,
 		#[arg(long)]
 		name: Option<String>,
+		/// An empty data migration, for a step in Rust
+		#[arg(long, requires = "name", conflicts_with = "rename")]
+		data: bool,
 	},
 	/// Print the TypeScript types of the content.
 	Types,
@@ -236,6 +239,7 @@ pub(super) fn makemigration(
 	migrations: &Migrations,
 	renames: &[String],
 	name: Option<&str>,
+	data: bool,
 ) -> CmdResult {
 	let renames = renames
 		.iter()
@@ -249,6 +253,18 @@ pub(super) fn makemigration(
 		.unwrap_or_default();
 
 	let ops = migrate::diff(&last, schema, &renames)?;
+	if data {
+		// the step works on the schema of its file
+		if !ops.is_empty() {
+			return Err("The schema changed since the last migration, run \
+				`makemigration` first"
+				.into());
+		}
+		let name = migrate::next_name(&migrations, name);
+		write_migration(dir, &name, true, ops, schema)?;
+		print!("{}", data_stub(&name));
+		return Ok(());
+	}
 	if ops.is_empty() {
 		println!("No changes");
 		return Ok(());
@@ -266,15 +282,47 @@ pub(super) fn makemigration(
 		);
 	}
 
+	write_migration(dir, &name, false, ops, schema)
+}
+
+fn write_migration(
+	dir: &Path,
+	name: &str,
+	data: bool,
+	ops: Vec<migrate::Op>,
+	schema: &Schema,
+) -> CmdResult {
 	let m = Migration {
-		name: name.clone(),
+		name: name.into(),
+		data,
 		ops,
 		schema: schema.clone(),
+		step: None,
 	};
 	fs::create_dir_all(dir)?;
 	let json = serde_json::to_string_pretty(&m).unwrap() + "\n";
 	fs::write(dir.join(format!("{name}.json")), json)?;
 	Ok(())
+}
+
+/// What to add to the cms crate for a new data migration.
+fn data_stub(name: &str) -> String {
+	let step = name.split_once('_').map_or(name, |(_, n)| n);
+	format!(
+		"Data migration {name}, register its step:
+
+	Cms::new(schema(), zipp::migrations!())
+		.data_migration(\"{name}\", {step})
+
+use zipp::migrate::{{Content, DataResult, DataTx}};
+
+fn {step}(tx: &DataTx) -> DataResult {{
+	tx.each(\"<entry type or block>\", |c: &mut Content| {{
+		Ok(())
+	}})
+}}
+"
+	)
 }
 
 pub(super) fn save_user(
@@ -351,12 +399,14 @@ pub(super) fn import_craft(
 /// See [`Cmd::Check`]; the schema itself is checked before every command.
 pub(super) fn check(
 	schema: Schema,
+	db: &Path,
 	migrations: &Migrations,
 	queries: &[PathBuf],
 ) -> CmdResult {
 	let mut mistakes = 0;
 
-	let changes = migrate::unmigrated(&migrations.load()?, &schema)?;
+	let files = migrations.read()?;
+	let changes = migrate::unmigrated(&files, &schema)?;
 	if changes.is_empty() {
 		println!("ok   migrations are up to date");
 	} else {
@@ -364,6 +414,21 @@ pub(super) fn check(
 		println!("FAIL the schema changed since the last migration:");
 		for op in &changes {
 			println!("       {}", op.describe());
+		}
+	}
+	for wrong in migrations.unmatched(&files) {
+		mistakes += 1;
+		println!("FAIL {wrong}");
+	}
+	// a database that is there, read only: what the next start applies
+	if db.exists() {
+		let flags = rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY;
+		let conn = rusqlite::Connection::open_with_flags(db, flags)?;
+		for m in &files {
+			if !migrate::apply::is_applied(&conn, &m.name)? {
+				let data = if m.data { " (data)" } else { "" };
+				println!("new  {}{data} runs on the next start", m.name);
+			}
 		}
 	}
 

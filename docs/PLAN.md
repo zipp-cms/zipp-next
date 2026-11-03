@@ -38,7 +38,7 @@
 - [x] Rich text field (TipTap): headings, lists, links, button rows, embedded blocks, html + chunks
 - [x] Field kinds as plugins: a crate with the Rust side and a studio
       package with its Svelte field
-- [ ] Data migrations in code, for changes the ops can't express
+- [x] Data migrations in code, for changes the ops can't express
 - [ ] crelte adapter, so a crelte project can use zipp instead of Craft:
       a new adapter in crelte (no craft/.env, no Craft variable names); no
       hacks in the textrem port meanwhile (operator 2026-11-01)

@@ -9,9 +9,12 @@
 //! field order are free to change, they don't touch content. Everything
 //! else needs a migration.
 //! A rename can't be told apart from a remove and an add, it is passed as
-//! a hint.
+//! a hint. What the ops can't express is a data migration in Rust, see
+//! [`data`].
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -22,11 +25,13 @@ use crate::schema::{
 };
 
 pub mod apply;
+pub mod data;
 mod diff;
 mod ops;
 #[cfg(test)]
 pub(crate) mod tests;
 
+pub use data::{Content, DataResult, DataStep, DataTx};
 pub use diff::diff;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -116,13 +121,19 @@ impl Rename {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Migration {
 	#[serde(skip)]
 	pub name: String,
+	/// A data migration: its step runs after the ops.
+	#[serde(default, skip_serializing_if = "std::ops::Not::not")]
+	pub data: bool,
 	pub ops: Vec<Op>,
 	/// The schema after this migration.
 	pub schema: Schema,
+	/// The registered step of a data migration.
+	#[serde(skip)]
+	pub step: Option<DataStep>,
 }
 
 /// The migration files of a site, see [`migrations!`](crate::migrations).
@@ -130,6 +141,8 @@ pub struct Migrations {
 	/// `migrations/` of the site's crate, where new ones are written
 	pub dir: PathBuf,
 	files: Vec<(String, Vec<u8>)>,
+	/// The steps of the data migrations by name.
+	steps: BTreeMap<String, DataStep>,
 }
 
 impl Migrations {
@@ -142,11 +155,37 @@ impl Migrations {
 		Self {
 			dir: dir.into(),
 			files,
+			steps: BTreeMap::new(),
 		}
 	}
 
-	/// The migrations sorted by name.
+	/// Registers the step of a data migration, see
+	/// [`Cms::data_migration`](crate::Cms::data_migration).
+	pub(crate) fn data(
+		mut self,
+		name: &str,
+		step: impl Fn(&DataTx) -> DataResult + Send + Sync + 'static,
+	) -> Self {
+		self.steps.insert(name.into(), DataStep(Arc::new(step)));
+		self
+	}
+
+	/// The migrations sorted by name, data migrations with their step.
+	/// Fails when a step and the files don't match.
 	pub fn load(&self) -> Result<Vec<Migration>, String> {
+		let mut migrations = self.read()?;
+		let wrong = self.unmatched(&migrations);
+		if !wrong.is_empty() {
+			return Err(wrong.join("\n"));
+		}
+		for m in &mut migrations {
+			m.step = self.steps.get(&m.name).cloned();
+		}
+		Ok(migrations)
+	}
+
+	/// The files sorted by name, without the steps.
+	pub fn read(&self) -> Result<Vec<Migration>, String> {
 		let mut migrations = vec![];
 		for (file, data) in &self.files {
 			let Some(name) = file.strip_suffix(".json") else {
@@ -160,6 +199,30 @@ impl Migrations {
 
 		migrations.sort_by(|a, b| a.name.cmp(&b.name));
 		Ok(migrations)
+	}
+
+	/// Data migrations without a step and steps without their file. A
+	/// step stays registered as long as its file exists.
+	pub fn unmatched(&self, migrations: &[Migration]) -> Vec<String> {
+		let mut wrong = vec![];
+		for m in migrations.iter().filter(|m| m.data) {
+			if !self.steps.contains_key(&m.name) {
+				wrong.push(format!(
+					"the data migration {} has no step, register it with \
+					Cms::data_migration(\"{}\", ...)",
+					m.name, m.name
+				));
+			}
+		}
+		for name in self.steps.keys() {
+			if !migrations.iter().any(|m| m.data && &m.name == name) {
+				wrong.push(format!(
+					"Cms::data_migration(\"{name}\", ...) has no data \
+					migration file, see makemigration --data"
+				));
+			}
+		}
+		wrong
 	}
 }
 

@@ -25,6 +25,7 @@ fn migration(
 		name: name.into(),
 		ops: diff(old, new, renames).unwrap(),
 		schema: new.clone(),
+		..Default::default()
 	}
 }
 

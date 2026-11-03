@@ -223,6 +223,7 @@ fn migration_file_roundtrip() {
 		name: String::new(),
 		ops: diff(&Schema::new(), &site(), &[]).unwrap(),
 		schema: site(),
+		..Default::default()
 	};
 	let s = serde_json::to_string_pretty(&m).unwrap();
 	let back: Migration = serde_json::from_str(&s).unwrap();

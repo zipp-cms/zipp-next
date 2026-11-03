@@ -74,5 +74,6 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 ## For developers
 
 - `cargo run -- makemigration` turns a change of the schema into a migration; renames are hints (`--rename event.city=town`).
+- What the ops can't do is a data migration in Rust: `cargo run -- makemigration --data --name split_names` writes its file and prints the step to register with `Cms::data_migration`.
 - The site adds its own routes and hooks: this demo has a [`/sitemap.xml`](https://zipp-studio.noah.meierlabs.dev/sitemap.xml) and logs every change.
 - `cargo run -- types` prints TypeScript types of the content.
