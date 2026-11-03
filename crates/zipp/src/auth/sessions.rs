@@ -51,7 +51,7 @@ pub(super) fn get_session(
 		.optional()?)
 }
 
-/// The valid session of a token, renewed when less than [`RENEW_BELOW_MS`]
+/// The valid session of a token, renewed when less than `RENEW_BELOW_MS`
 /// are left: who uses the studio stays logged in.
 pub fn renew_session(conn: &Connection, token: &str) -> Result<Session> {
 	let mut s = get_session(conn, token)?

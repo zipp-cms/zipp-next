@@ -4,7 +4,7 @@ use super::*;
 /// given, with a revision of who did it (`None`: the system). Shared
 /// fields are copied to the other sites. The section of an entry can't
 /// change, its type can to another of the section: the fields of the
-/// other sites are converted (see [`convert`]).
+/// other sites are converted (see [`convert`](crate::content::convert)).
 pub fn save(
 	conn: &Connection,
 	schema: &Schema,

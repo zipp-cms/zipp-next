@@ -1,0 +1,146 @@
+# Publishes a release, see RELEASING.md. Both registries use Trusted
+# Publishing: no tokens, GitHub's OIDC token proves the workflow.
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # the crates, e.g. v0.1.0
+      - 'zipp-ui@v*.*.*' # the npm package, e.g. zipp-ui@v0.1.0
+
+jobs:
+  crates:
+    if: startsWith(github.ref_name, 'v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Trusted Publishing on crates.io
+    env:
+      # in the order they depend on each other
+      CRATES: zipp-cms zipp-seo zipp-forms
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.x'
+
+      - name: Check the version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          for c in $CRATES; do
+            v=$(cargo metadata --no-deps --format-version 1 \
+              | jq -r --arg c "$c" '.packages[] | select(.name == $c) | .version')
+            if [[ "$v" != "$VERSION" ]]; then
+              echo "Tag version ${VERSION} does not match ${c} ${v}"
+              exit 1
+            fi
+          done
+
+      # the studio is embedded in zipp-cms as built files: they have to
+      # be the build of studio/ of this commit
+      - name: Check the embedded studio
+        run: |
+          cd studio
+          npm ci
+          npm run check
+          npm run build
+          cd ..
+          if [[ -n "$(git status --porcelain crates/zipp/studio)" ]]; then
+            git status --short crates/zipp/studio | head -20
+            echo "crates/zipp/studio is not the build of studio/: run npm run build in studio/ and commit it"
+            exit 1
+          fi
+
+      - name: Test
+        run: cargo test --workspace --locked --features zipp/testing,zipp/craft
+
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+
+      - name: Publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          # the sparse index of crates.io, where cargo looks for a version
+          index() {
+            case ${#1} in
+              1) echo "1/$1" ;;
+              2) echo "2/$1" ;;
+              3) echo "3/${1:0:1}/$1" ;;
+              *) echo "${1:0:2}/${1:2:2}/$1" ;;
+            esac
+          }
+          published() {
+            curl -sf "https://index.crates.io/$(index "$1")" \
+              | grep -q "\"vers\":\"$VERSION\""
+          }
+
+          for c in $CRATES; do
+            # a rerun after a failure skips what is out already
+            if published "$c"; then
+              echo "${c} ${VERSION} is on crates.io already"
+              continue
+            fi
+            cargo publish -p "$c" --locked
+
+            # the next crate depends on it: wait until the index has it
+            for i in $(seq 60); do
+              published "$c" && break
+              sleep 10
+            done
+            published "$c" || { echo "${c} ${VERSION} not in the index"; exit 1; }
+          done
+
+  zipp-ui:
+    if: startsWith(github.ref_name, 'zipp-ui@v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Trusted Publishing and provenance on npm
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted Publishing needs npm 11.5.1 or newer
+      - run: npm install -g npm@latest
+
+      - name: Check the version
+        run: |
+          VERSION="${GITHUB_REF_NAME#zipp-ui@v}"
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          v=$(node -p "require('./studio/ui/package.json').version")
+          if [[ "$v" != "$VERSION" ]]; then
+            echo "Tag version ${VERSION} does not match zipp-ui ${v}"
+            exit 1
+          fi
+
+      # zipp-ui is checked as part of the studio, which is built of it
+      - name: Check
+        run: |
+          cd studio
+          npm ci
+          npm run check
+
+      - name: Publish
+        run: |
+          cd studio/ui
+          if npm view "zipp-ui@${VERSION}" version >/dev/null 2>&1; then
+            echo "zipp-ui ${VERSION} is on npm already"
+            exit 0
+          fi
+
+          # a prerelease (0.2.0-alpha.0) gets its own dist-tag (alpha)
+          if [[ "${VERSION}" == *-* ]]; then
+            TAG=$(echo "${VERSION}" | cut -d- -f2 | cut -d. -f1)
+            npm publish --provenance --access public --tag "${TAG:-next}"
+          else
+            npm publish --provenance --access public
+          fi

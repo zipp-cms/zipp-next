@@ -1,7 +1,23 @@
 [package]
+name = "zipp-cms"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "A headless cms where the content model is code: an api, a studio, migrations and TypeScript types from a Rust schema"
+readme = "README.md"
+keywords = ["cms", "headless-cms", "graphql", "axum", "sqlite"]
+categories = ["web-programming::http-server", "web-programming"]
+
+[lib]
+# the package is zipp-cms (zipp is taken), the code says zipp
 name = "zipp"
-version = "0.1.0"
-edition = "2024"
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
 async-graphql = { version = "7", features = ["dynamic-schema", "dataloader"] }

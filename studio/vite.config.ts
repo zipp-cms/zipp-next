@@ -4,11 +4,9 @@ import { cpSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// the studio is part of the zipp crate, it has its version
-const cargo = readFileSync(
-	new URL('../crates/zipp/Cargo.toml', import.meta.url),
-	'utf8',
-);
+// the studio is part of the zipp crate, it has its version: the one of
+// [workspace.package], the first version in the workspace's Cargo.toml
+const cargo = readFileSync(new URL('../Cargo.toml', import.meta.url), 'utf8');
 const version = cargo.match(/^version = "(.+)"/m)![1];
 
 // breakpoints and mixins in every style block of the studio, see
@@ -78,10 +76,9 @@ export default defineConfig({
 	// the editors of field types and plugins
 	server: {
 		proxy: Object.fromEntries(
-			['/api', '/assets', '/_fields', '/_plugins', '/_studio'].map(path => [
-				path,
-				'http://127.0.0.1:8090',
-			]),
+			['/api', '/assets', '/_fields', '/_plugins', '/_studio'].map(
+				path => [path, 'http://127.0.0.1:8090'],
+			),
 		),
 	},
 });

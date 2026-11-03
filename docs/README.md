@@ -1,5 +1,7 @@
 # zipp documentation
 
+- [Getting started](getting-started.md): a site's cms crate, the
+  dependency on `zipp-cms`, the first run
 - [The content model](content-model.md): sites, sections, entry types,
   blocks, fields, translations, roles
 - [Editing](editing.md): drafts, revisions, previews, Setup, the AI chat

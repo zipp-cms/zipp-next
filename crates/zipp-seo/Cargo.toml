@@ -1,15 +1,24 @@
 [package]
 name = "zipp-seo"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
 description = "SEO for zipp like the Craft plugin meierlabs-seo: settings, seoJson, sitemaps"
+readme = "README.md"
+keywords = ["cms", "seo", "sitemap", "zipp"]
+categories = ["web-programming"]
+exclude = ["studio/"]
 
 [dependencies]
 rusqlite = "0.37"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }
-zipp = { path = "../zipp" }
+zipp = { package = "zipp-cms", path = "../zipp", version = "0.1.0" }
 
 [dev-dependencies]
-zipp = { path = "../zipp", features = ["testing"] }
+zipp = { package = "zipp-cms", path = "../zipp", version = "0.1.0", features = ["testing"] }
 tokio = { version = "1.45", features = ["rt-multi-thread", "macros"] }

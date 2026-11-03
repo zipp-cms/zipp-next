@@ -823,8 +823,8 @@ version = "0.1.0"
 dependencies = [
  "serde_json",
  "tokio",
- "zipp",
  "zipp-button-group",
+ "zipp-cms",
  "zipp-forms",
  "zipp-seo",
 ]
@@ -3527,7 +3527,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "zipp"
+name = "zipp-agent"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "zipp-cms",
+]
+
+[[package]]
+name = "zipp-button-group"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "zipp-cms",
+]
+
+[[package]]
+name = "zipp-cms"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
@@ -3560,25 +3579,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zipp-agent"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tokio",
- "tokio-stream",
- "zipp",
-]
-
-[[package]]
-name = "zipp-button-group"
-version = "0.1.0"
-dependencies = [
- "serde_json",
- "zipp",
-]
-
-[[package]]
 name = "zipp-forms"
 version = "0.1.0"
 dependencies = [
@@ -3586,7 +3586,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "zipp",
+ "zipp-cms",
 ]
 
 [[package]]
@@ -3597,7 +3597,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "zipp",
+ "zipp-cms",
 ]
 
 [[package]]

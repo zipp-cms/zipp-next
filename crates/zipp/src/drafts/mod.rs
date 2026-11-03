@@ -251,7 +251,7 @@ pub(super) fn check_base(
 /// validated here, a draft may be half done.
 ///
 /// The type is that of every site: another type of the section changes
-/// it in all of them, their fields converted (see [`convert`]). The
+/// it in all of them, their fields converted (see [`convert`](crate::content::convert)). The
 /// editor sends `content` already converted; without a type it stays.
 ///
 /// `base` is the version of the draft the editor started from (its

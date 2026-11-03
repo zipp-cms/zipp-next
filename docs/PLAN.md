@@ -54,7 +54,9 @@
 
 - Published on crates.io as `zipp-cms` (`[lib] name = "zipp"`, so `use zipp::`
   stays; whether the name `zipp` can be had is checked separately), the
-  plugins as `zipp-seo`, `zipp-forms`, `zipp-agent`, `zipp-button-group`
+  plugins as `zipp-seo`, `zipp-forms`; `zipp-agent` stays unpublished,
+  `zipp-button-group` becomes a field kind of zipp (operator 2026-11-03)
+- Released by GitHub Actions with Trusted Publishing (`RELEASING.md`)
 - License MIT OR Apache-2.0
 - zipp-ui is published on npm too, for plugin authors
 - Order: the fixes of the reviews first (zipp-tools reviews release-0.1,

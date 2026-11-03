@@ -94,7 +94,7 @@ pub(crate) fn client_addr(
 	client
 }
 
-/// The address of who sent the request, see [`client_addr`]. Without a
+/// The address of who sent the request, see `client_addr`. Without a
 /// connection (a router called directly) it is `0.0.0.0`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ClientAddr(pub IpAddr);

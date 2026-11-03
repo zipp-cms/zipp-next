@@ -1,7 +1,7 @@
 //! The JSON requests of assets. Uploads are multipart: `POST /assets`
 //! with the files, `POST /assets/{id}/file` with one, both answer with
 //! the assets; `POST /assets/unzip` with a zip, unpacked into folders
-//! (answers with [`super::Unzipped`]). `GET /assets/zip?ids=1,2` or
+//! (answers with `Unzipped`). `GET /assets/zip?ids=1,2` or
 //! `?folder=<id>` downloads them as a zip.
 
 use serde::{Deserialize, Serialize};

@@ -127,7 +127,7 @@ pub struct AppState {
 	pub mail: mail::Mailer,
 	/// where the cms is, `serve --public-url`: links in mails
 	pub public_url: Arc<String>,
-	/// the svgs of the schema's Lucide icons, see [`studio::schema_icons`]
+	/// the svgs of the schema's Lucide icons, see `studio::schema_icons`
 	#[from_ref(skip)]
 	pub icons: Arc<std::collections::BTreeMap<String, String>>,
 	/// the wrong passwords of logins, see [`auth::Throttle`]

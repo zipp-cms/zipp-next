@@ -1,6 +1,6 @@
 //! The studio's search, like Craft's: entries by their title, slug and
 //! texts in a site, assets by filename, title and alt text. Every save
-//! writes an entry's texts to `entry_texts` (see [`index`]), a full text
+//! writes an entry's texts to `entry_texts` (see `index`), a full text
 //! index (SQLite's FTS5) over them finds the words. Only what is live is
 //! searched, drafts are not. The website's search is the same index
 //! through GraphQL, see [`hits`].

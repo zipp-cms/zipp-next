@@ -41,14 +41,27 @@ fn main() {
 }
 ```
 
+A site depends on the package `zipp-cms`, the crate is called `zipp`:
+
+```toml
+[dependencies]
+zipp = { package = "zipp-cms", version = "0.1" }
+```
+
 The [documentation](docs/README.md) explains the content model, editing,
 GraphQL, SEO, extending and running a site.
 
 ## Layout
 
-- `crates/zipp`: the cms, a library the site crate calls
+- `crates/zipp`: the cms, a library the site crate calls (crates.io:
+  `zipp-cms`)
 - `studio`: the editing ui (Svelte), its build is embedded in the zipp
-  crate and served on `/admin`
+  crate and served on `/admin`; `studio/ui` is `zipp-ui` on npm, the
+  components for the studio modules of plugins
+- `crates/zipp-seo`, `crates/zipp-forms`: plugins (SEO, forms of the
+  website), on crates.io under their names
+- `crates/zipp-agent`: the coding agent in the AI chat, a plugin for
+  development, not published
 - `crates/zipp-button-group`: a field type of another crate, as an example
   of a plugin
 - `example/cms`: the cms crate of an example site, with its migrations;
@@ -67,3 +80,10 @@ cargo run -- serve --dev                      # studio on http://127.0.0.1:8090/
 
 Then open the studio, its first page says where to try which feature.
 See [Running and deploying](docs/operations.md) for the rest.
+
+## License
+
+MIT or Apache-2.0, at your option: [LICENSE-MIT](LICENSE-MIT),
+[LICENSE-APACHE](LICENSE-APACHE). What changed in each version is in
+[CHANGELOG.md](CHANGELOG.md), how to release in
+[RELEASING.md](RELEASING.md).

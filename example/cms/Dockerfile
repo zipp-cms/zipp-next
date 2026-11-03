@@ -3,7 +3,7 @@
 #
 # For the example the context is the repository (zipp is a path
 # dependency): docker build -f example/cms/Dockerfile -t example-cms .
-# A site's own cms crate with zipp as a git dependency builds from the
+# A site's own cms crate with zipp from crates.io builds from the
 # site's repository; change PACKAGE to its name.
 
 FROM rust:1-trixie AS build

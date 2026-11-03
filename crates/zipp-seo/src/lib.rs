@@ -95,7 +95,7 @@ const DAYS: &[&str] = &[
 	"Sunday",
 ];
 
-/// The SEO of a site, see [`Schema::seo`].
+/// The SEO of a site, turned on with `Schema::plugin`.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Seo {
 	/// by section handle

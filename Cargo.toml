@@ -1,3 +1,14 @@
 [workspace]
 resolver = "3"
 members = ["crates/zipp", "crates/zipp-button-group", "crates/zipp-seo", "crates/zipp-agent", "crates/zipp-forms", "example/cms"]
+
+# the crates are released together, in one version
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+# async-graphql 7.2 needs 1.89
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/zipp-cms/zipp-next"
+homepage = "https://github.com/zipp-cms/zipp-next"
+authors = ["Sören Meier <soeren@s-me.ch>"]

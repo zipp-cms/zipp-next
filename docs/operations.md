@@ -157,7 +157,9 @@ has the database open. By hand it is the same: stop, copy `zipp.db` to
 by `serve` like any database, one of a newer zipp is refused.
 
 A release build is a single binary with the api, the studio and the
-migrations; debug builds read the migrations from disk.
+migrations; debug builds read the migrations and the studio from disk
+(the studio from zipp's crate in cargo's registry), so only a release
+binary can be copied to another machine.
 
 ## Hosting
 
@@ -171,7 +173,7 @@ port 8090.
 - The example's context is the repository, zipp is a path dependency:
   `docker build -f example/cms/Dockerfile -t example-cms .` (with the
   `.dockerignore` of the repository).
-- A site's own cms crate (zipp as a git dependency) copies the
+- A site's own cms crate (zipp from crates.io) copies the
   Dockerfile into its repository, builds from there and sets
   `--build-arg PACKAGE=<its crate>`, the name of the binary.
 - The commands run in the container: `docker compose exec cms cms user

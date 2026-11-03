@@ -1,7 +1,7 @@
 //! Assets: uploaded files and images. A file lives in
 //! `<files>/<id>/<filename>`, its transforms in `<files>/<id>/t/` where
 //! they are generated on the first request. Changing the focal point or
-//! the edits (see [`Edits`]) deletes them.
+//! the edits (see `Edits`) deletes them.
 //!
 //! - `/assets/<id>/<filename>`: the image with its edits, `?original`
 //!   the file as it was uploaded
@@ -72,7 +72,7 @@ pub struct Asset {
 	/// the size of the uploaded file
 	pub original_width: Option<u32>,
 	pub original_height: Option<u32>,
-	/// the image editor's, see [`Edits`]
+	/// the image editor's, see `Edits`
 	pub edits: Option<Edits>,
 	/// the email of who uploaded it
 	pub uploaded_by: Option<String>,

@@ -38,7 +38,7 @@ pub fn up_to_date(
 /// All of them and the rebuild of the indexes are one transaction: when
 /// anything fails nothing is recorded, the next start tries again.
 /// `code` is the schema of the code, the same as the last migration's
-/// (see [`unmigrated`](crate::migrate::unmigrated)): the singles and the
+/// (see [`unmigrated`]): the singles and the
 /// indexes are made with it, a migration file has no field types of
 /// plugins and their relations would go.
 pub fn apply_migrations(

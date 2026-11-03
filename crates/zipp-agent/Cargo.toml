@@ -1,16 +1,26 @@
 [package]
 name = "zipp-agent"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
 description = "A zipp plugin for development: the studio's AI chat hands everything to a coding agent"
+readme = "README.md"
+keywords = ["cms", "ai", "agent", "zipp"]
+categories = ["web-programming", "development-tools"]
+# development only, not on crates.io for now (operator 2026-11-03)
+publish = false
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }
 tokio = { version = "1.45", features = ["rt-multi-thread", "fs", "sync", "time"] }
 tokio-stream = "0.1"
-zipp = { path = "../zipp" }
+zipp = { package = "zipp-cms", path = "../zipp", version = "0.1.0" }
 
 [dev-dependencies]
 tokio = { version = "1.45", features = ["rt-multi-thread", "macros"] }
-zipp = { path = "../zipp", features = ["testing"] }
+zipp = { package = "zipp-cms", path = "../zipp", version = "0.1.0", features = ["testing"] }

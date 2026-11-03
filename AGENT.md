@@ -193,3 +193,8 @@ What the owner decided, so it doesn't get asked again:
   `example/cms`, it fails on what `serve` would refuse.
 - New features get a line in `docs/` and, if the example can show them,
   in the example and `example/readme.md`.
+
+## Releasing
+
+- `RELEASING.md`: one version for all crates in `[workspace.package]`,
+  a tag publishes them through GitHub Actions.

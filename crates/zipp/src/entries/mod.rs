@@ -80,7 +80,7 @@ pub struct Entry {
 /// When an entry is live, in all its sites, like Craft's post and expiry
 /// date: from `post_date` (set when it is first published) until
 /// `expiry_date`, milliseconds. Published in a site and in these dates
-/// is live there, see [`LIVE_DATES`].
+/// is live there, see `LIVE_DATES`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Dates {

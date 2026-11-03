@@ -1,9 +1,19 @@
 [package]
 name = "zipp-button-group"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
 description = "A field of buttons in colors for zipp, like Craft's button group"
+readme = "README.md"
+keywords = ["cms", "field", "zipp"]
+categories = ["web-programming"]
+# becomes a field kind of zipp, so it is not published
+publish = false
 
 [dependencies]
 serde_json = "1.0"
-zipp = { path = "../zipp" }
+zipp = { package = "zipp-cms", path = "../zipp", version = "0.1.0" }
