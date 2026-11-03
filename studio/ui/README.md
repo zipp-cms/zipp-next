@@ -17,6 +17,8 @@ vite config of a module).
 
 For the values of a field, beside the inputs of the page: `Segmented`
 (one of a few), `CheckGroup` (some of a few, chips that wrap),
+`Checkbox` (an option with its text on the right and a `hint` under
+it, the tick of `CheckGroup`; `label` when there is no text),
 `Switch` (yes or no, its text on the right; `onchange` only when
 clicked), `DatePicker`, `SearchInput`.
 

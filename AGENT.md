@@ -98,10 +98,11 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
     (duplicate, remove in every list), `EntryChip` and `AssetChip` (a
     chosen entry or file), `AddButton`, `UploadButton`, `SearchInput`,
     `Segmented` (tabs and short choices), `Switch` (yes or no),
-    `CheckGroup` (some of a few choices), `entries/EntryPicker`,
+    `Checkbox` (one option, never a native one), `CheckGroup` (some
+    of a few choices, the same tick), `entries/EntryPicker`,
     `entries/SiteBadges`,
     `assets/AssetPicker`;
-  - text: `.muted`, `.note`, `.truncate`, `label.stacked`, `label.check`.
+  - text: `.muted`, `.note`, `.truncate`, `label.stacked`.
 - Pages: chuchi's router (`core/router.svelte.ts`, like hostdinghy).
   Each area registers its pages in its `routes.ts` with a lazy import,
   in a frame (`inLayout(Shell, [[path, () => import(...)]])`). A page

@@ -19,6 +19,7 @@
 	import RoleAccess from './RoleAccess.svelte';
 	import Avatar from './Avatar.svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
+	import Checkbox from 'zipp-ui/Checkbox.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
 	import { go } from '../core/router.svelte';
@@ -220,10 +221,9 @@
 				{/if}
 			</label>
 			{#if isNew && !form.password}
-				<label class="check">
-					<input type="checkbox" bind:checked={form.sendInvite} />
+				<Checkbox bind:checked={form.sendInvite}>
 					{t('users.sendInvite')}
-				</label>
+				</Checkbox>
 			{/if}
 			{#if form.needsCurrent && form.password}
 				{@render currentPassword()}

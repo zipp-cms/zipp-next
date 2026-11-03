@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Edits } from '../api';
+	import Checkbox from 'zipp-ui/Checkbox.svelte';
 	import BackgroundPicker from './BackgroundPicker.svelte';
 	import { withCanvas, withResize, type Size } from './edits';
 	import { t } from '../../i18n/index.svelte';
@@ -50,15 +51,12 @@
 			{t('assets.originalSize')}
 		</button>
 	{/if}
-	<label class="check">
-		<input
-			type="checkbox"
-			checked={!!edits.canvas}
-			onchange={e =>
-				(edits = withCanvas(edits, e.currentTarget.checked, resized))}
-		/>
+	<Checkbox
+		checked={!!edits.canvas}
+		onchange={on => (edits = withCanvas(edits, on, resized))}
+	>
 		{t('assets.canvas')}
-	</label>
+	</Checkbox>
 	{#if edits.canvas}
 		<label class="stacked">
 			{t('assets.canvasWidth')}
@@ -94,18 +92,14 @@
 		width: 6.125rem;
 	}
 
-	// a box as high as the inputs next to it
-	.check {
+	// a box as high as the inputs next to it, around the Checkbox
+	.options :global(label.check) {
+		align-self: auto;
 		padding: 0.4375rem 0.75rem;
 		border: 1px solid var(--border-strong);
 		border-radius: var(--radius);
 		background: var(--input);
-		cursor: pointer;
 		white-space: nowrap;
-
-		input {
-			margin: 0;
-		}
 
 		&:has(:checked) {
 			border-color: var(--accent);

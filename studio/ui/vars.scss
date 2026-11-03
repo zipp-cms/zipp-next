@@ -48,3 +48,26 @@ $label-gap: 1.25rem;
 	opacity: 0;
 	pointer-events: none;
 }
+
+// the box of a checkbox, Checkbox and CheckGroup; with .on or a
+// checked input before it, check-tick-on puts it on the accent
+@mixin check-tick {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	width: 0.875rem;
+	height: 0.875rem;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-sm);
+	background: var(--input);
+	transition:
+		background-color 0.15s ease,
+		border-color 0.15s ease;
+}
+
+@mixin check-tick-on {
+	border-color: var(--accent);
+	background: var(--accent);
+	color: var(--on-accent);
+}

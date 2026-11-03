@@ -2,6 +2,7 @@
 	import { type Edits } from '../api';
 	import { NO_EDITS, cropsOutside, noEdits, transparentEdges } from './edits';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import Checkbox from 'zipp-ui/Checkbox.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
 	import BackgroundPicker from './BackgroundPicker.svelte';
 	import CropStage from './CropStage.svelte';
@@ -188,14 +189,9 @@
 				label={t('assets.ratio')}
 			/>
 			{#if ratio !== null && ratio !== 0 && ratio !== 1}
-				<label class="check">
-					<input
-						type="checkbox"
-						bind:checked={portrait}
-						onchange={applyRatio}
-					/>
+				<Checkbox bind:checked={portrait} onchange={applyRatio}>
 					{t('assets.portrait')}
-				</label>
+				</Checkbox>
 			{/if}
 			{#if outside}
 				<span class="toolbar-sep"></span>

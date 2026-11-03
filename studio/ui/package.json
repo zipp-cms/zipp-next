@@ -21,6 +21,7 @@
 		"./vars.scss": "./vars.scss",
 		"./AddButton.svelte": "./src/AddButton.svelte",
 		"./AddGroup.svelte": "./src/AddGroup.svelte",
+		"./Checkbox.svelte": "./src/Checkbox.svelte",
 		"./CheckGroup.svelte": "./src/CheckGroup.svelte",
 		"./DatePicker.svelte": "./src/DatePicker.svelte",
 		"./DragHandle.svelte": "./src/DragHandle.svelte",

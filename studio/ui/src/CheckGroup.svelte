@@ -97,14 +97,7 @@
 	}
 
 	.tick {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 0.875rem;
-		height: 0.875rem;
-		border: 1px solid var(--border-strong);
-		border-radius: var(--radius-sm);
-		background: var(--input);
+		@include check-tick;
 
 		.on & {
 			border-color: var(--on-accent);

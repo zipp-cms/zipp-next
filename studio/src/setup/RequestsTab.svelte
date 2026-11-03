@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import Table from 'zipp-ui/Table.svelte';
+	import Checkbox from 'zipp-ui/Checkbox.svelte';
 	import { Busy } from '../core/busy.svelte';
 	import { time } from '../core/format';
 	import { setRequestDone, type ChangeRequest } from './api';
@@ -15,12 +16,10 @@
 	let requests = $state(untrack(() => loaded));
 	const action = new Busy();
 
-	async function toggle(r: ChangeRequest, box: HTMLInputElement) {
-		const done = box.checked;
+	// the box sets r.done, a failed save puts it back
+	async function toggle(r: ChangeRequest, done: boolean) {
 		const ok = await action.run(() => setRequestDone(r.id, done));
-		if (ok !== undefined) r.done = done;
-		// a failed save leaves r.done, the box has to go back itself
-		else box.checked = r.done;
+		if (ok === undefined) r.done = !done;
 	}
 </script>
 
@@ -44,12 +43,11 @@
 	>
 		{#snippet row(r)}
 			<td>
-				<input
-					type="checkbox"
-					aria-label={t('ui.done')}
-					checked={r.done}
+				<Checkbox
+					label={t('ui.done')}
+					bind:checked={r.done}
 					disabled={action.busy}
-					onchange={e => toggle(r, e.currentTarget)}
+					onchange={done => toggle(r, done)}
 				/>
 			</td>
 			<td class="text" class:done={r.done}>{r.text}</td>

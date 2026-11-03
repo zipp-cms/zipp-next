@@ -3,6 +3,7 @@
 	import type { Link, LinkKind, Schema } from '../../core/schema';
 	import type { EntryRef, Refs } from '../../entries/api';
 	import AddButton from 'zipp-ui/AddButton.svelte';
+	import Checkbox from 'zipp-ui/Checkbox.svelte';
 	import AssetChip from '../../assets/AssetChip.svelte';
 	import AssetPicker from '../../assets/AssetPicker.svelte';
 	import EntryPicker from '../../entries/EntryPicker.svelte';
@@ -216,24 +217,16 @@
 
 	<span></span>
 	<div class="end">
-		<label class="check">
-			<input
-				type="checkbox"
-				checked={newTab}
-				onchange={e => set({ newTab: e.currentTarget.checked })}
-			/>
+		<Checkbox checked={newTab} onchange={on => set({ newTab: on })}>
 			{t('fields.openInNewTab')}
-		</label>
+		</Checkbox>
 		{#if link.type === 'asset'}
-			<label class="check">
-				<input
-					type="checkbox"
-					checked={link.download ?? false}
-					onchange={e =>
-						set({ download: e.currentTarget.checked || undefined })}
-				/>
+			<Checkbox
+				checked={link.download ?? false}
+				onchange={on => set({ download: on || undefined })}
+			>
 				{t('fields.downloadInstead')}
-			</label>
+			</Checkbox>
 		{/if}
 		{#if onremove}
 			<button type="button" class="push" onclick={onremove}>

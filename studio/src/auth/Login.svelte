@@ -7,6 +7,7 @@
 	import { session } from '../core/session.svelte';
 	import { router } from '../core/router.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import Checkbox from 'zipp-ui/Checkbox.svelte';
 	import AuthLayout from './AuthLayout.svelte';
 	import PasswordInput from './PasswordInput.svelte';
 	import { Busy } from '../core/busy.svelte';
@@ -57,10 +58,7 @@
 			/>
 		</label>
 
-		<label class="check">
-			<input type="checkbox" bind:checked={remember} />
-			{t('auth.stayLoggedIn')}
-		</label>
+		<Checkbox bind:checked={remember}>{t('auth.stayLoggedIn')}</Checkbox>
 
 		{#if action.error}<p class="error">{action.error}</p>{/if}
 

@@ -401,13 +401,6 @@ button,
 	font-size: var(--fs-sm);
 }
 
-// a checkbox with its label on the right
-label.check {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-}
-
 // a label over its input
 label.stacked {
 	display: flex;
