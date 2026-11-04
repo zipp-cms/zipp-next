@@ -3,9 +3,17 @@ import { site } from './router.svelte';
 
 /**
  * What an editor edits, for the fields in it: a custom field tells its
- * plugin the entry and site, also in the flyout over another entry.
+ * plugin the entry and site, also in the flyout over another entry; an
+ * asset field's folder takes the slug, section and type (as they are
+ * now, getters).
  */
-export type Editing = { entryId: number | null; site: string };
+export type Editing = {
+	entryId: number | null;
+	site: string;
+	slug: string;
+	section: string;
+	type: string;
+};
 
 const KEY = Symbol('editing');
 

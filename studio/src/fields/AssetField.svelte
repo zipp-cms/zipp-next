@@ -25,6 +25,8 @@
 		type Upload,
 	} from '../assets/files';
 	import { t } from '../i18n/index.svelte';
+	import { getEditing } from '../core/editing';
+	import { fieldFolder } from '../assets/folders';
 
 	/**
 	 * Images and videos as cards, other files as chips, in an order; a
@@ -42,6 +44,9 @@
 	const ids = $derived(valueOf(values, field) ?? []);
 	const full = $derived(isFull(ids.length, max));
 	const set = (next: number[]) => (values[field.handle] = next);
+	// of the entry around, also in its blocks
+	const editing = getEditing();
+	const folder = $derived(fieldFolder(field.folder, editing));
 
 	const chosen = chosenAssets(() => ids);
 	let picking = $state(false);
@@ -69,7 +74,7 @@
 	 */
 	async function upload(items: Upload[]) {
 		const room = max ? max - ids.length : items.length;
-		items = prepare(items, field, room, pathDirs(field.folder));
+		items = prepare(items, field, room, pathDirs(folder));
 		const added = await uploads.run(items, null);
 		let next = ids;
 		for (const a of added)
@@ -193,7 +198,7 @@
 	<AssetPicker
 		{images}
 		extensions={field.extensions}
-		folderPath={field.folder}
+		folderPath={folder}
 		multiple={max !== 1}
 		selected={ids}
 		onpick={toggle}

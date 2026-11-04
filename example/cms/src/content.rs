@@ -302,10 +302,11 @@ pub fn schema() -> Schema {
 						)
 						.label("Warteliste")
 						.when(Condition::on("soldOut")),
+						// each event's program in a folder of its own
 						Field::assets("program")
 							.extensions(["pdf"])
 							.max(1)
-							.folder("Events/Programs")
+							.folder("Events/{slug}")
 							.label("Programm (PDF)"),
 					],
 				),

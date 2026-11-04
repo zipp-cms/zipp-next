@@ -351,6 +351,18 @@ fn asset_fields_with_a_folder_and_extensions() {
 }
 
 #[test]
+fn asset_folders_with_placeholders() {
+	let f = Field::assets("x").folder("Topics/{section}-{type}/{slug}");
+	site().block("d", "D", [f]).check().unwrap();
+
+	for path in ["{title}", "Topics/{slug", "{entry.slug}"] {
+		let s = site().block("d", "D", [Field::assets("x").folder(path)]);
+		let err = s.check().unwrap_err();
+		assert!(err.contains("only {slug}, {section} and {type}"), "{err}");
+	}
+}
+
+#[test]
 fn a_plugin_once() {
 	struct Twice;
 	impl crate::Plugin for Twice {

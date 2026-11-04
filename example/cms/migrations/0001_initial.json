@@ -1403,7 +1403,7 @@
             "kind": "assets",
             "images": false,
             "max": 1,
-            "folder": "Events/Programs",
+            "folder": "Events/{slug}",
             "extensions": [
               "pdf"
             ]
@@ -3333,7 +3333,7 @@
             "kind": "assets",
             "images": false,
             "max": 1,
-            "folder": "Events/Programs",
+            "folder": "Events/{slug}",
             "extensions": [
               "pdf"
             ]

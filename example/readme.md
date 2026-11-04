@@ -49,7 +49,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Alt text per site | Assets → an image → Alt text, switch the site | each site its own alt text, a site without has the primary site's |
 | Asset fields | Assets → an image → Credit, Licence | fields of every asset beside title and alt (`.asset_fields`); the website shows the credit under the images |
 | Videos | Assets → Videos · a page → Content → Video block | the library filters by type, a video plays in its panel and shows its first frame; the block takes only videos (`Field::videos`), a poster image and *loop* for a muted moving image |
-| Folders, file types, zips | Assets · Events → Tickets → Programm (PDF) · a folder's ⋯ → Download as zip · upload a zip | folders for the library, downloaded as a zip or unpacked from one; the event's program takes only PDFs and puts them into Events/Programs, its image picker opens in Events |
+| Folders, file types, zips | Assets · Events → Tickets → Programm (PDF) · a folder's ⋯ → Download as zip · upload a zip | folders for the library, downloaded as a zip or unpacked from one; the event's program takes only PDFs and puts them into a folder of the event, Events/{slug}, its image picker opens in Events |
 | Icons | the navigation, Pages, a page's blocks | entry types, blocks and nav groups with Lucide icons from the code |
 | Block titles | a page's blocks: Button, Images, Upcoming events · Setup → Blocks → Button | a block's head and the outline show the field the code names (`.block_title`): the button's link, the caption, the city |
 | Globals | Settings → Header, Footer | singles without a url, crelte reads them like Craft's globals |

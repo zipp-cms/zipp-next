@@ -506,6 +506,17 @@ impl Schema {
 				{
 					return Err("a folder is a path like Photos/Events".into());
 				}
+				// the studio fills them in from the entry, see field.rs
+				let rest = folder.as_deref().map(|f| {
+					f.replace("{slug}", "")
+						.replace("{section}", "")
+						.replace("{type}", "")
+				});
+				if rest.is_some_and(|r| r.contains(['{', '}'])) {
+					return Err("a folder knows only {slug}, {section} and \
+						{type}"
+						.into());
+				}
 				if extensions.iter().any(|e| {
 					e.is_empty() || !e.chars().all(|c| c.is_alphanumeric())
 				}) {

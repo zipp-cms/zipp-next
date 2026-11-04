@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- An asset field's folder can be per entry, like Craft's upload
+  subpath: `.folder("Topics/{slug}")`, also `{section}` and `{type}`;
+  the studio fills them in from the entry being edited (also in its
+  blocks), without a slug yet the path ends before it. The example's
+  event program goes into `Events/{slug}`.
 - The field kind button group, `Field::button_group`: one of some
   options like a dropdown, as buttons in a color per option like
   Craft's; GraphQL gives `ButtonGroupOption { value label color }`. It

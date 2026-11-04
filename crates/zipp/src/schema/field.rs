@@ -141,7 +141,8 @@ pub enum FieldKind {
 	},
 	/// Ids of assets, with `images` only images, with `extensions` only
 	/// files that end so; new ones go into `folder` (a path, `Photos/
-	/// Events`, made when missing), the picker opens there.
+	/// Events` or `Topics/{slug}`, made when missing), the picker opens
+	/// there.
 	#[non_exhaustive]
 	Assets {
 		images: bool,
@@ -778,7 +779,11 @@ impl Field {
 	}
 
 	/// Where new files of an asset field go and its picker opens: a path
-	/// of folders, `Photos/Events`, made when missing.
+	/// of folders, `Photos/Events`, made when missing. `{slug}`,
+	/// `{section}` and `{type}` are the entry's (also of a field in its
+	/// blocks), `Topics/{slug}`; the studio fills them in, so a renamed
+	/// slug leaves the files where they are. Without a slug yet the
+	/// path ends before it.
 	pub fn folder(mut self, path: &str) -> Self {
 		match &mut self.kind {
 			FieldKind::Assets { folder, .. } => {

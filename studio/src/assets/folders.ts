@@ -1,11 +1,37 @@
 import { t } from '../i18n/index.svelte';
 import type { Folder } from './api';
+import type { Editing } from '../core/editing';
 
 /** The folders of the asset library as a tree, found by name or path. */
 
 /** The name of the top, where all folders are and the assets in none. */
 export function root(): string {
 	return t('assets.library');
+}
+
+/**
+ * A field's folder with the entry's `{slug}`, `{section}` and `{type}`
+ * filled in. A missing one (a new entry without a slug, no editor)
+ * ends the path before its folder. It is resolved at each upload, so a
+ * renamed slug leaves the files where they are, like Craft.
+ */
+export function fieldFolder(
+	path: string | undefined,
+	entry: Pick<Editing, 'slug' | 'section' | 'type'> | undefined,
+): string | undefined {
+	const names: string[] = [];
+	for (const name of (path ?? '').split('/')) {
+		let missing = false;
+		const filled = name.replace(/\{(\w+)\}/g, (_, k: string) => {
+			// the schema check lets only these through
+			const v = entry?.[k as 'slug' | 'section' | 'type'] ?? '';
+			if (!v) missing = true;
+			return v;
+		});
+		if (missing) break;
+		names.push(filled);
+	}
+	return names.join('/') || undefined;
 }
 
 /** The folder of a path like `Photos/Events`, if it exists. */

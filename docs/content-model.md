@@ -268,7 +268,14 @@ their version too.
 In the studio assets are in folders (only there, urls don't change). An
 asset field can say where its uploads go and its picker opens,
 `.folder("Events/Programs")` (made on the first upload), and which
-files it takes, `.extensions(["pdf"])`; saving checks it. A folder's ⋯
+files it takes, `.extensions(["pdf"])`; saving checks it. A folder per
+entry like Craft's upload subpath: `.folder("Topics/{slug}")`, with
+`{slug}`, `{section}` and `{type}` of the entry being edited (also for a
+field in its blocks and groups; others are an error). The studio fills
+them in at each upload, so a renamed slug leaves the files where they
+are and only new ones go into the new folder. While the entry has no
+slug yet, the path ends before it: `Topics`, or the top of the library
+for `{slug}` alone. A folder's ⋯
 downloads it with its subfolders as a zip (`GET /api/assets/zip`, the
 files as uploaded, nothing from the trash), and a zip uploaded in the
 library can be unpacked into folders (`POST /api/assets/unzip`: folders

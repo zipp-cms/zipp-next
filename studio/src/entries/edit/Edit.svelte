@@ -65,7 +65,19 @@
 	const ed = untrack(() => editor);
 	const id = ed.id;
 	// the fields in it know their entry, also in the flyout
-	setEditing({ entryId: id, site: ed.site });
+	setEditing({
+		entryId: id,
+		site: ed.site,
+		get slug() {
+			return ed.slug;
+		},
+		get section() {
+			return ed.sec;
+		},
+		get type() {
+			return ed.ty;
+		},
+	});
 
 	const tabs = new Tabs(
 		() => ed.comp,
