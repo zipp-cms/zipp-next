@@ -9,7 +9,7 @@ use crate::schema::{Field, FieldKind, LinkKind};
 
 impl Importer<'_> {
 	/// Craft's link `{ type, id, value, label, target, download }`.
-	pub(super) fn link(&self, v: &Value, new_tab: bool) -> Option<Value> {
+	pub(super) fn link(&mut self, v: &Value, new_tab: bool) -> Option<Value> {
 		let ty = v["type"].as_str()?;
 		let (kind, value) = match ty {
 			"entry" | "category" => (
@@ -55,12 +55,47 @@ impl Importer<'_> {
 		if kind == LinkKind::Asset && v["download"] == true {
 			link["download"] = Value::from(true);
 		}
+		self.suffix(&mut link, v["urlSuffix"].as_str().unwrap_or_default());
 		Some(link)
+	}
+
+	/// Craft's url suffix: `#contact` is the anchor of an entry or url
+	/// link, anything else goes on the end of a url; what fits neither is
+	/// reported.
+	fn suffix(&mut self, link: &mut Value, suffix: &str) {
+		if suffix.is_empty() {
+			return;
+		}
+		let anchor = suffix.strip_prefix('#').filter(|a| {
+			!a.is_empty()
+				&& a.chars()
+					.all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+		});
+		match (link["type"].as_str(), anchor) {
+			(Some("entry" | "url"), Some(a)) => {
+				link["anchor"] = Value::from(a);
+			}
+			(Some("url"), None) => {
+				let url = link["value"].as_str().unwrap_or_default();
+				link["value"] = Value::from(format!("{url}{suffix}"));
+			}
+			(ty, _) => {
+				let what = format!(
+					"a link to {} with the suffix {suffix}: the suffix is \
+					left out",
+					ty.unwrap_or_default()
+				);
+				// once, not for every entry
+				if !self.report.skipped.contains(&what) {
+					self.skip(what);
+				}
+			}
+		}
 	}
 
 	/// A matrix as a navigation: each nested entry's link and the nested
 	/// entries of its own matrix under it.
-	pub(super) fn nav(&self, v: &Value) -> Value {
+	pub(super) fn nav(&mut self, v: &Value) -> Value {
 		let mut items = vec![];
 		for nested in v.as_array().into_iter().flatten() {
 			if nested["enabled"] == false {
@@ -187,7 +222,7 @@ impl Importer<'_> {
 
 	/// The link marks of a document as zipp's links, or plain text when
 	/// the field has no links.
-	fn links(&self, node: &mut Value, allowed: bool) {
+	fn links(&mut self, node: &mut Value, allowed: bool) {
 		if let Some(marks) = node.get_mut("marks").and_then(Value::as_array_mut)
 		{
 			let mut kept = vec![];
@@ -217,7 +252,7 @@ impl Importer<'_> {
 
 	/// An `href` of CKEditor: `{entry:12@1:url||https://…}`, mailto:,
 	/// tel: or a url.
-	fn href(&self, attrs: &Value) -> Option<Value> {
+	fn href(&mut self, attrs: &Value) -> Option<Value> {
 		let href = attrs["href"].as_str()?;
 		let target = attrs["target"].clone();
 		let link = if let Some(r) = href.strip_prefix('{') {

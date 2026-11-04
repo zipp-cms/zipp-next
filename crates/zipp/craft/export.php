@@ -10,12 +10,13 @@
 // text, number, boolean as they are; dropdowns the value, checkboxes a list
 // of values; tables rows by column handle; json as it is; entries,
 // categories and assets a list of ids; links { type, id | value, label,
-// target, download }; matrix a list of nested entries { id, type, title,
-// enabled, fields }; content blocks { fields }; CKEditor { html, entries }
-// with the raw html (`<craft-entry data-entry-id>`, `{entry:1@1:url}`);
-// meierlabs-seo's field in zipp-seo's shape with asset ids; TableMaker
-// { columns: [{ heading, width, align, type }], rows } with each row a list
-// in the order of the columns. Assets have the fields of their volume.
+// target, download, urlSuffix }; matrix a list of nested entries { id,
+// type, title, enabled, fields }; content blocks { fields }; CKEditor
+// { html, entries } with the raw html (`<craft-entry data-entry-id>`,
+// `{entry:1@1:url}`); meierlabs-seo's field in zipp-seo's shape with asset
+// ids; TableMaker { columns: [{ heading, width, align, type }], rows } with
+// each row a list in the order of the columns. Assets have the fields of their volume,
+// temporary uploads without a volume are left out.
 
 $sites = \Craft::$app->getSites()->getAllSites();
 
@@ -66,6 +67,9 @@ $value = function (\craft\base\ElementInterface $el, \craft\base\FieldInterface 
 			'label' => $v->getLabel(true),
 			'target' => $v->target,
 			'download' => $v->download,
+			// the advanced setting, `#contact` or `?a=1`, not in every
+			// Craft 5
+			'urlSuffix' => $v->urlSuffix ?? null,
 		],
 		$field instanceof \craft\fields\BaseRelationField => $ids($v),
 		// meierlabs-seo, the plugin may not be installed
@@ -181,6 +185,10 @@ foreach ($sites as $site) {
 }
 
 foreach (\craft\elements\Asset::find()->status(null)->all() as $a) {
+	// Craft's temporary uploads have no volume, nothing links them
+	if ($a->volumeId === null) {
+		continue;
+	}
 	$focal = $a->getHasFocalPoint() ? $a->getFocalPoint() : null;
 	$out['assets'][] = [
 		'id' => $a->id,

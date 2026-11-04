@@ -340,6 +340,9 @@ fn imports_the_alt_text_per_site() {
 				"title": null, "alt": null, "focalPoint": null },
 			{ "id": 4, "volume": "default", "path": "/etc/hostname",
 				"title": null, "alt": null, "focalPoint": null },
+			// Craft's temporary upload
+			{ "id": 5, "volume": null, "path": "user_2/c.jpg", "title": null,
+				"alt": null, "focalPoint": null },
 		],
 	}))
 	.unwrap();
@@ -360,12 +363,92 @@ fn imports_the_alt_text_per_site() {
 	assert_eq!(report.assets, 2);
 	let out = report.skipped.iter().filter(|s| s.contains("out of the"));
 	assert_eq!(out.count(), 2, "{:?}", report.skipped);
+	assert!(report.skipped.contains(
+		&"asset user_2/c.jpg: without a volume, a temporary upload".into()
+	));
 	let alt = |id| assets::get_asset(&conn, id).unwrap().alt;
 	assert_eq!(
 		alt(1),
 		[("de".into(), "Ein A".into()), ("en".into(), "An A".into())].into()
 	);
 	assert_eq!(alt(2), [("de".into(), "Noch ein A".into())].into());
+}
+
+#[test]
+fn keeps_url_suffixes() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let schema = Schema::new()
+		.site("de", "Deutsch", "de-CH")
+		.section(Section::channel("pages", ["page"]))
+		.entry(
+			"page",
+			"Page",
+			[Field::link(
+				"link",
+				[LinkKind::Entry, LinkKind::Url, LinkKind::Email],
+			)],
+		);
+	let page = |id, link: Value| {
+		json!({ "id": id, "type": "page", "title": format!("P{id}"),
+			"slug": format!("p{id}"), "enabled": true,
+			"fields": { "link": link } })
+	};
+	let suffixed = |ty, id: Option<i64>, value: Option<&str>, suffix| {
+		let mut l = link(ty, id, value);
+		l["urlSuffix"] = Value::from(suffix);
+		l
+	};
+	let export: Export = serde_json::from_value(json!({
+		"sites": [{ "handle": "default" }],
+		"sections": { "pages": { "sites": { "default": [
+			page(1, suffixed("entry", Some(1), None, "#contact")),
+			page(2, suffixed("url", None, Some("https://x.ch"), "#top")),
+			page(3, suffixed("url", None, Some("https://x.ch"), "?a=1#b")),
+			page(4, suffixed("entry", Some(1), None, "?a=1")),
+			page(5, suffixed("email", None, Some("mailto:a@b.ch"), "#x")),
+			// from an export before the suffix
+			page(6, link("entry", Some(1), None)),
+		] } } },
+	}))
+	.unwrap();
+	let opts = Options {
+		sites: vec![],
+		volumes: HashMap::new(),
+	};
+	let files = tempfile::tempdir().unwrap();
+
+	let report = import(&conn, &schema, files.path(), &export, &opts).unwrap();
+	assert_eq!(report.entries, 6);
+	assert_eq!(
+		report.skipped,
+		[
+			"a link to entry with the suffix ?a=1: the suffix is left out",
+			"a link to email with the suffix #x: the suffix is left out",
+		]
+	);
+
+	let link = |id| {
+		entries::get_entry(&conn, id, "de").unwrap().fields["link"].clone()
+	};
+	assert_eq!(
+		link(1),
+		json!({ "type": "entry", "value": 1, "anchor": "contact" })
+	);
+	// without a target in Craft, see imports_a_site
+	assert_eq!(
+		link(2),
+		json!({ "type": "url", "value": "https://x.ch", "newTab": false,
+			"anchor": "top" })
+	);
+	assert_eq!(
+		link(3),
+		json!({ "type": "url", "value": "https://x.ch?a=1#b",
+			"newTab": false })
+	);
+	assert_eq!(link(4), json!({ "type": "entry", "value": 1 }));
+	assert_eq!(link(5), json!({ "type": "email", "value": "a@b.ch" }));
+	assert_eq!(link(6), json!({ "type": "entry", "value": 1 }));
 }
 
 /// zipp-seo's field type, which depends on zipp: its values as they are.

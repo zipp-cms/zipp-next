@@ -392,13 +392,17 @@ rename one of them. Assets come with their title, alt text (per
 site, `export.php` from before gives only the primary site's), focal
 point and the fields of their volume, if the schema has them as asset
 fields (a path out of its volume, absolute or with `..`, is left out
-and listed). Each volume becomes a folder with Craft's folders in it,
+and listed, as are Craft's temporary uploads without a volume). Each
+volume becomes a folder with Craft's folders in it,
 named like the volume or as `--volume` says before a colon:
 `--volume timetables=Stundenpläne:../craft/web/timetables`,
 `--volume default=:../craft/web/assets` puts the files and folders of
 the volume on the top. A section whose uri format has only some types
 (`{% if type == 'blog' %}blog/{slug}{% endif %}`) is a section without
-a uri and `uri_of("blog", "blog/{slug}")`. Entries keep Craft's post date, structures their order. What
+a uri and `uri_of("blog", "blog/{slug}")`. A link's url suffix (an
+advanced setting of Craft's link field) `#contact` becomes the anchor
+of a link to an entry or url, any other suffix (`?a=1`) goes on the end
+of a url; on other links it is left out and listed. Entries keep Craft's post date, structures their order. What
 the schema doesn't have is left out and listed; slugs are made zipp's
 (`teddy--co.` becomes `teddy-co`), so redirect such urls in the
 frontend. SEOmatic's fields aren't imported, nor meierlabs-seo's

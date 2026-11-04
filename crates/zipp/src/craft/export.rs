@@ -59,7 +59,8 @@ pub struct Global {
 #[serde(rename_all = "camelCase")]
 pub struct CraftAsset {
 	pub id: i64,
-	pub volume: String,
+	/// none for Craft's temporary uploads, in older exports
+	pub volume: Option<String>,
 	/// from exports that have it, else the handle names its folder
 	pub volume_name: Option<String>,
 	/// in the volume, with its folders: `photos/a.jpg`

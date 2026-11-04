@@ -421,10 +421,17 @@ impl Importer<'_> {
 		sites: &HashMap<String, String>,
 	) -> Result<()> {
 		for a in &export.assets {
-			let Some(volume) = opts.volumes.get(&a.volume) else {
+			let Some(handle) = &a.volume else {
+				self.skip(format!(
+					"asset {}: without a volume, a temporary upload",
+					a.path
+				));
+				continue;
+			};
+			let Some(volume) = opts.volumes.get(handle) else {
 				self.skip(format!(
 					"asset {}: no folder for volume {}, use --volume {}=<dir>",
-					a.path, a.volume, a.volume
+					a.path, handle, handle
 				));
 				continue;
 			};
@@ -452,7 +459,7 @@ impl Importer<'_> {
 			};
 			let top = match &volume.folder {
 				Some(f) => f.as_str(),
-				None => a.volume_name.as_deref().unwrap_or(&a.volume),
+				None => a.volume_name.as_deref().unwrap_or(handle),
 			};
 			let path = [top]
 				.into_iter()
