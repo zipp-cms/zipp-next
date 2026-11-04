@@ -236,8 +236,14 @@ and `Field::assets` link them. Transforms are named in code
 on their first request and cached; crops keep the focal point editors
 set in the studio. GraphQL asks like Craft: `image { url(transform:
 "hero") width(transform: "hero") srcset(transforms: ["small", "hero"])
-alt }`. Only named transforms exist, so nobody can make the server
-render arbitrary sizes. `--public-url` makes the urls absolute for
+alt }`. Only named transforms and the sizes the schema lists exist,
+so nobody can make the server render arbitrary sizes: Craft's
+`url(width: 800)`, `url(height: 800)` and `url(width: 800, height:
+450)` work for `.image_widths([800, 1600])`, `.image_heights([800])`
+and `.image_sizes([(800, 450)])`; width and height crop around the
+focal point like Craft's default mode. Their names are `w800`, `h800`
+and `w800h450` (for `srcset(transforms: [...])`); a size that isn't
+listed is an error naming the allowed ones. `--public-url` makes the urls absolute for
 frontends on other domains. Like in Craft an asset has a title (GraphQL
 `title`, from the filename while it is empty) and an alt text per site
 (the studio edits the one of the site it shows; GraphQL gives the one

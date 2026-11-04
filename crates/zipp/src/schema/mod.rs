@@ -85,10 +85,13 @@ pub struct Schema {
 	/// Sites not on the website yet, see [`Schema::offline`].
 	#[serde(skip)]
 	pub(crate) offline: Vec<String>,
-	/// Widths images can have without a named transform, see
-	/// [`Schema::image_widths`].
+	/// Sizes images can have without a named transform, width and
+	/// height, see [`Schema::image_widths`] and [`Schema::image_sizes`].
 	#[serde(skip)]
-	pub(crate) image_widths: Vec<u32>,
+	pub(crate) image_sizes: Vec<(Option<u32>, Option<u32>)>,
+	/// The time zone of formatted dates, see [`Schema::timezone`].
+	#[serde(skip)]
+	pub(crate) timezone: Option<String>,
 }
 
 /// A markdown file of the project shown in the studio, like a readme.
@@ -317,20 +320,63 @@ impl Schema {
 		self.transforms.iter().find(|t| t.handle == handle)
 	}
 
-	/// The transform of a name: a named one or `w800` of an allowed width.
+	/// The transform of a name: a named one or one of the allowed sizes,
+	/// `w800`, `h800` or `w800h450`.
 	pub(crate) fn transform_named(&self, name: &str) -> Option<Transform> {
 		if let Some(t) = self.get_transform(name) {
 			return Some(t.clone());
 		}
-		let width: u32 = name.strip_prefix('w')?.parse().ok()?;
-		self.width_transform(width)
+		let num = |s: &str| s.parse::<u32>().ok();
+		let (w, h) = match name.strip_prefix('w') {
+			Some(rest) => match rest.split_once('h') {
+				Some((w, h)) => (Some(num(w)?), Some(num(h)?)),
+				None => (Some(num(rest)?), None),
+			},
+			None => (None, Some(num(name.strip_prefix('h')?)?)),
+		};
+		self.size_transform(w, h)
 	}
 
-	/// The transform of an allowed width.
-	pub(crate) fn width_transform(&self, width: u32) -> Option<Transform> {
-		self.image_widths
-			.contains(&width)
-			.then(|| Transform::new(&format!("w{width}")).width(width))
+	/// The transform of an allowed size, like Craft's `url(width: 800,
+	/// height: 450)`: both sizes crop around the focal point.
+	pub(crate) fn size_transform(
+		&self,
+		width: Option<u32>,
+		height: Option<u32>,
+	) -> Option<Transform> {
+		if !self.image_sizes.contains(&(width, height)) {
+			return None;
+		}
+		let (handle, mut t) = match (width, height) {
+			(Some(w), Some(h)) => {
+				let t = Transform::new("").width(w).height(h).crop();
+				(format!("w{w}h{h}"), t)
+			}
+			(Some(w), None) => (format!("w{w}"), Transform::new("").width(w)),
+			(None, Some(h)) => (format!("h{h}"), Transform::new("").height(h)),
+			(None, None) => return None,
+		};
+		t.handle = handle;
+		Some(t)
+	}
+
+	/// The sizes of [`Schema::size_transform`] for an error, `width 800,
+	/// height 600, 800x450`.
+	pub(crate) fn allowed_sizes(&self) -> String {
+		let sizes: Vec<String> = self
+			.image_sizes
+			.iter()
+			.map(|s| match s {
+				(Some(w), Some(h)) => format!("{w}x{h}"),
+				(Some(w), None) => format!("width {w}"),
+				(None, Some(h)) => format!("height {h}"),
+				(None, None) => unreachable!(),
+			})
+			.collect();
+		match sizes.is_empty() {
+			true => "none".into(),
+			false => sizes.join(", "),
+		}
 	}
 
 	pub fn get(&self, handle: &str) -> Option<&Component> {

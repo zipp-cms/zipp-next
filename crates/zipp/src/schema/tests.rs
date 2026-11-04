@@ -39,6 +39,16 @@ fn finds_mistakes() {
 	let s = site().entry("Bad", "Bad", []);
 	assert!(s.check().unwrap_err().contains("camelCase"));
 
+	let s = site().image_sizes([(800, 0)]);
+	assert_eq!(s.check().unwrap_err(), "image sizes can't be 0");
+
+	let s = site().timezone("Europe/Nowhere");
+	assert_eq!(
+		s.check().unwrap_err(),
+		"timezone \"Europe/Nowhere\" is unknown"
+	);
+	site().timezone("Europe/Zurich").check().unwrap();
+
 	let s = site().entry("loose", "Loose", []);
 	assert_eq!(s.check().unwrap_err(), "entry type loose is in no section");
 

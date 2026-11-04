@@ -25,6 +25,15 @@
 - Videos are the asset kind `video` like in Craft, they were `file`;
   `GET /api/assets?kind=file` lists files without the videos now.
 
+- Images in Craft's sizes: `url(height: 800)` and `url(width: 800,
+  height: 450)` (cropped around the focal point), also on `width` and
+  `height`, for the sizes of `Schema::image_heights` and
+  `Schema::image_sizes` besides `Schema::image_widths`; a size that
+  isn't listed is an error naming the allowed ones.
+- Craft's `@formatDateTime(format:, timezone:, locale:)` on the dates
+  of entries and date fields, PHP's date format, also as field
+  arguments; `Schema::timezone` for the time zone of formatted dates.
+
 ## 0.1.0 (2026-11-03)
 
 The first release: zipp as a library on crates.io (`zipp-cms`, the crate

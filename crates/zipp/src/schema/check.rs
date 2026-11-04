@@ -15,7 +15,17 @@ impl Schema {
 		}
 		self.check_roles()?;
 		self.check_docs()?;
-		self.check_transforms()
+		self.check_transforms()?;
+		self.check_timezone()
+	}
+
+	fn check_timezone(&self) -> Result<(), String> {
+		match &self.timezone {
+			Some(tz) if jiff::tz::TimeZone::get(tz).is_err() => {
+				Err(format!("timezone {tz:?} is unknown"))
+			}
+			_ => Ok(()),
+		}
 	}
 
 	fn check_sites(&self) -> Result<(), String> {
@@ -276,6 +286,10 @@ impl Schema {
 					t.handle
 				));
 			}
+		}
+		let zero = |s: Option<u32>| s == Some(0);
+		if self.image_sizes.iter().any(|(w, h)| zero(*w) || zero(*h)) {
+			return Err("image sizes can't be 0".into());
 		}
 		Ok(())
 	}

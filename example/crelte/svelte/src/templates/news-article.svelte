@@ -10,19 +10,13 @@
 </script>
 
 <script>
-	import { getSite } from 'crelte';
 	import Intro from '@/components/Intro.svelte';
-
-	const site = getSite();
 
 	let { entry, blocks } = $props();
 </script>
 
 <p class="meta">
-	{[
-		new Date(entry.postDate).toLocaleDateString($site.language),
-		...entry.categories.map(c => c.title),
-	].join(' · ')}
+	{[entry.postDate, ...entry.categories.map(c => c.title)].join(' · ')}
 </p>
 <Intro {entry} />
 <Content {blocks} />

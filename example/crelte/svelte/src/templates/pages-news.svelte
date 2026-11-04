@@ -10,20 +10,16 @@
 </script>
 
 <script>
-	import { getRoute, getSite } from 'crelte';
+	import { getRoute } from 'crelte';
 	import { getTranslations } from 'crelte/translations';
 	import Intro from '@/components/Intro.svelte';
 
 	const route = getRoute();
-	const site = getSite();
 	const t = getTranslations();
 
 	let { entry, articles, categories } = $props();
 
 	let active = $derived($route.getSearchParam('category'));
-
-	/** @param {string} date */
-	const day = date => new Date(date).toLocaleDateString($site.language);
 </script>
 
 <Intro {entry} />
@@ -53,7 +49,7 @@
 			<div>
 				<h2><a href={a.url}>{a.title}</a></h2>
 				<p class="meta">
-					{[day(a.postDate), ...a.categories.map(c => c.title)].join(
+					{[a.postDate, ...a.categories.map(c => c.title)].join(
 						' · ',
 					)}
 				</p>

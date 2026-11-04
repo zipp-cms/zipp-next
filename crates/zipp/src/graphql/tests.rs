@@ -403,7 +403,12 @@ async fn checks_queries_of_frontends() {
 #[tokio::test]
 async fn craft_arguments_and_fields() {
 	let db = Db::memory().unwrap();
-	let s = Arc::new(site().image_widths([400, 800]));
+	let s = Arc::new(
+		site()
+			.image_widths([400, 800])
+			.image_heights([450])
+			.image_sizes([(800, 400)]),
+	);
 	let urls = SiteUrls::from([
 		("de".to_string(), "https://x.ch".to_string()),
 		("en".to_string(), "https://x.ch/en".to_string()),
@@ -454,7 +459,12 @@ async fn craft_arguments_and_fields() {
 			one: entry(id: [{b}]) {{ title language postDate
 				localized {{ language url }} }}
 			img: entry(id: [{a}]) {{ ... on event_Entry {{ image {{
-				w800: url(width: 800) width(width: 800) focalPoint title }} }} }}
+				w800: url(width: 800) width(width: 800) focalPoint title
+				h450: url(height: 450) h450Width: width(height: 450)
+				crop: url(width: 800, height: 400, format: "webp")
+				cropWidth: width(width: 800, height: 400)
+				cropHeight: height(width: 800, height: 400)
+				cropSet: srcset(transforms: ["w800h400", "h450"]) }} }} }}
 		}}"#
 	);
 	let data = run(&gql, &q, true).await;
@@ -478,14 +488,53 @@ async fn craft_arguments_and_fields() {
 	assert_eq!(img["width"], 800);
 	assert_eq!(img["focalPoint"], json!([0.5, 0.5]));
 	assert_eq!(img["title"], "Piano night");
+	// Craft's height, and width with height cropped
+	assert!(img["h450"].as_str().unwrap().contains("/h450/"), "{img}");
+	assert_eq!(img["h450Width"], 800);
+	assert!(
+		img["crop"]
+			.as_str()
+			.unwrap()
+			.ends_with("/w800h400/piano-night.webp"),
+		"{img}"
+	);
+	assert_eq!(
+		(&img["cropWidth"], &img["cropHeight"]),
+		(&json!(800), &json!(400))
+	);
+	assert!(
+		img["cropSet"]
+			.as_str()
+			.unwrap()
+			.contains("/w800h400/piano-night.png 800w"),
+		"{img}"
+	);
 
-	// a width the schema doesn't allow
-	let req = async_graphql::Request::new(format!(
-		r#"{{ entry(id: [{a}]) {{ ... on event_Entry {{ image {{ url(width: 500) }} }} }} }}"#
-	))
-	.data(viewer(true));
-	let resp = gql.execute(req).await;
-	assert!(resp.errors[0].message.contains("width 500 is not allowed"));
+	// sizes the schema doesn't allow
+	let errors = check_query(
+		&gql,
+		&format!(
+			r#"{{ entry(id: [{a}]) {{ ... on event_Entry {{ image {{
+				url(width: 800, height: 450) }} }} }} }}"#
+		),
+	)
+	.await;
+	assert!(
+		errors[0].contains(
+			"width: 800, height: 450 is not an allowed image size, the \
+			schema allows: width 400, width 800, height 450, 800x400"
+		),
+		"{errors:?}"
+	);
+	let errors = check_query(
+		&gql,
+		&format!(
+			r#"{{ entry(id: [{a}]) {{ ... on event_Entry {{ image {{
+				srcset(transforms: ["w500"]) }} }} }} }}"#
+		),
+	)
+	.await;
+	assert!(errors[0].contains("unknown transform w500"), "{errors:?}");
 }
 
 #[tokio::test]

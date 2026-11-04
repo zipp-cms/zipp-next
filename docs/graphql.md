@@ -124,11 +124,31 @@ language switch (`localized { siteId siteHandle language title uri url
 }`): only where it is live and the request may read it, like any query
 of that site (published, no offline site for frontends, the sites of
 the token; a preview shows its entry in every site). Images have
-`focalPoint`, `title` and `url(width: 800)` for the widths of `.image_widths([400, 800, 1600])`
-(`w800` in `srcset(transforms: ["w400", "w800"])`),
+`focalPoint`, `title` and Craft's `url(width: 800)`, `url(height:
+800)` and `url(width: 800, height: 450)` (cropped around the focal
+point; also on `width` and `height`) for the sizes the schema lists,
+`.image_widths([400, 800])`, `.image_heights([800])` and
+`.image_sizes([(800, 450)])` (`w800`, `h800`, `w800h450` in
+`srcset(transforms: ["w400", "w800"])`); Craft's `mode` and
+`position` aren't there,
 `url(transform: "hero", format: "webp")` and `srcset(transforms: [...],
 format: "webp")` in another type (`webp`, `jpg`, `png`), and `alt` of
 the site asked, else of the primary site.
+The dates (`postDate`, `expiryDate`, `dateCreated`, `dateUpdated` and
+date fields) take Craft's `@formatDateTime(format: "j. F Y", timezone:
+"Europe/Zurich", locale: "de-CH")`, or the same as arguments,
+`postDate(format: "d.m.Y")`: async-graphql's dynamic schema has no
+directives of its own, so zipp moves the directive's arguments to the
+field before it checks the query. `format` is PHP's `date()` format
+like Craft's (`d D j l N S w z W F m M n t L o Y y a A g G h H i s v
+u e T O P p Z c r U`, `\` keeps a letter; Craft's `short`, `long` aren't
+there), without one Craft's `2026-10-28T09:00:00+01:00`; a date
+without any argument stays as it is, in UTC. Months and days are
+German, French, Italian or English, the language of `locale` or else of
+the site asked. The time zone is `timezone`, else the schema's
+`.timezone("Europe/Zurich")`, else UTC; a date field is a time in the
+schema's time zone, like editors entered it.
+
 Every asset has `kind` (`image`, `video` or `file`), `mimeType`
 (`video/mp4`) and `size`, the schema's asset fields (`image { url
 credit }`), `folderId`, `folder` (the path of its folder,

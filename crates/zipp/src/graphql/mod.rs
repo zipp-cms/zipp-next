@@ -54,6 +54,9 @@ mod asset;
 mod asset_list;
 #[cfg(test)]
 mod asset_list_tests;
+mod dates;
+#[cfg(test)]
+mod dates_tests;
 mod entry;
 pub mod ext;
 #[cfg(test)]
@@ -261,6 +264,11 @@ pub(crate) fn build(
 				field = field.argument(InputValue::new(arg, ty));
 			}
 		}
+		if DATES.contains(&name) {
+			for arg in dates::args() {
+				field = field.argument(arg);
+			}
+		}
 		entry_iface = entry_iface.field(field);
 	}
 	for f in &entry_fields {
@@ -354,6 +362,7 @@ pub(crate) fn build(
 		.limit_depth(15)
 		.limit_complexity(2000)
 		.extension(PublicErrors)
+		.extension(dates::FormatDateTime)
 		.finish()
 		.map_err(|e| e.to_string())
 }

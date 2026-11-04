@@ -197,6 +197,32 @@ async fn transforms_in_other_formats() {
 }
 
 #[tokio::test]
+async fn serves_the_allowed_sizes() {
+	let site = site_with_roles()
+		.image_widths([20])
+		.image_heights([10])
+		.image_sizes([(10, 10)]);
+	let ts = TestServer::new(site);
+	let editor = ts.user(Some("editor"));
+	let a = upload(&editor, "wide.png", &png(40, 20)).await.unwrap();
+
+	// a width, a height, both cropped
+	for (name, size) in
+		[("w20", (20, 10)), ("h10", (20, 10)), ("w10h10", (10, 10))]
+	{
+		let (status, body) = get(&editor, &a.url(Some(name))).await;
+		assert_eq!(status, StatusCode::OK, "{name}");
+		let img = image::load_from_memory(&body).unwrap();
+		assert_eq!((img.width(), img.height()), size, "{name}");
+	}
+	// not in the schema
+	for name in ["w30", "h20", "w20h10", "w10h", "h"] {
+		let url = a.url(Some(name));
+		assert_eq!(get(&editor, &url).await.0, StatusCode::NOT_FOUND, "{name}");
+	}
+}
+
+#[tokio::test]
 async fn alt_text_per_site() {
 	let ts = TestServer::new(site_with_roles());
 	let editor = ts.user(Some("editor"));

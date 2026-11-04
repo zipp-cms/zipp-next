@@ -34,15 +34,20 @@ pub(super) fn entry_common() -> Vec<(&'static str, TypeRef)> {
 	]
 }
 
+/// The dates of entries, with the arguments of [`dates`].
+pub(super) const DATES: [&str; 4] =
+	["postDate", "expiryDate", "dateCreated", "dateUpdated"];
+
 pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 	let ty = entry_common()
 		.into_iter()
 		.find(|(n, _)| *n == name)
 		.unwrap()
 		.1;
-	GqlField::new(name, ty, move |ctx| {
+	let field = GqlField::new(name, ty, move |ctx| {
 		FieldFuture::new(async move {
 			let e = ctx.parent_value.try_downcast_ref::<Entry>()?;
+			let date = |ms| dates::format_ms(&ctx, ms, &e.site);
 			let v = match name {
 				"id" => GqlValue::from(e.id.to_string()),
 				"sectionHandle" => GqlValue::from(e.section.clone()),
@@ -60,16 +65,13 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 				"createdAt" => GqlValue::from(e.created_at as f64),
 				"updatedAt" => GqlValue::from(e.updated_at as f64),
 				// not published yet: when it was made
-				"postDate" => GqlValue::from(crate::db::iso(
-					e.dates.post_date.unwrap_or(e.created_at),
-				)),
-				"expiryDate" => e
-					.dates
-					.expiry_date
-					.map(|d| GqlValue::from(crate::db::iso(d)))
-					.unwrap_or_default(),
-				"dateCreated" => GqlValue::from(crate::db::iso(e.created_at)),
-				"dateUpdated" => GqlValue::from(crate::db::iso(e.updated_at)),
+				"postDate" => date(e.dates.post_date.unwrap_or(e.created_at))?,
+				"expiryDate" => match e.dates.expiry_date {
+					Some(d) => date(d)?,
+					None => GqlValue::Null,
+				},
+				"dateCreated" => date(e.created_at)?,
+				"dateUpdated" => date(e.updated_at)?,
 				"language" => {
 					let schema = ctx.data::<Arc<Schema>>()?;
 					let site =
@@ -107,7 +109,11 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 			};
 			Ok(Some(FieldValue::value(v)))
 		})
-	})
+	});
+	match DATES.contains(&name) {
+		true => dates::args().into_iter().fold(field, GqlField::argument),
+		false => field,
+	}
 }
 
 /// A field of the content model, read from the JSON of its entry or block;
@@ -132,6 +138,7 @@ pub(super) fn content_field(
 	let kind_arg = matches!(kind, FieldKind::Assets { .. })
 		.then(|| InputValue::new("kind", TypeRef::named_list(TypeRef::STRING)));
 
+	let is_date = matches!(field.kind, FieldKind::Date { .. });
 	let f = GqlField::new(field.handle.clone(), ty, move |ctx| {
 		let handle = handle.clone();
 		let kind = kind.clone();
@@ -151,10 +158,14 @@ pub(super) fn content_field(
 			resolve_value(&ctx, kind, custom, value, site).await
 		})
 	});
-	Some(match kind_arg {
-		Some(arg) => f.argument(arg),
-		None => f,
-	})
+	// Craft's `@formatDateTime`
+	let date_args = is_date.then(dates::args).into_iter().flatten();
+	Some(
+		kind_arg
+			.into_iter()
+			.chain(date_args)
+			.fold(f, GqlField::argument),
+	)
 }
 
 /// The GraphQL type of a field; none for a note.
@@ -212,6 +223,12 @@ async fn resolve_value<'a>(
 	site: String,
 ) -> async_graphql::Result<Option<FieldValue<'a>>> {
 	match kind {
+		FieldKind::Date { .. } => match value.as_str() {
+			Some(d) => {
+				Ok(Some(FieldValue::value(dates::format_field(ctx, d, &site)?)))
+			}
+			None => Ok(None),
+		},
 		FieldKind::Relation { .. } => {
 			let ids: Vec<i64> = value
 				.as_array()
@@ -324,7 +341,6 @@ async fn resolve_value<'a>(
 		| FieldKind::Email
 		| FieldKind::Number { .. }
 		| FieldKind::Boolean
-		| FieldKind::Date { .. }
 		| FieldKind::Dropdown { .. } => match value {
 			Value::Null => Ok(None),
 			v => Ok(Some(FieldValue::value(GqlValue::from_json(v)?))),

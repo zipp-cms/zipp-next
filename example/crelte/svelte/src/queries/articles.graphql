@@ -9,7 +9,8 @@ query ($categories: [QueryArgument], $siteId: [QueryArgument]) {
 	) {
 		title
 		url
-		postDate
+		# Craft's directive, PHP's format in the language of the site
+		postDate @formatDateTime(format: "j. F Y")
 		... on article_Entry {
 			intro {
 				html

@@ -50,6 +50,8 @@ pub fn schema() -> Schema {
 	Schema::new()
 		.site("de", "Deutsch", "de-CH")
 		.site("en", "English", "en")
+		// formatted dates (`@formatDateTime`) are in Swiss time
+		.timezone("Europe/Zurich")
 		// the pages like the crelte tutorial: the home page is the page of
 		// type home, the news page lists the articles
 		.section(

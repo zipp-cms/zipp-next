@@ -18,9 +18,10 @@ fn asset_of<'a>(ctx: &ResolverContext<'a>) -> async_graphql::Result<&'a Asset> {
 	Ok(&ctx.parent_value.try_downcast_ref::<SiteAsset>()?.asset)
 }
 
-/// An asset, like Craft's: `url(transform: "medium")` and the size after
-/// the transform. Transforms are the named ones of the schema, the asset
-/// fields of the schema are fields of it.
+/// An asset, like Craft's: `url(transform: "medium")` or `url(width:
+/// 800, height: 450)` and the size after the transform. Transforms are
+/// the named ones and the sizes of the schema, the asset fields of the
+/// schema are fields of it.
 pub(super) fn asset_object(schema: &Schema) -> Object {
 	let plain = |name: &'static str, ty: TypeRef| {
 		GqlField::new(name, ty, move |ctx| {
@@ -59,6 +60,7 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 	let transform_arg =
 		|| InputValue::new("transform", TypeRef::named(TypeRef::STRING));
 	let width_arg = || InputValue::new("width", TypeRef::named(TypeRef::INT));
+	let height_arg = || InputValue::new("height", TypeRef::named(TypeRef::INT));
 	let format_arg =
 		|| InputValue::new("format", TypeRef::named(TypeRef::STRING));
 	let s = || TypeRef::named_nn(TypeRef::STRING);
@@ -120,7 +122,7 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 					let format = format_of(&ctx)?;
 					if format.is_some() && t.is_none() && a.kind == "image" {
 						return Err(GqlError::new(
-							"format needs a transform or a width",
+							"format needs a transform, a width or a height",
 						));
 					}
 					let url = asset_url(&ctx, a, t.as_ref(), format)?;
@@ -129,6 +131,7 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 			})
 			.argument(transform_arg())
 			.argument(width_arg())
+			.argument(height_arg())
 			.argument(format_arg()),
 		)
 		.field(
@@ -136,14 +139,16 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 				asset_size(ctx, |(w, _)| w)
 			})
 			.argument(transform_arg())
-			.argument(width_arg()),
+			.argument(width_arg())
+			.argument(height_arg()),
 		)
 		.field(
 			GqlField::new("height", TypeRef::named(TypeRef::INT), |ctx| {
 				asset_size(ctx, |(_, h)| h)
 			})
 			.argument(transform_arg())
-			.argument(width_arg()),
+			.argument(width_arg())
+			.argument(height_arg()),
 		)
 		.field(
 			GqlField::new("srcset", TypeRef::named(TypeRef::STRING), |ctx| {
@@ -154,7 +159,8 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 					let mut parts = vec![];
 					for name in ctx.args.try_get("transforms")?.list()?.iter() {
 						let name = name.string()?;
-						// named or `w800`, like the transform of url
+						// named or `w800`, `h800`, `w800h450`, like the
+						// transform of url
 						let t =
 							schema.transform_named(name).ok_or_else(|| {
 								GqlError::new(format!(
@@ -187,24 +193,32 @@ pub(super) fn transform_of(
 ) -> async_graphql::Result<Option<Transform>> {
 	let schema = ctx.data::<Arc<Schema>>()?;
 	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
-	let t = match (arg("transform"), arg("width")) {
-		(Some(name), _) => {
+	let size = |k: &str| -> async_graphql::Result<Option<u32>> {
+		match arg(k) {
+			Some(v) => Ok(Some(u32::try_from(v.i64()?).unwrap_or(0))),
+			None => Ok(None),
+		}
+	};
+	let t = match (arg("transform"), size("width")?, size("height")?) {
+		(Some(name), _, _) => {
 			let name = name.string()?;
 			schema.transform_named(name).ok_or_else(|| {
 				GqlError::new(format!("unknown transform {name}"))
 			})?
 		}
-		// Craft's `url(width: 800)`, of the widths the schema allows
-		(None, Some(w)) => {
-			let w = u32::try_from(w.i64()?).unwrap_or(0);
-			schema.width_transform(w).ok_or_else(|| {
-				GqlError::new(format!(
-					"width {w} is not allowed, the schema has {:?}",
-					schema.image_widths
-				))
-			})?
-		}
-		(None, None) => return Ok(None),
+		(None, None, None) => return Ok(None),
+		// Craft's `url(width: 800, height: 450)`, of the sizes the schema
+		// allows
+		(None, w, h) => schema.size_transform(w, h).ok_or_else(|| {
+			let w = w.map(|w| format!("width: {w}"));
+			let h = h.map(|h| format!("height: {h}"));
+			let asked: Vec<_> = w.into_iter().chain(h).collect();
+			GqlError::new(format!(
+				"{} is not an allowed image size, the schema allows: {}",
+				asked.join(", "),
+				schema.allowed_sizes()
+			))
+		})?,
 	};
 	// only images have transforms, a file stays itself
 	Ok((a.kind == "image").then(|| t.clone()))

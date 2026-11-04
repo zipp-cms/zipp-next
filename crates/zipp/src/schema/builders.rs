@@ -325,7 +325,38 @@ impl Schema {
 		mut self,
 		widths: impl IntoIterator<Item = u32>,
 	) -> Self {
-		self.image_widths.extend(widths);
+		self.image_sizes
+			.extend(widths.into_iter().map(|w| (Some(w), None)));
+		self
+	}
+
+	/// Heights images can be resized to, like Craft's `url(height:
+	/// 800)`, see [`Schema::image_widths`].
+	pub fn image_heights(
+		mut self,
+		heights: impl IntoIterator<Item = u32>,
+	) -> Self {
+		self.image_sizes
+			.extend(heights.into_iter().map(|h| (None, Some(h))));
+		self
+	}
+
+	/// Width and height images can be cropped to around their focal
+	/// point, like Craft's `url(width: 800, height: 450)`, see
+	/// [`Schema::image_widths`].
+	pub fn image_sizes(
+		mut self,
+		sizes: impl IntoIterator<Item = (u32, u32)>,
+	) -> Self {
+		self.image_sizes
+			.extend(sizes.into_iter().map(|(w, h)| (Some(w), Some(h))));
+		self
+	}
+
+	/// The time zone dates are formatted in, like Craft's time zone of
+	/// the system: `Europe/Zurich`. Without one it is UTC.
+	pub fn timezone(mut self, timezone: &str) -> Self {
+		self.timezone = Some(timezone.into());
 		self
 	}
 
