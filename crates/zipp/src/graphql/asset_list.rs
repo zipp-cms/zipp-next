@@ -34,25 +34,7 @@ fn list_of(
 	let schema = ctx.data::<Arc<Schema>>()?;
 	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
 
-	let site = match (arg("site"), arg("siteId")) {
-		(Some(s), _) => first(&s)?,
-		// the position of a site, or its handle
-		(None, Some(id)) => match first(&id)? {
-			Some(v) => {
-				let site = match v.parse::<i64>() {
-					Ok(n) => schema.site_by_id(n),
-					Err(_) => schema.get_site(&v),
-				};
-				let site = site.ok_or_else(|| {
-					GqlError::new(format!("unknown site {v}"))
-				})?;
-				Some(site.handle.clone())
-			}
-			None => None,
-		},
-		(None, None) => None,
-	};
-	let site = site.unwrap_or_else(|| schema.primary_site().handle.clone());
+	let site = site_arg(ctx)?;
 	if schema.get_site(&site).is_none() {
 		return Err(GqlError::new(format!("unknown site {site}")));
 	}

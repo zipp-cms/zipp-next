@@ -87,6 +87,15 @@ fn sections<'a>(schema: &'a Schema, globals: &Globals) -> Vec<&'a str> {
 		.collect()
 }
 
+/// Whether the users' pages are in the sitemap of a site: those of the
+/// authors of a section only while the section is.
+fn users_in_sitemap(schema: &Schema, globals: &Globals) -> bool {
+	schema.get_user_pages().is_some_and(|p| match &p.section {
+		Some(s) => sections(schema, globals).contains(&s.as_str()),
+		None => true,
+	})
+}
+
 /// The name of the sitemap of the users' pages in place of a section's,
 /// no handle starts with `_`.
 const USERS: &str = "_users";
@@ -182,6 +191,9 @@ async fn index(
 			}
 		}
 		// the pages of users, see `Schema::user_pages`
+		if !users_in_sitemap(&state.schema, &globals) {
+			continue;
+		}
 		let (_, count) =
 			zipp::user_page_uris(&conn, &state.schema, &site.handle, 0, 0)?;
 		for page in 1..=(count + size - 1) / size {
@@ -217,10 +229,10 @@ async fn page(
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	};
 	let conn = state.db.conn();
-	if p.section == USERS && p.page >= 1 {
+	let globals = published_globals(&conn, schema, site)?;
+	if p.section == USERS && p.page >= 1 && users_in_sitemap(schema, &globals) {
 		return users_page(&state, &conn, site, p.page);
 	}
-	let globals = published_globals(&conn, schema, site)?;
 	if p.page < 1 || !sections(schema, &globals).contains(&p.section.as_str()) {
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	}

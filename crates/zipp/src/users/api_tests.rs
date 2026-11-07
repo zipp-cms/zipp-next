@@ -295,3 +295,20 @@ async fn profiles_are_checked_and_saved() {
 	let err = user.call(&theirs).await.unwrap_err();
 	assert_eq!(err, Error::Forbidden);
 }
+
+#[tokio::test]
+async fn a_placeholder_slug_follows_a_name_from_the_studio() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	let mut nameless = new_user("x@x.ch", None);
+	nameless.name = String::new();
+	let created = admin.call(&nameless).await.unwrap();
+	let placeholder = format!("user-{}", created.user.id);
+	assert_eq!(created.user.slug, placeholder);
+	// the studio sends the slug it shows along
+	let mut change = unchanged(&created);
+	change.name = "Anna".into();
+	change.slug = Some(placeholder);
+	let saved = admin.call(&change).await.unwrap();
+	assert_eq!(saved.user.slug, "anna");
+}

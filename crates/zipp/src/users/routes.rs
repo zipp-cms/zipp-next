@@ -69,10 +69,10 @@ async fn update_route(
 		return Err(Error::Request("you can't change your own role".into()));
 	}
 	check_role(&state.schema, req.role.as_deref())?;
-	// the address of a page, like an entry's slug
-	if !auth.admin()
-		&& req.slug.as_ref().is_some_and(|s| *s != current.user.slug)
-	{
+	// the address of a page, like an entry's slug; the one it has stays
+	// (and a placeholder can follow a new name)
+	let new_slug = req.slug.as_ref().filter(|s| **s != current.user.slug);
+	if !auth.admin() && new_slug.is_some() {
 		return Err(Error::Forbidden);
 	}
 
@@ -97,7 +97,7 @@ async fn update_route(
 			));
 		}
 	}
-	let slug = match &req.slug {
+	let slug = match new_slug {
 		Some(s) => match check_slug(&state.db.conn(), req.id, s)? {
 			Ok(s) => Some(s),
 			Err(e) => {

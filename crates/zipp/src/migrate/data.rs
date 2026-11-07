@@ -52,6 +52,8 @@ pub struct DataTx<'a> {
 pub struct Content<'a> {
 	/// The entry's id, of an asset or a user theirs.
 	pub entry_id: i64,
+	/// The entry's type, `asset` or `user` for their fields.
+	pub ty: &'a str,
 	/// Empty for an asset or a user, they have no sites.
 	pub site: &'a str,
 	/// The title of the entry in the site, of a block too.
@@ -208,6 +210,7 @@ impl DataTx<'_> {
 			}
 			res = f(&mut Content {
 				entry_id,
+				ty,
 				site,
 				title,
 				fields: obj,

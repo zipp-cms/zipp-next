@@ -269,23 +269,30 @@ async fn site_profile_route(
 ) -> ApiResult<SiteProfileReq> {
 	let mut errors = vec![];
 	let name = req.name.as_deref().map(str::trim);
-	if name == Some("") {
-		errors.push(FieldError::new("name", "is required"));
+	match name {
+		Some("") => errors.push(FieldError::new("name", "is required")),
+		Some(n) if n.chars().count() > MAX_NAME => {
+			errors.push(FieldError::new("name", "is too long"))
+		}
+		_ => {}
 	}
+
+	// one lock from reading the fields to writing them, a save at the
+	// same time doesn't lose what this one doesn't send
+	let conn = state.db.conn();
 	// the fields it sends replace theirs, the others stay
 	let fields = match req.fields {
 		Some(sent) => {
-			let mut all = user.fields.as_object().cloned().unwrap_or_default();
+			let old = SiteUser::get(&conn, user.id)?.fields;
+			let mut all = old.as_object().cloned().unwrap_or_default();
 			all.extend(sent);
 			let all = serde_json::Value::Object(all);
-			let conn = state.db.conn();
-			match check_fields(
-				&conn,
-				&state.schema,
-				&all,
-				&user.fields,
-				user.id,
-			) {
+			match check_fields(&conn, &state.schema, &all, &old, user.id) {
+				// a profile is public, it stays small
+				Ok(f) if f.to_string().len() > MAX_FIELDS => {
+					errors.push(FieldError::new("fields", "are too long"));
+					None
+				}
 				Ok(f) => Some(f),
 				Err(Error::Invalid(e)) => {
 					errors.extend(e);
@@ -300,7 +307,6 @@ async fn site_profile_route(
 		return Err(Error::Invalid(errors));
 	}
 
-	let conn = state.db.conn();
 	let tx = conn.unchecked_transaction()?;
 	if let Some(name) = name {
 		set_name(&tx, user.id, name)?;
@@ -311,6 +317,12 @@ async fn site_profile_route(
 	tx.commit()?;
 	Ok(Json(SiteUser::get(&conn, user.id)?))
 }
+
+/// The longest name a member gives themselves, in characters.
+const MAX_NAME: usize = 100;
+
+/// The most a member's user fields take as JSON, in bytes.
+const MAX_FIELDS: usize = 64 * 1024;
 
 async fn site_logout_route(
 	State(state): State<AppState>,

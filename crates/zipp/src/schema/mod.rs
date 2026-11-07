@@ -447,6 +447,11 @@ impl Schema {
 		self.get(handle).filter(|c| c.entry)
 	}
 
+	/// The pages of users, see [`Schema::user_pages`].
+	pub fn get_user_pages(&self) -> Option<&UserPages> {
+		self.user_pages.as_ref()
+	}
+
 	pub fn get_section(&self, handle: &str) -> Option<&Section> {
 		self.sections.iter().find(|s| s.handle == handle)
 	}

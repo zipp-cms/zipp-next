@@ -363,6 +363,13 @@ async fn site_users_edit_their_profile() {
 	assert_eq!(err["error"]["detail"][0]["path"], "fields.city", "{err}");
 	let (status, _) = put_me(&member, json!({ "name": " " })).await;
 	assert_eq!(status, 400);
+	// a public profile stays small
+	let (status, _) = put_me(&member, json!({ "name": "x".repeat(101) })).await;
+	assert_eq!(status, 400);
+	let big = json!({ "fields": { "bio": "x".repeat(70_000) } });
+	let (status, err) = put_me(&member, big).await;
+	assert_eq!(status, 400);
+	assert_eq!(err["error"]["detail"][0]["path"], "fields", "{err}");
 
 	// slug, email and role are an admin's
 	for body in [

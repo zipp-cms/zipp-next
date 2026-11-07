@@ -74,7 +74,9 @@ own:
 
 A new name and the fields it sends replace theirs, the others stay;
 they are checked like in the studio (`INVALID` with paths like
-`fields.bio`, an empty name is refused). Anything else, the slug, the
+`fields.bio`, an empty name is refused, a name up to 100 characters and
+the fields up to 64 KB). A member edits every user field, so a field
+only admins set (like `verified`) doesn't belong there. Anything else, the slug, the
 email or the role, is refused with 400: those are an admin's. `GET
 /site-auth/me` and the login have the slug and fields too.
 

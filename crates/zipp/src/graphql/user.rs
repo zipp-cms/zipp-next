@@ -123,25 +123,6 @@ pub(super) fn has_entries_input() -> InputObject {
 	))
 }
 
-/// The site of the `site` or `siteId` argument, else the primary site.
-fn site_arg(ctx: &ResolverContext) -> async_graphql::Result<String> {
-	let schema = ctx.data::<Arc<Schema>>()?;
-	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
-	if let Some(v) = arg("site") {
-		return Ok(v.string()?.into());
-	}
-	if let Some(v) = arg("siteId").map(|v| first(&v)).transpose()?.flatten() {
-		let site = match v.parse::<i64>() {
-			Ok(n) => schema.site_by_id(n),
-			Err(_) => schema.get_site(&v),
-		};
-		let site =
-			site.ok_or_else(|| GqlError::new(format!("unknown site {v}")))?;
-		return Ok(site.handle.clone());
-	}
-	Ok(schema.primary_site().handle.clone())
-}
-
 /// The query of the arguments, `None` when the viewer sees no user.
 fn query_of(
 	ctx: &ResolverContext,
