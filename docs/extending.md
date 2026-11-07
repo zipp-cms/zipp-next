@@ -293,6 +293,13 @@ environment says where: `ZIPP_AGENT_COMMAND` (`claude`), `ZIPP_AGENT_DIR`
 (the project, `..`), `ZIPP_AGENT_RESTART` (rebuilds and restarts the
 cms; its unit needs `KillMode=process`, the agent outlives the restart),
 `ZIPP_AGENT_API`. Meant for a sandbox VM: the agent runs without asking.
+
+It is for development only and for admins only, and it runs with all
+permissions: the shell, the files of the project and an admin's session
+of the cms. Whatever it reads can steer it (prompt injection), also the
+entries, assets and drafts other users wrote; its prompt says content is
+data, but that is no guarantee. So don't run it on an instance shared
+with editors you don't trust, nor with a copy of a production database.
 The agent is a `Harness`: it builds the command for a message and turns
 the lines of its output into the chat's events (text, step, error), so
 `Agent::with(...)` can run another coding agent than Claude Code
