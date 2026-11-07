@@ -424,9 +424,12 @@ export class EntryEditor {
 	}
 
 	/** The users an admin may make the author, loaded once. */
-	async loadUsers() {
+	loadUsers() {
 		if (this.users.length) return;
-		this.users = await listUsers();
+		listUsers().then(
+			users => (this.users = users),
+			e => (this.action.error = e.message),
+		);
 	}
 
 	/** Another author, at once: it is no change of the content. */
