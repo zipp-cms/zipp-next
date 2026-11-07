@@ -11,7 +11,8 @@ export function favicon(site: string): Promise<string | null> {
 	let icon = icons.get(site);
 	if (!icon) {
 		icon = download(`/sites/${encodeURIComponent(site)}/favicon`)
-			.then(blob => URL.createObjectURL(blob))
+			// empty: the website has none
+			.then(blob => (blob.size ? URL.createObjectURL(blob) : null))
 			.catch(() => {
 				// asked again next time: it may have been the network
 				icons.delete(site);

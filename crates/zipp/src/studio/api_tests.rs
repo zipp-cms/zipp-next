@@ -378,7 +378,7 @@ async fn the_favicon_of_a_site() {
 	assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 	// a site without a url
 	let resp = ts.admin().get("/api/sites/en/favicon").await;
-	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+	assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 }
 
 #[tokio::test]
@@ -395,13 +395,13 @@ async fn no_favicon_of_another_host() {
 	let ts = favicon_site(&url);
 
 	let resp = ts.admin().get("/api/sites/de/favicon").await;
-	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+	assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 	assert_eq!(other.load(Ordering::SeqCst), 2);
 	assert_eq!(asked.load(Ordering::SeqCst), 0);
 
 	// none is kept too
 	let resp = ts.admin().get("/api/sites/de/favicon").await;
-	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+	assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 	assert_eq!(other.load(Ordering::SeqCst), 2);
 
 	// too big
@@ -410,5 +410,5 @@ async fn no_favicon_of_another_host() {
 		.admin()
 		.get("/api/sites/de/favicon")
 		.await;
-	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+	assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 }
