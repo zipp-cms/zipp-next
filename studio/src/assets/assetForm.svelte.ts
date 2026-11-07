@@ -11,12 +11,7 @@ import {
 import { NO_EDITS, noEdits } from './image/edits';
 import { Busy } from '../core/busy.svelte';
 import type { Values } from '../core/schema';
-import { clean } from '../core/values';
-
-/** The values without empty ones, as the server keeps them. */
-function filled(v: Values): Values {
-	return (clean(v) ?? {}) as Values;
-}
+import { cleanValues } from '../core/values';
 
 /** The alt texts without empty ones, as the server keeps them. */
 function filledAlt(alt: Record<string, string>): Record<string, string> {
@@ -78,7 +73,7 @@ export class AssetForm extends Busy {
 			filename: this.filename,
 			focal: this.focal,
 			edits: $state.snapshot(this.edits),
-			values: filled($state.snapshot(this.values)),
+			values: cleanValues($state.snapshot(this.values)),
 			folder: this.folder,
 		});
 	}
@@ -97,7 +92,7 @@ export class AssetForm extends Busy {
 				focalX: this.focal.x,
 				focalY: this.focal.y,
 				edits: noEdits(this.edits) ? null : $state.snapshot(this.edits),
-				fields: filled($state.snapshot(this.values)),
+				fields: cleanValues($state.snapshot(this.values)),
 			});
 			if (folder === folderId) return saved;
 			await moveAssets([id], folder);

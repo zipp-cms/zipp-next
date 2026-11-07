@@ -43,3 +43,8 @@ function cleanValue(v: unknown): unknown {
 	}
 	return v;
 }
+
+/** The values of a form without empty ones, as the server keeps them. */
+export function cleanValues(v: Values): Values {
+	return (clean(v) ?? {}) as Values;
+}

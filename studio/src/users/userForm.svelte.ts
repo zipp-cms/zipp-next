@@ -3,7 +3,7 @@ import { session } from '../core/session.svelte';
 import { time } from '../core/format';
 import { t } from '../i18n/index.svelte';
 import type { Values } from '../core/schema';
-import { clean } from '../core/values';
+import { cleanValues } from '../core/values';
 import {
 	createUser,
 	deleteUser,
@@ -14,11 +14,6 @@ import {
 	updateUser,
 	type Account,
 } from './api';
-
-/** The values without empty ones, as the server keeps them. */
-function filled(v: Values): Values {
-	return (clean(v) ?? {}) as Values;
-}
 
 /**
  * The account page of a user, or of a new one (`account` null): what it
@@ -87,7 +82,7 @@ export class UserForm extends Busy {
 			this.role,
 			this.language,
 			this.slug,
-			filled($state.snapshot(this.values)),
+			cleanValues($state.snapshot(this.values)),
 		]);
 	}
 
@@ -133,7 +128,7 @@ export class UserForm extends Busy {
 				password,
 				currentPassword: current,
 				slug: this.slug,
-				fields: filled($state.snapshot(this.values)),
+				fields: cleanValues($state.snapshot(this.values)),
 			});
 		});
 		if (!saved) return null;
