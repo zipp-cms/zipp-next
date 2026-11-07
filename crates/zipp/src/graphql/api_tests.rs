@@ -317,12 +317,17 @@ async fn as_token(
 	client: &Client,
 	body: &str,
 	id: &str,
+	bearer: Option<&str>,
 ) -> (StatusCode, Value) {
-	let req = Request::post("/api/graphql")
+	let mut req = Request::post("/api/graphql")
 		.header(header::CONTENT_TYPE, "application/json")
 		.header("x-zipp-schema", id)
 		.body(Body::from(body.to_string()))
 		.unwrap();
+	if let Some(t) = bearer {
+		let token = format!("Bearer {t}").parse().unwrap();
+		req.headers_mut().insert(header::AUTHORIZATION, token);
+	}
 	let resp = client.send(req).await;
 	let status = resp.status();
 	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
@@ -353,20 +358,37 @@ async fn graphiql_reads_as_a_token() {
 	let id = admin.call(&TokensReq {}).await.unwrap().tokens[0].id;
 
 	let all = r#"{"query": "{ entries { title } }"}"#;
+	let id = id.to_string();
 
 	// what its frontend sees: its sections, nothing unpublished
-	let (_, body) = as_token(&admin, all, &id.to_string()).await;
+	let (_, body) = as_token(&admin, all, &id, None).await;
 	assert_eq!(titles(&body), ["Jazz"]);
 	let (_, body) = graphql(&admin, "/api/graphql", all, None).await;
-	assert_eq!(titles(&body).len(), 4);
+	assert!(titles(&body).contains(&"Hidden"));
+	assert!(titles(&body).contains(&"Team"));
 
-	// an unknown token, and only for admins
-	let (status, _) = as_token(&admin, all, "999").await;
+	// an unknown token, and an expired one like for its frontend
+	let (status, _) = as_token(&admin, all, "999", None).await;
 	assert_eq!(status, StatusCode::NOT_FOUND);
-	let author = ts.user(Some("author"));
-	let (status, _) = as_token(&author, all, &id.to_string()).await;
+	let past = crate::db::now() - 1000;
+	new_token(&admin, Scope::ALL, Some(past)).await;
+	let expired = admin.call(&TokensReq {}).await.unwrap().tokens[1].id;
+	let (status, _) = as_token(&admin, all, &expired.to_string(), None).await;
 	assert_eq!(status, StatusCode::UNAUTHORIZED);
-	let (status, _) = as_token(&ts.anonymous(), all, &id.to_string()).await;
+
+	// only for admins: others read with their own token
+	let pages = Scope {
+		sections: Some(vec!["pages".into()]),
+		sites: None,
+		previews: false,
+	};
+	let bearer = new_token(&admin, pages, None).await;
+	let author = ts.user(Some("author"));
+	let (status, _) = as_token(&author, all, &id, None).await;
+	assert_eq!(status, StatusCode::UNAUTHORIZED);
+	let (_, body) = as_token(&author, all, &id, Some(&bearer)).await;
+	assert_eq!(titles(&body), ["Team"]);
+	let (status, _) = as_token(&ts.anonymous(), all, &id, None).await;
 	assert_eq!(status, StatusCode::UNAUTHORIZED);
 }
 

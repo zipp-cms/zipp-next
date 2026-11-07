@@ -166,7 +166,7 @@ pub(crate) fn scope_of(
 	else {
 		return Ok(None);
 	};
-	if t.expires_at.is_some_and(|e| e <= now()) {
+	if expired(&t) {
 		return Ok(None);
 	}
 	// a write per minute is enough to see whether a token is in use
@@ -176,4 +176,18 @@ pub(crate) fn scope_of(
 		params![now(), t.id],
 	)?;
 	Ok(Some(t.scope))
+}
+
+/// The scope of token `id` that GraphiQL reads as, `None` once it
+/// expired: its frontend gets nothing then either.
+pub(crate) fn picked_scope(
+	conn: &Connection,
+	id: i64,
+) -> Result<Option<Scope>> {
+	let t = get(conn, id)?;
+	Ok((!expired(&t)).then_some(t.scope))
+}
+
+fn expired(t: &GraphqlToken) -> bool {
+	t.expires_at.is_some_and(|e| e <= now())
 }

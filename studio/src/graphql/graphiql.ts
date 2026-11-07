@@ -6,7 +6,7 @@ import { GraphiQL } from 'graphiql';
 import 'graphiql/style.css';
 
 type Fetcher = ComponentProps<typeof GraphiQL>['fetcher'];
-type Token = { id: number; name: string };
+type Token = { id: number; name: string; expiresAt: number | null };
 
 // the session of the studio (the same origin keeps it), so an admin sees
 // drafts like in the studio; without one only development is open
@@ -39,7 +39,10 @@ async function listTokens(): Promise<Token[]> {
 	const resp = await fetch('/api/graphql/tokens', {
 		headers: { 'session-token': token },
 	});
-	return resp.ok ? (await resp.json()).tokens : [];
+	if (!resp.ok) return [];
+	const tokens: Token[] = (await resp.json()).tokens;
+	// an expired one reads nothing, like its frontend
+	return tokens.filter(t => !t.expiresAt || t.expiresAt > Date.now());
 }
 
 function SchemaPicker({ tokens }: { tokens: Token[] }) {
@@ -49,7 +52,11 @@ function SchemaPicker({ tokens }: { tokens: Token[] }) {
 		{
 			value,
 			title: 'Read as the frontend of a token',
-			style: { font: 'inherit', fontSize: '14px', padding: '2px 4px' },
+			style: {
+				font: 'inherit',
+				fontSize: '0.875rem',
+				padding: '2px 4px',
+			},
 			onChange: (e: { target: { value: string } }) => {
 				schema = e.target.value;
 				localStorage.setItem(SCHEMA_KEY, schema);
@@ -65,17 +72,20 @@ function SchemaPicker({ tokens }: { tokens: Token[] }) {
 
 if (!token && !dev) location.replace('/admin');
 else
-	listTokens().then(tokens => {
-		// a picked token that was revoked since
-		if (!tokens.some(t => String(t.id) === schema)) schema = '';
-		const logo = tokens.length
-			? createElement(
-					GraphiQL.Logo,
-					null,
-					createElement(SchemaPicker, { tokens }),
-				)
-			: undefined;
-		createRoot(document.getElementById('graphiql')!).render(
-			createElement(GraphiQL, { fetcher }, logo),
-		);
-	}, console.error);
+	// without the list GraphiQL still opens, with the full schema
+	listTokens()
+		.catch(() => [] as Token[])
+		.then(tokens => {
+			// a picked token that was revoked or expired since
+			if (!tokens.some(t => String(t.id) === schema)) schema = '';
+			const logo = tokens.length
+				? createElement(
+						GraphiQL.Logo,
+						null,
+						createElement(SchemaPicker, { tokens }),
+					)
+				: undefined;
+			createRoot(document.getElementById('graphiql')!).render(
+				createElement(GraphiQL, { fetcher }, logo),
+			);
+		});

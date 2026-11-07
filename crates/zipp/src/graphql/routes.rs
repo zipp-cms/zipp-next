@@ -73,10 +73,15 @@ async fn graphql(
 		// session; development without the token of serve is open
 		let open = state.dev && state.graphql_token.is_none();
 		// GraphiQL's schema picker: an admin reads as a token's frontend
-		let as_token = if editor { schema_param(&headers) } else { None };
+		let as_token = if editor {
+			schema_header(&headers)
+		} else {
+			None
+		};
 		let scope = match (editor, bearer(&headers)) {
 			(true, _) => match as_token {
-				Some(id) => tokens::get(&conn, id)?.scope,
+				Some(id) => tokens::picked_scope(&conn, id)?
+					.ok_or(Error::MissingEndpointToken)?,
 				None => Scope::ALL,
 			},
 			// a wrong token fails in development too, like on the server
@@ -112,7 +117,7 @@ fn bearer(headers: &HeaderMap) -> Option<&str> {
 }
 
 /// The token whose scope GraphiQL picked, `x-zipp-schema: <token id>`.
-fn schema_param(headers: &HeaderMap) -> Option<i64> {
+fn schema_header(headers: &HeaderMap) -> Option<i64> {
 	headers
 		.get("x-zipp-schema")
 		.and_then(|v| v.to_str().ok())
