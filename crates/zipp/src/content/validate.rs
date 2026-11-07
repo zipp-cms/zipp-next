@@ -159,18 +159,8 @@ pub(super) fn validate_value(
 			Value::Number(n),
 		) => {
 			let n = n.as_f64().unwrap_or_default();
-			if min.is_some_and(|min| n < min) || max.is_some_and(|max| n > max)
-			{
-				error(errors, path, "out of range");
-			} else if let Some(d) = decimals
-				&& !has_decimals(n, *d)
-			{
-				let want = match d {
-					0 => "a whole number".into(),
-					1 => "at most 1 decimal place".into(),
-					d => format!("at most {d} decimal places"),
-				};
-				error(errors, path, &want);
+			if let Err(e) = check_number(n, *min, *max, *decimals) {
+				error(errors, path, &e);
 			}
 		}
 		(FieldKind::Boolean, Value::Bool(_)) => {}
@@ -191,17 +181,7 @@ pub(super) fn validate_value(
 			}
 		}
 		(FieldKind::Checkboxes { options }, Value::Array(values)) => {
-			let mut out: Vec<Value> = vec![];
-			for v in values {
-				match v.as_str() {
-					Some(s) if options.iter().any(|o| o.value == s) => {
-						if !out.contains(v) {
-							out.push(v.clone());
-						}
-					}
-					_ => error(errors, path, "not one of the options"),
-				}
-			}
+			let out = validate_checkboxes(options, values, path, errors);
 			let empty = out.is_empty();
 			return filled(Value::Array(out), empty, required, path, errors);
 		}
@@ -262,20 +242,8 @@ pub(super) fn validate_value(
 		(FieldKind::Blocks { types, min, max }, Value::Array(blocks)) => {
 			let min = min.filter(|_| !hidden);
 			check_count(errors, path, blocks.len(), min, *max);
-			let blocks = blocks
-				.iter()
-				.enumerate()
-				.map(|(i, b)| {
-					validate_block(
-						schema,
-						types,
-						b,
-						&format!("{path}.{i}"),
-						hidden,
-						errors,
-					)
-				})
-				.collect();
+			let blocks =
+				validate_blocks(schema, types, blocks, path, hidden, errors);
 			return Some(Value::Array(blocks));
 		}
 		(FieldKind::Note { .. }, _) => {
@@ -289,20 +257,18 @@ pub(super) fn validate_value(
 			},
 			value,
 		) => {
-			let t = schema.field_types.get(ty).unwrap();
 			// zipp checks the blocks of the items, the type the rest
-			let value = match blocks.is_empty() {
-				true => value.clone(),
+			let items = match blocks.is_empty() {
+				true => Some(value.clone()),
 				false => {
-					let Some(items) = item_blocks(
-						schema, blocks, value, path, hidden, errors,
-					) else {
-						return Some(value.clone());
-					};
-					items
+					item_blocks(schema, blocks, value, path, hidden, errors)
 				}
 			};
-			match t.validate(options, &value) {
+			let Some(items) = items else {
+				return Some(value.clone());
+			};
+			let t = schema.field_types.get(ty).unwrap();
+			match t.validate(options, &items) {
 				// null: nothing left, like an empty text
 				Ok(v) => return (!v.is_null()).then_some(v),
 				Err(e) => error(errors, path, &e),
@@ -312,6 +278,66 @@ pub(super) fn validate_value(
 	}
 
 	Some(value.clone())
+}
+
+/// A number within the field's range with at most its decimal places.
+fn check_number(
+	n: f64,
+	min: Option<f64>,
+	max: Option<f64>,
+	decimals: Option<u32>,
+) -> Result<(), String> {
+	if min.is_some_and(|min| n < min) || max.is_some_and(|max| n > max) {
+		return Err("out of range".into());
+	}
+	match decimals {
+		Some(d) if !has_decimals(n, d) => Err(match d {
+			0 => "a whole number".into(),
+			1 => "at most 1 decimal place".into(),
+			d => format!("at most {d} decimal places"),
+		}),
+		_ => Ok(()),
+	}
+}
+
+/// The ticked options of a checkboxes field, each once.
+fn validate_checkboxes(
+	options: &[Choice],
+	values: &[Value],
+	path: &str,
+	errors: &mut Vec<FieldError>,
+) -> Vec<Value> {
+	let mut out: Vec<Value> = vec![];
+	for v in values {
+		match v.as_str() {
+			Some(s) if options.iter().any(|o| o.value == s) => {
+				if !out.contains(v) {
+					out.push(v.clone());
+				}
+			}
+			_ => error(errors, path, "not one of the options"),
+		}
+	}
+	out
+}
+
+/// The blocks of a blocks field, each checked like its component.
+fn validate_blocks(
+	schema: &Schema,
+	types: &[String],
+	blocks: &[Value],
+	path: &str,
+	hidden: bool,
+	errors: &mut Vec<FieldError>,
+) -> Vec<Value> {
+	blocks
+		.iter()
+		.enumerate()
+		.map(|(i, b)| {
+			let p = format!("{path}.{i}");
+			validate_block(schema, types, b, &p, hidden, errors)
+		})
+		.collect()
 }
 
 /// A value after its check: nothing left of it is no value, and an error
