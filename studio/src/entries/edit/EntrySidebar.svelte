@@ -12,8 +12,8 @@
 	 * type, parent and slug, the outline of the blocks, copying from
 	 * another site and the revisions. A global has no page and is always
 	 * live, it has no status, slug or type. A `narrow` editor has the
-	 * status on top (`EntryStatus`, collapsed), the rest goes under the
-	 * content with the revisions closed.
+	 * status on top (`EntryStatus`, collapsed), copying in the bar's ⋯
+	 * menu, the rest goes under the content with the revisions closed.
 	 */
 	let {
 		schema,
@@ -65,7 +65,8 @@
 		/>
 	{/each}
 
-	{#if !isNew && multiSite && ed.may.edit}
+	<!-- narrow: in the ⋯ menu of the bar instead -->
+	{#if !isNew && multiSite && ed.may.edit && !narrow}
 		<div class="card">
 			<label>
 				<span>{t('entries.copyContent')}</span>

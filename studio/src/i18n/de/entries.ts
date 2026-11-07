@@ -102,6 +102,7 @@ export default {
 	'entries.missing': 'Fehlt',
 	'entries.errors': { one: '{n} Fehler', other: '{n} Fehler' },
 	'entries.copyContent': 'Inhalt kopieren',
+	'entries.copyFrom': 'Inhalt von {site} kopieren',
 	'entries.fromOtherSite': 'Von einer anderen Website…',
 
 	// revisions

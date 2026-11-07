@@ -1,6 +1,7 @@
 <script lang="ts">
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
+	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import { time } from '../../core/format';
 	import type { EntryEditor } from './entryEditor.svelte';
 	import { t } from '../../i18n/index.svelte';
@@ -17,6 +18,9 @@
 		ondiscard,
 		onremove,
 		onsave,
+		narrow = false,
+		copySites = [],
+		oncopy,
 	}: {
 		ed: EntryEditor;
 		crumbs: { label: string; href?: string }[];
@@ -29,6 +33,11 @@
 		ondiscard: () => void;
 		onremove: () => void;
 		onsave: () => void;
+		/** the editor is narrow: the rarer actions go into a ⋯ menu */
+		narrow?: boolean;
+		/** the other sites whose content can be copied, by handle */
+		copySites?: { handle: string; name: string }[];
+		oncopy?: (site: string) => void;
 	} = $props();
 
 	const may = $derived(ed.may);
@@ -36,6 +45,26 @@
 	const published = $derived(ed.live?.published ?? false);
 	const hasDraft = $derived(!!ed.draft);
 	// who changed the draft last, and when
+	// narrow: copying from another site and the trash under ⋯, the
+	// sidebar with the copy is at the end of the page there
+	const more: MenuItem[] = $derived([
+		...copySites.map(s => ({
+			label: t('entries.copyFrom', { site: s.name }),
+			icon: 'copy',
+			onclick: () => oncopy?.(s.handle),
+		})),
+		...(may.delete
+			? [
+					{
+						label: t('entries.moveToTrash'),
+						icon: 'delete',
+						onclick: onremove,
+						danger: true,
+					},
+				]
+			: []),
+	]);
+
 	const draftBy = $derived(
 		ed.draft?.user
 			? t('entries.draftBy', {
@@ -67,7 +96,9 @@
 		{/if}
 	{/snippet}
 	{#snippet actions()}
-		{#if may.delete}
+		{#if narrow}
+			<Menu items={more} />
+		{:else if may.delete}
 			<button
 				class="icon"
 				onclick={onremove}

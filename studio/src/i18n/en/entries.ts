@@ -98,6 +98,7 @@ export default {
 	'entries.missing': 'Missing',
 	'entries.errors': { one: '{n} error', other: '{n} errors' },
 	'entries.copyContent': 'Copy content',
+	'entries.copyFrom': 'Copy content from {site}',
 	'entries.fromOtherSite': 'From another site…',
 
 	// revisions

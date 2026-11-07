@@ -219,6 +219,11 @@
 		ondiscard={discard}
 		onremove={remove}
 		onsave={save}
+		{narrow}
+		copySites={ed.id !== null && ed.may.edit
+			? schema.sites.filter(s => s.handle !== ed.site)
+			: []}
+		oncopy={copyFrom}
 	/>
 
 	<LivePane {ed} preview={live} {url} bind:width={editorWidth}>
