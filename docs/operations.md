@@ -269,8 +269,8 @@ is a new image: `serve` applies its migrations at the start.
   (traefik's `ratelimit` middleware, a few a second per address) or
   cache its answers for a minute.
 - The site box at the top of the studio's sidebar shows the website's
-  favicon (the letter of the site without one, the api answers 204 then). The cms fetches it from
-  the site's `--site-url` (its `<link rel="icon">`, `"shortcut icon"` or
+  favicon (the letter of the site without one, the api answers 204
+  then). The cms fetches it from the site's `--site-url` (its `<link rel="icon">`, `"shortcut icon"` or
   `"apple-touch-icon"`: an svg, else the largest up to 64px, else
   `/favicon.ico`), only from that host and port (with or without
   `www.`, http may go to https), within 3 seconds, a png, ico, gif,
