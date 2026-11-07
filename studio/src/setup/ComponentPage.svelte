@@ -4,6 +4,7 @@
 	import { describeCondition, fieldOptions } from './fieldOptions';
 	import { gqlType, usedIn } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
+	import Links from './Links.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -115,10 +116,7 @@
 									<dt>{o.name}</dt>
 									<dd>
 										{#if o.links?.length}
-											{#each o.links as l, k (l.href)}
-												{k ? ', ' : ''}
-												<a href={l.href}>{l.text}</a>
-											{/each}
+											<Links links={o.links} />
 										{:else if o.name === 'GraphQL'}
 											<code>{o.value}</code>
 										{:else}
