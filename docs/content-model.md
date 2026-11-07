@@ -370,7 +370,8 @@ What an editor sees is the field list, so it should read like the page:
   their labels above reads badly, rows with the labels on the left like
   a group read well. A tab of blocks stays without one.
 - Short fields share a row with `.width(25)` or `.width(50)`: a date,
-  a city, a price, a switch; in a card they get a narrower value.
+  a city, a price, a switch; where the labels are on the left (a card,
+  a group, a block) they get a narrower value in their own row.
 - Labels in the editors' language, `.instructions("…")` where a field
   needs an explanation, `Field::note` for a how-to that concerns
   several fields (image sizes, what shows where).

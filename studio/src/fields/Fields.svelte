@@ -77,11 +77,12 @@
 		{#each shown as field (field.handle)}
 			{@const path = prefix + field.handle}
 			{@const Input = fieldComponent(field)}
-			<!-- the part of the row it takes, every field full width in narrow
-		places -->
+			<!-- the part of the row it takes (in a block: of the value column),
+		every field full width in narrow places -->
 			<div
 				class="field"
 				class:part={(field.width ?? 100) < 100}
+				class:note={field.kind === 'note'}
 				style:--span={(field.width ?? 100) / 25}
 			>
 				{#if field.kind !== 'note'}
@@ -143,11 +144,13 @@
 		}
 	}
 
-	// inside a block: the label on the left, compact
+	// inside a block: the label on the left, compact; every field in its
+	// own row, so the label column lines up
 	.nested {
 		gap: 0.625rem 1.25rem;
 
 		.field {
+			grid-column: 1 / -1;
 			display: grid;
 			grid-template-columns: $label-col minmax(0, 1fr);
 			gap: $label-gap;
@@ -174,45 +177,39 @@
 		}
 	}
 
+	// a width is the share of the value column it takes, enough for a
+	// date at least and for choices in one line where they fit; an
+	// error's or a note's text doesn't widen it
+	@include container-min(26rem) {
+		.nested .part > .value {
+			width: max(var(--span) * 25%, min(100%, 14rem));
+		}
+
+		.nested .part:not(.note) > .value {
+			min-width: fit-content;
+
+			> .error {
+				contain: inline-size;
+			}
+		}
+	}
+
 	// the label above its value again, like on the page: the handle on
 	// the name's line, the instructions under it
-	@mixin label-above {
-		display: flex;
-		align-items: stretch;
-		gap: 0.375rem;
-
-		> :global(.label) {
-			gap: 0.375rem;
-			padding-top: 0;
-		}
-
-		> :global(.label .instructions) {
-			margin-top: 0;
-		}
-
-		> .value:only-child {
-			grid-column: auto;
-		}
-	}
-
-	// with the labels on the left every field keeps its own row, so the
-	// label column lines up; a width is the share of the value column
-	// it takes, enough for a date at least and for choices in one line
-	// where they fit
-	.nested .field {
-		grid-column: 1 / -1;
-	}
-
-	@include container-min(36rem) {
-		.nested .part > .value {
-			width: max(calc(var(--span) * 25%), min(100%, 14rem));
-			min-width: fit-content;
-		}
-	}
-
 	@include fields-narrow {
 		.nested .field {
-			@include label-above;
+			display: flex;
+			align-items: stretch;
+			gap: 0.375rem;
+
+			> :global(.label) {
+				gap: 0.375rem;
+				padding-top: 0;
+			}
+
+			> :global(.label .instructions) {
+				margin-top: 0;
+			}
 		}
 	}
 </style>
