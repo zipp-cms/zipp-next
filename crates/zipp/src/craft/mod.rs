@@ -223,6 +223,13 @@ impl Importer<'_> {
 		self.report.skipped.push(what);
 	}
 
+	/// Skips what repeats once, not for every entry.
+	fn skip_once(&mut self, what: String) {
+		if !self.report.skipped.contains(&what) {
+			self.skip(what);
+		}
+	}
+
 	/// Every element of a section with its entry type, in Craft's order.
 	fn plan(
 		&mut self,
@@ -658,10 +665,7 @@ impl Importer<'_> {
 					)
 				}
 			};
-			// once, not for every entry
-			if !self.report.skipped.contains(&what) {
-				self.skip(what);
-			}
+			self.skip_once(what);
 		}
 		flat
 	}
@@ -705,9 +709,7 @@ impl Importer<'_> {
 						field.handle,
 						columns.len()
 					);
-					if !self.report.skipped.contains(&what) {
-						self.skip(what);
-					}
+					self.skip_once(what);
 				}
 				let mut rows = vec![];
 				for row in craft_rows.as_array().into_iter().flatten() {
