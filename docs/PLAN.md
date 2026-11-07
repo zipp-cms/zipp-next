@@ -201,3 +201,8 @@ commit.
 - [ ] Navigation items without a link (operator 2026-11-07, later): an
       item that is only a label for its children, so a sub navigation
       that opens on click or hover needs no hack (textrem's header)
+- [ ] GraphQL schemas in code like Craft's (operator 2026-11-07, later):
+      `GraphqlSchema::new("public").sections(["pages", "mappen"])`
+      says which sections (and assets) a token may read, each token of
+      the studio gets one; the GraphQL page also lists the server's own
+      token (`ZIPP_GRAPHQL_TOKEN`, full access) so it is never empty
