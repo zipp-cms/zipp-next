@@ -10,6 +10,8 @@ export type Size = { w: number; h: number };
 /** fractions of the turned image, past 0 and 1 outside of it */
 export type Rect = { x: number; y: number; w: number; h: number };
 export type Corner = 'nw' | 'ne' | 'sw' | 'se';
+/** A corner, or the middle of a side: only that side moves. */
+export type Handle = Corner | 'n' | 'e' | 's' | 'w';
 
 export const WHOLE: Rect = { x: 0, y: 0, w: 1, h: 1 };
 
@@ -139,51 +141,119 @@ export function placeOf(area: Size, turned: Size, scale: number): Place {
 	};
 }
 
+/** How a drag changes the crop besides where the pointer is. */
+export type DragOptions = {
+	/** Alt: the opposite side moves the other way, around the middle */
+	center?: boolean;
+	/** how close to the image's border an edge snaps to it, in pixels */
+	snap?: number;
+};
+
+/** `v` on 0 or 1 (the image's border) when it is within `d` of it. */
+function snapped(v: number, d: number): number {
+	if (Math.abs(v) < d) return 0;
+	if (Math.abs(v - 1) < d) return 1;
+	return v;
+}
+
 /**
- * The crop after dragging it or one of its corners by dx, dy (in images),
- * kept in the area and in the ratio if there is one.
+ * The crop after dragging it, a corner or a side by dx, dy (in images),
+ * kept in the area and in the ratio if there is one. The moved edges
+ * snap to the image's border, so a crop can keep the whole width and
+ * change only its height.
  */
 export function dragged(
-	kind: 'move' | Corner,
+	kind: 'move' | Handle,
 	from: Rect,
 	dx: number,
 	dy: number,
 	place: Place,
 	want: number | null,
 	turned: Size,
+	opts: DragOptions = {},
 ): Rect {
 	const [lx, hx] = place.x;
 	const [ly, hy] = place.y;
+	const sx = (opts.snap ?? 0) / place.w;
+	const sy = (opts.snap ?? 0) / place.h;
 	if (kind === 'move') {
-		return {
-			...from,
-			x: Math.min(Math.max(lx, from.x + dx), hx - from.w),
-			y: Math.min(Math.max(ly, from.y + dy), hy - from.h),
-		};
+		let x = Math.min(Math.max(lx, from.x + dx), hx - from.w);
+		let y = Math.min(Math.max(ly, from.y + dy), hy - from.h);
+		// its left or right edge onto the border
+		if (snapped(x, sx) !== x) x = snapped(x, sx);
+		else x = snapped(x + from.w, sx) - from.w;
+		if (snapped(y, sy) !== y) y = snapped(y, sy);
+		else y = snapped(y + from.h, sy) - from.h;
+		return { ...from, x, y };
 	}
+
 	const min = 0.03;
-	const left = kind === 'nw' || kind === 'sw';
-	const top = kind === 'nw' || kind === 'ne';
+	const left = kind.includes('w');
+	const right = kind.includes('e');
+	const top = kind.includes('n');
+	const bottom = kind.includes('s');
+	const center = !!opts.center;
+	const cx = from.x + from.w / 2;
+	const cy = from.y + from.h / 2;
 	let x1 = from.x,
 		y1 = from.y,
 		x2 = from.x + from.w,
 		y2 = from.y + from.h;
-	if (left) x1 = Math.min(Math.max(lx, x1 + dx), x2 - min);
-	else x2 = Math.max(Math.min(hx, x2 + dx), x1 + min);
-	if (top) y1 = Math.min(Math.max(ly, y1 + dy), y2 - min);
-	else y2 = Math.max(Math.min(hy, y2 + dy), y1 + min);
-	// a ratio: the height follows the width, within the area
+
+	// the dragged sides follow the pointer and snap; with Alt the other
+	// side mirrors them around the middle
+	if (left) {
+		x1 = snapped(x1 + dx, sx);
+		if (center) x2 = 2 * cx - x1;
+	}
+	if (right) {
+		x2 = snapped(x2 + dx, sx);
+		if (center) x1 = 2 * cx - x2;
+	}
+	if (top) {
+		y1 = snapped(y1 + dy, sy);
+		if (center) y2 = 2 * cy - y1;
+	}
+	if (bottom) {
+		y2 = snapped(y2 + dy, sy);
+		if (center) y1 = 2 * cy - y2;
+	}
+
+	// in the area, never smaller than `min`
+	x1 = Math.max(lx, x1);
+	x2 = Math.min(hx, x2);
+	y1 = Math.max(ly, y1);
+	y2 = Math.min(hy, y2);
+	if (x2 - x1 < min) {
+		if (center) [x1, x2] = [cx - min / 2, cx + min / 2];
+		else if (left) x1 = x2 - min;
+		else x2 = x1 + min;
+	}
+	if (y2 - y1 < min) {
+		if (center) [y1, y2] = [cy - min / 2, cy + min / 2];
+		else if (top) y1 = y2 - min;
+		else y2 = y1 + min;
+	}
+
+	// a ratio: the height follows the width, within the area (a ratio
+	// has no side handles, a corner moves both)
 	if (want !== null) {
 		let w = x2 - x1;
 		let h = (w * turned.w) / (want * turned.h);
-		const room = top ? y2 - ly : hy - y1;
+		const room = center
+			? 2 * Math.min(cy - ly, hy - cy)
+			: top
+				? y2 - ly
+				: hy - y1;
 		if (h > room) {
 			h = room;
 			w = (h * want * turned.h) / turned.w;
-			if (left) x1 = x2 - w;
+			if (center) [x1, x2] = [cx - w / 2, cx + w / 2];
+			else if (left) x1 = x2 - w;
 			else x2 = x1 + w;
 		}
-		if (top) y1 = y2 - h;
+		if (center) [y1, y2] = [cy - h / 2, cy + h / 2];
+		else if (top) y1 = y2 - h;
 		else y2 = y1 + h;
 	}
 	return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };

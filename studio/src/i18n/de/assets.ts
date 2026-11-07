@@ -82,12 +82,16 @@ export default {
 	'assets.square': 'Quadratisch',
 	'assets.portrait': 'Hochformat',
 	'assets.cropNote':
-		'Ziehen Sie den Ausschnitt über das Bild hinaus, um Platz darum herum zu schaffen. Mit der Tastatur verschieben die Pfeiltasten ihn oder eine Ecke, mit Shift in grösseren Schritten.',
+		'Ziehen Sie den Ausschnitt über das Bild hinaus, um Platz darum herum zu schaffen; nahe am Bildrand rasten seine Ränder dort ein. Eine Seite ändert nur diese Seite, Alt ändert die Grösse um die Mitte. Mit der Tastatur verschieben die Pfeiltasten ihn, eine Ecke oder eine Seite, mit Shift in grösseren Schritten.',
 	'assets.cropAt': 'Bei {x} %, {y} %, {w} × {h} %',
 	'assets.cornerNw': 'Ecke oben links des Ausschnitts',
 	'assets.cornerNe': 'Ecke oben rechts des Ausschnitts',
 	'assets.cornerSw': 'Ecke unten links des Ausschnitts',
 	'assets.cornerSe': 'Ecke unten rechts des Ausschnitts',
+	'assets.sideN': 'Oberer Rand des Ausschnitts',
+	'assets.sideE': 'Rechter Rand des Ausschnitts',
+	'assets.sideS': 'Unterer Rand des Ausschnitts',
+	'assets.sideW': 'Linker Rand des Ausschnitts',
 	'assets.transparentNote':
 		'Transparenz braucht ein PNG: Ein JPEG wird dann als PNG ausgeliefert.',
 	'assets.focalNote':

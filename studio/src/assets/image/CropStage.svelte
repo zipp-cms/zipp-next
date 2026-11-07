@@ -9,7 +9,7 @@
 		fitScale,
 		placeOf,
 		withCrop,
-		type Corner,
+		type Handle,
 		type Rect,
 		type Size,
 	} from './edits';
@@ -17,8 +17,11 @@
 
 	/**
 	 * Cropping: the whole stage is the area, the image in its middle; the
-	 * crop may reach past the image. The scale only changes between drags,
-	 * so the image doesn't move under the pointer.
+	 * crop may reach past the image. Its corners and the middles of its
+	 * sides resize it (the sides only without a ratio), Alt resizes around
+	 * its middle, and edges near the image's border snap to it. The scale
+	 * only changes between drags, so the image doesn't move under the
+	 * pointer.
 	 */
 	let {
 		img,
@@ -56,27 +59,52 @@
 	});
 	const place = $derived(placeOf(area, turned, scale));
 
+	/** how close in pixels an edge snaps to the image's border */
+	const SNAP = 8;
+
 	let drag: {
-		kind: 'move' | Corner;
+		kind: 'move' | Handle;
 		x: number;
 		y: number;
 		from: Rect;
+		/** where the pointer is now, for Alt pressed without moving */
+		nowX: number;
+		nowY: number;
 	} | null = null;
 
-	function down(e: PointerEvent, kind: 'move' | Corner) {
+	function down(e: PointerEvent, kind: 'move' | Handle) {
 		if (!editable) return;
 		e.preventDefault();
 		e.stopPropagation();
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-		drag = { kind, x: e.clientX, y: e.clientY, from: { ...rect } };
+		const [x, y] = [e.clientX, e.clientY];
+		drag = { kind, x, y, from: { ...rect }, nowX: x, nowY: y };
+	}
+
+	function apply(center: boolean) {
+		if (!drag) return;
+		const dx = (drag.nowX - drag.x) / place.w;
+		const dy = (drag.nowY - drag.y) / place.h;
+		const c = dragged(drag.kind, drag.from, dx, dy, place, want, turned, {
+			center,
+			snap: SNAP,
+		});
+		edits = withCrop(edits, c);
 	}
 
 	function move(e: PointerEvent) {
 		if (!drag) return;
-		const dx = (e.clientX - drag.x) / place.w;
-		const dy = (e.clientY - drag.y) / place.h;
-		const c = dragged(drag.kind, drag.from, dx, dy, place, want, turned);
-		edits = withCrop(edits, c);
+		drag.nowX = e.clientX;
+		drag.nowY = e.clientY;
+		apply(e.altKey);
+	}
+
+	// Alt pressed or let go during a drag changes it at once
+	function altKey(e: KeyboardEvent) {
+		if (drag && e.key === 'Alt') {
+			e.preventDefault();
+			apply(e.type === 'keydown');
+		}
 	}
 
 	function up() {
@@ -85,13 +113,15 @@
 		refit++;
 	}
 
-	// the arrow keys move the crop or the corner that has the focus
-	function onkeydown(e: KeyboardEvent, kind: 'move' | Corner) {
+	// the arrow keys move the crop or the handle that has the focus
+	function onkeydown(e: KeyboardEvent, kind: 'move' | Handle) {
 		const step = arrowStep(e);
 		if (!editable || !step) return;
 		e.preventDefault();
 		e.stopPropagation();
-		const c = dragged(kind, rect, step.dx, step.dy, place, want, turned);
+		const c = dragged(kind, rect, step.dx, step.dy, place, want, turned, {
+			center: e.altKey,
+		});
 		edits = withCrop(edits, c);
 		refit++;
 	}
@@ -106,12 +136,22 @@
 			h: percent(rect.h),
 		}),
 	);
-	const corners = $derived({
+	const labels = $derived({
 		nw: t('assets.cornerNw'),
 		ne: t('assets.cornerNe'),
 		sw: t('assets.cornerSw'),
 		se: t('assets.cornerSe'),
+		n: t('assets.sideN'),
+		e: t('assets.sideE'),
+		s: t('assets.sideS'),
+		w: t('assets.sideW'),
 	});
+	// the sides only without a ratio, a ratio moves both
+	const handles = $derived<Handle[]>(
+		want === null
+			? ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']
+			: ['nw', 'ne', 'se', 'sw'],
+	);
 
 	/** Where a fraction rect is on the stage. */
 	const at = (r: Rect) => ({
@@ -121,6 +161,8 @@
 		height: `${r.h * place.h}px`,
 	});
 </script>
+
+<svelte:window onkeydown={altKey} onkeyup={altKey} />
 
 <div class="area" bind:clientWidth={area.w} bind:clientHeight={area.h}>
 	{#if scale > 0}
@@ -160,13 +202,14 @@
 			aria-valuetext={where}
 			onkeydown={e => onkeydown(e, 'move')}
 		>
-			{#each ['nw', 'ne', 'sw', 'se'] as const as h (h)}
+			{#each handles as h (h)}
 				<span
 					class="handle {h}"
+					class:side={h.length === 1}
 					onpointerdown={e => down(e, h)}
 					role="slider"
 					tabindex={editable ? 0 : -1}
-					aria-label={corners[h]}
+					aria-label={labels[h]}
 					aria-valuenow={percent(rect.x)}
 					aria-valuetext={where}
 					onkeydown={e => onkeydown(e, h)}
@@ -244,6 +287,42 @@
 			right: -2px;
 			bottom: -2px;
 			cursor: nwse-resize;
+		}
+
+		// the middle of a side, a bar along it
+		&.side {
+			width: 1.5rem;
+			height: 0.5rem;
+		}
+
+		&.n,
+		&.s {
+			left: calc(50% - 0.75rem);
+			cursor: ns-resize;
+		}
+
+		&.n {
+			top: -2px;
+		}
+
+		&.s {
+			bottom: -2px;
+		}
+
+		&.e,
+		&.w {
+			top: calc(50% - 0.75rem);
+			width: 0.5rem;
+			height: 1.5rem;
+			cursor: ew-resize;
+		}
+
+		&.e {
+			right: -2px;
+		}
+
+		&.w {
+			left: -2px;
 		}
 	}
 </style>
