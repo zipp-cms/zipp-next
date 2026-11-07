@@ -7,7 +7,8 @@ import { Marked, type Tokens } from 'marked';
  */
 export const safeUrl = (href: string) =>
 	/^(https?:\/\/|mailto:|tel:|#)/i.test(href) ||
-	(href.startsWith('/') && !href.startsWith('//'));
+	// browsers read /\host like //host, another site
+	(href.startsWith('/') && !/^\/[/\\]/.test(href));
 
 const escape = (s: string) =>
 	s.replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
