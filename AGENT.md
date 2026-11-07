@@ -199,6 +199,12 @@ What the owner decided, so it doesn't get asked again:
 - New features get a line in `docs/` and, if the example can show them,
   in the example and `example/readme.md`.
 
+## Changes
+
+- Changes go through a pull request into `main`, never straight to
+  `main`. Each pull request gets a code and a security review and the
+  full checks before it is squash merged, one at a time.
+
 ## Releasing
 
 - `RELEASING.md`: one version for all crates in `[workspace.package]`,
