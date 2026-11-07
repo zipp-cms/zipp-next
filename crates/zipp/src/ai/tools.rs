@@ -214,13 +214,12 @@ fn tool_list_entries(t: &Ctx, input: &Value) -> ToolResult {
 			params.push((key.into(), v.into()));
 		}
 	}
-	let q = Query::parse(schema, &params).map_err(Error::Request)?;
+	let mut q = Query::parse(schema, &params).map_err(Error::Request)?;
+	// in the query, or the limit could leave out the user's own entries
+	crate::entries::restrict(t.auth, schema, &mut q)?;
 	let entries = select(conn, &q)?;
 	let mut out = vec![];
-	for e in entries.iter().filter(|e| {
-		t.auth
-			.can_entry(schema, &e.section, e.author_id, Access::View)
-	}) {
+	for e in &entries {
 		let (content, draft) = current(conn, e.id, &site)?;
 		out.push(json!({ "id": e.id, "section": e.section, "type": e.ty,
 				"title": content.title, "uri": e.uri,

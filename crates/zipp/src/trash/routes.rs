@@ -15,10 +15,14 @@ async fn list_route(
 	Ok(Json(list(&state.db.conn(), &state.schema, &auth)?))
 }
 
-/// Whether the user may delete an entry of the trash.
+/// Whether the user may delete an entry of the trash, with the children
+/// that went with it.
 fn check_entry(state: &AppState, auth: &Authed, id: i64) -> Result<()> {
-	let (section, author) = trashed_owner(&state.db.conn(), id)?;
-	auth.check_entry(&state.schema, &section, author, Access::Delete)
+	let conn = state.db.conn();
+	let (section, author, deleted_at) = trashed_owner(&conn, id)?;
+	let (schema, need) = (&state.schema, Access::Delete);
+	auth.check_entry(schema, &section, author, need)?;
+	check_tree(&conn, schema, auth, id, &section, need, Some(deleted_at))
 }
 
 async fn restore_entry_route(

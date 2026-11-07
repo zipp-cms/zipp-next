@@ -1,1 +1,0 @@
-import{r as e}from"./index-CQtgPCVJ.js";function r(){return e("GET","/graphql/tokens")}function t(n){return e("POST","/graphql/tokens",n)}function a(n){return e("DELETE",`/graphql/tokens/${n}`)}function s(){window.open("/api/graphql")}export{t as c,a as d,r as l,s as o};

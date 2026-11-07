@@ -611,7 +611,8 @@ async fn children_of_a_list_load_together_in_their_order() {
 		let team = page("Team", Some(about));
 		page("Board", Some(about));
 		page("Open", Some(jobs));
-		crate::entries::move_entry(&conn, &s, team, Some(about), 1).unwrap();
+		crate::entries::move_entry(&conn, &s, team, Some(about), 1, None)
+			.unwrap();
 	}
 
 	let data = run(

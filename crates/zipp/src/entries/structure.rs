@@ -1,23 +1,34 @@
 use super::*;
 
+/// Refuses a parent outside the section or one the user doesn't see
+/// (`None`: the system), the same way: an entry under a hidden page
+/// would show its uri.
 pub(super) fn check_parent(
 	conn: &Connection,
+	schema: &Schema,
 	section: &Section,
 	parent: i64,
+	user: Option<&Authed>,
 ) -> Result<()> {
 	if section.kind != SectionKind::Structure {
 		return Err(Error::Request(
 			"only entries of a structure have parents".into(),
 		));
 	}
-	let parent_section: Option<String> = conn
+	let found: Option<(String, Option<i64>)> = conn
 		.query_row(
-			"SELECT section FROM entries WHERE id = ?1 AND deleted_at IS NULL",
+			"SELECT section, author_id FROM entries
+			WHERE id = ?1 AND deleted_at IS NULL",
 			[parent],
-			|r| r.get(0),
+			|r| Ok((r.get(0)?, r.get(1)?)),
 		)
 		.optional()?;
-	if parent_section.as_ref() != Some(&section.handle) {
+	let fits = found.is_some_and(|(s, author)| {
+		s == section.handle
+			&& user
+				.is_none_or(|u| u.can_entry(schema, &s, author, Access::View))
+	});
+	if !fits {
 		return Err(Error::Request(format!(
 			"the parent {parent} is not in {}",
 			section.handle
@@ -282,6 +293,7 @@ pub(crate) fn move_entry(
 	id: i64,
 	parent: Option<i64>,
 	index: usize,
+	user: Option<&Authed>,
 ) -> Result<()> {
 	let section: String = conn.query_row(
 		"SELECT section FROM entries WHERE id = ?1",
@@ -290,7 +302,7 @@ pub(crate) fn move_entry(
 	)?;
 	let section = schema.get_section(&section).unwrap();
 	if let Some(p) = parent {
-		check_parent(conn, section, p)?;
+		check_parent(conn, schema, section, p, user)?;
 
 		// the new parent can't be the entry or below it
 		let mut up = Some(p);

@@ -1,7 +1,8 @@
 use super::api::*;
 use super::*;
 use crate::api::{ApiResult, ApiRouter, Req};
-use crate::auth::{Admin, Delete, EntryAccess, Publish, View};
+use crate::auth::{Admin, EntryAccess, Publish, View};
+use crate::trash::check_tree;
 
 /// Only the related entries the role sees: the chips of the others would
 /// show their titles and pages.
@@ -131,8 +132,11 @@ async fn move_route(
 	access: EntryAccess<Publish>,
 	Req(req): Req<MoveReq>,
 ) -> ApiResult<MoveReq> {
-	let conn = state.db.conn();
-	move_entry(&conn, &state.schema, req.id, req.parent_id, req.index)?;
+	let (conn, schema, auth) = (state.db.conn(), &state.schema, &access.auth);
+	// its children move along
+	let (id, section) = (req.id, &access.section);
+	check_tree(&conn, schema, auth, id, section, Access::Publish, None)?;
+	move_entry(&conn, schema, id, req.parent_id, req.index, Some(auth))?;
 	drop(conn);
 	state.changed(req.id, &access.section, ChangeKind::Moved);
 	Ok(Json(()))
@@ -143,17 +147,22 @@ async fn author_route(
 	_admin: Admin,
 	Req(req): Req<AuthorReq>,
 ) -> ApiResult<AuthorReq> {
-	set_author(&state.db.conn(), req.id, req.author_id)?;
+	let section = {
+		let conn = state.db.conn();
+		set_author(&conn, req.id, req.author_id)?;
+		section_of(&conn, req.id)?
+	};
+	// GraphQL shows the author, frontends refresh
+	state.changed(req.id, &section, ChangeKind::Saved);
 	Ok(Json(()))
 }
 
 async fn delete_route(
 	State(state): State<AppState>,
-	access: EntryAccess<Delete>,
+	auth: Authed,
 	Req(req): Req<DeleteReq>,
 ) -> ApiResult<DeleteReq> {
-	let user = Some(access.auth.user_id);
-	trash(&state, req.id, &access.section, user)?;
+	delete_as(&state, &auth, req.id)?;
 	Ok(Json(()))
 }
 

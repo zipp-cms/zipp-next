@@ -35,10 +35,10 @@ mod structure;
 #[cfg(test)]
 pub(crate) mod tests;
 
+pub(crate) use as_user::restrict;
 pub use as_user::{
 	Saved, WithDraft, create_as, delete_as, get_as, list_as, update_as,
 };
-pub(crate) use as_user::{restrict, trash};
 pub(crate) use routes::routes;
 pub(crate) use routes::viewable_refs;
 pub(crate) use save::check;

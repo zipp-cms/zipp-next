@@ -138,7 +138,7 @@ fn structures_build_uris_from_parents() {
 	assert_eq!(team.uri.as_deref(), Some("company/team"));
 
 	// moving to the top and before about
-	move_entry(&conn, &s, team.id, None, 0).unwrap();
+	move_entry(&conn, &s, team.id, None, 0, None).unwrap();
 	let team = get_entry(&conn, team.id, "en").unwrap();
 	assert_eq!(team.uri.as_deref(), Some("team"));
 	assert_eq!(
@@ -146,7 +146,7 @@ fn structures_build_uris_from_parents() {
 		["Team", "About"]
 	);
 
-	let err = move_entry(&conn, &s, about.id, Some(about.id), 0);
+	let err = move_entry(&conn, &s, about.id, Some(about.id), 0, None);
 	assert!(err.is_err());
 }
 
@@ -161,7 +161,7 @@ fn the_tree_is_the_order_of_the_section_without_the_trash() {
 	page(&conn, &s, "Jobs", Some(about));
 	let old = page(&conn, &s, "Old", None);
 	page(&conn, &s, "Older", Some(old));
-	move_entry(&conn, &s, team, Some(about), 1).unwrap();
+	move_entry(&conn, &s, team, Some(about), 1, None).unwrap();
 	crate::trash::trash_entry(&conn, &s, old, None).unwrap();
 
 	let tree = [("section", "pages"), ("order", "structure")];
@@ -219,11 +219,11 @@ fn structures_stay_within_their_max_level() {
 	// an entry with a child doesn't fit below another
 	let jobs = page(&conn, &s, "Jobs", None);
 	let open = page(&conn, &s, "Open", Some(jobs));
-	let err = move_entry(&conn, &s, jobs, Some(about), 0).unwrap_err();
+	let err = move_entry(&conn, &s, jobs, Some(about), 0, None).unwrap_err();
 	assert!(
 		matches!(err, Error::Request(m) if m.contains("with its children"))
 	);
-	let err = move_entry(&conn, &s, open, Some(team), 0).unwrap_err();
+	let err = move_entry(&conn, &s, open, Some(team), 0, None).unwrap_err();
 	assert_eq!(
 		err,
 		Error::Request(
@@ -232,8 +232,8 @@ fn structures_stay_within_their_max_level() {
 	);
 
 	// without its child it does
-	move_entry(&conn, &s, open, Some(about), 1).unwrap();
-	move_entry(&conn, &s, jobs, Some(about), 2).unwrap();
+	move_entry(&conn, &s, open, Some(about), 1, None).unwrap();
+	move_entry(&conn, &s, jobs, Some(about), 2, None).unwrap();
 	assert_eq!(get_entry(&conn, jobs, "de").unwrap().parent_id, Some(about));
 }
 

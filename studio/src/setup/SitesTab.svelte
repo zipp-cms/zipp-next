@@ -1,6 +1,11 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
-	import { accessText, isAdmin, roleName } from '../core/access';
+	import {
+		accessText,
+		isAdmin,
+		roleAccessText,
+		roleName,
+	} from '../core/access';
 	import { visibleRoles, visibleSections } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
 	import MailCard from './MailCard.svelte';
@@ -81,7 +86,7 @@
 					<code>{r.handle}</code>
 				</td>
 				{#each sections as s (s.handle)}
-					<td>{accessText(r.sections[s.handle])}</td>
+					<td>{roleAccessText(r, s.handle)}</td>
 				{/each}
 				<td>{accessText(r.assets)}</td>
 				<td>{r.ai ? t('common.yes') : '–'}</td>

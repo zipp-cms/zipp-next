@@ -769,3 +769,62 @@ async fn own_access_reaches_only_own_entries() {
 	let err = member.call(&update(mine.id)).await.unwrap_err();
 	assert_eq!(err, Error::Forbidden);
 }
+
+#[tokio::test]
+async fn own_access_stops_at_the_entries_of_others_in_a_tree() {
+	let schema = site_with_roles()
+		.role(Role::new("member", "Member").own("pages", Access::Delete));
+	let ts = TestServer::new(schema);
+	let admin = ts.admin();
+	let member = ts.user(Some("member"));
+	let about = input("pages", "page", "About", json!({}));
+	let about = admin.call(&CreateReq(about)).await.unwrap();
+
+	// not below a page they don't see
+	let mut under = input("pages", "page", "Under", json!({}));
+	under.parent_id = Some(about.id);
+	let err = member.call(&CreateReq(under)).await.unwrap_err();
+	assert!(matches!(err, Error::Request(_)), "{err:?}");
+	let mine = input("pages", "page", "Mine", json!({}));
+	let mine = member.call(&CreateReq(mine)).await.unwrap();
+	let to_about = MoveReq {
+		id: mine.id,
+		parent_id: Some(about.id),
+		index: 0,
+	};
+	let err = member.call(&to_about).await.unwrap_err();
+	assert!(matches!(err, Error::Request(_)), "{err:?}");
+
+	// a page of someone else below theirs: it doesn't go with it
+	let mut sub = input("pages", "page", "Sub", json!({}));
+	sub.parent_id = Some(mine.id);
+	admin.call(&CreateReq(sub)).await.unwrap();
+	let to_top = MoveReq {
+		id: mine.id,
+		parent_id: None,
+		index: 1,
+	};
+	let err = member.call(&to_top).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	let delete = DeleteReq { id: mine.id };
+	let err = member.call(&delete).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+
+	// nor out of the trash
+	admin.call(&delete).await.unwrap();
+	let restore = crate::trash::api::RestoreEntryReq { id: mine.id };
+	let err = member.call(&restore).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	admin.call(&restore).await.unwrap();
+
+	// their own tree is theirs
+	let mut own_sub = input("pages", "page", "Own sub", json!({}));
+	own_sub.parent_id = Some(mine.id);
+	let own_sub = member.call(&CreateReq(own_sub)).await.unwrap();
+	let child = MoveReq {
+		id: own_sub.id,
+		parent_id: None,
+		index: 0,
+	};
+	member.call(&child).await.unwrap();
+}

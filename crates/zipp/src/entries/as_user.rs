@@ -5,6 +5,7 @@
 
 use super::*;
 use crate::drafts::{SiteDoc, get_draft, put_draft};
+use crate::trash::{check_tree, trash_entry};
 
 /// Where an update of [`update_as`] went.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -165,21 +166,18 @@ pub fn update_as(
 }
 
 /// Moves an entry to the trash as the user, like
-/// `DELETE /api/entries/{id}`.
+/// `DELETE /api/entries/{id}`; in a structure with its children, which
+/// have to be theirs too if only their own entries are.
 pub fn delete_as(state: &AppState, auth: &Authed, id: i64) -> Result<()> {
-	let (section, author) = owner_of(&state.db.conn(), id)?;
-	auth.check_entry(&state.schema, &section, author, Access::Delete)?;
-	trash(state, id, &section, Some(auth.user_id))
-}
-
-/// Moves an entry to the trash and tells the hooks.
-pub(crate) fn trash(
-	state: &AppState,
-	id: i64,
-	section: &str,
-	user: Option<i64>,
-) -> Result<()> {
-	crate::trash::trash_entry(&state.db.conn(), &state.schema, id, user)?;
-	state.changed(id, section, ChangeKind::Deleted);
+	let section = {
+		let conn = state.db.conn();
+		let (section, author) = owner_of(&conn, id)?;
+		let (schema, need) = (&state.schema, Access::Delete);
+		auth.check_entry(schema, &section, author, need)?;
+		check_tree(&conn, schema, auth, id, &section, need, None)?;
+		trash_entry(&conn, schema, id, Some(auth.user_id))?;
+		section
+	};
+	state.changed(id, &section, ChangeKind::Deleted);
 	Ok(())
 }

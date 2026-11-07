@@ -107,22 +107,42 @@ async fn forgot_route(
 	}
 	// before the lookup, so the answer is the same for every email
 	link_url(&state.public_url, links::Kind::Reset, "")?;
+	send_reset(state, &req.email, None)?;
+	Ok(Json(()))
+}
+
+/// Mails a reset link if there is a user with the email: to the studio,
+/// for a member of a role without it to the website (`site` picks its
+/// url), like an admin's link on the Users page. Without that url no
+/// mail, the answer is the same either way.
+fn send_reset(state: AppState, email: &str, site: Option<&str>) -> Result<()> {
 	let conn = state.db.conn();
-	let Some((id, email)) = reset_target(&conn, &req.email)? else {
-		return Ok(Json(()));
+	let Some((id, email)) = reset_target(&conn, email)? else {
+		return Ok(());
 	};
 	let kind = links::Kind::Reset;
-	let (url, _) = new_link(&conn, &state.public_url, id, kind, None)?;
+	let role = role_of(&conn, id)?;
+	let mail = if studio_role(&state.schema, role.as_deref()) {
+		if state.public_url.is_empty() {
+			return Ok(());
+		}
+		let (url, _) = new_link(&conn, &state.public_url, id, kind, None)?;
+		link_mail(&state.public_url, kind, &email, &url, None)
+	} else {
+		let Ok(site) = site_url(&state.schema, &state.site_urls, site) else {
+			return Ok(());
+		};
+		let (url, _) = new_site_link(&conn, &site, id, kind, None)?;
+		site_link_mail(&site, kind, &email, &url, None)
+	};
 	drop(conn);
-	let mail =
-		link_mail(&state.public_url, links::Kind::Reset, &email, &url, None);
 	// in the background: the answer takes as long for unknown emails
 	tokio::spawn(async move {
 		if let Err(e) = state.mail.send(mail).await {
 			tracing::warn!("password reset: {e}");
 		}
 	});
-	Ok(Json(()))
+	Ok(())
 }
 
 async fn link_route(
@@ -262,21 +282,8 @@ async fn site_reset_route(
 		));
 	}
 	// before the lookup, so the answer is the same for every email
-	let url = site_url(&state.schema, &state.site_urls, req.site.as_deref())?;
-	let conn = state.db.conn();
-	let Some((id, email)) = reset_target(&conn, &req.email)? else {
-		return Ok(Json(()));
-	};
-	let kind = links::Kind::Reset;
-	let (link, _) = new_site_link(&conn, &url, id, kind, None)?;
-	drop(conn);
-	let mail = site_link_mail(&url, kind, &email, &link, None);
-	// in the background: the answer takes as long for unknown emails
-	tokio::spawn(async move {
-		if let Err(e) = state.mail.send(mail).await {
-			tracing::warn!("password reset of the website: {e}");
-		}
-	});
+	site_url(&state.schema, &state.site_urls, req.site.as_deref())?;
+	send_reset(state, &req.email, req.site.as_deref())?;
 	Ok(Json(()))
 }
 

@@ -290,3 +290,30 @@ async fn members_are_invited_to_the_website() {
 	let err = admin.call(&LoginAsLinkReq { id }).await.unwrap_err();
 	assert!(matches!(err, Error::Request(_)));
 }
+
+#[tokio::test]
+async fn a_reset_link_leads_where_the_user_logs_in() {
+	let ts = server();
+	add(&ts, "m@x.ch", Some("member"));
+	add(&ts, "a@x.ch", Some("author"));
+	let anon = ts.visitor(None);
+
+	// a member who asks the studio gets the website's link
+	let forgot = ForgotReq {
+		email: "m@x.ch".into(),
+	};
+	ts.anonymous().call(&forgot).await.unwrap();
+	let sent = mails(&ts).await;
+	assert_eq!(sent.len(), 1);
+	assert!(sent[0].text.contains("https://x.ch/reset-password?token="));
+
+	// a user of the studio who asks the website gets the studio's
+	let reset = SiteResetReq {
+		email: "a@x.ch".into(),
+		site: None,
+	};
+	anon.call(&reset).await.unwrap();
+	let sent = mails(&ts).await;
+	assert_eq!(sent.len(), 2);
+	assert!(sent[1].text.contains("http://zipp.test/admin/password/"));
+}

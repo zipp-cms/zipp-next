@@ -9,12 +9,12 @@
 
 use std::path::Path;
 
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::auth::Authed;
-use crate::db::{DAY_MS, now};
+use crate::db::{DAY_MS, marks, now};
 use crate::entries::{
 	INDEX_TABLES, fits_below, free_uri, levels_of, next_position, reindex,
 };
@@ -95,19 +95,52 @@ fn with_children(
 	Ok(ids)
 }
 
-/// The section of an entry in the trash and who made it.
+/// The section of an entry in the trash, who made it and when it went.
 pub fn trashed_owner(
 	conn: &Connection,
 	id: i64,
-) -> Result<(String, Option<i64>)> {
+) -> Result<(String, Option<i64>, i64)> {
 	conn.query_row(
-		"SELECT section, author_id FROM entries WHERE id = ?1
+		"SELECT section, author_id, deleted_at FROM entries WHERE id = ?1
 		AND deleted_at IS NOT NULL",
 		[id],
-		|r| Ok((r.get(0)?, r.get(1)?)),
+		|r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
 	)
 	.optional()?
 	.ok_or(Error::NotFound)
+}
+
+/// Whether the user may do `need` with an entry they may do it with
+/// and the children that go with it (in the trash those of
+/// `deleted_at`): with only own access to the section (see
+/// [`Role::own`](crate::Role::own)) when they all are theirs.
+pub(crate) fn check_tree(
+	conn: &Connection,
+	schema: &Schema,
+	auth: &Authed,
+	id: i64,
+	section: &str,
+	need: Access,
+	deleted_at: Option<i64>,
+) -> Result<()> {
+	if auth.can(schema, section, need) {
+		return Ok(());
+	}
+	let ids = with_children(conn, id, deleted_at)?;
+	let sql = format!(
+		"SELECT EXISTS (SELECT 1 FROM entries
+		WHERE id IN ({}) AND author_id IS NOT ?)",
+		marks(ids.len())
+	);
+	let mut values: Vec<rusqlite::types::Value> =
+		ids.into_iter().map(Into::into).collect();
+	values.push(auth.user_id.into());
+	let others: bool =
+		conn.query_row(&sql, params_from_iter(values), |r| r.get(0))?;
+	match others {
+		true => Err(Error::Forbidden),
+		false => Ok(()),
+	}
 }
 
 /// Moves an entry to the trash, in a structure with its children.

@@ -22,7 +22,7 @@ the website" after a right password, a session of the studio they still
 have from another role is refused like an ended one. The Users page
 lists, creates and edits them like everybody (the role shows "Studio: No,
 website only", Setup's roles too); their invite and reset links lead to
-the website, and there is no "Log in as" for them.
+the website (also when they ask the studio's login page), and there is no "Log in as" for them.
 
 ## Logging in on the website
 
@@ -35,7 +35,7 @@ server) calls the cms on its own routes, not under `/api`:
 | `POST /site-auth/login {email, password}` | `{ session: { token, expiresAt }, user: { id, name, email, role } }` |
 | `GET /site-auth/me` | the same, the session renewed when it ends soon |
 | `POST /site-auth/logout` | ends the session |
-| `POST /site-auth/reset {email, site?}` | mails a link to the website, the same answer for unknown emails |
+| `POST /site-auth/reset {email, site?}` | mails a link to the website (a user of the studio gets the studio's), the same answer for unknown emails |
 | `POST /site-auth/password {token, password}` | sets the password of an invite or reset link and logs in, like login |
 
 The frontend keeps the token in an httpOnly cookie of the site and sends

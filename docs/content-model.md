@@ -400,7 +400,10 @@ recipes and no others (new ones are theirs, so `Edit` creates), with
 Craft's "view other authors' entries". Every request about an entry
 checks it (drafts, publishing, moving, the trash, revisions, the AI's
 tools), lists, pickers and the search show only what the user may see,
-and the author can't be changed by such a role. `/api/entries?author=4`
+and the author can't be changed by such a role. In a structure
+such a user doesn't put entries below pages they can't see, and
+deletes, restores or moves an entry only when the children that go
+with it are theirs too. `/api/entries?author=4`
 lists what user 4 made. A relation or link to an
 entry of a section the role can't view (or to an asset without asset
 access) is left out on save like one to a deleted entry, unless the

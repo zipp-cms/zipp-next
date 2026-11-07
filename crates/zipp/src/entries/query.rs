@@ -74,8 +74,8 @@ pub struct Query {
 	pub slug: Option<String>,
 	pub uri: Option<String>,
 	pub ids: Option<Vec<i64>>,
-	/// made by one of these users
-	pub authors: Vec<i64>,
+	/// made by one of these users, `author=`: none
+	pub authors: Option<Vec<i64>>,
 	/// children of these entries, `parent=5`; GraphQL loads the children
 	/// of several entries at once
 	pub parents: Vec<i64>,
@@ -211,7 +211,7 @@ impl Query {
 			slug: None,
 			uri: None,
 			ids: None,
-			authors: vec![],
+			authors: None,
 			parents: vec![],
 			level: None,
 			search: None,
@@ -343,7 +343,7 @@ impl Query {
 				"search" => q.search = Some(value.clone()),
 				"text" => q.text = Some(value.clone()),
 				"parent" => q.parents = vec![int(key, value)?],
-				"author" => q.authors = parse_ids(key, value)?,
+				"author" => q.authors = Some(parse_ids(key, value)?),
 				"related" => q.related = Some(int(key, value)?),
 				_ if key.starts_with("r.") => {
 					let field = key[2..].to_string();
@@ -607,10 +607,9 @@ impl Query {
 			let values = ids.iter().map(|i| Value::Integer(*i)).collect();
 			cond(format!("e.id IN ({marks})"), values);
 		}
-		if !self.authors.is_empty() {
-			let marks = marks(self.authors.len());
-			let values =
-				self.authors.iter().map(|i| Value::Integer(*i)).collect();
+		if let Some(authors) = &self.authors {
+			let marks = marks(authors.len());
+			let values = authors.iter().map(|i| Value::Integer(*i)).collect();
 			cond(format!("e.author_id IN ({marks})"), values);
 		}
 		if let Some(own) = &self.own_only {

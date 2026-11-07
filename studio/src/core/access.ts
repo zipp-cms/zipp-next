@@ -1,6 +1,12 @@
 import { session } from './session.svelte';
 import { t } from '../i18n/index.svelte';
-import { navGroups, type Access, type NavGroup, type Schema } from './schema';
+import {
+	navGroups,
+	type Access,
+	type NavGroup,
+	type Role,
+	type Schema,
+} from './schema';
 
 /**
  * What the logged in user may do, from the roles of the schema. The
@@ -45,6 +51,16 @@ export function accessText(
 	none = '–',
 ): string {
 	return level ? t(`common.${level}`) : none;
+}
+
+/** A role's access to a section for showing it, with the one to the
+ * entries its users made. */
+export function roleAccessText(role: Role, section: string): string {
+	const own = role.own[section];
+	if (!own) return accessText(role.sections[section]);
+	const mine = t('common.ownAccess', { access: accessText(own) });
+	const all = role.sections[section];
+	return all ? `${accessText(all)}, ${mine}` : mine;
 }
 
 export function isAdmin(schema: Schema): boolean {

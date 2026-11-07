@@ -13,6 +13,7 @@ export default {
 	'common.discard': 'Discard',
 	'common.download': 'Download',
 	'common.draft': 'Draft',
+	'common.ownAccess': 'own entries: {access}',
 	'common.edit': 'Edit',
 	'common.email': 'Email',
 	'common.loading': 'Loading…',

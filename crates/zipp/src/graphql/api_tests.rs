@@ -552,6 +552,9 @@ async fn entries_have_their_author() {
 		json!([{ "title": "Rock", "authorId": id.to_string(), "author": mia }]),
 		"{body}"
 	);
+	// no users, no entries
+	let body = ts.graphql(query, json!({ "a": [] })).await;
+	assert_eq!(body["data"]["entries"], json!([]), "{body}");
 	// the public part only
 	let query = "{ entries { ... on event_Entry { author { email } } } }";
 	let body = ts.graphql(query, json!({})).await;

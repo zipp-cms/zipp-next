@@ -55,7 +55,8 @@ pub(crate) fn check(
 		}
 		None => {
 			if let Some(p) = input.parent_id {
-				check_parent(conn, section, p)?;
+				let user = crate::auth::user_of(conn, user_id)?;
+				check_parent(conn, schema, section, p, user.as_ref())?;
 				check_level(conn, section, p, 1)?;
 			}
 			input.parent_id
