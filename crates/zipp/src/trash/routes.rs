@@ -78,10 +78,10 @@ async fn empty_route(
 	for e in trash.entries {
 		// like one by one: not with children of others that went with it
 		let (id, deleted_at) = (e.id, Some(e.deleted_at));
-		if check_tree(&tx, schema, &auth, id, &e.section, need, deleted_at)
-			.is_ok()
-		{
-			purge_entry(&tx, e.id)?;
+		match check_tree(&tx, schema, &auth, id, &e.section, need, deleted_at) {
+			Ok(()) => purge_entry(&tx, e.id)?,
+			Err(Error::Forbidden) => {}
+			Err(e) => return Err(e),
 		}
 	}
 	tx.commit()?;
