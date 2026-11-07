@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A group is always an object in GraphQL, also for an entry saved
+  before it had a value (a new entry, a draft), like Craft's content
+  block: a frontend no longer breaks on `sale.format` of a new entry.
 - `sort-assets` puts assets into the folders of the asset fields that
   use them, `{slug}` and the others filled in like uploads in the
   studio: after an import from Craft, or when a field got a folder.

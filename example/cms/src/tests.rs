@@ -115,7 +115,8 @@ async fn tickets_are_a_group_of_the_event() {
 	let data = ts.graphql(query, json!({ "siteId": 1 })).await;
 	let events = &data["data"]["events"];
 	assert_eq!(events[0]["tickets"], json!({ "soldOut": true }), "{data}");
-	assert_eq!(events[1]["tickets"], Value::Null);
+	// without a value the group is there, like Craft's content block
+	assert_eq!(events[1]["tickets"], json!({ "soldOut": null }));
 }
 
 /// A small png, 4 x 2.

@@ -260,13 +260,19 @@ async fn resolve_value<'a>(
 				.map(|b| block_of(b, &site));
 			Ok(Some(FieldValue::list(blocks)))
 		}
-		FieldKind::Group { component } if value.is_object() => {
-			// read like a block, it has no id or type of its own
+		FieldKind::Group { component } => {
+			// read like a block, it has no id or type of its own; always
+			// there like Craft's content block, also when an entry was
+			// saved before it had a value (a new entry, a draft)
+			let fields = match value {
+				Value::Object(_) => value,
+				_ => Value::Object(Default::default()),
+			};
 			Ok(Some(FieldValue::owned_any(Block {
 				id: String::new(),
 				ty: component,
 				site,
-				fields: value,
+				fields,
 			})))
 		}
 		FieldKind::Markdown if value.is_string() => {
@@ -332,8 +338,7 @@ async fn resolve_value<'a>(
 		}
 		// a value of another shape (a draft, an older migration) is
 		// none rather than JSON in the place of an object
-		FieldKind::Group { .. }
-		| FieldKind::Markdown
+		FieldKind::Markdown
 		| FieldKind::RichText { .. }
 		| FieldKind::Link { .. }
 		| FieldKind::Note { .. } => Ok(None),

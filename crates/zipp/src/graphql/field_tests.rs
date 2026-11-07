@@ -227,6 +227,14 @@ async fn groups_and_markdown() {
 		let fields = json!({ "seo": { "title": "Hi", "description": "D" } });
 		save(&conn, &s, None, input("pages", "page", "P", fields), None)
 			.unwrap();
+		save(
+			&conn,
+			&s,
+			None,
+			input("pages", "page", "N", json!({})),
+			None,
+		)
+		.unwrap();
 		let fields = json!({ "notes": "**bold** <script>x</script>" });
 		save(&conn, &s, None, input("events", "event", "E", fields), None)
 			.unwrap();
@@ -245,6 +253,7 @@ async fn groups_and_markdown() {
 		&gql,
 		r#"{
 			p: entry(uri: "p") { ... on page_Entry { seo { title description } } }
+			n: entry(uri: "n") { ... on page_Entry { seo { title description } } }
 			e: entry(uri: "events/e") { ... on event_Entry { notes { markdown html } } }
 		}"#,
 		true,
@@ -253,6 +262,11 @@ async fn groups_and_markdown() {
 	assert_eq!(
 		data["p"]["seo"],
 		json!({ "title": "Hi", "description": "D" })
+	);
+	// a group without a value is there like Craft's content block
+	assert_eq!(
+		data["n"]["seo"],
+		json!({ "title": null, "description": null })
 	);
 	assert_eq!(
 		data["e"]["notes"]["html"],
