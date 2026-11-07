@@ -727,25 +727,32 @@ pub(crate) fn set_author(
 	}
 }
 
-/// The section of an entry and who made it, what its access depends on.
+/// The section of an entry and who made it, what its access depends on;
+/// none when it isn't there or in the trash.
+pub(crate) fn find_owner(
+	conn: &Connection,
+	id: i64,
+) -> Result<Option<(String, Option<i64>)>> {
+	Ok(conn
+		.query_row(
+			"SELECT section, author_id FROM entries
+			WHERE id = ?1 AND deleted_at IS NULL",
+			[id],
+			|r| Ok((r.get(0)?, r.get(1)?)),
+		)
+		.optional()?)
+}
+
+/// [`find_owner`] of an entry that must be there.
 pub(crate) fn owner_of(
 	conn: &Connection,
 	id: i64,
 ) -> Result<(String, Option<i64>)> {
-	Ok(conn.query_row(
-		"SELECT section, author_id FROM entries
-		WHERE id = ?1 AND deleted_at IS NULL",
-		[id],
-		|r| Ok((r.get(0)?, r.get(1)?)),
-	)?)
+	find_owner(conn, id)?.ok_or(Error::NotFound)
 }
 
 pub(crate) fn section_of(conn: &Connection, id: i64) -> Result<String> {
-	Ok(conn.query_row(
-		"SELECT section FROM entries WHERE id = ?1 AND deleted_at IS NULL",
-		[id],
-		|r| r.get(0),
-	)?)
+	Ok(owner_of(conn, id)?.0)
 }
 
 /// The slug an entry is saved with: its own, else one of its title.

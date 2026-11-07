@@ -15,14 +15,7 @@ pub(super) fn check_parent(
 			"only entries of a structure have parents".into(),
 		));
 	}
-	let found: Option<(String, Option<i64>)> = conn
-		.query_row(
-			"SELECT section, author_id FROM entries
-			WHERE id = ?1 AND deleted_at IS NULL",
-			[parent],
-			|r| Ok((r.get(0)?, r.get(1)?)),
-		)
-		.optional()?;
+	let found = find_owner(conn, parent)?;
 	let fits = found.is_some_and(|(s, author)| {
 		s == section.handle
 			&& user

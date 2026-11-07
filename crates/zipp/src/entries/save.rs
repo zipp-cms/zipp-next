@@ -297,22 +297,23 @@ fn check_relations(
 	let user = crate::auth::user_of(conn, user_id)?;
 	let mut gone = vec![];
 	for rel in relations(schema, comp, fields) {
-		let (kind, sql) = match rel.target {
-			Target::Entries { .. } => (
-				LinkKind::Entry,
-				"SELECT section, author_id FROM entries
-				WHERE id = ?1 AND deleted_at IS NULL",
-			),
-			Target::Assets { .. } => (
-				LinkKind::Asset,
-				"SELECT '', NULL FROM assets
-				WHERE id = ?1 AND deleted_at IS NULL",
-			),
+		let kind = match rel.target {
+			Target::Entries { .. } => LinkKind::Entry,
+			Target::Assets { .. } => LinkKind::Asset,
 		};
 		for id in rel.ids {
-			let found: Option<(String, Option<i64>)> = conn
-				.query_row(sql, [id], |r| Ok((r.get(0)?, r.get(1)?)))
-				.optional()?;
+			let found = match kind {
+				LinkKind::Entry => find_owner(conn, id)?,
+				// an asset has no section or author
+				_ => conn
+					.query_row(
+						"SELECT '', NULL FROM assets
+						WHERE id = ?1 AND deleted_at IS NULL",
+						[id],
+						|r| Ok((r.get(0)?, r.get(1)?)),
+					)
+					.optional()?,
+			};
 			let visible = found.is_some_and(|(s, a)| match (&user, kind) {
 				(None, _) => true,
 				_ if before.contains(&(kind, id)) => true,

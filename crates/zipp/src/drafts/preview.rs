@@ -86,9 +86,8 @@ pub(crate) fn preview(
 		token: String::new(),
 	};
 	// nor one in the trash
-	let (section, author) = match crate::entries::owner_of(conn, id) {
-		Err(Error::NotFound) => return Ok(None),
-		owner => owner?,
+	let Some((section, author)) = crate::entries::find_owner(conn, id)? else {
+		return Ok(None);
 	};
 	if !auth.can_entry(schema, &section, author, Access::View) {
 		return Ok(None);
