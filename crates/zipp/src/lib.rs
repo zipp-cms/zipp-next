@@ -85,7 +85,8 @@ use crate::migrate::{DataResult, DataTx, Migrations};
 #[cfg(feature = "craft")]
 use cli::import_craft;
 use cli::{
-	Cmd, Opts, backup, check, makemigration, restore, save_user, test_mail,
+	Cmd, Opts, backup, check, makemigration, restore, save_user, sort_assets,
+	test_mail,
 };
 use server::serve;
 
@@ -389,6 +390,7 @@ impl Cms {
 				&volume,
 				&site,
 			),
+			Cmd::SortAssets => sort_assets(&schema, &opts.db, &migrations),
 			Cmd::User { email, role } => {
 				save_user(&schema, &opts.db, &email, role.as_deref())
 			}

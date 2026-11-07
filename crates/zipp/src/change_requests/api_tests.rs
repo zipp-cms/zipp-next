@@ -44,11 +44,13 @@ async fn anyone_requests_a_change() {
 
 #[tokio::test]
 async fn a_role_without_setup_requests_nothing() {
-	let ts = TestServer::new(site().role(
-		Role::new("writer", "Writer")
-			.section("pages", Access::Edit)
-			.without_setup(),
-	));
+	let ts = TestServer::new(
+		site().role(
+			Role::new("writer", "Writer")
+				.section("pages", Access::Edit)
+				.without_setup(),
+		),
+	);
 	let writer = ts.user(Some("writer"));
 	assert_eq!(
 		writer.call(&page_request("A subtitle")).await.unwrap_err(),

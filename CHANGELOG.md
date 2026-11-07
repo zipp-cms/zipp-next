@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `sort-assets` puts assets into the folders of the asset fields that
+  use them, `{slug}` and the others filled in like uploads in the
+  studio: after an import from Craft, or when a field got a folder.
+  Assets of several entries stay where they are.
 - A role can be without Setup, `Role::without_setup()`, like an editor
   in Craft who only writes: no Setup in the sidebar, no links to it, no
   change requests. Roles see it read only as before by default.

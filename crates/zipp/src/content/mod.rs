@@ -16,6 +16,7 @@ pub(crate) mod tests;
 mod validate;
 
 pub(crate) use relations::Target;
+pub(crate) use relations::asset_folders;
 pub(crate) use relations::drop_links;
 pub(crate) use relations::relations;
 pub(crate) use validate::check_default;

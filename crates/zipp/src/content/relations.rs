@@ -168,6 +168,34 @@ pub(super) fn collect_relations(
 	}
 }
 
+/// The assets of the asset fields with a folder, also inside blocks and
+/// groups: the field's folder (with its placeholders) and the ids.
+pub(crate) fn asset_folders<'a>(
+	schema: &'a Schema,
+	comp: &'a Component,
+	fields: &'a Value,
+) -> Vec<(&'a str, Vec<i64>)> {
+	let mut out = vec![];
+	for field in &comp.fields {
+		let value = &fields[&field.handle];
+		if let FieldKind::Assets {
+			folder: Some(folder),
+			..
+		} = &field.kind
+		{
+			let ids = value.as_array().into_iter().flatten();
+			out.push((
+				folder.as_str(),
+				ids.filter_map(Value::as_i64).collect(),
+			));
+		}
+		for inner in inner(schema, field, value) {
+			out.extend(asset_folders(schema, inner.comp, inner.fields));
+		}
+	}
+	out
+}
+
 /// The links of a navigation and the ones under them.
 fn nav_relations(
 	schema: &Schema,

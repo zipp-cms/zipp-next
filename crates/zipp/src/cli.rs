@@ -5,11 +5,11 @@ use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
 
-use crate::db::Db;
-use crate::migrate::{self, Migration, Migrations, Rename};
-use crate::{Schema, auth, client, graphql};
 #[cfg(feature = "craft")]
-use crate::{assets, craft, migrate::apply};
+use crate::craft;
+use crate::db::Db;
+use crate::migrate::{self, Migration, Migrations, Rename, apply};
+use crate::{Schema, assets, auth, client, graphql};
 
 /// The error of a command, printed before zipp exits.
 pub(super) type CmdError = Box<dyn std::error::Error + Send + Sync>;
@@ -152,6 +152,10 @@ pub(super) enum Cmd {
 		#[arg(long)]
 		site: Vec<String>,
 	},
+	/// Put assets into the folders of the fields that use them, like
+	/// uploads in the studio (`{slug}` the entry's): after an import or
+	/// when a field got a folder. Assets of several entries stay.
+	SortAssets,
 	/// Add a studio user or set a new password and role, reads the
 	/// password from stdin. Without a role the user is an admin.
 	User {
@@ -408,6 +412,22 @@ pub(super) fn import_craft(
 		report.entries,
 		report.assets,
 		report.skipped.len()
+	);
+	Ok(())
+}
+
+/// See [`Cmd::SortAssets`].
+pub(super) fn sort_assets(
+	schema: &Schema,
+	db_path: &Path,
+	migrations: &Migrations,
+) -> CmdResult {
+	let db = Db::open(db_path)?;
+	apply::up_to_date(&db.conn(), &migrations.load()?, schema)?;
+	let sorted = assets::sort_assets(&db.conn(), schema)?;
+	println!(
+		"Moved {} assets into their fields' folders, {} of several entries stay",
+		sorted.moved, sorted.shared
 	);
 	Ok(())
 }

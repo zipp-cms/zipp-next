@@ -21,6 +21,9 @@ SQLite database, default `zipp.db`):
 - `import-craft <export.json> [--volume handle=[folder:]dir] [--site craft=zipp]`:
   imports a Craft site into a database without content, only with the
   feature `craft`, see below
+- `sort-assets`: puts assets into the folders of the asset fields that
+  use them, like uploads in the studio: after an import, see below, or
+  when a field got a folder
 - `backup <dir> [--files dir] [--keep n]`: a backup of the database and
   the files, also while the server runs, see Backups
 - `restore <backup> [--files dir]`: puts a backup back, the server
@@ -407,3 +410,10 @@ the schema doesn't have is left out and listed; slugs are made zipp's
 (`teddy--co.` becomes `teddy-co`), so redirect such urls in the
 frontend. SEOmatic's fields aren't imported, nor meierlabs-seo's
 settings (set them in the single `seoSettings`).
+
+Craft's folders often aren't the ones the schema's asset fields upload
+to (`.folder("Mappen/{slug}")`): `sort-assets` after the import puts
+each asset that one entry uses in fields with a folder there, with the
+entry's `{slug}`, `{section}` and `{type}` filled in like the studio
+does. Assets of several entries or folders stay where they are, and so
+do the ones in no such field; running it again moves only what changed.

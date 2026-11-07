@@ -31,6 +31,9 @@ mod files;
 mod folders;
 mod manage;
 mod routes;
+mod sort;
+#[cfg(test)]
+mod sort_tests;
 #[cfg(test)]
 pub(crate) mod tests;
 mod transform;
@@ -57,6 +60,7 @@ pub(crate) use manage::{
 use files::file_headers;
 pub(crate) use files::file_routes;
 pub(crate) use routes::api_routes;
+pub(crate) use sort::sort_assets;
 pub use transform::transform_size;
 use transform::*;
 
