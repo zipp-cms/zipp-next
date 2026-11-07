@@ -181,6 +181,9 @@ pub(super) fn viewer_query(
 	let mut q = Query::parse(schema, params).map_err(GqlError::new)?;
 	// the same for the entries of `relatedToEntries`
 	q.each_mut(&mut |q| {
+		// else the relations of a draft or of a section it doesn't read
+		// show
+		q.relations_as_queries(schema);
 		q.published_only = viewer.published_only;
 		match &viewer.preview {
 			Some(Preview::Entry(id, _)) => q.preview_id = Some(*id),

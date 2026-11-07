@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { gqlType, uriOf, visibleRoles } from './setup';
+	import { gqlType, visibleRoles } from './setup';
 	import {
 		componentPath,
 		entryPath,
@@ -13,7 +13,7 @@
 	import { accessOf, accessText, isAdmin } from '../core/access';
 	import PluginCards from './PluginCards.svelte';
 	import Table from 'zipp-ui/Table.svelte';
-	import { componentOf, sectionOf } from '../core/schema';
+	import { componentOf, sectionOf, uriOf } from '../core/schema';
 	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
 

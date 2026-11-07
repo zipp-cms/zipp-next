@@ -30,46 +30,44 @@ pub(super) fn criteria_input(schema: &Schema) -> InputObject {
 }
 
 fn query_args(schema: &Schema) -> Vec<(String, TypeRef)> {
+	let mut args: Vec<(String, TypeRef)> = TAKEN
+		.iter()
+		.map(|&n| (n.to_string(), arg_type(n)))
+		.collect();
+	// the relation fields like Craft's: ids, `:notempty:` or `:empty:`
+	for handle in relation_args(schema) {
+		args.push((handle, TypeRef::named_list("QueryArgument")));
+	}
+	args
+}
+
+/// The type of an argument of [`TAKEN`].
+fn arg_type(name: &str) -> TypeRef {
 	let s = || TypeRef::named(TypeRef::STRING);
 	// lists like in Craft, so crelte's queries fit
 	let l = || TypeRef::named_list(TypeRef::STRING);
 	let i = || TypeRef::named(TypeRef::INT);
 	let q = || TypeRef::named_list("QueryArgument");
-	let args = vec![
-		("site", l()),
-		("siteId", q()),
-		// one, several or `["not", "news"]`, the same for types
-		("section", l()),
-		("type", l()),
-		("uri", l()),
-		("slug", l()),
+	match name {
+		// section, type: one, several or `["not", "news"]`
+		"site" | "section" | "type" | "uri" | "slug" => l(),
+		"siteId" => q(),
 		// Craft's: an id, a list of them, or `["not", 1, 2]`
-		("id", q()),
-		("ids", TypeRef::named_nn_list(TypeRef::INT)),
+		"id" => q(),
+		"ids" => TypeRef::named_nn_list(TypeRef::INT),
 		// Craft's: one or several users
-		("authorId", q()),
-		("parent", i()),
-		("level", i()),
-		("related", i()),
+		"authorId" => q(),
+		"parent" | "level" | "related" => i(),
 		// Craft's: `[1, 2]` either, `["and", 1, 2]` both
-		("relatedTo", q()),
+		"relatedTo" => q(),
 		// each of the list, like Craft
-		("relatedToEntries", TypeRef::named_nn_list("EntryCriteria")),
-		("search", s()),
-		("order", s()),
-		// Craft's `postDate DESC`
-		("orderBy", s()),
-		("limit", i()),
-		("offset", i()),
-		("where", TypeRef::named_nn_list("Where")),
-	];
-	let mut args: Vec<(String, TypeRef)> =
-		args.into_iter().map(|(n, t)| (n.to_string(), t)).collect();
-	// the relation fields like Craft's: ids, `:notempty:` or `:empty:`
-	for handle in relation_args(schema) {
-		args.push((handle, q()));
+		"relatedToEntries" => TypeRef::named_nn_list("EntryCriteria"),
+		// orderBy: Craft's `postDate DESC`
+		"search" | "order" | "orderBy" => s(),
+		"limit" | "offset" => i(),
+		"where" => TypeRef::named_nn_list("Where"),
+		_ => unreachable!("{name} is no argument of the entry queries"),
 	}
-	args
 }
 
 /// The arguments of the entry queries, a relation field of the same name
@@ -279,14 +277,7 @@ fn params_of<'a>(
 			// the position of a site, or its handle
 			"siteId" => {
 				let Some(v) = first(&value)? else { continue };
-				let site = match v.parse::<i64>() {
-					Ok(n) => schema.site_by_id(n),
-					Err(_) => schema.get_site(&v),
-				};
-				let site = site.ok_or_else(|| {
-					GqlError::new(format!("unknown site {v}"))
-				})?;
-				params.push(("site".into(), site.handle.clone()));
+				params.push(("site".into(), site_of(schema, &v)?));
 			}
 			_ => params.push((name.into(), value.string()?.into())),
 		}
@@ -297,20 +288,30 @@ fn params_of<'a>(
 /// The site of the `site` or `siteId` argument, else the primary site.
 pub(super) fn site_arg(ctx: &ResolverContext) -> async_graphql::Result<String> {
 	let schema = ctx.data::<Arc<Schema>>()?;
-	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
-	if let Some(v) = arg("site").map(|v| first(&v)).transpose()?.flatten() {
-		return Ok(v);
-	}
-	if let Some(v) = arg("siteId").map(|v| first(&v)).transpose()?.flatten() {
-		let site = match v.parse::<i64>() {
-			Ok(n) => schema.site_by_id(n),
-			Err(_) => schema.get_site(&v),
+	if let Some(v) = arg(ctx, "site").map(|v| first(&v)).transpose()?.flatten()
+	{
+		return match schema.get_site(&v) {
+			Some(_) => Ok(v),
+			None => Err(GqlError::new(format!("unknown site {v}"))),
 		};
-		let site =
-			site.ok_or_else(|| GqlError::new(format!("unknown site {v}")))?;
-		return Ok(site.handle.clone());
+	}
+	if let Some(v) =
+		arg(ctx, "siteId").map(|v| first(&v)).transpose()?.flatten()
+	{
+		return site_of(schema, &v);
 	}
 	Ok(schema.primary_site().handle.clone())
+}
+
+/// The handle of a site of `siteId`: its position or its handle.
+fn site_of(schema: &Schema, v: &str) -> async_graphql::Result<String> {
+	let site = match v.parse::<i64>() {
+		Ok(n) => schema.site_by_id(n),
+		Err(_) => schema.get_site(v),
+	};
+	let site =
+		site.ok_or_else(|| GqlError::new(format!("unknown site {v}")))?;
+	Ok(site.handle.clone())
 }
 
 /// The first value of a list argument, as text. A single value counts

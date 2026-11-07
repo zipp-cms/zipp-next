@@ -329,6 +329,33 @@ fn tokens_show_the_draft() {
 	assert!(preview(&conn, &s, "nope").unwrap().is_none());
 }
 
+/// A link of one entry shows it while its user may view it.
+#[test]
+fn a_token_ends_with_the_access_of_its_user() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = crate::fixtures::site_with_roles();
+	let page = input("pages", "page", "Live", json!({}));
+	let e = save(&conn, &s, None, page, None).unwrap();
+	let author = crate::users::create(
+		&conn,
+		"author@test.ch",
+		"",
+		"",
+		Some("author"),
+		"",
+	)
+	.unwrap();
+	let token = create_token(&conn, e.id, author).unwrap();
+	assert!(preview(&conn, &s, &token).unwrap().is_some());
+
+	crate::users::set_role(&conn, author, Some("gone")).unwrap();
+	assert!(preview(&conn, &s, &token).unwrap().is_none());
+	crate::users::set_role(&conn, author, Some("author")).unwrap();
+	crate::trash::trash_entry(&conn, &s, e.id, None).unwrap();
+	assert!(preview(&conn, &s, &token).unwrap().is_none());
+}
+
 /// The live preview keeps its token while the editor types: each save
 /// shows, a discard the live content again.
 #[test]

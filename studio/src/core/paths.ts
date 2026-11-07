@@ -1,4 +1,4 @@
-import { sectionName, type Component, type Schema } from './schema';
+import { docOf, sectionName, type Component, type Schema } from './schema';
 import { visibleNav } from './access';
 
 /** The paths of the studio's pages. */
@@ -46,8 +46,7 @@ export function userPath(id: number | 'new'): string {
 
 /** The page of a section or a doc. */
 export function navHref(schema: Schema, handle: string): string {
-	if (schema.docs.some(d => d.handle === handle))
-		return '/admin/docs/' + handle;
+	if (docOf(schema, handle)) return '/admin/docs/' + handle;
 	return sectionPath(handle);
 }
 

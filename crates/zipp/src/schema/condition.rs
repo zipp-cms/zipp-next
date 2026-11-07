@@ -71,8 +71,7 @@ impl Condition {
 
 	/// Whether it holds for the values of the component's fields.
 	fn holds(&self, comp: &Component, values: &Map<String, Value>) -> bool {
-		let Some(field) = comp.fields.iter().find(|f| f.handle == self.field())
-		else {
+		let Some(field) = comp.field(self.field()) else {
 			return true;
 		};
 		let value = values.get(&field.handle).unwrap_or(&Value::Null);
@@ -93,7 +92,7 @@ impl Condition {
 impl Component {
 	/// The conditions of a field: its own and the one of its tab.
 	pub(crate) fn conditions_of(&self, handle: &str) -> Vec<&Condition> {
-		let own = self.fields.iter().find(|f| f.handle == handle);
+		let own = self.field(handle);
 		let tab = self
 			.tabs
 			.iter()
@@ -145,7 +144,7 @@ impl Schema {
 		of: &[String],
 	) -> Result<(), String> {
 		let name = cond.field();
-		let field = comp.fields.iter().find(|f| f.handle == name);
+		let field = comp.field(name);
 		let Some(field) = field.filter(|f| f.kind.has_value()) else {
 			return Err(format!("condition: unknown field {name}"));
 		};

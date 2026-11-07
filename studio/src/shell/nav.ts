@@ -1,6 +1,6 @@
 import type { Schema } from '../core/schema';
 import { visibleNav } from '../core/access';
-import { sectionOf } from '../core/schema';
+import { docOf, sectionOf } from '../core/schema';
 
 /** The navigation of the studio: its groups, their items and links. */
 
@@ -20,7 +20,7 @@ export function groupItems(
 	return (group?.sections ?? []).map(h => {
 		const s = sectionOf(schema, h);
 		if (s) return { handle: h, name: s.name };
-		const d = schema.docs.find(d => d.handle === h);
+		const d = docOf(schema, h);
 		return { handle: h, name: d?.name ?? h };
 	});
 }

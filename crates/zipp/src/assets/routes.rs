@@ -8,6 +8,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 
 use super::api::*;
+use super::files::serve_uploaded;
 use super::*;
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
@@ -42,9 +43,10 @@ pub(super) async fn upload(
 		let tmp = spool(&state.files, field).await?;
 		let conn = state.db.conn();
 		let user = Some(auth.user_id);
-		let asset = store_file(&conn, &state.files, &filename, tmp, user)?;
-		move_assets(&conn, &[asset.id], params.folder)?;
-		assets.push(get_asset(&conn, asset.id)?);
+		let folder = params.folder;
+		let asset =
+			store_file(&conn, &state.files, &filename, tmp, folder, user)?;
+		assets.push(asset);
 	}
 	Ok(Json(assets))
 }
@@ -64,22 +66,49 @@ pub(super) async fn replace_route(
 
 /// `POST /assets/unzip?folder=<id>`, multipart: a zip, its folders
 /// become folders in the folder, its files assets. It is unpacked before
-/// the database is taken.
+/// the database is taken, one zip at a time: unpacking takes the disk
+/// and a while.
 pub(super) async fn unzip_route(
 	State(state): State<AppState>,
 	AssetAccess { auth, .. }: AssetAccess<Edit>,
 	Query(params): Query<UploadParams>,
 	mut multipart: Multipart,
 ) -> Result<Json<Unzipped>> {
+	// the folder is there, before the zip comes
+	check_folder(&state.db.conn(), params.folder)?;
+	let unzipping = state.unzipping.clone().try_lock_owned().map_err(|_| {
+		Error::Conflict("another zip is being unpacked, try again".into())
+	})?;
+
 	let (_, tmp) = first_file(&state.files, &mut multipart).await?;
 	let user = Some(auth.user_id);
 	let unzipped = tokio::task::spawn_blocking(move || {
+		// held until it is unpacked, also when the request goes away
+		let _unzipping = unzipping;
 		let zip = read_zip(&state.files, tmp.as_file(), &Limits::default())?;
 		let conn = state.db.conn();
 		unzip(&conn, &state.files, zip, params.folder, user)
 	})
 	.await??;
 	Ok(Json(unzipped))
+}
+
+/// `GET /assets/{id}/original`: the file as it was uploaded, for the
+/// image editor; the public url serves an image with its edits. No
+/// shared cache keeps it: the session is in a header a proxy can't see.
+pub(super) async fn original_route(
+	State(state): State<AppState>,
+	_access: AssetAccess<View>,
+	Path(id): Path<i64>,
+	req: axum::extract::Request,
+) -> Result<Response> {
+	let asset = get_asset(&state.db.conn(), id)?;
+	let mut resp = serve_uploaded(&state, &asset, req).await?;
+	resp.headers_mut().insert(
+		header::CACHE_CONTROL,
+		header::HeaderValue::from_static("private, no-store"),
+	);
+	Ok(resp)
 }
 
 #[derive(Deserialize)]
@@ -279,6 +308,7 @@ pub(crate) fn api_routes() -> Router<AppState> {
 		.route("/assets/unzip", post(unzip_route).layer(big()))
 		.route("/assets/zip", get(zip_route))
 		.route("/assets/{id}/file", post(replace_route).layer(big()))
+		.route("/assets/{id}/original", get(original_route))
 		.api::<ListReq, _>(list_route)
 		.api::<UpdateReq, _>(update_route)
 		.api::<DeleteReq, _>(delete_route)

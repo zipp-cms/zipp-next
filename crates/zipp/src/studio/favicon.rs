@@ -10,6 +10,8 @@ use axum::body::Bytes;
 use axum::http::HeaderValue;
 use reqwest::{Client, Response, Url, header, redirect};
 
+use crate::html::{attr, attributes};
+
 /// How long a site's icon, or that it has none, is kept.
 const KEEP: Duration = Duration::from_secs(60 * 60);
 /// The part of a page read for its links, they are in the head.
@@ -192,19 +194,16 @@ pub(crate) fn links(html: &str) -> Vec<Link> {
 		let end = lower[start..].find('>').map_or(html.len(), |e| start + e);
 		rest = end;
 
-		let attrs = attributes(&html[start..end]);
-		let attr = |name: &str| {
-			attrs
-				.iter()
-				.find(|(n, _)| n == name)
-				.map(|(_, v)| v.as_str())
-		};
-		let rel = attr("rel").unwrap_or_default().to_ascii_lowercase();
+		let attrs: Vec<(String, String)> = attributes(&html[start..end])
+			.into_iter()
+			.map(|(n, v)| (n, v.trim().to_string()))
+			.collect();
+		let rel = attr(&attrs, "rel").unwrap_or_default().to_ascii_lowercase();
 		let apple = rel
 			.split_ascii_whitespace()
 			.any(|r| r.starts_with("apple-touch-icon"));
 		let icon = rel.split_ascii_whitespace().any(|r| r == "icon");
-		let Some(href) = attr("href").filter(|h| !h.is_empty()) else {
+		let Some(href) = attr(&attrs, "href").filter(|h| !h.is_empty()) else {
 			continue;
 		};
 		if !icon && !apple {
@@ -212,9 +211,9 @@ pub(crate) fn links(html: &str) -> Vec<Link> {
 		}
 
 		let path = href.split(['?', '#']).next().unwrap_or_default();
-		let svg = attr("type").is_some_and(|t| t.contains("svg"))
+		let svg = attr(&attrs, "type").is_some_and(|t| t.contains("svg"))
 			|| path.to_ascii_lowercase().ends_with(".svg");
-		let size = attr("sizes")
+		let size = attr(&attrs, "sizes")
 			.unwrap_or_default()
 			.split_ascii_whitespace()
 			.filter_map(|s| {
@@ -230,43 +229,6 @@ pub(crate) fn links(html: &str) -> Vec<Link> {
 		});
 	}
 	links
-}
-
-/// The attributes of a tag, names in lower case.
-fn attributes(tag: &str) -> Vec<(String, String)> {
-	let mut attrs = vec![];
-	let mut s = tag.trim_start_matches('/');
-	loop {
-		s = s.trim_start_matches(|c: char| c.is_whitespace() || c == '/');
-		let name_end = s
-			.find(|c: char| c.is_whitespace() || c == '=' || c == '/')
-			.unwrap_or(s.len());
-		if name_end == 0 {
-			return attrs;
-		}
-		let name = s[..name_end].to_ascii_lowercase();
-		s = s[name_end..].trim_start();
-
-		let Some(after) = s.strip_prefix('=') else {
-			attrs.push((name, String::new()));
-			continue;
-		};
-		let after = after.trim_start();
-		let (value, rest) = match after.chars().next() {
-			Some(q @ ('"' | '\'')) => {
-				let inner = &after[1..];
-				let end = inner.find(q).unwrap_or(inner.len());
-				(&inner[..end], inner.get(end + 1..).unwrap_or_default())
-			}
-			_ => {
-				let end =
-					after.find(char::is_whitespace).unwrap_or(after.len());
-				(&after[..end], &after[end..])
-			}
-		};
-		attrs.push((name, value.trim().to_string()));
-		s = rest;
-	}
 }
 
 /// The icon the sidebar shows best: an svg, else the largest up to 64px,

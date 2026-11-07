@@ -11,6 +11,7 @@
 	import { EMPTY, createEditor, moveNode, trimmed } from './rich/editor';
 	import { Sortable } from 'zipp-ui/sortable';
 	import SortLine from 'zipp-ui/SortLine.svelte';
+	import { isReadonly, watchReadonly } from './readonly';
 
 	/**
 	 * Rich text with TipTap. The toolbar has only what the schema allows
@@ -69,7 +70,7 @@
 			opts,
 			schema,
 			refs,
-			editable: !el.closest('fieldset[disabled]'),
+			editable: !isReadonly(el),
 			language,
 			label: field.label,
 			// a plain copy, TipTap doesn't take Svelte's proxies
@@ -84,29 +85,18 @@
 		editable = toolbar = editor.isEditable;
 
 		// read only as long as a fieldset around it is disabled (a
-		// conflict, a role, publishing), a fieldset can change after the
-		// start; without an update, else it would write a draft, and with
-		// a transaction, so the cards in the text follow
-		const readonly = () => !!el.closest('fieldset[disabled]');
-		const watch = new MutationObserver(() => {
-			if (!editor || editable === !readonly()) return;
-			editable = !readonly();
+		// conflict, a role, publishing); without an update, else it would
+		// write a draft, and with a transaction, so the cards in the text
+		// follow
+		return watchReadonly(el, readonly => {
+			if (!editor || editable === !readonly) return;
+			editable = !readonly;
 			toolbar ||= editable;
 			editor.setEditable(editable, false);
 			editor.view.dispatch(
 				editor.state.tr.setMeta('addToHistory', false),
 			);
 		});
-		for (
-			let f = el.closest('fieldset');
-			f;
-			f = f.parentElement?.closest('fieldset') ?? null
-		)
-			watch.observe(f, {
-				attributes: true,
-				attributeFilter: ['disabled'],
-			});
-		return () => watch.disconnect();
 	});
 
 	// content that changes from outside (load, restore) goes into the editor

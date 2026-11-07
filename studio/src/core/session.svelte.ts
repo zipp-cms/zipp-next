@@ -138,13 +138,9 @@ export class Session {
 	 */
 	async renew(email: string, password: string): Promise<boolean> {
 		const before = this.user?.id;
-		const auth = await request<Authenticated>('POST', '/auth/login', {
-			email,
-			password,
-		});
-		this.use(auth, this.remember);
+		await this.login(email, password, this.remember);
 		this.expired = false;
-		if (auth.user.id !== before) return false;
+		if (this.user?.id !== before) return false;
 		for (const f of this.renewed) f();
 		return true;
 	}

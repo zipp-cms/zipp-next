@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- zipp-forms limits submissions per address only (5 in 10 minutes): the
+  cap of 50 per form from all addresses let about ten addresses block a
+  form for everyone.
+- zipp-seo's root `seo` and `seoJson` are null for a site the token's
+  GraphQL schema doesn't read; plugins check it with
+  `graphql::ext::reads_site`.
+- A switched off block in rich text (`"enabled": false`) is left out of
+  GraphQL's `chunks` like a switched off block of a blocks field.
+- GraphQL's `related` and the relation field arguments (`offerCategory:
+  5`, `":notempty:"`, `":empty:"`) only count the entries the viewer
+  may see, like `relatedTo`: a token learned through them that an entry
+  points to an unpublished one or to one outside its sections or sites.
+- A zip upload checks its folder before it is unpacked, and a server
+  unpacks one zip at a time: another one meanwhile is a conflict (409),
+  the studio sends its zips one after another.
+- The file url of an edited image is always the edited image, `?original`
+  is gone: anyone with the url got the uploaded file and the crop of an
+  editor back. The studio's image editor and Download get the uploaded
+  file with the session from `GET /api/assets/{id}/original`, for roles
+  that see assets.
 - GraphQL schemas are code, like Craft's in its project config:
   `Schema::graphql_schema(GraphqlSchema::new("website", "Website")
   .sections(["pages", "news"]).assets().previews())` says which

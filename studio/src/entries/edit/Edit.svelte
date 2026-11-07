@@ -20,6 +20,7 @@
 		componentOf,
 		entryUrl,
 		siteName,
+		uriOf,
 		type Schema,
 	} from '../../core/schema';
 	import { go } from '../../core/router.svelte';
@@ -43,7 +44,8 @@
 	import EntryHead from './EntryHead.svelte';
 	import EntrySidebar from './EntrySidebar.svelte';
 	import EntryStatus from './EntryStatus.svelte';
-	import LivePane, { liveSetting, toggleLive } from './LivePane.svelte';
+	import LivePane from './LivePane.svelte';
+	import { liveSetting, toggleLive } from './live.svelte';
 	import RevisionView from './RevisionView.svelte';
 	import TabBar from '../../fields/TabBar.svelte';
 	import { SitePreview } from '../preview.svelte';
@@ -105,7 +107,8 @@
 		!onclose &&
 			id === null &&
 			!!schema.siteUrls[ed.site] &&
-			!!(ed.secDef?.uri || ed.secDef?.type_uris?.[ed.ty]),
+			!!ed.secDef &&
+			uriOf(ed.secDef, ed.ty, ed.site) !== null,
 	);
 	const live = $derived(
 		canLive && liveSetting.on

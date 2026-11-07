@@ -4,11 +4,13 @@ use crate::api::DefaultsReq;
 use crate::{Seo, SeoDefaults, seo_field};
 use serde_json::{Value, json};
 use zipp::SiteUrls;
+use zipp::axum::body::{Body, to_bytes};
+use zipp::axum::http::{Request, header};
 use zipp::drafts::{SiteDoc, put_draft};
 use zipp::entries::save;
 use zipp::error::Error;
 use zipp::testing::{Client, TestServer, input};
-use zipp::{Field, Schema, Section, UserPages};
+use zipp::{Field, GraphqlSchema, Schema, Section, UserPages};
 
 /// The site as its crate builds it, before [`Cms`](zipp::Cms) finishes it.
 fn schema() -> Schema {
@@ -141,6 +143,7 @@ async fn seo_like_the_craft_plugin() {
 		serde_json::from_str(j["jsonLd"].as_str().unwrap()).unwrap();
 	let graph = ld["@graph"].as_array().unwrap();
 	assert_eq!(graph[0]["@type"], "MedicalClinic");
+	assert_eq!(graph[0]["address"]["@type"], "PostalAddress");
 	assert_eq!(graph[0]["address"]["addressLocality"], "Thun");
 	assert_eq!(graph[0]["openingHoursSpecification"][0]["opens"], "08:00");
 	let page = graph.iter().find(|g| g["@type"] == "WebPage").unwrap();
@@ -180,6 +183,43 @@ async fn seo_like_the_craft_plugin() {
 	)
 	.await;
 	assert_eq!(data["entry"]["seo"]["robots"], "noindex, nofollow");
+}
+
+/// A request of GraphQL's api as JSON, the answer as JSON.
+async fn post(client: &Client, path: &str, body: Value, bearer: &str) -> Value {
+	let mut req = Request::post(path)
+		.header(header::CONTENT_TYPE, "application/json")
+		.body(Body::from(body.to_string()))
+		.unwrap();
+	if !bearer.is_empty() {
+		let auth = format!("Bearer {bearer}").parse().unwrap();
+		req.headers_mut().insert(header::AUTHORIZATION, auth);
+	}
+	let resp = client.send(req).await;
+	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+	serde_json::from_slice(&body).unwrap()
+}
+
+#[tokio::test]
+async fn a_token_gets_the_seo_of_its_sites() {
+	let german = GraphqlSchema::new("german", "German")
+		.sections(["events", "pages"])
+		.sites(["de"]);
+	let ts = TestServer::new(schema().graphql_schema(german));
+	let token = json!({ "name": "Website", "schema": "german" });
+	let created = post(&ts.admin(), "/api/graphql/tokens", token, "").await;
+	let token = created["token"].as_str().unwrap();
+
+	let anon = ts.anonymous();
+	let query = |site: &str| json!({ "query": format!(r#"{{ seoJson(site: "{site}") }}"#) });
+	let resp = post(&anon, "/api/graphql", query("de"), token).await;
+	assert!(resp["data"]["seoJson"].is_object(), "{resp}");
+	let resp = post(&anon, "/api/graphql", query("en"), token).await;
+	assert_eq!(resp["data"]["seoJson"], Value::Null, "{resp}");
+
+	// the token of serve reads every site
+	let resp = ts.graphql(r#"{ seoJson(site: "en") }"#, json!({})).await;
+	assert!(resp["data"]["seoJson"].is_object(), "{resp}");
 }
 
 #[test]

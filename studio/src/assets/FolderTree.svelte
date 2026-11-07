@@ -2,8 +2,8 @@
 	import type { Folder } from './api';
 	import { root } from './folders';
 	import { FolderTreeState } from './folderTree.svelte';
-	import { ASSETS_DRAG, uploads } from './uploads.svelte';
-	import { fromDrop, type Upload } from './files';
+	import { ASSETS_DRAG, readDrop } from './uploads.svelte';
+	import type { Upload } from './files';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import TreeCaret from 'zipp-ui/TreeCaret.svelte';
@@ -112,14 +112,7 @@
 		const data = e.dataTransfer!;
 		const ids = data.getData(ASSETS_DRAG);
 		if (ids) onmove?.(JSON.parse(ids), id);
-		else
-			fromDrop(data)
-				.then(items => onupload?.(items, id))
-				.catch(err =>
-					uploads.report(
-						t('assets.dropFailed', { error: err.message ?? err }),
-					),
-				);
+		else readDrop(data, items => onupload?.(items, id));
 	}
 </script>
 

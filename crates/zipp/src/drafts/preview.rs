@@ -44,24 +44,24 @@ pub(crate) enum Preview {
 	All(Vec<String>),
 }
 
-/// What a valid token shows.
+/// What a valid token shows, as its user may see it now.
 pub(crate) fn preview(
 	conn: &Connection,
 	schema: &Schema,
 	token: &str,
 ) -> Result<Option<Preview>> {
-	let found: Option<(Option<i64>, Option<String>)> = conn
+	let found: Option<(Option<i64>, i64, Option<String>)> = conn
 		.query_row(
-			"SELECT p.entry_id, u.role FROM preview_tokens p
+			"SELECT p.entry_id, p.user_id, u.role FROM preview_tokens p
 			JOIN users u ON u.id = p.user_id
 			WHERE p.hash = ?1 AND p.expires_at > ?2",
 			params![token_hash(token), now()],
-			|r| Ok((r.get(0)?, r.get(1)?)),
+			|r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
 		)
 		.optional()?;
-	let id = match found {
+	let (id, user_id, role) = match found {
 		None => return Ok(None),
-		Some((None, role)) => {
+		Some((None, _, role)) => {
 			let role = role.as_deref().map(|r| schema.get_role(r));
 			let sections = schema
 				.sections
@@ -77,8 +77,21 @@ pub(crate) fn preview(
 				.collect();
 			return Ok(Some(Preview::All(sections)));
 		}
-		Some((Some(id), _)) => id,
+		Some((Some(id), user_id, role)) => (id, user_id, role),
 	};
+	// a user who doesn't see the entry anymore shows it no more
+	let auth = crate::auth::Authed {
+		user_id,
+		role,
+		token: String::new(),
+	};
+	// nor one in the trash
+	let Some((section, author)) = crate::entries::find_owner(conn, id)? else {
+		return Ok(None);
+	};
+	if !auth.can_entry(schema, &section, author, Access::View) {
+		return Ok(None);
+	}
 	let (doc, _) = draft_or_live(conn, id)?;
 	Ok(Some(Preview::Entry(id, doc)))
 }

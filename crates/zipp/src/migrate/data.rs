@@ -145,43 +145,36 @@ impl DataTx<'_> {
 			},
 		)?;
 
-		// assets have no sites and their title is their own
-		let mut stmt = self.conn.prepare(
-			"SELECT id, CASE title WHEN '' THEN filename ELSE title END,
-			fields FROM assets",
-		)?;
-		let rows = stmt
-			.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
-			.collect::<rusqlite::Result<Vec<(i64, String, String)>>>()?;
-		drop(stmt);
+		// assets and users have no sites; the title of an asset is its own
+		// or its filename, a user's their name
+		let others = [
+			(
+				"assets",
+				"CASE title WHEN '' THEN filename ELSE title END",
+				ASSET,
+			),
+			("users", "name", USER),
+		];
+		for (table, title, ty) in others {
+			let mut stmt = self
+				.conn
+				.prepare(&format!("SELECT id, {title}, fields FROM {table}"))?;
+			let rows = stmt
+				.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+				.collect::<rusqlite::Result<Vec<(i64, String, String)>>>()?;
+			drop(stmt);
 
-		for (id, title, fields) in rows {
-			let mut fields: Value = serde_json::from_str(&fields)?;
-			let at = (id, "", title.as_str());
-			if self.run(component, ASSET, &mut fields, at, &mut f)? {
-				self.conn.execute(
-					"UPDATE assets SET fields = ?1 WHERE id = ?2",
-					params![fields.to_string(), id],
-				)?;
-			}
-		}
-
-		// users neither, their title is their name
-		let mut stmt =
-			self.conn.prepare("SELECT id, name, fields FROM users")?;
-		let rows = stmt
-			.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
-			.collect::<rusqlite::Result<Vec<(i64, String, String)>>>()?;
-		drop(stmt);
-
-		for (id, name, fields) in rows {
-			let mut fields: Value = serde_json::from_str(&fields)?;
-			let at = (id, "", name.as_str());
-			if self.run(component, USER, &mut fields, at, &mut f)? {
-				self.conn.execute(
-					"UPDATE users SET fields = ?1 WHERE id = ?2",
-					params![fields.to_string(), id],
-				)?;
+			for (id, title, fields) in rows {
+				let mut fields: Value = serde_json::from_str(&fields)?;
+				let at = (id, "", title.as_str());
+				if self.run(component, ty, &mut fields, at, &mut f)? {
+					self.conn.execute(
+						&format!(
+							"UPDATE {table} SET fields = ?1 WHERE id = ?2"
+						),
+						params![fields.to_string(), id],
+					)?;
+				}
 			}
 		}
 

@@ -1,7 +1,6 @@
 //! `POST /forms/<handle>`: a submission of the website, checked and
 //! mailed to the recipients of the form's settings.
 
-use std::net::IpAddr;
 use std::sync::Arc;
 
 use serde::Deserialize;
@@ -21,12 +20,10 @@ use zipp::mail::Mail;
 
 use crate::{FORM_SETTINGS, Form, FormFieldKind, Forms};
 
-/// Submissions of an address in [`WINDOW_MS`] before it has to wait.
+/// Submissions of an address in [`WINDOW_MS`] before it has to wait. Only
+/// per address: a cap of a form from all of them let a few addresses
+/// block it for everyone.
 const MAX_PER_ADDRESS: usize = 5;
-/// Submissions of a form in [`WINDOW_MS`], from all addresses: many
-/// addresses can't send a flood of mails either. It also keeps the
-/// limits small, only what is counted is kept.
-const MAX_PER_FORM: usize = 50;
 const WINDOW_MS: i64 = 10 * MINUTE_MS;
 
 #[derive(Deserialize)]
@@ -48,14 +45,15 @@ fn answer(status: StatusCode, body: Value) -> Response {
 	(status, zipp::axum::Json(body)).into_response()
 }
 
+fn failure(status: StatusCode, message: &str) -> Response {
+	answer(status, json!({ "success": false, "message": message }))
+}
+
 /// The visitor gets a short reason, the log the whole one.
 fn unavailable(why: &str) -> Response {
 	tracing::warn!("forms: {why}");
 	let message = "The form can't send right now, please try again later";
-	answer(
-		StatusCode::SERVICE_UNAVAILABLE,
-		json!({ "success": false, "message": message }),
-	)
+	failure(StatusCode::SERVICE_UNAVAILABLE, message)
 }
 
 async fn submit(
@@ -71,10 +69,7 @@ async fn submit(
 	};
 	let Ok(values) = serde_json::from_slice::<Map<String, Value>>(&body) else {
 		let message = "a JSON object of the fields";
-		return answer(
-			StatusCode::BAD_REQUEST,
-			json!({ "success": false, "message": message }),
-		);
+		return failure(StatusCode::BAD_REQUEST, message);
 	};
 	let site = state
 		.schema
@@ -108,12 +103,9 @@ async fn submit(
 			);
 		}
 	};
-	if !forms.may_send(&handle, client) {
+	if !forms.may_send(client) {
 		let message = "Too many messages, please try again in a few minutes";
-		return answer(
-			StatusCode::TOO_MANY_REQUESTS,
-			json!({ "success": false, "message": message }),
-		);
+		return failure(StatusCode::TOO_MANY_REQUESTS, message);
 	}
 	if settings.to.is_empty() {
 		return unavailable(&format!("{handle} has no recipient in Forms"));
@@ -240,30 +232,20 @@ pub(crate) fn mail_text(form: &Form, values: &[String]) -> String {
 	text
 }
 
-/// What a submission counts for.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub(crate) enum Limit {
-	Address(IpAddr),
-	Form(String),
-}
-
 impl Forms {
-	/// Whether an address may send the form now; counts it.
-	fn may_send(&self, form: &str, client: ClientAddr) -> bool {
+	/// Whether an address may send a form now; counts it.
+	fn may_send(&self, client: ClientAddr) -> bool {
 		let now = now();
 		let mut limits = self.limits.lock().unwrap_or_else(|e| e.into_inner());
 		limits.retain(|_, times| {
 			times.retain(|t| now - *t < WINDOW_MS);
 			!times.is_empty()
 		});
-		let address = Limit::Address(client.network());
-		let form = Limit::Form(form.into());
-		let count = |l: &Limit| limits.get(l).map_or(0, Vec::len);
-		if count(&address) >= MAX_PER_ADDRESS || count(&form) >= MAX_PER_FORM {
+		let times = limits.entry(client.network()).or_default();
+		if times.len() >= MAX_PER_ADDRESS {
 			return false;
 		}
-		limits.entry(address).or_default().push(now);
-		limits.entry(form).or_default().push(now);
+		times.push(now);
 		true
 	}
 }

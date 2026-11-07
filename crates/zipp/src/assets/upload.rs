@@ -102,8 +102,6 @@ pub async fn upload_as(
 		Some(path) => Some(folder_at(&conn, path)?),
 		None => None,
 	};
-	let asset =
-		store_file(&conn, &state.files, &name, tmp, Some(auth.user_id))?;
-	move_assets(&conn, &[asset.id], folder)?;
-	get_asset(&conn, asset.id)
+	let user = Some(auth.user_id);
+	store_file(&conn, &state.files, &name, tmp, folder, user)
 }

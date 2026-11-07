@@ -16,7 +16,8 @@ use serde_json::Value;
 use crate::auth::Authed;
 use crate::db::{DAY_MS, marks, now};
 use crate::entries::{
-	INDEX_TABLES, fits_below, free_uri, levels_of, next_position, reindex,
+	INDEX_TABLES, SUBTREE, fits_below, free_uri, levels_of, next_position,
+	reindex,
 };
 use crate::error::{Error, Result};
 use crate::schema::{Access, Schema, SectionKind};
@@ -80,15 +81,8 @@ fn with_children(
 	id: i64,
 	deleted_at: Option<i64>,
 ) -> Result<Vec<i64>> {
-	let mut stmt = conn.prepare(
-		"WITH RECURSIVE tree(id, depth) AS (
-			SELECT ?1, 0
-			UNION ALL
-			SELECT e.id, t.depth + 1 FROM entries e JOIN tree t
-			ON e.parent_id = t.id WHERE e.deleted_at IS ?2
-		)
-		SELECT id FROM tree ORDER BY depth",
-	)?;
+	let mut stmt =
+		conn.prepare(&format!("{SUBTREE} SELECT id FROM tree ORDER BY depth"))?;
 	let ids = stmt
 		.query_map(params![id, deleted_at], |r| r.get(0))?
 		.collect::<rusqlite::Result<_>>()?;
@@ -307,15 +301,7 @@ pub fn restore_asset(conn: &Connection, id: i64) -> Result<()> {
 /// with it. A child trashed on its own before stays in the trash, on the
 /// top.
 pub fn purge_entry(conn: &Connection, id: i64) -> Result<()> {
-	let deleted_at: i64 = conn
-		.query_row(
-			"SELECT deleted_at FROM entries
-			WHERE id = ?1 AND deleted_at IS NOT NULL",
-			[id],
-			|r| r.get(0),
-		)
-		.optional()?
-		.ok_or(Error::NotFound)?;
+	let (_, _, deleted_at) = trashed_owner(conn, id)?;
 	for e in with_children(conn, id, Some(deleted_at))? {
 		conn.execute(
 			"UPDATE entries SET parent_id = NULL

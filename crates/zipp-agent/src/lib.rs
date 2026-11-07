@@ -9,7 +9,10 @@
 //! ```
 //!
 //! It only works with `serve --dev` and for admins, in production it does
-//! nothing. Where it runs is the environment's: `ZIPP_AGENT_COMMAND`
+//! nothing. The agent runs with all permissions (the shell, the project,
+//! an admin's session of the cms), and content that other users wrote can
+//! steer it (prompt injection): don't run it on an instance shared with
+//! editors you don't trust. Where it runs is the environment's: `ZIPP_AGENT_COMMAND`
 //! (default `claude`), `ZIPP_AGENT_DIR` (the project, default `..`),
 //! `ZIPP_AGENT_RESTART` (a shell command that rebuilds and restarts the
 //! cms), `ZIPP_AGENT_API` (this cms' api, default

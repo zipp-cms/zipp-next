@@ -14,7 +14,7 @@ export type Source = {
 	errors: Record<string, string>;
 	refs: Refs;
 	path: string;
-	changed: Set<string>;
+	changed?: Set<string>;
 };
 
 /**

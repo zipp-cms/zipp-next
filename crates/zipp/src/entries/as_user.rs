@@ -41,7 +41,7 @@ pub(crate) fn restrict(
 	}
 	// a search over all sections only finds what the role sees, also in
 	// the total, or a search would tell whether a hidden entry matches;
-	// the entries of `relatedToEntries` too
+	// the entries of `relatedToEntries` and the ones related to too
 	if !auth.admin() {
 		let sections: Vec<String> = schema
 			.sections
@@ -51,6 +51,7 @@ pub(crate) fn restrict(
 			.collect();
 		let own_only = auth.own_only(schema);
 		q.each_mut(&mut |q| {
+			q.relations_as_queries(schema);
 			q.sections = Some(sections.clone());
 			q.own_only = own_only.clone();
 		});

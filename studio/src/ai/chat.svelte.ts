@@ -198,6 +198,8 @@ export class Chat {
 	clear() {
 		this.messages = [];
 		this.lines = [];
+		// else a reload brings the old chat back
+		sessionStorage.removeItem(KEY);
 		if (this.model === null)
 			agentForget().catch(e => (this.error = e.message));
 	}

@@ -322,6 +322,37 @@ fn each_reaches_the_fields_of_assets() {
 }
 
 #[test]
+fn each_reaches_the_fields_of_users() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site().user_fields([Field::text("city")]);
+	let first = migration("0001", &Schema::new(), &s);
+	apply(&conn, std::slice::from_ref(&first));
+	conn.execute(
+		r#"INSERT INTO users (email, password_hash, created_at, name, fields)
+		VALUES ('anna@x.ch', '', 0, 'Anna', '{"city":"Thun"}')"#,
+		[],
+	)
+	.unwrap();
+
+	let migrations = [
+		first,
+		data("0002", &s, |tx| {
+			tx.each("user", |c| {
+				let city: String = c.get("city").unwrap_or_default();
+				c.set("city", format!("{city} {} {}", c.title, c.entry_id))
+			})
+		}),
+	];
+	apply(&conn, &migrations);
+
+	let fields: String = conn
+		.query_row("SELECT fields FROM users", [], |r| r.get(0))
+		.unwrap();
+	assert_eq!(fields, r#"{"city":"Thun Anna 1"}"#);
+}
+
+#[test]
 fn a_value_that_isn_t_json_fails() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();

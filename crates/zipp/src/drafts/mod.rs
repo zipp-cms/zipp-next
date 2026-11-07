@@ -24,7 +24,7 @@ use crate::AppState;
 use crate::content::{FieldError, follow, validate_fields};
 use crate::db::{DAY_MS, marks, now};
 use crate::entries::{
-	Dates, Entry, EntryInput, check, get_entry, slugify, write,
+	Dates, Entry, EntryInput, check, get_entry, slug_of, write,
 };
 use crate::error::{Error, Result};
 use crate::schema::{Component, Field, Schema};
@@ -335,7 +335,7 @@ fn back_to_live(
 ) -> Value {
 	let from = schema.entry_type(from);
 	let kept = |f: &Field| {
-		from.and_then(|c| c.fields.iter().find(|g| g.handle == f.handle))
+		from.and_then(|c| c.field(&f.handle))
 			.is_some_and(|g| g.translatable && g.kind == f.kind)
 	};
 	let mut out = fields.as_object().cloned().unwrap_or_default();
@@ -374,10 +374,7 @@ pub(super) fn store_or_discard(
 /// are the same with the same ids. A draft with a value a save refuses
 /// stays, so the editor sees the error on publish.
 fn same_as_live(schema: &Schema, doc: &Doc, live: &Doc) -> bool {
-	let slug = |sd: &SiteDoc| match sd.slug.trim() {
-		"" => slugify(sd.title.trim()),
-		s => slugify(s),
-	};
+	let slug = |sd: &SiteDoc| slug_of(&sd.slug, &sd.title);
 	// as hidden: a half done draft needn't be filled, but cleaning drops
 	// invalid values, so only a draft without errors can be the same
 	let fields = |sd: &SiteDoc| {
@@ -456,7 +453,7 @@ pub(crate) fn publish(
 	for c in &checked {
 		write(&tx, schema, c)?;
 	}
-	tx.execute("DELETE FROM drafts WHERE entry_id = ?1", [id])?;
+	discard(&tx, id)?;
 	record_revision(&tx, id, user_id)?;
 	tx.commit()?;
 	Ok(())

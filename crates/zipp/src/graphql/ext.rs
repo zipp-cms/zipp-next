@@ -31,6 +31,15 @@ pub fn indexing(ctx: &ResolverContext) -> async_graphql::Result<bool> {
 	Ok(ctx.data::<Viewer>()?.indexing)
 }
 
+/// Whether the one who asks reads `site`: a token of a GraphQL schema
+/// with other sites gets nothing of it, like of `entries`.
+pub fn reads_site(
+	ctx: &ResolverContext,
+	site: &str,
+) -> async_graphql::Result<bool> {
+	Ok(ctx.data::<Viewer>()?.scope.site(site))
+}
+
 /// The site of what the field is on (an entry, asset, user or block), in
 /// [`FieldType::resolve`](crate::FieldType::resolve).
 pub fn site(ctx: &ResolverContext) -> async_graphql::Result<String> {

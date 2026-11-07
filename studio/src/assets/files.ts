@@ -60,12 +60,17 @@ export async function fromDrop(data: DataTransfer): Promise<Upload[]> {
 /** What an asset field takes: only images, only some extensions. */
 type Allowed = { images: boolean; extensions?: string[] };
 
+/** The extension of a file name in lower case, empty without one. */
+export function extOf(name: string): string {
+	const dot = name.lastIndexOf('.');
+	return dot < 0 ? '' : name.slice(dot + 1).toLowerCase();
+}
+
 /** Whether a file fits the field. */
 function allows(allowed: Allowed, file: File): boolean {
 	if (allowed.images && !file.type.startsWith('image/')) return false;
 	const exts = allowed.extensions ?? [];
-	const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-	return !exts.length || (file.name.includes('.') && exts.includes(ext));
+	return !exts.length || exts.includes(extOf(file.name));
 }
 
 /** The file dialog's `accept` of a field. */

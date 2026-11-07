@@ -89,6 +89,10 @@ pub struct Query {
 	pub(crate) related_to: Vec<Related>,
 	/// by a relation field of the entries, `r.offerCategory=5`
 	pub(crate) relations: Vec<RelationFilter>,
+	/// what `related` and `relations` look at, `None`: all entries; a
+	/// viewer's are the ones it sees, a relation to another one tells
+	/// nothing of it
+	pub(crate) targets: Option<Box<Query>>,
 	pub(crate) filters: Vec<Filter>,
 	pub(crate) order: Order,
 	pub(crate) desc: bool,
@@ -219,6 +223,7 @@ impl Query {
 			related: None,
 			related_to: vec![],
 			relations: vec![],
+			targets: None,
 			filters: vec![],
 			order: Order::Column("updated_at"),
 			desc: true,
@@ -252,158 +257,19 @@ impl Query {
 		params: &[(String, String)],
 	) -> Result<Self, String> {
 		let mut q = Self::new(schema);
-		let int = |k: &str, v: &str| {
-			v.parse::<i64>()
-				.map_err(|_| format!("{k} must be a number"))
-		};
 
 		// type first, filters need it
 		if let Some((_, types)) = params.iter().find(|(k, _)| k == "type") {
-			let types: Vec<String> = types.split(',').map(Into::into).collect();
-			if let Some(t) =
-				types.iter().find(|t| schema.entry_type(t).is_none())
-			{
-				return Err(format!("unknown entry type {t}"));
-			}
+			let types = entry_types(schema, types)?;
 			match types.as_slice() {
 				[one] => q.ty = Some(one.clone()),
 				_ => q.types = types,
 			}
 		}
-		let mut ordered = false;
 
+		let mut ordered = false;
 		for (key, value) in params {
-			match key.as_str() {
-				"type" => {}
-				"site" => {
-					if schema.get_site(value).is_none() {
-						return Err(format!("unknown site {value}"));
-					}
-					q.site = value.clone();
-				}
-				"section" | "notSections" => {
-					let sections: Vec<String> =
-						value.split(',').map(Into::into).collect();
-					if let Some(s) = sections
-						.iter()
-						.find(|s| schema.get_section(s).is_none())
-					{
-						return Err(format!("unknown section {s}"));
-					}
-					match (key.as_str(), sections.as_slice()) {
-						("notSections", _) => q.not_sections = sections,
-						(_, [one]) => q.section = Some(one.clone()),
-						_ => q.any_sections = sections,
-					}
-				}
-				"notTypes" => {
-					let types: Vec<String> =
-						value.split(',').map(Into::into).collect();
-					if let Some(t) =
-						types.iter().find(|t| schema.entry_type(t).is_none())
-					{
-						return Err(format!("unknown entry type {t}"));
-					}
-					q.not_types = types;
-				}
-				"level" => {
-					let level = int(key, value)?;
-					if !(1..=MAX_LEVEL).contains(&level) {
-						return Err(format!(
-							"level must be between 1 and {MAX_LEVEL}"
-						));
-					}
-					q.level = Some(level);
-				}
-				// none is no filter, like in Craft
-				"relatedTo" => match parse_ids(key, value)? {
-					ids if ids.is_empty() => {}
-					ids => q.related_to.push(Related::Ids(ids)),
-				},
-				"relatedToEntries" => {
-					let params: Vec<(String, String)> =
-						serde_urlencoded::from_str(value).map_err(|_| {
-							format!("{key} must be url encoded parameters")
-						})?;
-					let mut of = Self::parse(schema, &params)?;
-					// each level doubles the sql, so only one
-					let nested = of
-						.related_to
-						.iter()
-						.any(|r| matches!(r, Related::Entries(_)));
-					if nested {
-						return Err(format!("{key} can't have another one"));
-					}
-					// only which entries, no tree to order by
-					of.order = Order::Column("updated_at");
-					q.related_to.push(Related::Entries(Box::new(of)));
-				}
-				"slug" => q.slug = Some(value.clone()),
-				"uri" => q.uri = Some(value.trim_matches('/').into()),
-				"search" => q.search = Some(value.clone()),
-				"text" => q.text = Some(value.clone()),
-				"parent" => q.parents = vec![int(key, value)?],
-				"author" => q.authors = Some(parse_ids(key, value)?),
-				"related" => q.related = Some(int(key, value)?),
-				_ if key.starts_with("r.") => {
-					let field = key[2..].to_string();
-					if !relation_field(schema, &field) {
-						return Err(format!("{field} is no relation field"));
-					}
-					let mut f = RelationFilter {
-						field,
-						ids: vec![],
-						any: false,
-						none: false,
-					};
-					match value.as_str() {
-						":notempty:" => f.any = true,
-						":empty:" => f.none = true,
-						v => f.ids = parse_ids(key, v)?,
-					}
-					q.relations.push(f);
-				}
-				"limit" => q.limit = int(key, value)?.clamp(1, MAX_LIMIT),
-				"offset" => q.offset = int(key, value)?.max(0),
-				"ids" | "notIds" => {
-					let ids = parse_ids(key, value)?;
-					match key.as_str() {
-						"ids" => q.ids = Some(ids),
-						_ => q.not_ids = ids,
-					}
-				}
-				// Craft's `postDate DESC`, `title`
-				"orderBy" => {
-					let mut words = value.split_whitespace();
-					let name = words.next().unwrap_or("postDate");
-					// Craft's relevance: the default with a search, without
-					// one it is ignored like in Craft
-					if name == "score" {
-						continue;
-					}
-					q.desc = words
-						.next()
-						.is_some_and(|d| d.eq_ignore_ascii_case("desc"));
-					q.order = q.order_of(schema, name)?;
-					ordered = true;
-				}
-				"order" => {
-					let (desc, name) = match value.strip_prefix('-') {
-						Some(n) => (true, n),
-						None => (false, value.as_str()),
-					};
-					q.desc = desc;
-					q.order = q.order_of(schema, name)?;
-					ordered = true;
-				}
-				_ => match key.strip_prefix("f.") {
-					Some(f) => {
-						let filter = q.filter(schema, f, value)?;
-						q.filters.push(filter);
-					}
-					None => return Err(format!("unknown parameter {key}")),
-				},
-			}
+			ordered |= q.param(schema, key, value)?;
 		}
 
 		// the entries related to are in the same site
@@ -413,29 +279,157 @@ impl Query {
 			}
 		}
 
-		// signs alone search nothing, so there is no relevance to order by
-		let words = q
-			.text
-			.as_ref()
-			.is_some_and(|t| !crate::search::words(t).is_empty());
-		if !ordered && words {
-			q.order = Order::Relevance;
-			q.desc = false;
-		} else if !ordered {
-			q.section_order(schema);
+		if !ordered {
+			q.default_order(schema);
 		}
-
 		Ok(q)
 	}
 
-	/// Calls `f` with the query and the queries of its `relatedToEntries`,
-	/// so what a viewer may see holds for them too.
+	/// Sets one parameter of [`parse`](Self::parse), true when it is the
+	/// order.
+	fn param(
+		&mut self,
+		schema: &Schema,
+		key: &str,
+		value: &str,
+	) -> Result<bool, String> {
+		match key {
+			"type" => {}
+			"site" => {
+				if schema.get_site(value).is_none() {
+					return Err(format!("unknown site {value}"));
+				}
+				self.site = value.into();
+			}
+			"section" | "notSections" => {
+				let sections = sections(schema, value)?;
+				match (key, sections.as_slice()) {
+					("notSections", _) => self.not_sections = sections,
+					(_, [one]) => self.section = Some(one.clone()),
+					_ => self.any_sections = sections,
+				}
+			}
+			"notTypes" => self.not_types = entry_types(schema, value)?,
+			"level" => {
+				let level = parse_int(key, value)?;
+				if !(1..=MAX_LEVEL).contains(&level) {
+					return Err(format!(
+						"level must be between 1 and {MAX_LEVEL}"
+					));
+				}
+				self.level = Some(level);
+			}
+			// none is no filter, like in Craft
+			"relatedTo" => match parse_ids(key, value)? {
+				ids if ids.is_empty() => {}
+				ids => self.related_to.push(Related::Ids(ids)),
+			},
+			"relatedToEntries" => {
+				let of = related_entries(schema, key, value)?;
+				self.related_to.push(of);
+			}
+			"slug" => self.slug = Some(value.into()),
+			"uri" => self.uri = Some(value.trim_matches('/').into()),
+			"search" => self.search = Some(value.into()),
+			"text" => self.text = Some(value.into()),
+			"parent" => self.parents = vec![parse_int(key, value)?],
+			"author" => self.authors = Some(parse_ids(key, value)?),
+			"related" => self.related = Some(parse_int(key, value)?),
+			_ if key.starts_with("r.") => {
+				let filter = relation_filter(schema, key, value)?;
+				self.relations.push(filter);
+			}
+			"limit" => self.limit = parse_int(key, value)?.clamp(1, MAX_LIMIT),
+			"offset" => self.offset = parse_int(key, value)?.max(0),
+			"ids" => self.ids = Some(parse_ids(key, value)?),
+			"notIds" => self.not_ids = parse_ids(key, value)?,
+			"orderBy" => return self.order_by_craft(schema, value),
+			"order" => {
+				let (desc, name) = match value.strip_prefix('-') {
+					Some(n) => (true, n),
+					None => (false, value),
+				};
+				self.desc = desc;
+				self.order = self.order_of(schema, name)?;
+				return Ok(true);
+			}
+			_ => match key.strip_prefix("f.") {
+				Some(f) => {
+					let filter = self.filter(schema, f, value)?;
+					self.filters.push(filter);
+				}
+				None => return Err(format!("unknown parameter {key}")),
+			},
+		}
+		Ok(false)
+	}
+
+	/// Sets Craft's `orderBy`, `postDate DESC`, `title`; true when it
+	/// is an order.
+	fn order_by_craft(
+		&mut self,
+		schema: &Schema,
+		value: &str,
+	) -> Result<bool, String> {
+		let mut words = value.split_whitespace();
+		let name = words.next().unwrap_or("postDate");
+		// Craft's relevance: the default with a search, without one it is
+		// ignored like in Craft
+		if name == "score" {
+			return Ok(false);
+		}
+		self.desc =
+			words.next().is_some_and(|d| d.eq_ignore_ascii_case("desc"));
+		self.order = self.order_of(schema, name)?;
+		Ok(true)
+	}
+
+	/// The order without one asked for: the best match of `text`, else
+	/// the section's.
+	fn default_order(&mut self, schema: &Schema) {
+		// signs alone search nothing, so there is no relevance to order by
+		let words = self
+			.text
+			.as_ref()
+			.is_some_and(|t| !crate::search::words(t).is_empty());
+		if words {
+			self.order = Order::Relevance;
+			self.desc = false;
+		} else {
+			self.section_order(schema);
+		}
+	}
+
+	/// `relatedTo` ids, `related` and `r.` filters as queries of entries:
+	/// [`each_mut`](Self::each_mut) restricts them like the query, a
+	/// relation to an entry the user doesn't see tells nothing of it.
+	pub(crate) fn relations_as_queries(&mut self, schema: &Schema) {
+		for r in &mut self.related_to {
+			if let Related::Ids(ids) = r {
+				let mut of = Query::new(schema);
+				of.site = self.site.clone();
+				of.ids = Some(std::mem::take(ids));
+				*r = Related::Entries(Box::new(of));
+			}
+		}
+		if self.related.is_some() || !self.relations.is_empty() {
+			let mut of = Query::new(schema);
+			of.site = self.site.clone();
+			self.targets = Some(Box::new(of));
+		}
+	}
+
+	/// Calls `f` with the query and the queries of its `relatedToEntries`
+	/// and `targets`, so what a viewer may see holds for them too.
 	pub(crate) fn each_mut(&mut self, f: &mut impl FnMut(&mut Query)) {
 		f(self);
 		for r in &mut self.related_to {
 			if let Related::Entries(of) = r {
 				of.each_mut(f);
 			}
+		}
+		if let Some(of) = &mut self.targets {
+			of.each_mut(f);
 		}
 	}
 
@@ -477,9 +471,8 @@ impl Query {
 		let ty = self.ty.as_ref().ok_or("filters and order need a type")?;
 		let comp = schema.entry_type(ty).unwrap();
 		let f = comp
-			.fields
-			.iter()
-			.find(|f| f.handle == field && f.indexed)
+			.field(field)
+			.filter(|f| f.indexed)
 			.ok_or_else(|| format!("{ty}.{field} is not indexed"))?;
 		Ok(schema.index_kind(&f.kind) == Some(IndexKind::Number))
 	}
@@ -538,137 +531,143 @@ impl Query {
 	/// `FROM ... WHERE ...` and its params, without order and limit. `e`
 	/// are the entries, `s` their row of the site.
 	pub(crate) fn sql_from(&self) -> (String, Vec<Value>) {
-		let mut joins = String::new();
-		let mut conds = vec!["e.deleted_at IS NULL".to_string()];
-		let mut join_params = vec![Value::Text(self.site.clone())];
-		let mut params = vec![];
-
-		let mut cond = |sql: String, values: Vec<Value>| {
-			conds.push(sql);
-			params.extend(values);
+		let mut sql = Sql {
+			joins: String::new(),
+			join_params: vec![Value::Text(self.site.clone())],
+			conds: vec!["e.deleted_at IS NULL".into()],
+			params: vec![],
 		};
-		let text = |s: &Option<String>| Value::Text(s.clone().unwrap());
-		if self.section.is_some() {
-			cond("e.section = ?".into(), vec![text(&self.section)]);
+		self.which_conds(&mut sql);
+		self.search_conds(&mut sql);
+		self.relation_conds(&mut sql);
+		self.live_conds(&mut sql);
+		self.filter_conds(&mut sql);
+		self.order_join(&mut sql);
+
+		let from = format!(
+			"FROM entries e \
+			JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?{} \
+			WHERE {}",
+			sql.joins,
+			sql.conds.join(" AND ")
+		);
+		sql.join_params.extend(sql.params);
+		(from, sql.join_params)
+	}
+
+	/// Which entries by their sections, types, ids, places in the tree
+	/// and authors.
+	fn which_conds(&self, sql: &mut Sql) {
+		if let Some(section) = &self.section {
+			sql.cond("e.section = ?", vec![Value::Text(section.clone())]);
 		}
 		if !self.any_sections.is_empty() {
-			let values =
-				self.any_sections.iter().map(|s| Value::Text(s.clone()));
-			let marks = marks(self.any_sections.len());
-			cond(format!("e.section IN ({marks})"), values.collect());
+			sql.in_list("e.section IN", texts(&self.any_sections));
 		}
 		if !self.not_sections.is_empty() {
-			let values =
-				self.not_sections.iter().map(|s| Value::Text(s.clone()));
-			let marks = marks(self.not_sections.len());
-			cond(format!("e.section NOT IN ({marks})"), values.collect());
+			sql.in_list("e.section NOT IN", texts(&self.not_sections));
 		}
-		if let Some(sections) = &self.sections {
-			let values = sections.iter().map(|s| Value::Text(s.clone()));
+		match &self.sections {
 			// none of none
-			let sql = match sections.len() {
-				0 => "0".into(),
-				n => format!("e.section IN ({})", marks(n)),
-			};
-			cond(sql, values.collect());
+			Some(sections) if sections.is_empty() => sql.cond("0", vec![]),
+			Some(sections) => sql.in_list("e.section IN", texts(sections)),
+			None => {}
 		}
-		if self.ty.is_some() {
-			cond("e.type = ?".into(), vec![text(&self.ty)]);
+		if let Some(ty) = &self.ty {
+			sql.cond("e.type = ?", vec![Value::Text(ty.clone())]);
 		}
 		if !self.types.is_empty() {
-			let marks = marks(self.types.len());
-			let values =
-				self.types.iter().map(|t| Value::Text(t.clone())).collect();
-			cond(format!("e.type IN ({marks})"), values);
+			sql.in_list("e.type IN", texts(&self.types));
 		}
 		if !self.not_types.is_empty() {
-			let marks = marks(self.not_types.len());
-			let values = self
-				.not_types
-				.iter()
-				.map(|t| Value::Text(t.clone()))
-				.collect();
-			cond(format!("e.type NOT IN ({marks})"), values);
+			sql.in_list("e.type NOT IN", texts(&self.not_types));
 		}
 		if !self.not_ids.is_empty() {
-			let marks = marks(self.not_ids.len());
-			let values =
-				self.not_ids.iter().map(|i| Value::Integer(*i)).collect();
-			cond(format!("e.id NOT IN ({marks})"), values);
+			sql.in_list("e.id NOT IN", ints(&self.not_ids));
 		}
-		if self.slug.is_some() {
-			cond("s.slug = ?".into(), vec![text(&self.slug)]);
+		if let Some(slug) = &self.slug {
+			sql.cond("s.slug = ?", vec![Value::Text(slug.clone())]);
 		}
-		if self.uri.is_some() {
-			cond("s.uri = ?".into(), vec![text(&self.uri)]);
+		if let Some(uri) = &self.uri {
+			sql.cond("s.uri = ?", vec![Value::Text(uri.clone())]);
 		}
 		if let Some(ids) = &self.ids {
-			let marks = marks(ids.len());
-			let values = ids.iter().map(|i| Value::Integer(*i)).collect();
-			cond(format!("e.id IN ({marks})"), values);
+			sql.in_list("e.id IN", ints(ids));
 		}
 		if let Some(authors) = &self.authors {
-			let marks = marks(authors.len());
-			let values = authors.iter().map(|i| Value::Integer(*i)).collect();
-			cond(format!("e.author_id IN ({marks})"), values);
+			sql.in_list("e.author_id IN", ints(authors));
 		}
 		if let Some(own) = &self.own_only {
-			let (sql, values) = own.sql();
-			cond(sql, values);
+			let (cond, values) = own.sql();
+			sql.cond(cond, values);
 		}
 		if !self.parents.is_empty() {
-			let marks = marks(self.parents.len());
-			let values =
-				self.parents.iter().map(|i| Value::Integer(*i)).collect();
-			cond(format!("e.parent_id IN ({marks})"), values);
+			sql.in_list("e.parent_id IN", ints(&self.parents));
 		}
 		if let Some(level) = self.level {
 			// the parents of a level are the entries of the level above
-			let mut sql = "e.parent_id IS NULL".to_string();
+			let mut cond = "e.parent_id IS NULL".to_string();
 			for _ in 1..level {
-				sql = format!(
+				cond = format!(
 					"e.parent_id IN (SELECT id FROM entries e \
-					WHERE {sql} AND e.deleted_at IS NULL)"
+					WHERE {cond} AND e.deleted_at IS NULL)"
 				);
 			}
-			cond(sql, vec![]);
+			sql.cond(cond, vec![]);
 		}
+	}
+
+	/// Part of the title (`search`) and the full text (`text`).
+	fn search_conds(&self, sql: &mut Sql) {
 		if let Some(search) = &self.search {
 			let like = format!("%{}%", escape_like(search));
-			cond("s.title LIKE ? ESCAPE '\\'".into(), vec![like.into()]);
+			sql.cond("s.title LIKE ? ESCAPE '\\'", vec![like.into()]);
 		}
 		if let Some(text) = &self.text {
 			// signs alone find nothing
 			let words = crate::search::words(text);
 			match words.is_empty() {
-				true => cond("0".into(), vec![]),
+				true => sql.cond("0", vec![]),
 				false => {
-					joins += " JOIN entry_texts x ON x.entry_id = e.id \
+					sql.joins += " JOIN entry_texts x ON x.entry_id = e.id \
 						AND x.site = s.site \
 						JOIN entry_search ON entry_search.rowid = x.id";
 					let fts = crate::search::fts_query(&words);
-					cond("entry_search MATCH ?".into(), vec![fts.into()]);
+					sql.cond("entry_search MATCH ?", vec![fts.into()]);
 				}
 			}
 		}
+	}
+
+	/// `related`, `relatedTo` and the relation fields, `related` and
+	/// the fields only by their relations to `targets`.
+	fn relation_conds(&self, sql: &mut Sql) {
+		let (targets, target_values) = match &self.targets {
+			Some(q) => {
+				let (from, values) = q.sql_from();
+				(format!(" AND target_id IN (SELECT e.id {from})"), values)
+			}
+			None => (String::new(), vec![]),
+		};
 		if let Some(id) = self.related {
-			let sql = "e.id IN (SELECT entry_id FROM entry_relations \
-				WHERE target_id = ? AND site = s.site)";
-			cond(sql.into(), vec![Value::Integer(id)]);
+			let cond = format!(
+				"e.id IN (SELECT entry_id FROM entry_relations \
+				WHERE target_id = ? AND site = s.site{targets})"
+			);
+			let mut values = vec![Value::Integer(id)];
+			values.extend(target_values.clone());
+			sql.cond(cond, values);
 		}
 		for r in &self.related_to {
 			let (of, values) = match r {
-				Related::Ids(ids) => (
-					marks(ids.len()),
-					ids.iter().map(|i| Value::Integer(*i)).collect(),
-				),
+				Related::Ids(ids) => (marks(ids.len()), ints(ids)),
 				Related::Entries(q) => {
 					let (from, values) = q.sql_from();
 					(format!("SELECT e.id {from}"), values)
 				}
 			};
 			// to them or from them
-			let sql = format!(
+			let cond = format!(
 				"(e.id IN (SELECT entry_id FROM entry_relations \
 				WHERE site = s.site AND target_id IN ({of})) \
 				OR e.id IN (SELECT target_id FROM entry_relations \
@@ -676,88 +675,92 @@ impl Query {
 			);
 			let mut both = values.clone();
 			both.extend(values);
-			cond(sql, both);
+			sql.cond(cond, both);
 		}
 		for r in &self.relations {
-			let of = "SELECT entry_id FROM entry_relations \
-				WHERE path = ? AND site = s.site";
-			let field = Value::Text(r.field.clone());
+			let of = format!(
+				"SELECT entry_id FROM entry_relations \
+				WHERE path = ? AND site = s.site{targets}"
+			);
+			let mut values = vec![Value::Text(r.field.clone())];
+			values.extend(target_values.clone());
 			if r.none {
-				cond(format!("e.id NOT IN ({of})"), vec![field]);
+				sql.cond(format!("e.id NOT IN ({of})"), values);
 			} else if r.any || r.ids.is_empty() {
-				cond(format!("e.id IN ({of})"), vec![field]);
+				sql.cond(format!("e.id IN ({of})"), values);
 			} else {
 				let marks = marks(r.ids.len());
-				let mut values = vec![field];
-				values.extend(r.ids.iter().map(|i| Value::Integer(*i)));
-				cond(
+				values.extend(ints(&r.ids));
+				sql.cond(
 					format!("e.id IN ({of} AND target_id IN ({marks}))"),
 					values,
 				);
 			}
 		}
+	}
+
+	/// What may be seen: an offline site nothing, pages, and for
+	/// frontends what is live or previewed.
+	fn live_conds(&self, sql: &mut Sql) {
 		if self.nothing {
-			cond("0".into(), vec![]);
+			sql.cond("0", vec![]);
 		}
 		if self.with_uri {
-			cond("s.uri IS NOT NULL".into(), vec![]);
+			sql.cond("s.uri IS NOT NULL", vec![]);
 		}
 		if self.published_only && !self.preview_sections.is_empty() {
 			// published as the draft has it, or live without a draft; the
 			// other sections live
 			let sections = &self.preview_sections;
-			let sql = format!(
+			let cond = format!(
 				"CASE WHEN e.section IN ({}) THEN \
 				COALESCE((SELECT json_extract(d.doc, '$.' || s.site || '.published') \
 				FROM drafts d WHERE d.entry_id = e.id), s.published) = 1 \
 				ELSE s.published = 1 AND {LIVE_DATES} END",
 				marks(sections.len())
 			);
-			let values = sections.iter().map(|s| Value::Text(s.clone()));
-			cond(sql, values.collect());
+			sql.cond(cond, texts(sections));
 		} else if self.published_only {
 			// live: published, after its post date and before it expires;
 			// the entry of a preview anyway
 			let preview = Value::Integer(self.preview_id.unwrap_or(0));
 			let live =
 				format!("((s.published = 1 AND {LIVE_DATES}) OR e.id = ?)");
-			cond(live, vec![preview]);
+			sql.cond(live, vec![preview]);
 		}
+	}
 
+	/// The indexed fields of `f.<field>`, each joined.
+	fn filter_conds(&self, sql: &mut Sql) {
 		for (i, f) in self.filters.iter().enumerate() {
-			joins += &format!(
+			sql.joins += &format!(
 				" JOIN entry_values f{i} ON f{i}.entry_id = e.id \
 				AND f{i}.site = s.site AND f{i}.field = ?"
 			);
-			join_params.push(Value::Text(f.field.clone()));
+			sql.join_params.push(Value::Text(f.field.clone()));
 
 			let col = match f.value {
 				Value::Text(_) => "text",
 				_ => "num",
 			};
-			cond(format!("f{i}.{col} {} ?", f.op), vec![f.value.clone()]);
+			let cond = format!("f{i}.{col} {} ?", f.op);
+			sql.cond(cond, vec![f.value.clone()]);
 		}
+	}
 
+	/// The join that [`order_by`](Self::order_by) sorts by.
+	fn order_join(&self, sql: &mut Sql) {
 		match &self.order {
 			Order::Field(field, _) => {
-				joins += " LEFT JOIN entry_values o ON o.entry_id = e.id \
+				sql.joins += " LEFT JOIN entry_values o ON o.entry_id = e.id \
 					AND o.site = s.site AND o.field = ?";
-				join_params.push(Value::Text(field.clone()));
+				sql.join_params.push(Value::Text(field.clone()));
 			}
 			Order::Structure if self.tree() => {
-				joins += " JOIN tree t ON t.id = e.id"
+				sql.joins += " JOIN tree t ON t.id = e.id"
 			}
 			Order::Structure | Order::Column(_) | Order::Relevance => {}
 		}
-
-		let sql = format!(
-			"FROM entries e \
-			JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?{joins} \
-			WHERE {}",
-			conds.join(" AND ")
-		);
-		join_params.extend(params);
-		(sql, join_params)
 	}
 
 	pub(crate) fn order_by(&self) -> String {
@@ -784,11 +787,111 @@ impl Query {
 /// `entries` can filter by it.
 pub(crate) fn relation_field(schema: &Schema, handle: &str) -> bool {
 	schema.components.iter().filter(|c| c.entry).any(|c| {
-		c.fields.iter().any(|f| {
-			f.handle == handle
-				&& matches!(f.kind, crate::schema::FieldKind::Relation { .. })
+		c.field(handle).is_some_and(|f| {
+			matches!(f.kind, crate::schema::FieldKind::Relation { .. })
 		})
 	})
+}
+
+/// What [`Query::sql_from`] collects: the joins and the conditions, each
+/// with their params.
+struct Sql {
+	joins: String,
+	join_params: Vec<Value>,
+	conds: Vec<String>,
+	params: Vec<Value>,
+}
+
+impl Sql {
+	fn cond(&mut self, sql: impl Into<String>, values: Vec<Value>) {
+		self.conds.push(sql.into());
+		self.params.extend(values);
+	}
+
+	/// `<col> IN (?, ?, ?)` of some values, `col_in` with the `IN` or
+	/// `NOT IN`.
+	fn in_list(&mut self, col_in: &str, values: Vec<Value>) {
+		let sql = format!("{col_in} ({})", marks(values.len()));
+		self.cond(sql, values);
+	}
+}
+
+fn texts(list: &[String]) -> Vec<Value> {
+	list.iter().map(|s| Value::Text(s.clone())).collect()
+}
+
+fn ints(list: &[i64]) -> Vec<Value> {
+	list.iter().map(|i| Value::Integer(*i)).collect()
+}
+
+fn parse_int(key: &str, value: &str) -> Result<i64, String> {
+	value.parse().map_err(|_| format!("{key} must be a number"))
+}
+
+/// The entry types of a list `a,b`; an unknown one is an error.
+fn entry_types(schema: &Schema, list: &str) -> Result<Vec<String>, String> {
+	let types: Vec<String> = list.split(',').map(Into::into).collect();
+	if let Some(t) = types.iter().find(|t| schema.entry_type(t).is_none()) {
+		return Err(format!("unknown entry type {t}"));
+	}
+	Ok(types)
+}
+
+/// The sections of a list `a,b`; an unknown one is an error.
+fn sections(schema: &Schema, list: &str) -> Result<Vec<String>, String> {
+	let sections: Vec<String> = list.split(',').map(Into::into).collect();
+	if let Some(s) = sections.iter().find(|s| schema.get_section(s).is_none()) {
+		return Err(format!("unknown section {s}"));
+	}
+	Ok(sections)
+}
+
+/// `relatedToEntries`: the entries of a query, its parameters url
+/// encoded.
+fn related_entries(
+	schema: &Schema,
+	key: &str,
+	value: &str,
+) -> Result<Related, String> {
+	let params: Vec<(String, String)> = serde_urlencoded::from_str(value)
+		.map_err(|_| format!("{key} must be url encoded parameters"))?;
+	let mut of = Query::parse(schema, &params)?;
+	// each level doubles the sql, so only one
+	let nested = of
+		.related_to
+		.iter()
+		.any(|r| matches!(r, Related::Entries(_)));
+	if nested {
+		return Err(format!("{key} can't have another one"));
+	}
+	// only which entries, no tree to order by
+	of.order = Order::Column("updated_at");
+	Ok(Related::Entries(Box::new(of)))
+}
+
+/// `r.<field>`: by a relation field, to some ids, `:notempty:` or
+/// `:empty:`.
+fn relation_filter(
+	schema: &Schema,
+	key: &str,
+	value: &str,
+) -> Result<RelationFilter, String> {
+	let field = key[2..].to_string();
+	if !relation_field(schema, &field) {
+		return Err(format!("{field} is no relation field"));
+	}
+	let mut f = RelationFilter {
+		field,
+		ids: vec![],
+		any: false,
+		none: false,
+	};
+	match value {
+		":notempty:" => f.any = true,
+		":empty:" => f.none = true,
+		v => f.ids = parse_ids(key, v)?,
+	}
+	Ok(f)
 }
 
 #[cfg(test)]

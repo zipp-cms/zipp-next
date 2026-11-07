@@ -26,6 +26,8 @@ class Uploads {
 	finished = $state(false);
 	active = $derived(this.done < this.files);
 	private hide: ReturnType<typeof setTimeout> | undefined;
+	/** the last zip, the server unpacks one at a time */
+	private zip: Promise<unknown> = Promise.resolve();
 
 	/**
 	 * The files into `folder` (null: the top), the folders of `dir`
@@ -63,18 +65,17 @@ class Uploads {
 			for (let item; (item = queue.shift());) {
 				const into = dirs.get(item.dir.join('/')) ?? null;
 				let sent = 0;
+				const send = () =>
+					uploadAsset(item.file, into, !!item.unzip, s => {
+						// the form is a bit larger than the file
+						const now = Math.min(s, item.file.size);
+						this.sent += now - sent;
+						sent = now;
+					});
 				try {
-					const done = await uploadAsset(
-						item.file,
-						into,
-						!!item.unzip,
-						s => {
-							// the form is a bit larger than the file
-							const now = Math.min(s, item.file.size);
-							this.sent += now - sent;
-							sent = now;
-						},
-					);
+					const done = await (item.unzip
+						? this.afterZips(send)
+						: send());
 					const assets = Array.isArray(done) ? done : done.assets;
 					added.push(...assets);
 					this.uploaded += assets.length;
@@ -91,6 +92,13 @@ class Uploads {
 		await Promise.all(Array.from({ length: PARALLEL }, next));
 		this.end();
 		return added;
+	}
+
+	/** Runs `f` once the zips before it are through. */
+	private afterZips<T>(f: () => Promise<T>): Promise<T> {
+		const run = this.zip.then(f);
+		this.zip = run.catch(() => {});
+		return run;
 	}
 
 	private reset() {
@@ -120,6 +128,17 @@ class Uploads {
 }
 
 export const uploads = new Uploads();
+
+/** The files of a drop for `then`, a drop that can't be read is reported. */
+export function readDrop(data: DataTransfer, then: (items: Upload[]) => void) {
+	fromDrop(data)
+		.then(then)
+		.catch(err =>
+			uploads.report(
+				t('assets.dropFailed', { error: err.message ?? err }),
+			),
+		);
+}
 
 /**
  * The folders of the files' `dir`s below `folder`, the missing ones
@@ -203,13 +222,7 @@ export class FileDrag {
 		this.stop();
 		if (took || !this.files(e)) return;
 		e.preventDefault();
-		fromDrop(e.dataTransfer!)
-			.then(this.ondrop)
-			.catch(err =>
-				uploads.report(
-					t('assets.dropFailed', { error: err.message ?? err }),
-				),
-			);
+		readDrop(e.dataTransfer!, this.ondrop);
 	};
 
 	private stop() {

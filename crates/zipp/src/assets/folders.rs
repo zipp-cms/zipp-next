@@ -151,11 +151,21 @@ pub(crate) fn folder_named(
 /// The folder of a path like `Members/4`, its folders made when they
 /// are missing.
 pub(crate) fn folder_at(conn: &Connection, path: &str) -> Result<i64> {
+	folder_path(conn, path.split('/'))?
+		.ok_or_else(|| Error::Request("a folder without a name".into()))
+}
+
+/// The folder of a path of names, made if it isn't there; empty names
+/// are skipped, none at all is the top.
+pub(crate) fn folder_path<'a>(
+	conn: &Connection,
+	names: impl Iterator<Item = &'a str>,
+) -> Result<Option<i64>> {
 	let mut parent = None;
-	for name in path.split('/').filter(|n| !n.trim().is_empty()) {
+	for name in names.filter(|n| !n.trim().is_empty()) {
 		parent = Some(folder_named(conn, parent, name)?);
 	}
-	parent.ok_or_else(|| Error::Request("a folder without a name".into()))
+	Ok(parent)
 }
 
 /// A new name or place; not into itself or a folder in it.

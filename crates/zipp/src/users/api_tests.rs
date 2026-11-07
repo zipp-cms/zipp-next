@@ -210,12 +210,27 @@ async fn checks_what_admins_send() {
 	short.password = "short".into();
 	let err = admin.call(&new_user("no-at", None)).await.unwrap_err();
 	assert_eq!(paths(err), ["email"]);
+	// a reset link would go to both
+	let two = new_user("a@x.ch, b@y.ch", None);
+	assert_eq!(paths(admin.call(&two).await.unwrap_err()), ["email"]);
+	let err = admin
+		.call(&new_user(" taken@x.ch", None))
+		.await
+		.unwrap_err();
+	assert_eq!(paths(err), ["email"]);
 	let err = admin.call(&new_user("taken@x.ch", None)).await.unwrap_err();
 	assert_eq!(paths(err), ["email"]);
 	assert_eq!(paths(admin.call(&short).await.unwrap_err()), ["password"]);
 	let boss = new_user("a@x.ch", Some("boss"));
 	let err = admin.call(&boss).await.unwrap_err();
 	assert!(matches!(err, Error::Request(_)));
+
+	// one the cli took stays
+	let conn = || ts.state.db.conn();
+	let id = super::create(&conn(), "dev@localhost", "", "", None, "").unwrap();
+	let mut dev = unchanged(&admin.call(&GetReq { id }).await.unwrap());
+	dev.name = "Dev".into();
+	admin.call(&dev).await.unwrap();
 
 	// not oneself
 	let me = admin.call(&SessionReq {}).await.unwrap().user;

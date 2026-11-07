@@ -151,81 +151,7 @@ impl Op {
 				});
 			}
 			Self::ChangeField { component, field } => {
-				let old = schema.get(component).and_then(|c| {
-					c.fields.iter().find(|f| f.handle == field.handle)
-				});
-				// a group of another component is another kind too, its
-				// keys are those of the other component
-				let same_kind =
-					old.is_some_and(|o| match (&o.kind, &field.kind) {
-						// blocks in the items or not is another shape
-						(
-							FieldKind::Custom {
-								ty: a, blocks: x, ..
-							},
-							FieldKind::Custom {
-								ty: b, blocks: y, ..
-							},
-						) => a == b && x.is_empty() == y.is_empty(),
-						(
-							FieldKind::Group { component: a },
-							FieldKind::Group { component: b },
-						) => a == b,
-						(a, b) => {
-							std::mem::discriminant(a)
-								== std::mem::discriminant(b)
-						}
-					});
-				// another kind starts over like a new field, with its
-				// default; a plain value the new kind takes as it is stays
-				// (text "pdf" for a button group with the option pdf)
-				if !same_kind {
-					let default = default_of(schema, field);
-					let keeps = old.is_some_and(|o| plain(&o.kind))
-						&& plain(&field.kind);
-					walk_mut(schema, comp, fields, &mut |c, obj| {
-						if &c.handle != component {
-							return;
-						}
-						let value = obj.get(&field.handle);
-						if keeps
-							&& value.is_some_and(|v| takes(schema, field, v))
-						{
-							return;
-						}
-						match &default {
-							Some(d) => {
-								obj.insert(field.handle.clone(), d.clone())
-							}
-							None => obj.remove(&field.handle),
-						};
-					});
-				}
-				// a column of a table likewise, its cells go
-				let changed = match (old.map(|o| &o.kind), &field.kind) {
-					(
-						Some(FieldKind::Table { columns: before }),
-						FieldKind::Table { columns },
-					) => changed_columns(before, columns),
-					_ => vec![],
-				};
-				if !changed.is_empty() {
-					walk_mut(schema, comp, fields, &mut |c, obj| {
-						if &c.handle != component {
-							return;
-						}
-						let rows = obj
-							.get_mut(&field.handle)
-							.and_then(Value::as_array_mut);
-						for row in rows.into_iter().flatten() {
-							if let Some(row) = row.as_object_mut() {
-								for h in &changed {
-									row.remove(h);
-								}
-							}
-						}
-					});
-				}
+				change_field(schema, comp, fields, component, field)
 			}
 		}
 
@@ -290,6 +216,85 @@ impl Op {
 				section.handle
 			),
 		}
+	}
+}
+
+/// The content of a field whose settings changed, `comp` is the entry's
+/// component and `component` the one of the field.
+fn change_field(
+	schema: &Schema,
+	comp: &Component,
+	fields: &mut Value,
+	component: &str,
+	field: &Field,
+) {
+	let old = schema.get(component).and_then(|c| c.field(&field.handle));
+
+	// another kind starts over like a new field, with its default; a plain
+	// value the new kind takes as it is stays (text "pdf" for a button
+	// group with the option pdf)
+	if !old.is_some_and(|o| same_kind(&o.kind, &field.kind)) {
+		let default = default_of(schema, field);
+		let keeps = old.is_some_and(|o| plain(&o.kind)) && plain(&field.kind);
+		walk_mut(schema, comp, fields, &mut |c, obj| {
+			if c.handle != component {
+				return;
+			}
+			let value = obj.get(&field.handle);
+			if keeps && value.is_some_and(|v| takes(schema, field, v)) {
+				return;
+			}
+			match &default {
+				Some(d) => obj.insert(field.handle.clone(), d.clone()),
+				None => obj.remove(&field.handle),
+			};
+		});
+	}
+
+	// a column of a table likewise, its cells go
+	let changed = match (old.map(|o| &o.kind), &field.kind) {
+		(
+			Some(FieldKind::Table { columns: before }),
+			FieldKind::Table { columns },
+		) => changed_columns(before, columns),
+		_ => vec![],
+	};
+	if !changed.is_empty() {
+		walk_mut(schema, comp, fields, &mut |c, obj| {
+			if c.handle != component {
+				return;
+			}
+			let rows = obj.get_mut(&field.handle).and_then(Value::as_array_mut);
+			for row in rows.into_iter().flatten() {
+				if let Some(row) = row.as_object_mut() {
+					for h in &changed {
+						row.remove(h);
+					}
+				}
+			}
+		});
+	}
+}
+
+/// Whether a field's content keeps its shape from one kind to the other.
+/// A group of another component is another kind too, its keys are those
+/// of the other component.
+fn same_kind(a: &FieldKind, b: &FieldKind) -> bool {
+	match (a, b) {
+		// blocks in the items or not is another shape
+		(
+			FieldKind::Custom {
+				ty: a, blocks: x, ..
+			},
+			FieldKind::Custom {
+				ty: b, blocks: y, ..
+			},
+		) => a == b && x.is_empty() == y.is_empty(),
+		(
+			FieldKind::Group { component: a },
+			FieldKind::Group { component: b },
+		) => a == b,
+		(a, b) => std::mem::discriminant(a) == std::mem::discriminant(b),
 	}
 }
 

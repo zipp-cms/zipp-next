@@ -122,7 +122,7 @@ pub(crate) fn entry_seo_field(name: &str, ty: &str) -> GqlField {
 }
 
 /// The root `seo(siteId: Int, site: String)` and `seoJson(...)` for pages
-/// without an entry.
+/// without an entry, null for a site the token doesn't read.
 pub(crate) fn root_fields() -> [GqlField; 2] {
 	let field = |name: &'static str, ty: TypeRef| {
 		GqlField::new(name, ty, |ctx| {
@@ -145,6 +145,10 @@ pub(crate) fn root_fields() -> [GqlField; 2] {
 					.get("site")
 					.and_then(|v| v.string().ok().map(String::from));
 				let site = schema.site_or_primary(by_handle.or(by_id));
+				// nothing of a site the token doesn't read
+				if !ext::reads_site(&ctx, &site)? {
+					return Ok(None);
+				}
 				let v = resolve_seo(&ctx, &site, None)?;
 				Ok(Some(FieldValue::value(GqlValue::from_json(v)?)))
 			})

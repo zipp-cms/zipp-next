@@ -6,6 +6,7 @@
 	import type { Refs } from '../../entries/api';
 	import { openAsset, openEntry } from '../../core/flyout.svelte';
 	import LinkRow from '../link/LinkRow.svelte';
+	import { linkHref, linkedId } from '../link/link';
 	import RichLinkEditor from './RichLinkEditor.svelte';
 	import { setLink } from './editor';
 	import { t } from '../../i18n/index.svelte';
@@ -104,17 +105,11 @@
 
 	/** An entry or a file in the flyout, the rest in a new tab. */
 	function open(l: Link) {
-		if (l.type === 'entry' && typeof l.value === 'number')
-			return openEntry(l.value);
-		if (l.type === 'asset' && typeof l.value === 'number')
-			return openAsset(l.value);
-		const v = String(l.value ?? '');
-		const href =
-			l.type === 'email'
-				? `mailto:${v}`
-				: l.type === 'phone'
-					? `tel:${v}`
-					: v + (l.anchor ? `#${l.anchor}` : '');
+		const entry = linkedId(l, 'entry');
+		if (entry !== null) return openEntry(entry);
+		const asset = linkedId(l, 'asset');
+		if (asset !== null) return openAsset(asset);
+		const href = linkHref(l);
 		// a draft may have any url, only the web and the site open
 		if (safeUrl(href)) window.open(href, '_blank', 'noopener');
 	}

@@ -68,11 +68,7 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 
 	let mut obj = Object::new("Asset");
 	if let Some(comp) = schema.get(ASSET) {
-		for field in &comp.fields {
-			if let Some(f) = content_field(schema, ASSET, field) {
-				obj = obj.field(f);
-			}
-		}
+		obj = content_fields(obj, schema, comp);
 	}
 	obj.field(plain("id", TypeRef::named_nn(TypeRef::ID)))
 		.field(plain("filename", s()))
@@ -192,14 +188,13 @@ pub(super) fn transform_of(
 	a: &Asset,
 ) -> async_graphql::Result<Option<Transform>> {
 	let schema = ctx.data::<Arc<Schema>>()?;
-	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
 	let size = |k: &str| -> async_graphql::Result<Option<u32>> {
-		match arg(k) {
+		match arg(ctx, k) {
 			Some(v) => Ok(Some(u32::try_from(v.i64()?).unwrap_or(0))),
 			None => Ok(None),
 		}
 	};
-	let t = match (arg("transform"), size("width")?, size("height")?) {
+	let t = match (arg(ctx, "transform"), size("width")?, size("height")?) {
 		(Some(name), _, _) => {
 			let name = name.string()?;
 			schema.transform_named(name).ok_or_else(|| {
@@ -227,7 +222,7 @@ pub(super) fn transform_of(
 /// The `format` argument: `webp`, `jpg` or `png`, `None` for the
 /// transform's.
 fn format_of(ctx: &ResolverContext) -> async_graphql::Result<Option<Format>> {
-	let Some(f) = ctx.args.get("format").filter(|v| !v.is_null()) else {
+	let Some(f) = arg(ctx, "format") else {
 		return Ok(None);
 	};
 	let f = f.string()?;

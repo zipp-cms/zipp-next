@@ -166,3 +166,27 @@ async fn refuses_zips_out_of_bounds() {
 	let folders = editor.call(&FoldersReq {}).await.unwrap();
 	assert!(folders.folders.is_empty());
 }
+
+#[tokio::test]
+async fn unzips_one_zip_into_a_folder_that_is_there() {
+	let ts = TestServer::new(site_with_roles());
+	let author = ts.user(Some("author"));
+	let zip = zip_of(&[("a.txt", b"a")]);
+	let unzip = async |path: &str| {
+		let resp = author.upload(path, &[("x.zip", &zip)]).await;
+		Client::json::<Unzipped>(resp).await
+	};
+
+	let err = unzip("/assets/unzip?folder=999").await.unwrap_err();
+	assert_eq!(err, Error::NotFound);
+
+	// while another one is unpacked
+	let unzipping = ts.state.unzipping.clone();
+	let held = unzipping.lock().await;
+	let err = unzip("/assets/unzip").await.unwrap_err();
+	assert!(matches!(err, Error::Conflict(m) if m.contains("another zip")));
+	assert!(author.call(&ListReq::default()).await.unwrap().is_empty());
+
+	drop(held);
+	assert_eq!(unzip("/assets/unzip").await.unwrap().assets.len(), 1);
+}

@@ -342,11 +342,8 @@ fn unpack(
 		}
 		let Some((name, tmp)) = file else { continue };
 
-		match store_file(conn, files, &name, tmp, user) {
-			Ok(a) => {
-				stored.push(a.id);
-				move_assets(conn, &[a.id], into)?;
-			}
+		match store_file(conn, files, &name, tmp, into, user) {
+			Ok(a) => stored.push(a.id),
 			Err(Error::Request(why)) => skipped.push(why),
 			Err(e) => return Err(e),
 		}

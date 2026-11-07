@@ -300,6 +300,75 @@ async fn edits_only_images() {
 }
 
 #[tokio::test]
+async fn the_uploaded_image_only_for_the_studio() {
+	let schema = site_with_roles()
+		.role(Role::new("reader", "Reader").section("events", Access::View));
+	let ts = TestServer::new(schema);
+	let author = ts.user(Some("author"));
+	let a = upload(&author, "a.png", &png(20, 10)).await.unwrap();
+	let edits: Edits = serde_json::from_value(
+		json!({ "crop": { "x": 0, "y": 0, "w": 0.5, "h": 1 } }),
+	)
+	.unwrap();
+	let change = UpdateReq {
+		id: a.id,
+		change: AssetChange {
+			edits: Some(edits),
+			..Default::default()
+		},
+	};
+	let a = author.call(&change).await.unwrap();
+
+	// the public url is the crop, also with ?original
+	let url = a.url(None);
+	let (status, edited) = get(&ts.anonymous(), &url).await;
+	assert_eq!(status, StatusCode::OK);
+	assert_ne!(edited, png(20, 10));
+	let original = format!("{url}?original");
+	assert_eq!(get(&ts.anonymous(), &original).await.1, edited);
+
+	// the uploaded file for who sees assets
+	let path = format!("/api/assets/{}/original", a.id);
+	assert_eq!(get(&author, &path).await, (StatusCode::OK, png(20, 10)));
+	// no shared cache keeps it
+	let resp = author.get(&path).await;
+	let cache = &resp.headers()[axum::http::header::CACHE_CONTROL];
+	assert_eq!(cache, "private, no-store");
+	let reader = ts.user(Some("reader"));
+	assert_eq!(get(&reader, &path).await.0, StatusCode::FORBIDDEN);
+	let anon = get(&ts.anonymous(), &path).await.0;
+	assert_eq!(anon, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn an_edit_of_the_same_size_keeps_the_pixels() {
+	let ts = TestServer::new(site_with_roles());
+	let author = ts.user(Some("author"));
+	let mut img = image::RgbImage::new(3, 2);
+	img.put_pixel(0, 0, image::Rgb([255, 0, 0]));
+	let mut data = vec![];
+	img.write_to(&mut Cursor::new(&mut data), ImageFormat::Png)
+		.unwrap();
+	let a = upload(&author, "a.png", &data).await.unwrap();
+	let edits: Edits =
+		serde_json::from_value(json!({ "flipH": true })).unwrap();
+	let change = UpdateReq {
+		id: a.id,
+		change: AssetChange {
+			edits: Some(edits),
+			..Default::default()
+		},
+	};
+	let a = author.call(&change).await.unwrap();
+
+	// flipped as it is, not resampled
+	let (status, body) = get(&ts.anonymous(), &a.url(None)).await;
+	assert_eq!(status, StatusCode::OK);
+	let served = image::load_from_memory(&body).unwrap().to_rgb8();
+	assert_eq!(served, image::imageops::flip_horizontal(&img));
+}
+
+#[tokio::test]
 async fn usage_shows_what_the_role_sees() {
 	let schema = site_with_roles()
 		.role(Role::new("media", "Media").assets(crate::Access::View));

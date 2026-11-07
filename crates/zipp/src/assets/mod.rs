@@ -3,8 +3,8 @@
 //! they are generated on the first request. Changing the focal point or
 //! the edits (see `Edits`) deletes them.
 //!
-//! - `/assets/<id>/<filename>`: the image with its edits, `?original`
-//!   the file as it was uploaded
+//! - `/assets/<id>/<filename>`: the image with its edits; the file as
+//!   it was uploaded is `/api/assets/<id>/original`, for the studio
 //! - `/assets/<id>/<transform>/<filename>`: a named transform of the
 //!   schema, `_thumb` is the one of the studio
 
@@ -48,11 +48,9 @@ use edits::{Canvas, Crop, Resize};
 use folders::folder;
 pub(crate) use folders::{
 	Folder, check_folder, create_folder, delete_folder, folder_at,
-	folder_named, folder_paths, folders, folders_under, move_assets, top_count,
-	update_folder,
+	folder_named, folder_path, folder_paths, folders, folders_under,
+	move_assets, top_count, update_folder,
 };
-#[cfg(feature = "craft")]
-pub(crate) use manage::check_fields;
 pub(crate) use manage::{
 	AssetChange, AssetList, InFolder, Kind, Usage, count, delete, find, list,
 	replace, search, update, usage,
@@ -280,8 +278,6 @@ pub(crate) fn get_many(conn: &Connection, ids: &[i64]) -> Result<Vec<Asset>> {
 	Ok(ids.iter().filter_map(|id| found.get(id).cloned()).collect())
 }
 
-/// Only letters, digits, dots, dashes and underscores, so the name is a
-/// safe path and url.
 /// The folder of an asset: its file and [`TRANSFORMS`].
 pub(crate) fn asset_dir(files: &FsPath, id: i64) -> std::path::PathBuf {
 	files.join(id.to_string())
@@ -292,6 +288,8 @@ pub(crate) fn asset_dir(files: &FsPath, id: i64) -> std::path::PathBuf {
 /// can take its name.
 pub(crate) const TRANSFORMS: &str = ".t";
 
+/// Only letters, digits, dots, dashes and underscores, so the name is a
+/// safe path and url.
 pub(crate) fn clean_filename(name: &str) -> String {
 	let name: String = name
 		.rsplit(['/', '\\'])
@@ -309,13 +307,15 @@ pub(crate) fn clean_filename(name: &str) -> String {
 	}
 }
 
+/// The extension of a filename in lower case, `pdf` of `a.PDF`.
+pub(crate) fn extension(filename: &str) -> Option<String> {
+	filename.rsplit_once('.').map(|(_, e)| e.to_lowercase())
+}
+
 /// The type of a file that is no image, by its name: never what the
 /// upload claims.
 fn file_mime(filename: &str) -> &'static str {
-	let ext = filename
-		.rsplit_once('.')
-		.map(|(_, e)| e.to_ascii_lowercase());
-	match ext.as_deref() {
+	match extension(filename).as_deref() {
 		Some("pdf") => "application/pdf",
 		Some("mp4") => "video/mp4",
 		Some("webm") => "video/webm",
@@ -430,18 +430,21 @@ pub(crate) fn store(
 ) -> Result<Asset> {
 	let mut tmp = temp_file(files)?;
 	std::io::Write::write_all(&mut tmp, data)?;
-	store_file(conn, files, filename, tmp, user)
+	store_file(conn, files, filename, tmp, None, user)
 }
 
-/// Stores an upload that came in as `tmp`: the row first for the id, then
-/// the file moves in. `user` is who uploads, none for imports.
+/// Stores an upload that came in as `tmp` in `folder`, `None` on the
+/// top: the row first for the id, then the file moves in. `user` is who
+/// uploads, none for imports.
 pub(crate) fn store_file(
 	conn: &Connection,
 	files: &FsPath,
 	filename: &str,
 	tmp: tempfile::NamedTempFile,
+	folder: Option<i64>,
 	user: Option<i64>,
 ) -> Result<Asset> {
+	check_folder(conn, folder)?;
 	let Upload {
 		filename,
 		kind,
@@ -452,8 +455,19 @@ pub(crate) fn store_file(
 	let size = tmp.as_file().metadata()?.len();
 	conn.execute(
 		"INSERT INTO assets (filename, kind, mime, size, width, height,
-		created_at, uploaded_by) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-		params![filename, kind, mime, size, width, height, now(), user],
+		created_at, uploaded_by, folder_id)
+		VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+		params![
+			filename,
+			kind,
+			mime,
+			size,
+			width,
+			height,
+			now(),
+			user,
+			folder
+		],
 	)?;
 	let id = conn.last_insert_rowid();
 

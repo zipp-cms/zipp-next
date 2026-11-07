@@ -42,15 +42,17 @@ pub use as_user::{
 pub(crate) use routes::routes;
 pub(crate) use routes::viewable_refs;
 pub(crate) use save::check;
+pub(crate) use save::check_fields;
 pub(crate) use save::reindex;
 pub(crate) use save::reindex_all;
 pub use save::save;
 pub(crate) use save::write;
-pub(crate) use save::{check_relations, links_of};
 pub(crate) use structure::move_entry;
 pub(crate) use structure::refresh_uris;
 use structure::*;
-pub(crate) use structure::{fits_below, free_uri, levels_of, next_position};
+pub(crate) use structure::{
+	SUBTREE, fits_below, free_uri, levels_of, next_position,
+};
 
 /// The tables that are built from an entry's fields, per entry and site:
 /// whatever is removed or rewritten has to clear them all.
@@ -727,25 +729,40 @@ pub(crate) fn set_author(
 	}
 }
 
-/// The section of an entry and who made it, what its access depends on.
+/// The section of an entry and who made it, what its access depends on;
+/// none when it isn't there or in the trash.
+pub(crate) fn find_owner(
+	conn: &Connection,
+	id: i64,
+) -> Result<Option<(String, Option<i64>)>> {
+	Ok(conn
+		.query_row(
+			"SELECT section, author_id FROM entries
+			WHERE id = ?1 AND deleted_at IS NULL",
+			[id],
+			|r| Ok((r.get(0)?, r.get(1)?)),
+		)
+		.optional()?)
+}
+
+/// [`find_owner`] of an entry that must be there.
 pub(crate) fn owner_of(
 	conn: &Connection,
 	id: i64,
 ) -> Result<(String, Option<i64>)> {
-	Ok(conn.query_row(
-		"SELECT section, author_id FROM entries
-		WHERE id = ?1 AND deleted_at IS NULL",
-		[id],
-		|r| Ok((r.get(0)?, r.get(1)?)),
-	)?)
+	find_owner(conn, id)?.ok_or(Error::NotFound)
 }
 
 pub(crate) fn section_of(conn: &Connection, id: i64) -> Result<String> {
-	Ok(conn.query_row(
-		"SELECT section FROM entries WHERE id = ?1 AND deleted_at IS NULL",
-		[id],
-		|r| r.get(0),
-	)?)
+	Ok(owner_of(conn, id)?.0)
+}
+
+/// The slug an entry is saved with: its own, else one of its title.
+pub(crate) fn slug_of(slug: &str, title: &str) -> String {
+	match slug.trim() {
+		"" => slugify(title),
+		s => slugify(s),
+	}
 }
 
 /// `Über uns!` becomes `über-uns`.

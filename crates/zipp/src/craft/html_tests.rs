@@ -54,3 +54,12 @@ fn headings_lists_links_and_entries() {
 	);
 	assert_eq!(c[3], json!({ "type": "craftEntry", "attrs": { "id": 7 } }));
 }
+
+#[test]
+fn attributes_with_entities() {
+	let doc = to_doc("<p><a HREF='/x?a=1&amp;b=2' target=_blank>a</a></p>");
+	assert_eq!(
+		doc["content"][0]["content"][0]["marks"][0]["attrs"],
+		json!({ "href": "/x?a=1&b=2", "target": "_blank" })
+	);
+}

@@ -85,10 +85,7 @@ impl Importer<'_> {
 					left out",
 					ty.unwrap_or_default()
 				);
-				// once, not for every entry
-				if !self.report.skipped.contains(&what) {
-					self.skip(what);
-				}
+				self.skip_once(what);
 			}
 		}
 	}

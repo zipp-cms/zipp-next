@@ -125,35 +125,35 @@ pub(super) fn nav_items(
 	Ok(out)
 }
 
-/// An item of a navigation: a link and the items under it.
-pub(super) fn nav_item_object() -> Object {
-	let field = |name: &'static str, ty: TypeRef| {
-		GqlField::new(name, ty, move |ctx| value_field(ctx, name))
-	};
+fn value_object_field(name: &'static str, ty: TypeRef) -> GqlField {
+	GqlField::new(name, ty, move |ctx| value_field(ctx, name))
+}
+
+/// The fields of a link on `obj`.
+fn link_fields(obj: Object) -> Object {
+	let field = value_object_field;
 	let s = || TypeRef::named(TypeRef::STRING);
-	Object::new("NavItem")
-		.field(field("type", TypeRef::named_nn(TypeRef::STRING)))
+	obj.field(field("type", TypeRef::named_nn(TypeRef::STRING)))
 		.field(field("url", TypeRef::named_nn(TypeRef::STRING)))
 		.field(field("label", s()))
 		.field(field("defaultLabel", TypeRef::named_nn(TypeRef::STRING)))
 		.field(field("target", s()))
 		.field(field("download", TypeRef::named_nn(TypeRef::BOOLEAN)))
-		.field(field("children", TypeRef::named_nn_list_nn("NavItem")))
+}
+
+/// An item of a navigation: a link and the items under it.
+pub(super) fn nav_item_object() -> Object {
+	let children = TypeRef::named_nn_list_nn("NavItem");
+	link_fields(Object::new("NavItem"))
+		.field(value_object_field("children", children))
 }
 
 pub(super) fn link_object() -> Object {
-	let field = |name: &'static str, ty: TypeRef| {
-		GqlField::new(name, ty, move |ctx| value_field(ctx, name))
-	};
-	let s = || TypeRef::named(TypeRef::STRING);
-	Object::new("Link")
-		.description("A link like Craft's LinkData, use label ?? defaultLabel")
-		.field(field("type", TypeRef::named_nn(TypeRef::STRING)))
-		.field(field("url", TypeRef::named_nn(TypeRef::STRING)))
-		.field(field("label", s()))
-		.field(field("defaultLabel", TypeRef::named_nn(TypeRef::STRING)))
-		.field(field("target", s()))
-		.field(field("download", TypeRef::named_nn(TypeRef::BOOLEAN)))
+	link_fields(
+		Object::new("Link").description(
+			"A link like Craft's LinkData, use label ?? defaultLabel",
+		),
+	)
 }
 
 pub(super) fn entry_url(

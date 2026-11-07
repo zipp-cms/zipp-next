@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { type Edits } from '../api';
+	import { originalFile, type Edits } from '../api';
 	import { NO_EDITS, cropsOutside, noEdits, transparentEdges } from './edits';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Checkbox from 'zipp-ui/Checkbox.svelte';
@@ -27,13 +27,13 @@
 	 * focal point. It draws the result the way the server makes it.
 	 */
 	let {
-		src,
+		id,
 		edits = $bindable(),
 		focal = $bindable(),
 		editable,
 	}: {
-		/** the uploaded file */
-		src: string;
+		/** the asset, its uploaded file is drawn */
+		id: number;
 		edits: Edits;
 		focal: { x: number; y: number };
 		editable: boolean;
@@ -48,10 +48,28 @@
 	]);
 
 	let img = $state<HTMLImageElement | null>(null);
+	let error = $state('');
+	// with the session, the public url has the edits; once loaded the
+	// image draws without its url. Only the load of the current id counts.
 	$effect(() => {
-		const i = new Image();
-		i.onload = () => (img = i);
-		i.src = src;
+		let stale = false;
+		img = null;
+		error = '';
+		originalFile(id).then(
+			blob => {
+				if (stale) return;
+				const i = new Image();
+				i.onload = () => {
+					URL.revokeObjectURL(i.src);
+					if (!stale) img = i;
+				};
+				i.src = URL.createObjectURL(blob);
+			},
+			(e: Error) => {
+				if (!stale) error = e.message;
+			},
+		);
+		return () => (stale = true);
 	});
 
 	const size = $derived(
@@ -249,7 +267,11 @@
 				{/if}
 			</div>
 		{/if}
-		{#if !img}<p class="empty">{t('common.loading')}</p>{/if}
+		{#if error}
+			<p class="error">{error}</p>
+		{:else if !img}
+			<p class="empty">{t('common.loading')}</p>
+		{/if}
 	</div>
 	{#if mode === 'focal' && editable}
 		<p class="note">{t('assets.focalNote')}</p>

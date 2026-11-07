@@ -25,6 +25,7 @@
 	import { itemBlocks } from './itemBlocks';
 	import { getEditing, editedSite } from '../core/editing';
 	import { Last } from '../core/synced.svelte';
+	import { isReadonly, watchReadonly } from './readonly';
 
 	/**
 	 * A field of a type of another crate: zipp serves its module, which
@@ -45,34 +46,10 @@
 
 	// its items hold blocks: their editor is the studio's, with the
 	// context here (the entry, the site)
-	const blocks = untrack(() => props.field.blocks?.length)
-		? itemBlocks(
-				{
-					get schema() {
-						return props.schema;
-					},
-					get field() {
-						return props.field;
-					},
-					get values() {
-						return props.values;
-					},
-					get errors() {
-						return props.errors;
-					},
-					get refs() {
-						return props.refs;
-					},
-					get path() {
-						return props.path;
-					},
-					get changed() {
-						return props.changed ?? new Set<string>();
-					},
-				},
-				getAllContexts(),
-			)
-		: null;
+	const context = getAllContexts();
+	const blocks = untrack(() =>
+		props.field.blocks?.length ? itemBlocks(props, context) : null,
+	);
 
 	const editing = getEditing();
 	const site = editedSite();
@@ -82,6 +59,13 @@
 	let target: HTMLElement;
 	let mounted = $state.raw<Mounted | null>(null);
 	let error = $state('');
+	// a revision, or the role may not edit; a fieldset can change after
+	// the start (a conflict, publishing)
+	let readonly = $state(false);
+	$effect(() => {
+		readonly = isReadonly(target);
+		return watchReadonly(target, r => (readonly = r));
+	});
 
 	function current(): FieldProps {
 		return {
@@ -93,8 +77,7 @@
 			},
 			entryId: editing?.entryId ?? null,
 			site,
-			// a revision, or the role may not edit
-			readonly: !!target?.closest('fieldset[disabled]'),
+			readonly,
 			error: errors[path] ?? null,
 			host,
 			blocks,

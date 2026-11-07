@@ -8,9 +8,9 @@ use rusqlite::types::Value as SqlValue;
 use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 use serde_json::Value;
 
-use crate::content::{FieldError, validate};
+use crate::content::FieldError;
 use crate::db::marks;
-use crate::entries::{LIVE_DATES, check_relations, links_of, slugify};
+use crate::entries::{self, LIVE_DATES, slugify};
 use crate::error::{Error, Result};
 use crate::schema::{Schema, USER};
 
@@ -104,23 +104,19 @@ pub(crate) fn check_fields(
 	old: &Value,
 	by: i64,
 ) -> Result<Value> {
-	let Some(comp) = schema.get(USER) else {
-		return Ok(Value::Object(Default::default()));
-	};
-	let in_fields = |errors: Vec<FieldError>| {
-		let errors = errors
-			.into_iter()
-			.map(|e| FieldError::new(format!("fields.{}", e.path), e.message));
-		Error::Invalid(errors.collect())
-	};
-	let mut fields = validate(schema, comp, fields).map_err(in_fields)?;
-	let before = links_of(schema, comp, old);
-	let errors =
-		check_relations(conn, schema, USER, &mut fields, Some(by), &before)?;
-	if !errors.is_empty() {
-		return Err(in_fields(errors));
-	}
-	Ok(fields)
+	let checked =
+		entries::check_fields(conn, schema, USER, fields, old, Some(by));
+	checked.map_err(|e| match e {
+		Error::Invalid(errors) => Error::Invalid(
+			errors
+				.into_iter()
+				.map(|e| {
+					FieldError::new(format!("fields.{}", e.path), e.message)
+				})
+				.collect(),
+		),
+		e => e,
+	})
 }
 
 pub(crate) fn set_fields(

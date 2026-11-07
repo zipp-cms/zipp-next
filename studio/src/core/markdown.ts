@@ -6,8 +6,11 @@ import { Marked, type Tokens } from 'marked';
  * or an AI answer can't run code or send data anywhere.
  */
 export const safeUrl = (href: string) =>
-	/^(https?:\/\/|mailto:|tel:|#)/i.test(href) ||
-	(href.startsWith('/') && !href.startsWith('//'));
+	// browsers drop tabs and newlines: /\t/host is //host
+	!/[\x00-\x1f\x7f]/.test(href) &&
+	(/^(https?:\/\/|mailto:|tel:|#)/i.test(href) ||
+		// browsers read /\host like //host, another site
+		(href.startsWith('/') && !/^\/[/\\]/.test(href)));
 
 const escape = (s: string) =>
 	s.replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);

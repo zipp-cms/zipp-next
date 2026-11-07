@@ -74,8 +74,15 @@ async fn empty_route(
 	let conn = state.db.conn();
 	let trash = list(&conn, &state.schema, &auth)?;
 	let tx = conn.unchecked_transaction()?;
+	let (schema, need) = (&state.schema, Access::Delete);
 	for e in trash.entries {
-		purge_entry(&tx, e.id)?;
+		// like one by one: not with children of others that went with it
+		let (id, deleted_at) = (e.id, Some(e.deleted_at));
+		match check_tree(&tx, schema, &auth, id, &e.section, need, deleted_at) {
+			Ok(()) => purge_entry(&tx, e.id)?,
+			Err(Error::Forbidden) => {}
+			Err(e) => return Err(e),
+		}
 	}
 	tx.commit()?;
 	// the files go one by one, each with its row

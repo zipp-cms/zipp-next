@@ -1,40 +1,37 @@
 use super::*;
 
+/// The fields every entry has, see [`ENTRY_FIELDS`].
 pub(super) fn entry_common() -> Vec<(&'static str, TypeRef)> {
+	let names = ENTRY_FIELDS.iter().chain(OPTIONAL_ENTRY_FIELDS);
+	names.map(|&n| (n, entry_common_type(n))).collect()
+}
+
+fn entry_common_type(name: &str) -> TypeRef {
 	let s = || TypeRef::named_nn(TypeRef::STRING);
-	vec![
+	match name {
 		// Craft's ids are strings
-		("id", TypeRef::named_nn(TypeRef::ID)),
-		("sectionHandle", s()),
-		("typeHandle", s()),
-		("site", s()),
-		// Craft's name of it
-		("siteHandle", s()),
+		"id" => TypeRef::named_nn(TypeRef::ID),
+		// siteHandle is Craft's name of the site
+		"sectionHandle" | "typeHandle" | "site" | "siteHandle" => s(),
 		// the position of the site, crelte knows sites by number
-		("siteId", TypeRef::named_nn(TypeRef::INT)),
-		("url", TypeRef::named(TypeRef::STRING)),
-		("title", s()),
-		("slug", s()),
-		("uri", TypeRef::named(TypeRef::STRING)),
-		("published", TypeRef::named_nn(TypeRef::BOOLEAN)),
-		("parent", TypeRef::named("Entry")),
-		("children", TypeRef::named_nn_list_nn("Entry")),
+		"siteId" => TypeRef::named_nn(TypeRef::INT),
+		"url" | "uri" => TypeRef::named(TypeRef::STRING),
+		"title" | "slug" | "language" => s(),
+		"published" => TypeRef::named_nn(TypeRef::BOOLEAN),
+		"parent" => TypeRef::named("Entry"),
+		// localized: the entry in the other sites, for a language switch
+		"children" | "localized" => TypeRef::named_nn_list_nn("Entry"),
 		// milliseconds since 1970, too big for Int
-		("createdAt", TypeRef::named_nn(TypeRef::FLOAT)),
-		("updatedAt", TypeRef::named_nn(TypeRef::FLOAT)),
+		"createdAt" | "updatedAt" => TypeRef::named_nn(TypeRef::FLOAT),
 		// Craft's, as `2026-10-28T08:00:00+00:00`
-		("postDate", s()),
+		"postDate" | "dateCreated" | "dateUpdated" => s(),
 		// none: it doesn't expire
-		("expiryDate", TypeRef::named(TypeRef::STRING)),
-		("dateCreated", s()),
-		("dateUpdated", s()),
-		("language", s()),
-		// the entry in the other sites, for a language switch
-		("localized", TypeRef::named_nn_list_nn("Entry")),
+		"expiryDate" => TypeRef::named(TypeRef::STRING),
 		// who made it, Craft's; none: the system or a deleted user
-		("authorId", TypeRef::named(TypeRef::ID)),
-		("author", TypeRef::named("User")),
-	]
+		"authorId" => TypeRef::named(TypeRef::ID),
+		"author" => TypeRef::named("User"),
+		_ => unreachable!("{name} is no field of every entry"),
+	}
 }
 
 /// The dates of entries, with the arguments of [`dates`].
@@ -42,11 +39,7 @@ pub(super) const DATES: [&str; 4] =
 	["postDate", "expiryDate", "dateCreated", "dateUpdated"];
 
 pub(super) fn entry_common_field(name: &'static str) -> GqlField {
-	let ty = entry_common()
-		.into_iter()
-		.find(|(n, _)| *n == name)
-		.unwrap()
-		.1;
+	let ty = entry_common_type(name);
 	let field = GqlField::new(name, ty, move |ctx| {
 		FieldFuture::new(async move {
 			let e = ctx.parent_value.try_downcast_ref::<Entry>()?;
@@ -143,9 +136,23 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 	}
 }
 
+/// The fields of a component on its object, see [`content_field`].
+pub(super) fn content_fields(
+	mut obj: Object,
+	schema: &Schema,
+	comp: &Component,
+) -> Object {
+	for field in &comp.fields {
+		if let Some(f) = content_field(schema, &comp.handle, field) {
+			obj = obj.field(f);
+		}
+	}
+	obj
+}
+
 /// A field of the content model, read from the JSON of its entry or block;
 /// none for a note, it has no value.
-pub(super) fn content_field(
+fn content_field(
 	schema: &Schema,
 	comp: &str,
 	field: &crate::schema::Field,
@@ -267,20 +274,12 @@ async fn resolve_value<'a>(
 			None => Ok(None),
 		},
 		FieldKind::Relation { .. } => {
-			let ids: Vec<i64> = value
-				.as_array()
-				.map(|a| a.iter().filter_map(Value::as_i64).collect())
-				.unwrap_or_default();
 			// in the order of the field
-			let entries = entries_by_id(ctx, &site, &ids).await?;
+			let entries = entries_by_id(ctx, &site, &ids_of(&value)).await?;
 			Ok(Some(FieldValue::list(entries.into_iter().map(entry_value))))
 		}
 		FieldKind::Assets { .. } => {
-			let ids: Vec<i64> = value
-				.as_array()
-				.map(|a| a.iter().filter_map(Value::as_i64).collect())
-				.unwrap_or_default();
-			let mut assets = assets_by_id(ctx, &ids).await?;
+			let mut assets = assets_by_id(ctx, &ids_of(&value)).await?;
 			let kinds = kinds_of(ctx)?;
 			if !kinds.is_empty() {
 				assets.retain(|a| kinds.iter().any(|k| k.of(a)));
@@ -292,9 +291,7 @@ async fn resolve_value<'a>(
 		FieldKind::Blocks { .. } => {
 			let blocks = value.as_array().into_iter().flatten();
 			// a switched off block isn't on the website
-			let blocks = blocks
-				.filter(|b| b["enabled"] != false)
-				.map(|b| block_of(b, &site));
+			let blocks = blocks.filter_map(|b| ext::block(b, &site));
 			Ok(Some(FieldValue::list(blocks)))
 		}
 		FieldKind::Group { component } => {
@@ -361,23 +358,7 @@ async fn resolve_value<'a>(
 		// the option, one that was removed since is none
 		FieldKind::ButtonGroup { options } => {
 			let option = options.into_iter().find(|o| value == o.value);
-			match option {
-				Some(o) => {
-					// websites get the Lucide name, an svg is the studio's
-					let icon = match o.icon {
-						Some(crate::schema::Icon::Lucide(name)) => Some(name),
-						_ => None,
-					};
-					let json = serde_json::json!({
-						"value": o.value,
-						"label": o.label,
-						"color": o.color,
-						"icon": icon,
-					});
-					Ok(Some(FieldValue::value(GqlValue::from_json(json)?)))
-				}
-				None => Ok(None),
-			}
+			option.map(button_option_value).transpose()
 		}
 		FieldKind::Texts { keys } => {
 			let texts = crate::content::texts_of(&keys, &value);
@@ -399,6 +380,32 @@ async fn resolve_value<'a>(
 			v => Ok(Some(FieldValue::value(GqlValue::from_json(v)?))),
 		},
 	}
+}
+
+/// The ids of a relation or assets field.
+fn ids_of(value: &Value) -> Vec<i64> {
+	value
+		.as_array()
+		.map(|a| a.iter().filter_map(Value::as_i64).collect())
+		.unwrap_or_default()
+}
+
+/// The chosen option of a button group, see [`button_group_option`].
+fn button_option_value(
+	o: crate::schema::ButtonOption,
+) -> async_graphql::Result<FieldValue<'static>> {
+	// websites get the Lucide name, an svg is the studio's
+	let icon = match o.icon {
+		Some(crate::schema::Icon::Lucide(name)) => Some(name),
+		_ => None,
+	};
+	let json = serde_json::json!({
+		"value": o.value,
+		"label": o.label,
+		"color": o.color,
+		"icon": icon,
+	});
+	Ok(FieldValue::value(GqlValue::from_json(json)?))
 }
 
 pub(super) fn block_value(
@@ -466,13 +473,8 @@ pub(super) fn content_objects(
 		.collect();
 	for handle in grouped {
 		let comp = schema.get(handle).unwrap();
-		let mut obj = Object::new(format!("{handle}_Fields"));
-		for field in &comp.fields {
-			if let Some(f) = content_field(schema, &comp.handle, field) {
-				obj = obj.field(f);
-			}
-		}
-		objects.push(obj);
+		let obj = Object::new(format!("{handle}_Fields"));
+		objects.push(content_fields(obj, schema, comp));
 	}
 
 	// a type of the rows of each table field, its columns as fields
@@ -533,12 +535,7 @@ pub(super) fn content_objects(
 		if !comp.entry && !comp.fields.iter().any(|f| f.handle == "slug") {
 			obj = obj.field(block_slug(comp.title_field.clone()));
 		}
-		for field in &comp.fields {
-			if let Some(f) = content_field(schema, &comp.handle, field) {
-				obj = obj.field(f);
-			}
-		}
-		objects.push(obj);
+		objects.push(content_fields(obj, schema, comp));
 	}
 	objects
 }

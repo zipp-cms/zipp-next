@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::schema::{
-	Column, ColumnKind, Component, Field, FieldKind, Holds, LinkKind, Schema,
+	Choice, Column, ColumnKind, Component, Field, FieldKind, Holds, LinkKind,
+	Schema,
 };
 
 pub(crate) mod relations;
@@ -73,6 +74,8 @@ pub(crate) struct Inner<'a> {
 	pub comp: &'a Component,
 	pub fields: &'a Value,
 	pub at: Option<String>,
+	/// a block switched off (`"enabled": false`) isn't on the website
+	pub enabled: bool,
 }
 
 impl Inner<'_> {
@@ -99,6 +102,7 @@ pub(crate) fn inner<'a>(
 			comp,
 			fields: &b["fields"],
 			at: Some(at),
+			enabled: b["enabled"] != false,
 		})
 	};
 	match field.kind.holds() {
@@ -133,6 +137,7 @@ pub(crate) fn inner<'a>(
 				comp,
 				fields: value,
 				at: None,
+				enabled: true,
 			})
 			.into_iter()
 			.collect(),
@@ -317,10 +322,7 @@ pub(crate) fn convert(
 	fields: &Value,
 ) -> Value {
 	fn kind<'a>(c: &'a Component, handle: &str) -> Option<&'a FieldKind> {
-		c.fields
-			.iter()
-			.find(|f| f.handle == handle)
-			.map(|f| &f.kind)
+		c.field(handle).map(|f| &f.kind)
 	}
 	let same = |h: &str| kind(from, h).is_some_and(|k| kind(to, h) == Some(k));
 	let out = fields.as_object().cloned().unwrap_or_default();

@@ -152,7 +152,11 @@ fn collect(
 			FieldKind::Texts { .. } => out.extend(strings(value)),
 			_ => {}
 		}
-		for i in inner(schema, field, value) {
+		// what isn't on the website isn't found either
+		for i in inner(schema, field, value)
+			.into_iter()
+			.filter(|i| i.enabled)
+		{
 			collect(schema, i.comp, i.fields, out);
 		}
 	}

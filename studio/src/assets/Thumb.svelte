@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { altOf, assetUrl, isVideo, type Asset } from './api';
 	import { duration } from '../core/format';
+	import { extOf } from './files';
 	import { site } from '../core/router.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 
@@ -18,7 +19,8 @@
 		small = false,
 	}: { asset: Asset; named?: boolean; small?: boolean } = $props();
 
-	const ext = $derived(asset.filename.split('.').pop()?.toUpperCase() ?? '');
+	// a file without one shows no type, not its name twice
+	const ext = $derived(extOf(asset.filename).toUpperCase());
 	// the browser knows it once it read the start of the file
 	let seconds = $state(0);
 </script>
@@ -52,7 +54,7 @@
 			{#if named}<span class="name">{asset.filename}</span>{/if}
 		</span>
 	{/if}
-	{#if !small}<span class="ext">{ext}</span>{/if}
+	{#if !small && ext}<span class="ext">{ext}</span>{/if}
 </div>
 
 <style lang="scss">

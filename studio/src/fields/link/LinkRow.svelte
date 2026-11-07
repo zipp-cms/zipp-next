@@ -5,7 +5,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import { chosenAssets } from '../../assets/chosen.svelte';
-	import { LINK_ICONS, linkSummary, opensInNewTab } from './link';
+	import { LINK_ICONS, linkSummary, linkedId, opensInNewTab } from './link';
 	import { t } from '../../i18n/index.svelte';
 
 	/**
@@ -41,19 +41,14 @@
 
 	const newTab = $derived(opensInNewTab(schema, link, externalInNewTab));
 	// a linked file shows its filename
-	const asset = chosenAssets(() =>
-		link.type === 'asset' && typeof link.value === 'number'
-			? [link.value]
-			: [],
-	);
+	const assetId = $derived(linkedId(link, 'asset'));
+	const asset = chosenAssets(() => (assetId === null ? [] : [assetId]));
 	const summary = $derived(
 		linkSummary(
 			schema,
 			link,
 			refs,
-			link.type === 'asset' && typeof link.value === 'number'
-				? asset.get(link.value)?.filename
-				: undefined,
+			assetId === null ? undefined : asset.get(assetId)?.filename,
 		),
 	);
 </script>

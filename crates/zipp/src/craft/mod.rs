@@ -223,6 +223,13 @@ impl Importer<'_> {
 		self.report.skipped.push(what);
 	}
 
+	/// Skips what repeats once, not for every entry.
+	fn skip_once(&mut self, what: String) {
+		if !self.report.skipped.contains(&what) {
+			self.skip(what);
+		}
+	}
+
 	/// Every element of a section with its entry type, in Craft's order.
 	fn plan(
 		&mut self,
@@ -465,10 +472,11 @@ impl Importer<'_> {
 				Some(f) => f.as_str(),
 				None => a.volume_name.as_deref().unwrap_or(handle),
 			};
+			// a volume without a name is the top
 			let path = [top]
 				.into_iter()
 				.chain(dirs.into_iter().flat_map(|d| d.split('/')));
-			let folder = match self.folder(conn, path) {
+			let folder = match assets::folder_path(conn, path) {
 				Ok(f) => f,
 				Err(e) => {
 					self.skip(format!("asset {}: {e}", a.path));
@@ -513,20 +521,6 @@ impl Importer<'_> {
 		Ok(())
 	}
 
-	/// The folder of a path of names, made if it isn't there; empty names
-	/// stay where they are, so a volume without a name is the top.
-	fn folder<'p>(
-		&self,
-		conn: &Connection,
-		path: impl Iterator<Item = &'p str>,
-	) -> Result<Option<i64>> {
-		let mut parent = None;
-		for name in path.filter(|n| !n.is_empty()) {
-			parent = Some(assets::folder_named(conn, parent, name)?);
-		}
-		Ok(parent)
-	}
-
 	/// The asset fields, once the entries exist that they may link.
 	fn asset_fields(
 		&mut self,
@@ -544,9 +538,10 @@ impl Importer<'_> {
 			if fields.as_object().is_none_or(Map::is_empty) {
 				continue;
 			}
-			let checked = assets::check_fields(
+			let checked = entries::check_fields(
 				conn,
 				self.schema,
+				ASSET,
 				&fields,
 				&json!({}),
 				None,
@@ -670,10 +665,7 @@ impl Importer<'_> {
 					)
 				}
 			};
-			// once, not for every entry
-			if !self.report.skipped.contains(&what) {
-				self.skip(what);
-			}
+			self.skip_once(what);
 		}
 		flat
 	}
@@ -717,9 +709,7 @@ impl Importer<'_> {
 						field.handle,
 						columns.len()
 					);
-					if !self.report.skipped.contains(&what) {
-						self.skip(what);
-					}
+					self.skip_once(what);
 				}
 				let mut rows = vec![];
 				for row in craft_rows.as_array().into_iter().flatten() {

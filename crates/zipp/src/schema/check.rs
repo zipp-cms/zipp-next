@@ -55,24 +55,11 @@ impl Schema {
 		if self.sites.is_empty() {
 			return Err("a schema needs at least one site".into());
 		}
-		for site in &self.sites {
-			check_handle(&site.handle)?;
-		}
-		if let Some(s) = first_twice(&self.sites, |a, b| a.handle == b.handle) {
-			return Err(format!("site {} exists twice", s.handle));
-		}
-		Ok(())
+		check_handles(&self.sites, |s| &s.handle, "site")
 	}
 
 	fn check_sections(&self) -> Result<(), String> {
-		for section in &self.sections {
-			check_handle(&section.handle)?;
-		}
-		if let Some(s) =
-			first_twice(&self.sections, |a, b| a.handle == b.handle)
-		{
-			return Err(format!("section {} exists twice", s.handle));
-		}
+		check_handles(&self.sections, |s| &s.handle, "section")?;
 		for section in &self.sections {
 			self.check_section(section)
 				.map_err(|e| format!("section {}: {e}", section.handle))?;
@@ -274,12 +261,7 @@ impl Schema {
 
 	fn check_graphql_schemas(&self) -> Result<(), String> {
 		let all = &self.graphql_schemas;
-		for s in all {
-			check_handle(&s.handle)?;
-		}
-		if let Some(s) = first_twice(all, |a, b| a.handle == b.handle) {
-			return Err(format!("graphql schema {} exists twice", s.handle));
-		}
+		check_handles(all, |s| &s.handle, "graphql schema")?;
 		for s in all {
 			let unknown = |what: &str, h: &String| {
 				format!("graphql schema {}: unknown {what} {h}", s.handle)
@@ -383,9 +365,7 @@ impl Schema {
 		}
 		if let Some(f) = &section.uri_if {
 			for t in &section.types {
-				let field = self
-					.entry_type(t)
-					.and_then(|c| c.fields.iter().find(|x| &x.handle == f));
+				let field = self.entry_type(t).and_then(|c| c.field(f));
 				if !field.is_some_and(|x| x.kind == FieldKind::Boolean) {
 					return Err(format!("uri if {f}: {t} has no boolean {f}"));
 				}
@@ -495,25 +475,7 @@ impl Schema {
 				if headings.iter().any(|h| !(1..=6).contains(h)) {
 					return Err("headings go from 1 to 6".into());
 				}
-				for style in styles {
-					// a class of css the frontend can select
-					let mut chars = style.class.chars();
-					let ok =
-						chars.next().is_some_and(|c| c.is_ascii_alphabetic())
-							&& chars.all(|c| {
-								c.is_ascii_alphanumeric() || "-_".contains(c)
-							});
-					if !ok {
-						return Err(format!(
-							"style {:?} must be a class like lead or text-large",
-							style.class
-						));
-					}
-				}
-				if let Some(s) = first_twice(styles, |a, b| a.class == b.class)
-				{
-					return Err(format!("style {} exists twice", s.class));
-				}
+				check_styles(styles)?;
 				self.check_types(blocks, false)?;
 				check_toolbar(kind)
 			}
@@ -531,29 +493,9 @@ impl Schema {
 				}
 			}
 			FieldKind::Dropdown { options }
-			| FieldKind::Checkboxes { options } => {
-				if options.is_empty() {
-					return Err("it needs options".into());
-				}
-				if options.iter().any(|o| o.value.is_empty()) {
-					return Err("an option needs a value".into());
-				}
-				match first_twice(options, |a, b| a.value == b.value) {
-					Some(o) => Err(format!("option {} exists twice", o.value)),
-					None => Ok(()),
-				}
-			}
+			| FieldKind::Checkboxes { options } => check_options(options, |o| &o.value),
 			FieldKind::ButtonGroup { options } => {
-				if options.is_empty() {
-					return Err("it needs options".into());
-				}
-				if options.iter().any(|o| o.value.is_empty()) {
-					return Err("an option needs a value".into());
-				}
-				if let Some(o) = first_twice(options, |a, b| a.value == b.value)
-				{
-					return Err(format!("option {} exists twice", o.value));
-				}
+				check_options(options, |o| &o.value)?;
 				// the studio and websites put it into CSS
 				let bad = options
 					.iter()
@@ -568,23 +510,8 @@ impl Schema {
 			FieldKind::Assets {
 				folder, extensions, ..
 			} => {
-				// the folders are names, the api refuses a `/` in them
-				if folder
-					.as_deref()
-					.is_some_and(|f| f.split('/').any(|n| n.trim().is_empty()))
-				{
-					return Err("a folder is a path like Photos/Events".into());
-				}
-				// the studio fills them in from the entry, see field.rs
-				let rest = folder.as_deref().map(|f| {
-					f.replace("{slug}", "")
-						.replace("{section}", "")
-						.replace("{type}", "")
-				});
-				if rest.is_some_and(|r| r.contains(['{', '}'])) {
-					return Err("a folder knows only {slug}, {section} and \
-						{type}"
-						.into());
+				if let Some(f) = folder {
+					check_folder(f)?;
 				}
 				if extensions.iter().any(|e| {
 					e.is_empty() || !e.chars().all(|c| c.is_alphanumeric())
@@ -593,25 +520,7 @@ impl Schema {
 				}
 				Ok(())
 			}
-			FieldKind::Table { columns } => {
-				if columns.is_empty() {
-					return Err("a table needs columns".into());
-				}
-				for c in columns {
-					check_handle(&c.handle)?;
-				}
-				if let Some(c) =
-					first_twice(columns, |a, b| a.handle == b.handle)
-				{
-					return Err(format!("column {} exists twice", c.handle));
-				}
-				for c in columns {
-					// a cell is checked like the field of its kind
-					self.check_field(comp, &c.as_field())
-						.map_err(|e| format!("column {}: {e}", c.handle))?;
-				}
-				Ok(())
-			}
+			FieldKind::Table { columns } => self.check_columns(comp, columns),
 			FieldKind::Navigation { to, depth, .. }
 				if to.is_empty() || *depth == 0 =>
 			{
@@ -630,24 +539,49 @@ impl Schema {
 				self.check_types(blocks, false)?;
 				t.check(options)
 			}
-			FieldKind::Group { component } => {
-				if self.get(component).is_none() {
-					return Err(format!("unknown component {component}"));
-				}
-				// its defaults would never end
-				if self.group_holds(component, &comp.handle) {
-					return Err("a group can't hold its own component".into());
-				}
-				if component == ASSET || component == USER {
-					return Err(holds_no_content(component));
-				}
-				Ok(())
-			}
+			FieldKind::Group { component } => self.check_group(comp, component),
 			FieldKind::Note { text } if text.trim().is_empty() => {
 				Err("a note needs a text".into())
 			}
 			_ => Ok(()),
 		}
+	}
+
+	/// The columns of a table, a cell is checked like the field of its
+	/// kind.
+	fn check_columns(
+		&self,
+		comp: &Component,
+		columns: &[Column],
+	) -> Result<(), String> {
+		if columns.is_empty() {
+			return Err("a table needs columns".into());
+		}
+		check_handles(columns, |c| &c.handle, "column")?;
+		for c in columns {
+			self.check_field(comp, &c.as_field())
+				.map_err(|e| format!("column {}: {e}", c.handle))?;
+		}
+		Ok(())
+	}
+
+	/// The component of a group field in `comp`.
+	fn check_group(
+		&self,
+		comp: &Component,
+		component: &str,
+	) -> Result<(), String> {
+		if self.get(component).is_none() {
+			return Err(format!("unknown component {component}"));
+		}
+		// its defaults would never end
+		if self.group_holds(component, &comp.handle) {
+			return Err("a group can't hold its own component".into());
+		}
+		if component == ASSET || component == USER {
+			return Err(holds_no_content(component));
+		}
+		Ok(())
 	}
 
 	/// The sections a field takes entries of, see [`Field::sections`].
@@ -752,7 +686,7 @@ impl Schema {
 /// The title field of a block is one of its fields that holds a short
 /// text, the studio shows it in the block's head.
 fn check_title_field(comp: &Component, handle: &str) -> Result<(), String> {
-	let Some(field) = comp.fields.iter().find(|f| f.handle == handle) else {
+	let Some(field) = comp.field(handle) else {
 		return Err("the block has no such field".into());
 	};
 	match field.kind {
@@ -772,6 +706,61 @@ fn check_title_field(comp: &Component, handle: &str) -> Result<(), String> {
 	}
 }
 
+/// The styles of a rich text: classes of css the frontend can select,
+/// each once.
+fn check_styles(styles: &[Style]) -> Result<(), String> {
+	for style in styles {
+		let mut chars = style.class.chars();
+		let ok = chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+			&& chars.all(|c| c.is_ascii_alphanumeric() || "-_".contains(c));
+		if !ok {
+			return Err(format!(
+				"style {:?} must be a class like lead or text-large",
+				style.class
+			));
+		}
+	}
+	match first_twice(styles, |a, b| a.class == b.class) {
+		Some(s) => Err(format!("style {} exists twice", s.class)),
+		None => Ok(()),
+	}
+}
+
+/// The options of a dropdown, checkboxes or a button group: some, each
+/// with a value of its own.
+fn check_options<T>(
+	options: &[T],
+	value: impl Fn(&T) -> &str,
+) -> Result<(), String> {
+	if options.is_empty() {
+		return Err("it needs options".into());
+	}
+	if options.iter().any(|o| value(o).is_empty()) {
+		return Err("an option needs a value".into());
+	}
+	match first_twice(options, |a, b| value(a) == value(b)) {
+		Some(o) => Err(format!("option {} exists twice", value(o))),
+		None => Ok(()),
+	}
+}
+
+/// The folder of an assets field: a path of names (the api refuses a `/`
+/// in them) with the placeholders the studio fills in from the entry,
+/// see field.rs.
+fn check_folder(folder: &str) -> Result<(), String> {
+	if folder.split('/').any(|n| n.trim().is_empty()) {
+		return Err("a folder is a path like Photos/Events".into());
+	}
+	let rest = folder
+		.replace("{slug}", "")
+		.replace("{section}", "")
+		.replace("{type}", "");
+	if rest.contains(['{', '}']) {
+		return Err("a folder knows only {slug}, {section} and {type}".into());
+	}
+	Ok(())
+}
+
 fn is_color(c: &str) -> bool {
 	c.len() == 7
 		&& c.starts_with('#')
@@ -781,6 +770,21 @@ fn is_color(c: &str) -> bool {
 /// The asset or user fields only live on assets and users.
 fn holds_no_content(component: &str) -> String {
 	format!("{component} holds the {component} fields, no content")
+}
+
+/// Each handle is a valid one and none is there twice.
+fn check_handles<T>(
+	items: &[T],
+	handle: impl Fn(&T) -> &str,
+	what: &str,
+) -> Result<(), String> {
+	for x in items {
+		check_handle(handle(x))?;
+	}
+	match first_twice(items, |a, b| handle(a) == handle(b)) {
+		Some(x) => Err(format!("{what} {} exists twice", handle(x))),
+		None => Ok(()),
+	}
 }
 
 /// The first item that is the same as one before it, for the handles

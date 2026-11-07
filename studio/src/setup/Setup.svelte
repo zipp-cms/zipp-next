@@ -1,49 +1,13 @@
 <script module lang="ts">
-	import { sectionOf, type Schema as SchemaT } from '../core/schema';
-	import { listEntries } from '../entries/api';
-	import { canSetup, isAdmin } from '../core/access';
-	import { listRequests } from './api';
-	import { entryCounts } from './setup';
-	import { t } from '../i18n/index.svelte';
+	import type { Schema as SchemaT } from '../core/schema';
+	import { loadSetup } from './setup';
 
-	/**
-	 * A section of its own: its first entries come with the page; the
-	 * overview and the sections their counts, the requests their list.
-	 */
-	export async function loadProps(props: {
+	export function loadProps(props: {
 		schema: SchemaT;
 		tab?: string;
 		handle?: string;
 	}) {
-		if (!canSetup(props.schema)) throw new Error(t('setup.notForRole'));
-		const tab = props.tab ?? 'overview';
-		if (tab === 'requests') return { requests: await listRequests() };
-		if (tab === 'overview') {
-			const admin = isAdmin(props.schema);
-			const [counts, requests] = await Promise.all([
-				entryCounts(props.schema),
-				admin ? listRequests() : Promise.resolve([]),
-			]);
-			return {
-				counts,
-				openRequests: requests.filter(r => !r.done).length,
-			};
-		}
-		if (tab === 'sections' && !props.handle)
-			return { counts: await entryCounts(props.schema) };
-		if (tab !== 'sections' || !props.handle) return {};
-		const section = sectionOf(props.schema, props.handle);
-		if (!section)
-			throw new Error(
-				t('setup.noSectionThere', { handle: props.handle }),
-			);
-		const params: Record<string, string> = {
-			section: section.handle,
-			site: props.schema.sites[0].handle,
-			limit: '1000',
-		};
-		if (section.kind === 'structure') params.order = 'structure';
-		return { list: await listEntries(params) };
+		return loadSetup(props.schema, props.tab ?? 'overview', props.handle);
 	}
 </script>
 
@@ -52,7 +16,8 @@
 	import type { EntryList } from '../entries/api';
 	import type { ChangeRequest } from './api';
 	import PageTop from 'zipp-ui/PageTop.svelte';
-	import { SETUP_TABS } from './tabs';
+	import { setupCrumbs } from './setup';
+	import { t } from '../i18n/index.svelte';
 	import { componentOf } from '../core/schema';
 	import { current } from '../core/router.svelte';
 	import ComponentPage from './ComponentPage.svelte';
@@ -93,24 +58,7 @@
 	const component = $derived(
 		handle ? componentOf(schema, handle) : undefined,
 	);
-
-	// Setup, the tab, the section or type of a page of its own
-	const crumbs = $derived.by(() => {
-		const key = SETUP_TABS.find(([h]) => h === tab)?.[1];
-		const name = key ? t(key) : tab;
-		const out: { label: string; href?: string }[] = [
-			{ label: t('setup.setup'), href: '/admin/setup' },
-			{ label: name, href: `/admin/setup/${tab}` },
-		];
-		if (handle) {
-			const own =
-				tab === 'sections'
-					? sectionOf(schema, handle)?.name
-					: component?.name;
-			out.push({ label: own ?? handle });
-		}
-		return out;
-	});
+	const crumbs = $derived(setupCrumbs(schema, tab, handle));
 </script>
 
 <PageTop {crumbs} note={t('setup.readOnly')}>

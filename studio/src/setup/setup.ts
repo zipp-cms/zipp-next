@@ -1,7 +1,16 @@
-import type { Component, Field, Role, Schema, Section } from '../core/schema';
-import { componentOf } from '../core/schema';
-import { can, isAdmin, visibleNav } from '../core/access';
+import type {
+	Component,
+	Field,
+	Role,
+	Schema,
+	Section,
+	Tab,
+} from '../core/schema';
+import { componentOf, sectionOf } from '../core/schema';
+import { can, canSetup, isAdmin, visibleNav } from '../core/access';
 import { listEntries } from '../entries/api';
+import { listRequests } from './api';
+import { SETUP_TABS } from './tabs';
 import { describeField } from './fieldKind';
 import { session } from '../core/session.svelte';
 import { t } from '../i18n/index.svelte';
@@ -81,18 +90,6 @@ export function usedIn(
 	return out;
 }
 
-/** The uri of an entry type in a section: its own, the site's or the section's. */
-export function uriOf(
-	section: Section,
-	type: string,
-	site?: string,
-): string | null {
-	const own = section.type_uris?.[type];
-	if (own !== undefined) return own;
-	const inSite = site ? section.site_uris?.[site] : undefined;
-	return inSite ?? section.uri ?? null;
-}
-
 /** The number of entries of each section the role sees, in the primary site. */
 export async function entryCounts(
 	schema: Schema,
@@ -105,6 +102,95 @@ export async function entryCounts(
 		),
 	);
 	return Object.fromEntries(counts);
+}
+
+/**
+ * The data of a page of Setup: a section of its own its first entries;
+ * the overview and the sections their counts, the requests their list.
+ */
+export async function loadSetup(
+	schema: Schema,
+	tab: string,
+	handle: string | undefined,
+) {
+	if (!canSetup(schema)) throw new Error(t('setup.notForRole'));
+	if (tab === 'requests') return { requests: await listRequests() };
+	if (tab === 'overview') {
+		const [counts, requests] = await Promise.all([
+			entryCounts(schema),
+			isAdmin(schema) ? listRequests() : Promise.resolve([]),
+		]);
+		return {
+			counts,
+			openRequests: requests.filter(r => !r.done).length,
+		};
+	}
+	if (tab === 'sections' && !handle)
+		return { counts: await entryCounts(schema) };
+	if (tab !== 'sections' || !handle) return {};
+	const section = sectionOf(schema, handle);
+	if (!section) throw new Error(t('setup.noSectionThere', { handle }));
+	const params: Record<string, string> = {
+		section: section.handle,
+		site: schema.sites[0].handle,
+		limit: '1000',
+	};
+	if (section.kind === 'structure') params.order = 'structure';
+	return { list: await listEntries(params) };
+}
+
+/** Setup, the tab, the section or type of a page of its own. */
+export function setupCrumbs(
+	schema: Schema,
+	tab: string,
+	handle: string | null,
+): { label: string; href?: string }[] {
+	const key = SETUP_TABS.find(([h]) => h === tab)?.[1];
+	const out: { label: string; href?: string }[] = [
+		{ label: t('setup.setup'), href: '/admin/setup' },
+		{ label: key ? t(key) : tab, href: `/admin/setup/${tab}` },
+	];
+	if (handle) {
+		const own =
+			tab === 'sections'
+				? sectionOf(schema, handle)?.name
+				: componentOf(schema, handle)?.name;
+		out.push({ label: own ?? handle });
+	}
+	return out;
+}
+
+/** The fields of a component by the tabs of its editor, else in one card. */
+export function fieldGroups(c: Component): {
+	name: string;
+	fields: Field[];
+	when: Tab['when'];
+	card: boolean | undefined;
+}[] {
+	if (!c.tabs?.length)
+		return [
+			{
+				name: t('setup.fields'),
+				fields: c.fields,
+				when: undefined,
+				card: c.card,
+			},
+		];
+	const tabs = c.tabs;
+	const byTab = tabs.map(tab => ({
+		name: tab.name,
+		fields: c.fields.filter(f => tab.fields.includes(f.handle)),
+		when: tab.when,
+		card: c.card || tab.card,
+	}));
+	const rest = c.fields.filter(
+		f => !tabs.some(tab => tab.fields.includes(f.handle)),
+	);
+	if (!rest.length) return byTab;
+	return [
+		...byTab,
+		{ name: t('setup.other'), fields: rest, when: undefined, card: false },
+	];
 }
 
 /** The blocks or groups a field holds, by handle. */

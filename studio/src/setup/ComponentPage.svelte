@@ -2,8 +2,9 @@
 	import type { Component, Field, Schema } from '../core/schema';
 	import { describeField } from './fieldKind';
 	import { describeCondition, fieldOptions } from './fieldOptions';
-	import { gqlType, usedIn } from './setup';
+	import { fieldGroups, gqlType, usedIn } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
+	import Links from './Links.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
@@ -13,38 +14,7 @@
 	let { schema, component: c }: { schema: Schema; component: Component } =
 		$props();
 
-	// the tabs of the editor, else one card of all fields
-	const groups = $derived.by(() => {
-		if (!c.tabs?.length)
-			return [
-				{
-					name: t('setup.fields'),
-					fields: c.fields,
-					when: undefined,
-					card: c.card,
-				},
-			];
-		const byTab = c.tabs.map(tab => ({
-			name: tab.name,
-			fields: c.fields.filter(f => tab.fields.includes(f.handle)),
-			when: tab.when,
-			card: c.card || tab.card,
-		}));
-		const rest = c.fields.filter(
-			f => !c.tabs!.some(tab => tab.fields.includes(f.handle)),
-		);
-		return rest.length
-			? [
-					...byTab,
-					{
-						name: t('setup.other'),
-						fields: rest,
-						when: undefined,
-						card: false,
-					},
-				]
-			: byTab;
-	});
+	const groups = $derived(fieldGroups(c));
 
 	// the open fields, the one of the url's anchor too (#field-intro)
 	let open = $state<string[]>(
@@ -115,10 +85,7 @@
 									<dt>{o.name}</dt>
 									<dd>
 										{#if o.links?.length}
-											{#each o.links as l, k (l.href)}
-												{k ? ', ' : ''}
-												<a href={l.href}>{l.text}</a>
-											{/each}
+											<Links links={o.links} />
 										{:else if o.name === 'GraphQL'}
 											<code>{o.value}</code>
 										{:else}

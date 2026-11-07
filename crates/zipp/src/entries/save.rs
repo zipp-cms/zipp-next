@@ -73,10 +73,7 @@ pub(crate) fn check(
 	if title.is_empty() {
 		errors.push(FieldError::new("title", "is required"));
 	}
-	let slug = match input.slug.trim() {
-		"" => slugify(&title),
-		s => slugify(s),
-	};
+	let slug = slug_of(&input.slug, &title);
 	// a title of only signs makes none, the uri would be the parent's (or
 	// the home page's)
 	if slug.is_empty() && !title.is_empty() {
@@ -288,7 +285,7 @@ pub(crate) fn write(
 /// them. What the user `user_id` may not view counts as deleted, so a
 /// save tells nothing about hidden sections or assets; what it linked to
 /// `before` stays, someone who sees it chose it.
-pub(crate) fn check_relations(
+fn check_relations(
 	conn: &Connection,
 	schema: &Schema,
 	ty: &str,
@@ -300,22 +297,23 @@ pub(crate) fn check_relations(
 	let user = crate::auth::user_of(conn, user_id)?;
 	let mut gone = vec![];
 	for rel in relations(schema, comp, fields) {
-		let (kind, sql) = match rel.target {
-			Target::Entries { .. } => (
-				LinkKind::Entry,
-				"SELECT section, author_id FROM entries
-				WHERE id = ?1 AND deleted_at IS NULL",
-			),
-			Target::Assets { .. } => (
-				LinkKind::Asset,
-				"SELECT '', NULL FROM assets
-				WHERE id = ?1 AND deleted_at IS NULL",
-			),
+		let kind = match rel.target {
+			Target::Entries { .. } => LinkKind::Entry,
+			Target::Assets { .. } => LinkKind::Asset,
 		};
 		for id in rel.ids {
-			let found: Option<(String, Option<i64>)> = conn
-				.query_row(sql, [id], |r| Ok((r.get(0)?, r.get(1)?)))
-				.optional()?;
+			let found = match kind {
+				LinkKind::Entry => find_owner(conn, id)?,
+				// an asset has no section or author
+				_ => conn
+					.query_row(
+						"SELECT '', NULL FROM assets
+						WHERE id = ?1 AND deleted_at IS NULL",
+						[id],
+						|r| Ok((r.get(0)?, r.get(1)?)),
+					)
+					.optional()?,
+			};
 			let visible = found.is_some_and(|(s, a)| match (&user, kind) {
 				(None, _) => true,
 				_ if before.contains(&(kind, id)) => true,
@@ -409,8 +407,32 @@ fn linked(conn: &Connection, id: i64) -> Result<Vec<(LinkKind, i64)>> {
 	Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
+/// The values of the fields of a component (the asset or user fields)
+/// cleaned up, or what is wrong with them; nothing to keep without the
+/// component. `old` are the values before, see [`check_relations`].
+pub(crate) fn check_fields(
+	conn: &Connection,
+	schema: &Schema,
+	handle: &str,
+	fields: &Value,
+	old: &Value,
+	user_id: Option<i64>,
+) -> Result<Value> {
+	let Some(comp) = schema.get(handle) else {
+		return Ok(Value::Object(Default::default()));
+	};
+	let mut fields = validate(schema, comp, fields).map_err(Error::Invalid)?;
+	let before = links_of(schema, comp, old);
+	let errors =
+		check_relations(conn, schema, handle, &mut fields, user_id, &before)?;
+	if !errors.is_empty() {
+		return Err(Error::Invalid(errors));
+	}
+	Ok(fields)
+}
+
 /// The links of field values, the `before` of [`check_relations`].
-pub(crate) fn links_of(
+fn links_of(
 	schema: &Schema,
 	comp: &Component,
 	fields: &Value,
@@ -427,9 +449,8 @@ pub(crate) fn links_of(
 }
 
 /// Whether a filename ends with one of the extensions (lowercase).
-pub(crate) fn has_extension(filename: &str, extensions: &[String]) -> bool {
-	let ext = filename.rsplit_once('.').map(|(_, e)| e.to_lowercase());
-	ext.is_some_and(|e| extensions.contains(&e))
+fn has_extension(filename: &str, extensions: &[String]) -> bool {
+	crate::assets::extension(filename).is_some_and(|e| extensions.contains(&e))
 }
 
 /// Rewrites the index rows of every entry that isn't in the trash, in

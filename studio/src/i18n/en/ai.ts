@@ -1,5 +1,6 @@
 export default {
 	'ai.title': 'AI',
+	'ai.notForRole': 'Your role has no AI',
 	'ai.width': 'Width of the chat',
 	'ai.startOver': 'Start over, this chat is only kept in this tab',
 	'ai.newChat': 'New chat',

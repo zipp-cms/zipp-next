@@ -51,11 +51,14 @@
 									message: t('shell.fileDeleted'),
 								},
 					);
-		load.catch((e): Loaded => ({ kind: 'error', message: e.message }))
-			// only for what is still open
-			.then(l => {
-				if (flyout.open === open) loaded = l;
-			});
+		// only the newest: another one opened, another site
+		let stale = false;
+		load.catch((e): Loaded => ({ kind: 'error', message: e.message })).then(
+			l => {
+				if (!stale) loaded = l;
+			},
+		);
+		return () => (stale = true);
 	});
 </script>
 

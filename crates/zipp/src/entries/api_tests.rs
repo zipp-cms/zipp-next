@@ -346,7 +346,8 @@ async fn lists_tell_nothing_of_hidden_sections() {
 #[tokio::test]
 async fn lists_of_several_sections_and_related_entries() {
 	let schema = site_with_roles()
-		.role(Role::new("reader", "Reader").section("pages", Access::View));
+		.role(Role::new("reader", "Reader").section("pages", Access::View))
+		.role(Role::new("lister", "Lister").section("events", Access::View));
 	let ts = TestServer::new(schema);
 	let admin = ts.admin();
 	let page = admin
@@ -373,6 +374,15 @@ async fn lists_of_several_sections_and_related_entries() {
 	assert_eq!(admin.call(&related).await.unwrap().total, 1);
 	let reader = ts.user(Some("reader"));
 	assert_eq!(reader.call(&related).await.unwrap().total, 0);
+
+	// nor of the page through the events that point to it
+	let lister = ts.user(Some("lister"));
+	let id = page.id.to_string();
+	for p in [("relatedTo", &id), ("related", &id), ("r.page", &id)] {
+		let events = params(&[("section", "events"), (p.0, p.1)]);
+		assert_eq!(admin.call(&events).await.unwrap().total, 1, "{p:?}");
+		assert_eq!(lister.call(&events).await.unwrap().total, 0, "{p:?}");
+	}
 }
 
 #[tokio::test]

@@ -5,7 +5,7 @@
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 
-use crate::content::FieldError;
+use crate::content::{FieldError, valid_email};
 use crate::db::now;
 use crate::error::{Error, Result};
 use crate::schema::Schema;
@@ -118,7 +118,14 @@ pub fn check(
 		params![email, id],
 		|r| r.get(0),
 	)?;
-	if !email.contains('@') {
+	// the one the user has stays, also one the cli took (`a@localhost`)
+	let kept: bool = conn.query_row(
+		"SELECT EXISTS (SELECT 1 FROM users WHERE id = ?1 AND email = ?2)",
+		params![id, email],
+		|r| r.get(0),
+	)?;
+	// one address: mails of the account go to it, and to no one else
+	if !kept && !valid_email(email) {
 		error("email", "An email address");
 	} else if taken {
 		error("email", "Another user has this email");

@@ -272,7 +272,7 @@ export type Schema = {
 	/** the models of the AI chat, empty if it is off */
 	aiModels: { id: string; name: string }[];
 	/** markdown files of the code, read only, as html */
-	docs: { handle: string; name: string; html: string }[];
+	docs: Doc[];
 };
 
 export type Block = {
@@ -364,6 +364,8 @@ export function entryUrl(
 /** What a role may do, each level includes the ones before. */
 export type Access = 'view' | 'edit' | 'publish' | 'delete';
 
+export type Doc = { handle: string; name: string; html: string };
+
 export type Role = {
 	handle: string;
 	name: string;
@@ -416,6 +418,30 @@ export function sectionOf(schema: Schema, handle: string): Section | undefined {
 
 export function sectionName(schema: Schema, handle: string): string {
 	return sectionOf(schema, handle)?.name ?? handle;
+}
+
+export function roleOf(
+	schema: Schema,
+	handle: string | null | undefined,
+): Role | undefined {
+	return schema.roles.find(r => r.handle === handle);
+}
+
+/** A doc of the code, it has a page in the nav like a section. */
+export function docOf(schema: Schema, handle: string): Doc | undefined {
+	return schema.docs.find(d => d.handle === handle);
+}
+
+/** The uri of an entry type in a section: its own, the site's or the section's. */
+export function uriOf(
+	section: Section,
+	type: string,
+	site?: string,
+): string | null {
+	const own = section.type_uris?.[type];
+	if (own !== undefined) return own;
+	const inSite = site ? section.site_uris?.[site] : undefined;
+	return inSite ?? section.uri ?? null;
 }
 
 /** Whether the entries of a section have pages: a uri, or one of a type. */
