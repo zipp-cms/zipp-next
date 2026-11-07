@@ -191,6 +191,16 @@
 			</div>
 		</Popover>
 	{/if}
+	{#if opts.buttons}
+		<button
+			type="button"
+			title={t('fields.insertButton')}
+			aria-label={t('fields.insertButton')}
+			onclick={() => insertButton(editor)}
+		>
+			<Icon name="button" />
+		</button>
+	{/if}
 	{#if opts.buttons || blockTypes.length}
 		<span class="toolbar-sep"></span>
 		<Popover

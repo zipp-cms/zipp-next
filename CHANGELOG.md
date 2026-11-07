@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A rich text with buttons has a button icon in its toolbar, next to
+  the link, that inserts a button; the Insert menu keeps it too.
 - An old revision shows the entry type's tabs like the editor, opens
   on the editor's tab and has a dot on the tabs it changed.
 - Live preview also for a new entry of a section with pages: the button

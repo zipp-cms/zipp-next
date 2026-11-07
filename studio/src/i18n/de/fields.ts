@@ -53,6 +53,7 @@ export default {
 	'fields.link': 'Link',
 	'fields.insert': 'Einfügen',
 	'fields.button': 'Button',
+	'fields.insertButton': 'Button einfügen',
 	'fields.writePlaceholder': 'Schreiben …',
 	'fields.continueWriting': 'Weiterschreiben …',
 	'fields.addLineAbove': 'Zeile darüber einfügen',

@@ -50,6 +50,7 @@ export default {
 	'fields.link': 'Link',
 	'fields.insert': 'Insert',
 	'fields.button': 'Button',
+	'fields.insertButton': 'Insert a button',
 	'fields.writePlaceholder': 'Write …',
 	'fields.continueWriting': 'Continue writing …',
 	'fields.addLineAbove': 'Add a line above',
