@@ -67,6 +67,10 @@ export function canAi(schema: Schema): boolean {
 	return isAdmin(schema) || !!role(schema)?.ai;
 }
 
+export function canSetup(schema: Schema): boolean {
+	return isAdmin(schema) || !!role(schema)?.setup;
+}
+
 /** The nav without the sections the role may not see, docs stay. */
 export function visibleNav(schema: Schema): NavGroup[] {
 	return navGroups(schema)

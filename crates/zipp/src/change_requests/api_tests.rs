@@ -1,6 +1,7 @@
 use super::api::*;
 use crate::error::Error;
-use crate::fixtures::site_with_roles;
+use crate::fixtures::{site, site_with_roles};
+use crate::schema::{Access, Role};
 use crate::testing::TestServer;
 
 fn page_request(text: &str) -> CreateReq {
@@ -39,6 +40,21 @@ async fn anyone_requests_a_change() {
 		ts.anonymous().call(&page_request("x")).await.unwrap_err(),
 		Error::MissingSessionToken
 	);
+}
+
+#[tokio::test]
+async fn a_role_without_setup_requests_nothing() {
+	let ts = TestServer::new(site().role(
+		Role::new("writer", "Writer")
+			.section("pages", Access::Edit)
+			.without_setup(),
+	));
+	let writer = ts.user(Some("writer"));
+	assert_eq!(
+		writer.call(&page_request("A subtitle")).await.unwrap_err(),
+		Error::Forbidden
+	);
+	assert!(ts.mails().is_empty());
 }
 
 #[tokio::test]

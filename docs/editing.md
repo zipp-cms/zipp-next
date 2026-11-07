@@ -94,7 +94,7 @@ than 30 days (`trash::KEEP_DAYS`) goes on its own. The api is the same:
 ## The content model in the studio
 
 Everyone sees it read only under
-Setup (a role only its sections, with what it may do there, and its own
+Setup (but a role made `without_setup()`; a role only its sections, with what it may do there, and its own
 role; the header shows who is logged in with which role), like Craft's settings with admin changes off: sections (kind,
 entry types, uri, and each section's entries with whether they are live
 per site and have unpublished changes), entry types and blocks with

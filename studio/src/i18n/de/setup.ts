@@ -5,6 +5,7 @@ export default {
 	'setup.setup': 'Einrichtung',
 	'setup.readOnly': 'Nur lesen, das Inhaltsmodell ist Code',
 	'setup.noSectionThere': 'Es gibt keinen Abschnitt {handle}',
+	'setup.notForRole': 'Ihre Rolle hat keine Einrichtung',
 	'setup.noEntryType': 'Kein Eintragstyp {handle}',
 	'setup.noBlock': 'Kein Block {handle}',
 	'setup.noSection': 'Kein Abschnitt {handle}',

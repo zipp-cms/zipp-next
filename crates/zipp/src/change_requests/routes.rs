@@ -21,6 +21,10 @@ async fn create_route(
 	auth: Authed,
 	Req(req): Req<CreateReq>,
 ) -> ApiResult<CreateReq> {
+	// they come from Setup
+	if !auth.can_setup(&state.schema) {
+		return Err(Error::Forbidden);
+	}
 	let (created, admins) = {
 		let conn = state.db.conn();
 		let created =

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A role can be without Setup, `Role::without_setup()`, like an editor
+  in Craft who only writes: no Setup in the sidebar, no links to it, no
+  change requests. Roles see it read only as before by default.
 - The live preview opens as wide as a phone (400px) and goes down to
   280px. The entry editor lays out by its own width (container
   queries, mixins in `vars.scss`): too narrow for the sidebar, the

@@ -2,6 +2,7 @@ export default {
 	'setup.setup': 'Setup',
 	'setup.readOnly': 'Read only, the content model is code',
 	'setup.noSectionThere': 'There is no section {handle}',
+	'setup.notForRole': 'Your role has no Setup',
 	'setup.noEntryType': 'No entry type {handle}',
 	'setup.noBlock': 'No block {handle}',
 	'setup.noSection': 'No section {handle}',

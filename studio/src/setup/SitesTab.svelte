@@ -71,6 +71,7 @@
 				...sections.map(s => s.name),
 				t('setup.assets'),
 				t('setup.ai'),
+				t('setup.setup'),
 			]}
 		>
 			{#snippet row(r)}
@@ -83,6 +84,7 @@
 				{/each}
 				<td>{accessText(r.assets)}</td>
 				<td>{r.ai ? t('common.yes') : '–'}</td>
+				<td>{r.setup ? t('common.yes') : '–'}</td>
 			{/snippet}
 		</Table>
 	</div>

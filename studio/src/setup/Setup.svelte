@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import { sectionOf, type Schema as SchemaT } from '../core/schema';
 	import { listEntries } from '../entries/api';
-	import { isAdmin } from '../core/access';
+	import { canSetup, isAdmin } from '../core/access';
 	import { listRequests } from './api';
 	import { entryCounts } from './setup';
 	import { t } from '../i18n/index.svelte';
@@ -15,6 +15,7 @@
 		tab?: string;
 		handle?: string;
 	}) {
+		if (!canSetup(props.schema)) throw new Error(t('setup.notForRole'));
 		const tab = props.tab ?? 'overview';
 		if (tab === 'requests') return { requests: await listRequests() };
 		if (tab === 'overview') {

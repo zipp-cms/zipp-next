@@ -79,6 +79,10 @@ impl Authed {
 		self.admin() || self.role(schema).is_some_and(|r| r.ai)
 	}
 
+	pub fn can_setup(&self, schema: &Schema) -> bool {
+		self.admin() || self.role(schema).is_some_and(|r| r.setup)
+	}
+
 	/// [`Authed::can`] as an error, for a section that comes with the
 	/// request.
 	pub fn check(

@@ -342,6 +342,8 @@ export type Role = {
 	sections: Record<string, Access>;
 	assets: Access | null;
 	ai: boolean;
+	/** the content model read only under Setup */
+	setup: boolean;
 };
 
 /** Lookups in the schema by handle. */

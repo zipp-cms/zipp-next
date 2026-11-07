@@ -35,6 +35,14 @@ pub struct Role {
 	pub assets: Option<Access>,
 	/// the AI chat; it can do what the role can
 	pub ai: bool,
+	/// the content model read only under Setup, where the role also asks
+	/// admins for changes
+	#[serde(default = "yes")]
+	pub setup: bool,
+}
+
+fn yes() -> bool {
+	true
 }
 
 impl Role {
@@ -45,6 +53,7 @@ impl Role {
 			sections: BTreeMap::new(),
 			assets: None,
 			ai: false,
+			setup: true,
 		}
 	}
 
@@ -71,6 +80,12 @@ impl Role {
 
 	pub fn ai(mut self) -> Self {
 		self.ai = true;
+		self
+	}
+
+	/// Hides Setup, like Craft's settings for an editor who only writes.
+	pub fn without_setup(mut self) -> Self {
+		self.setup = false;
 		self
 	}
 }

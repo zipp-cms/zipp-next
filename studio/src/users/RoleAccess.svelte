@@ -5,7 +5,7 @@
 	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
 
-	/** What a role may do, from the code: per section, assets, AI. */
+	/** What a role may do, from the code: per section, assets, AI, Setup. */
 	let { schema, role }: { schema: Schema; role: string | null } = $props();
 
 	const def = $derived(schema.roles.find(r => r.handle === role));
@@ -26,6 +26,8 @@
 		<dd>{accessText(def.assets)}</dd>
 		<dt>{t('users.ai')}</dt>
 		<dd>{def.ai ? t('common.yes') : '–'}</dd>
+		<dt>{t('users.setup')}</dt>
+		<dd>{def.setup ? t('common.yes') : '–'}</dd>
 	</dl>
 	<p class="note">
 		<Sentence key="users.levels" params={{ setup: t('users.setup') }}>

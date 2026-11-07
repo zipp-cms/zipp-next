@@ -157,7 +157,7 @@ What the owner decided, so it doesn't get asked again:
 
 - The content model is code, also roles, SEO defaults, translations keys,
   offline sites and image widths. Editors change content, never the model;
-  they see the model read only under Setup.
+  they see the model read only under Setup (a role can be without it).
 - Everything editors change has drafts, revisions and previews, also
   globals, translations and the SEO settings (they are singles).
 - zipp replaces Craft behind crelte frontends. GraphQL answers in Craft's

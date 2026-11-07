@@ -5,6 +5,7 @@
 	import {
 		canAi,
 		canAssets,
+		canSetup,
 		canTrash,
 		hasAgent,
 		isAdmin,
@@ -111,7 +112,8 @@
 			</a>
 		{/if}
 		<hr />
-		<!-- read only for everyone, a role sees its part -->
+		<!-- read only, a role sees its part (unless it has no Setup) -->
+		{#if canSetup(schema)}
 		<a
 			class="item nav-item"
 			href="/admin/setup"
@@ -132,6 +134,7 @@
 					</a>
 				{/each}
 			</div>
+		{/if}
 		{/if}
 		{#if isAdmin(schema)}
 			<a

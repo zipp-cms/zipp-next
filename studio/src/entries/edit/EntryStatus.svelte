@@ -3,6 +3,7 @@
 	import Switch from 'zipp-ui/Switch.svelte';
 	import { dateState } from '../api';
 	import { shortTime } from '../../core/format';
+	import { canSetup } from '../../core/access';
 	import { setupPath } from '../../core/paths';
 	import SiteBadges from '../SiteBadges.svelte';
 	import { componentName, siteName } from '../../core/schema';
@@ -167,7 +168,7 @@ discarding or restoring: what is typed then would be lost -->
 						</option>
 					{/each}
 				</select>
-			{:else}
+			{:else if canSetup(schema)}
 				<a
 					class="value"
 					href={setupPath('types', comp.handle)}
@@ -175,6 +176,8 @@ discarding or restoring: what is typed then would be lost -->
 				>
 					{comp.name}
 				</a>
+			{:else}
+				<span class="value">{comp.name}</span>
 			{/if}
 		</label>
 
