@@ -12,6 +12,9 @@
   pages; logged in website users edit their own profile with `PUT
   /site-auth/me`. The studio's user page edits the profile, a token can
   read users.
+- An icon next to the site at the top of the sidebar opens the website
+  of the site the studio edits (its url from `--site-url`), the first
+  site's when it has none; the rest of the box still switches sites.
 - A field that takes only one type leaves the type out: relation chips
   show only the title, block rows only their summary (the type stays
   when a block has no summary). Moving a chip of a relation, which wrap

@@ -17,6 +17,7 @@ export default {
 	'shell.setupSites': 'Websites, Bildformate und Rollen',
 	'shell.menu': 'Menü',
 	'shell.site': 'Website',
+	'shell.openWebsite': 'Website öffnen',
 	'shell.development': 'Entwicklung',
 	'shell.production': 'Produktion',
 	'shell.offline': 'offline',

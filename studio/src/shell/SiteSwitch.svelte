@@ -4,52 +4,98 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { t } from '../i18n/index.svelte';
 
-	/** The site the studio edits, and where it runs; the box opens a choice. */
+	/**
+	 * The site the studio edits, and where it runs; the box opens a
+	 * choice, the icon next to it the website of that site.
+	 */
 	let { schema }: { schema: Schema } = $props();
 
 	const current = $derived(siteOf(schema, site.current));
+	const url = $derived(
+		schema.siteUrls[site.current] ??
+			schema.siteUrls[schema.sites[0]?.handle],
+	);
 	const offline = (handle: string) => schema.offline.includes(handle);
 </script>
 
-<label class="site-switch" title={t('shell.site')}>
-	<span class="mark">{(current?.name ?? '?')[0]}</span>
-	<span class="name">
-		<strong class="truncate">{current?.name}</strong>
-		<small>
-			{schema.dev
-				? t('shell.development')
-				: t('shell.production')}{offline(site.current)
-				? ' · ' + t('shell.offline')
-				: ''}
-		</small>
-	</span>
-	{#if schema.sites.length > 1}
-		<Icon name="chevrons-up-down" />
-		<select
-			value={site.current}
-			onchange={e => setSite(e.currentTarget.value)}
+<div class="site-switch">
+	<label class="choice" title={t('shell.site')}>
+		<span class="mark">{(current?.name ?? '?')[0]}</span>
+		<span class="name">
+			<strong class="truncate">{current?.name}</strong>
+			<small>
+				{schema.dev
+					? t('shell.development')
+					: t('shell.production')}{offline(site.current)
+					? ' · ' + t('shell.offline')
+					: ''}
+			</small>
+		</span>
+		{#if schema.sites.length > 1}
+			<Icon name="chevrons-up-down" />
+			<select
+				value={site.current}
+				onchange={e => setSite(e.currentTarget.value)}
+			>
+				{#each schema.sites as s (s.handle)}
+					<option value={s.handle}>
+						{s.name}{offline(s.handle)
+							? ` (${t('shell.offline')})`
+							: ''}
+					</option>
+				{/each}
+			</select>
+		{/if}
+	</label>
+	{#if url}
+		<a
+			class="open"
+			href={url}
+			target="_blank"
+			rel="noopener"
+			title={t('shell.openWebsite')}
+			aria-label={t('shell.openWebsite')}
 		>
-			{#each schema.sites as s (s.handle)}
-				<option value={s.handle}>
-					{s.name}{offline(s.handle)
-						? ` (${t('shell.offline')})`
-						: ''}
-				</option>
-			{/each}
-		</select>
+			<Icon name="external" />
+		</a>
 	{/if}
-</label>
+</div>
 
 <style lang="scss">
 	.site-switch {
-		position: relative;
 		display: flex;
 		align-items: center;
-		gap: 0.625rem;
-		padding: 0.5rem 0.625rem;
+		gap: 0.25rem;
+		padding: 0.5rem 0.375rem 0.5rem 0.625rem;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
 		color: var(--muted);
+	}
+
+	.choice {
+		position: relative;
+		display: flex;
+		flex: 1;
+		align-items: center;
+		gap: 0.625rem;
+		min-width: 0;
+	}
+
+	.open {
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		width: 2rem;
+		height: 2rem;
+		border-radius: var(--radius);
+		color: var(--muted);
+
+		@include hover {
+			&:hover {
+				background: var(--hover);
+				color: var(--text);
+			}
+		}
 	}
 
 	.mark {
@@ -81,7 +127,7 @@
 		}
 	}
 
-	// the whole box opens the choice
+	// the box but the icon opens the choice
 	select {
 		position: absolute;
 		inset: 0;
