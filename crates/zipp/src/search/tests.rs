@@ -53,6 +53,20 @@ fn collects_the_texts_of_blocks_groups_and_rich_text() {
 }
 
 #[test]
+fn leaves_out_switched_off_blocks() {
+	let s = site_with_roles();
+	let block = |id: &str, text: &str, enabled: bool| {
+		json!({ "id": id, "type": "text", "enabled": enabled,
+			"fields": { "content": text } })
+	};
+	let fields = json!({
+		"body": [block("a", "Shown", true), block("b", "Secret", false)],
+	});
+	let comp = s.entry_type("page").unwrap();
+	assert_eq!(texts(&s, comp, &fields), "Shown");
+}
+
+#[test]
 fn collects_the_text_columns_of_tables() {
 	use crate::schema::{Column, Field};
 	let s = site_with_roles().entry(

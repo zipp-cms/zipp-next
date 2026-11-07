@@ -73,6 +73,8 @@ pub(crate) struct Inner<'a> {
 	pub comp: &'a Component,
 	pub fields: &'a Value,
 	pub at: Option<String>,
+	/// a block switched off (`"enabled": false`) isn't on the website
+	pub enabled: bool,
 }
 
 impl Inner<'_> {
@@ -99,6 +101,7 @@ pub(crate) fn inner<'a>(
 			comp,
 			fields: &b["fields"],
 			at: Some(at),
+			enabled: b["enabled"] != false,
 		})
 	};
 	match field.kind.holds() {
@@ -133,6 +136,7 @@ pub(crate) fn inner<'a>(
 				comp,
 				fields: value,
 				at: None,
+				enabled: true,
 			})
 			.into_iter()
 			.collect(),
