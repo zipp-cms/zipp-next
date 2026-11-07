@@ -5,6 +5,8 @@
 
 use serde_json::{Value, json};
 
+use crate::html::attr;
+
 #[derive(Debug, PartialEq)]
 enum Node {
 	Element {
@@ -65,7 +67,7 @@ fn parse(html: &str) -> Vec<Node> {
 
 		let tag = tag.trim_end_matches('/');
 		let (name, attrs) = match tag.split_once(char::is_whitespace) {
-			Some((n, a)) => (n, parse_attrs(a)),
+			Some((n, a)) => (n, attributes(a)),
 			None => (tag, vec![]),
 		};
 		let name = name.to_ascii_lowercase();
@@ -86,6 +88,12 @@ fn parse(html: &str) -> Vec<Node> {
 	stack.pop().unwrap().2
 }
 
+/// The attributes of a tag with their entities decoded.
+fn attributes(s: &str) -> Vec<(String, String)> {
+	let attrs = crate::html::attributes(s).into_iter();
+	attrs.map(|(n, v)| (n, decode(v))).collect()
+}
+
 fn close(stack: &mut Vec<Open>) {
 	let (name, attrs, children) = stack.pop().unwrap();
 	stack.last_mut().unwrap().2.push(Node::Element {
@@ -93,37 +101,6 @@ fn close(stack: &mut Vec<Open>) {
 		attrs,
 		children,
 	});
-}
-
-fn parse_attrs(mut s: &str) -> Vec<(String, String)> {
-	let mut out = vec![];
-	loop {
-		s = s.trim_start();
-		let end = s
-			.find(|c: char| c == '=' || c.is_whitespace())
-			.unwrap_or(s.len());
-		if end == 0 {
-			break;
-		}
-		let name = s[..end].to_ascii_lowercase();
-		s = s[end..].trim_start();
-
-		let Some(after) = s.strip_prefix('=') else {
-			out.push((name, String::new()));
-			continue;
-		};
-		let after = after.trim_start();
-		let (value, rest) = match after.chars().next() {
-			Some(q @ ('"' | '\'')) => {
-				let inner = &after[1..];
-				inner.split_once(q).unwrap_or((inner, ""))
-			}
-			_ => after.split_once(char::is_whitespace).unwrap_or((after, "")),
-		};
-		out.push((name, decode(value)));
-		s = rest;
-	}
-	out
 }
 
 fn decode(s: &str) -> String {
@@ -264,13 +241,6 @@ fn blocks(nodes: &[Node]) -> Vec<Value> {
 	}
 	flush(&mut inline, &mut out);
 	out
-}
-
-fn attr<'a>(attrs: &'a [(String, String)], name: &str) -> Option<&'a str> {
-	attrs
-		.iter()
-		.find(|(n, _)| n == name)
-		.map(|(_, v)| v.as_str())
 }
 
 /// Text and line breaks with their marks; white space collapses like in

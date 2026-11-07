@@ -61,6 +61,7 @@ pub mod error;
 #[cfg(test)]
 mod fixtures;
 pub mod graphql;
+mod html;
 pub mod mail;
 pub mod migrate;
 mod plugin;
