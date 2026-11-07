@@ -43,6 +43,12 @@ import { slugify } from '../../core/format';
 import { depths } from '../../core/tree';
 import { t } from '../../i18n/index.svelte';
 
+/** A value that is no content: empty, or the type's default. */
+function isEmpty(v: unknown, def: unknown): boolean {
+	const c = JSON.stringify(clean(v));
+	return c === 'null' || c === JSON.stringify(clean(def));
+}
+
 /** What the role may do with the entry; the server checks it too. */
 export type May = { edit: boolean; publish: boolean; delete: boolean };
 
@@ -115,6 +121,11 @@ export class EntryEditor {
 	/** someone else changed the draft, nothing is saved until resolved */
 	conflict = $state('');
 
+	/** the values of each type the editor had, see `changeType` */
+	#byType: Record<string, Values> = {};
+	/** a new entry as it opened, see `blank` */
+	#opened: SiteDoc | null = null;
+
 	/** the site it edits, the one of the start: the site may switch */
 	readonly site: string;
 
@@ -181,6 +192,7 @@ export class EntryEditor {
 		const sec = sectionOf(schema, ed.sec);
 		ed.ty = sec?.types[0] ?? '';
 		ed.fields = defaults(schema, ed.ty);
+		ed.#opened = ed.doc;
 		ed.saver.saved();
 		if (sec?.kind === 'structure') await ed.loadParents();
 		return ed;
@@ -286,35 +298,54 @@ export class EntryEditor {
 
 	/**
 	 * Another type of the section, like Craft's: a field with the same
-	 * handle and kind keeps its content, the others go, after asking.
-	 * The draft converts the other sites the same way. Whether it changed.
+	 * handle and kind keeps its content, the others go, without asking.
+	 * The draft converts the other sites the same way; the live entry and
+	 * the revisions keep the old type, discarding or restoring brings it
+	 * back. While the editor is open each type keeps its values: back to
+	 * a type, they are there again.
 	 */
-	changeType(to: string): boolean {
+	changeType(to: string) {
 		const from = componentOf(this.schema, this.ty);
 		const into = componentOf(this.schema, to);
-		if (!into || to === this.ty) return false;
+		if (!into || to === this.ty) return;
 		const kept = (handle: string) => {
 			const a = from?.fields.find(f => f.handle === handle);
 			const b = into.fields.find(f => f.handle === handle);
 			return !!a && !!b && sameKind(a, b);
 		};
-		const values = (clean($state.snapshot(this.fields)) ?? {}) as Values;
-		const lost = Object.keys(values)
-			.filter(h => !kept(h))
-			.map(h => from?.fields.find(f => f.handle === h)?.label ?? h);
-		const question = t('entries.confirmType', {
-			type: into.name,
-			fields: lost.join(', '),
-		});
-		if (lost.length && !confirm(question)) return false;
-		this.fields = Object.fromEntries(
-			Object.entries(this.fields).filter(([h]) => kept(h)),
+		const fields = $state.snapshot(this.fields) as Values;
+		this.#byType[this.ty] = fields;
+
+		// a default of the new type replaces an empty value or the old
+		// type's default
+		const before = defaults(this.schema, this.ty);
+		const after = defaults(this.schema, to);
+		const taken = Object.entries(fields).filter(
+			([h, v]) => kept(h) && !(h in after && isEmpty(v, before[h])),
 		);
-		// a new entry starts with the defaults of the other type
-		if (this.id === null)
-			this.fields = { ...defaults(this.schema, to), ...this.fields };
+		const theirs = Object.entries(this.#byType[to] ?? {}).filter(
+			([h]) => !kept(h),
+		);
+		this.fields = {
+			...after,
+			...Object.fromEntries(theirs),
+			...Object.fromEntries(taken),
+		};
 		this.ty = to;
-		return true;
+	}
+
+	/**
+	 * A new entry with nothing but its type's defaults: leaving it loses
+	 * nothing.
+	 */
+	get blank(): boolean {
+		if (!this.#opened) return false;
+		const empty = {
+			...this.#opened,
+			type: this.ty,
+			fields: defaults(this.schema, this.ty),
+		};
+		return docChanges(empty, this.doc).size === 0;
 	}
 
 	/**

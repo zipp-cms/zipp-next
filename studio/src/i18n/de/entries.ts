@@ -77,8 +77,6 @@ export default {
 		'während Sie bearbeitet haben. Ihre letzten Änderungen sind noch nicht gespeichert.',
 	'entries.loadTheirs': 'Deren Änderungen laden',
 	'entries.keepMine': 'Meine behalten',
-	'entries.confirmType':
-		'Den Eintragstyp zu {type} ändern? Er hat kein Feld wie {fields}: deren Inhalt wird in jeder Website entfernt.',
 
 	// status and sidebar
 	'entries.publishedIn': 'Veröffentlicht in {site}',

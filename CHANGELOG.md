@@ -12,6 +12,13 @@
   pages; logged in website users edit their own profile with `PUT
   /site-auth/me`. The studio's user page edits the profile, a token can
   read users.
+- Changing an entry's type asks nothing anymore: fields of the same
+  handle and kind stay, the type's defaults fill what is empty, and
+  while the editor is open each type keeps its values, so switching
+  back brings them again. Of a saved entry the change is in the draft:
+  Discard or an older revision bring back the old type with every
+  field. A new entry with only its type's defaults has no content,
+  leaving it doesn't ask.
 - A narrow editor (a phone, or next to a wide live preview) has a ⋯
   menu in its bar with "Copy content from <site>" and Move to the
   trash, instead of the copy card at the end of the page.

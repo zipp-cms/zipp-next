@@ -163,11 +163,7 @@ discarding or restoring: what is typed then would be lost -->
 			{#if secDef.types.length > 1}
 				<select
 					value={ed.ty}
-					onchange={e => {
-						// asked first when content would go
-						if (!ed.changeType(e.currentTarget.value))
-							e.currentTarget.value = ed.ty;
-					}}
+					onchange={e => ed.changeType(e.currentTarget.value)}
 				>
 					{#each secDef.types as ty (ty)}
 						<option value={ty}>
