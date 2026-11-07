@@ -68,8 +68,8 @@ A component imports nothing of the studio.
 
 ## Versions
 
-zipp-ui has the version of zipp, a module built with zipp-ui 0.1 runs
-in the studio of zipp 0.1. Before 1.0 a new minor version (0.2) may
+zipp-ui has the version of zipp, a module built with zipp-ui 0.2 runs
+in the studio of zipp 0.2. Before 1.0 a new minor version (0.3) may
 break modules: the exports and their props, `zipp-ui/field` and the
 CSS variables and classes above. A patch version doesn't.
 

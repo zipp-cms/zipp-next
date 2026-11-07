@@ -23,6 +23,7 @@ zipp = { package = "zipp-cms", version = "0.2" }
 # plugins, if the site wants them
 zipp-seo = "0.2"
 zipp-forms = "0.2"
+zipp-members = "0.2"
 
 [dev-dependencies]
 # zipp::testing for the site's own tests
