@@ -17,7 +17,7 @@ use crate::content::{
 	with_defaults,
 };
 use crate::db::{marks, now};
-use crate::drafts::record_revision;
+use crate::drafts::{keep_live, record_revision};
 use crate::entries::query::Query;
 use crate::error::{Error, Result};
 use crate::schema::Access;

@@ -14,6 +14,9 @@ pub fn save(
 ) -> Result<Entry> {
 	let c = check(conn, schema, id, input, user_id)?;
 	let tx = conn.unchecked_transaction()?;
+	if let Some(id) = id {
+		keep_live(&tx, id)?;
+	}
 	let id = write(&tx, schema, &c)?;
 	record_revision(&tx, id, user_id)?;
 	tx.commit()?;

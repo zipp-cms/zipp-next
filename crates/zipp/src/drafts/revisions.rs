@@ -75,11 +75,47 @@ pub(crate) fn record_revision(
 	id: i64,
 	user_id: Option<i64>,
 ) -> Result<()> {
-	let doc = live_doc(conn, id)?;
+	insert_revision(conn, id, &live_doc(conn, id)?, user_id, now())
+}
+
+/// Keeps the live state of an entry as a revision of no one if the newest
+/// revision isn't it (content of an import or from before revisions were
+/// kept), so the save that follows can be undone. Called before a save
+/// of an existing entry.
+pub(crate) fn keep_live(conn: &Connection, id: i64) -> Result<()> {
+	let live = live_doc(conn, id)?;
+	let newest: Option<String> = conn
+		.query_row(
+			"SELECT doc FROM revisions WHERE entry_id = ?1
+			ORDER BY id DESC LIMIT 1",
+			[id],
+			|r| r.get(0),
+		)
+		.optional()?;
+	let newest = newest.and_then(|d| serde_json::from_str::<Doc>(&d).ok());
+	if newest.as_ref() == Some(&live) {
+		return Ok(());
+	}
+
+	let updated_at: i64 = conn.query_row(
+		"SELECT updated_at FROM entries WHERE id = ?1",
+		[id],
+		|r| r.get(0),
+	)?;
+	insert_revision(conn, id, &live, None, updated_at)
+}
+
+fn insert_revision(
+	conn: &Connection,
+	id: i64,
+	doc: &Doc,
+	user_id: Option<i64>,
+	created_at: i64,
+) -> Result<()> {
 	conn.execute(
 		"INSERT INTO revisions (entry_id, doc, user_id, created_at)
 		VALUES (?1, ?2, ?3, ?4)",
-		params![id, serde_json::to_string(&doc).unwrap(), user_id, now()],
+		params![id, serde_json::to_string(doc).unwrap(), user_id, created_at],
 	)?;
 	conn.execute(
 		"DELETE FROM revisions WHERE entry_id = ?1 AND id NOT IN (

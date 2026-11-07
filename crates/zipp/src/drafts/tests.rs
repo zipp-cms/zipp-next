@@ -232,6 +232,38 @@ fn restores_a_revision_into_the_draft() {
 	assert_eq!(d.doc["de"].title, "One");
 }
 
+#[test]
+fn a_save_keeps_live_content_without_a_revision() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+	let e = save(
+		&conn,
+		&s,
+		None,
+		input("pages", "page", "Imported", json!({})),
+		None,
+	)
+	.unwrap();
+	conn.execute("DELETE FROM revisions", []).unwrap();
+	let updated_at: i64 = conn
+		.query_row("SELECT updated_at FROM entries", [], |r| r.get(0))
+		.unwrap();
+
+	let edit = input("pages", "page", "Edited", json!({}));
+	save(&conn, &s, Some(e.id), edit, None).unwrap();
+	let revs = revisions(&conn, e.id).unwrap();
+	assert_eq!(revs.len(), 2);
+	assert_eq!(revs[1].created_at, updated_at);
+	let first = get_revision(&conn, e.id, revs[1].id).unwrap();
+	assert_eq!(first["de"].title, "Imported");
+
+	// once kept, a save adds only its own
+	let edit = input("pages", "page", "Again", json!({}));
+	save(&conn, &s, Some(e.id), edit, None).unwrap();
+	assert_eq!(revisions(&conn, e.id).unwrap().len(), 3);
+}
+
 /// An admin, the maker of preview tokens.
 fn admin(conn: &Connection) -> i64 {
 	crate::users::create(conn, "admin@test.ch", "", "", None, "").unwrap()

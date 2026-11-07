@@ -100,6 +100,41 @@ async fn drafts_until_published() {
 }
 
 #[tokio::test]
+async fn content_from_before_revisions_stays_restorable() {
+	let ts = TestServer::new(site_with_roles());
+	let editor = ts.user(Some("editor"));
+	let id = create(&editor, "pages", "page").await;
+	// imported or from before revisions were kept
+	ts.state
+		.db
+		.conn()
+		.execute("DELETE FROM revisions WHERE entry_id = ?1", [id])
+		.unwrap();
+
+	editor.call(&put(id, "page", "Edited", None)).await.unwrap();
+	editor.call(&PublishReq { id }).await.unwrap();
+
+	// the content before the first edit is the oldest, of no one
+	let revs = editor.call(&RevisionsReq { id }).await.unwrap();
+	assert_eq!(revs.len(), 2);
+	let first = revs.last().unwrap();
+	assert_eq!(first.user, None);
+	assert!(revs[0].user.as_ref().unwrap().starts_with("editor"));
+	let restore = RestoreReq {
+		id,
+		rev: first.id,
+		base: None,
+	};
+	let restored = editor.call(&restore).await.unwrap();
+	assert_eq!(restored.doc["de"].title, "Start");
+
+	// the next publish has its revision already
+	editor.call(&PublishReq { id }).await.unwrap();
+	let revs = editor.call(&RevisionsReq { id }).await.unwrap();
+	assert_eq!(revs.len(), 3);
+}
+
+#[tokio::test]
 async fn two_editors_conflict() {
 	let ts = TestServer::new(site_with_roles());
 	let (a, b) = (ts.admin(), ts.admin());

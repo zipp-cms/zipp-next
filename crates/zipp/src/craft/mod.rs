@@ -25,6 +25,7 @@ use serde_json::{Map, Value, json};
 
 use crate::assets;
 use crate::db::{now, parse_iso};
+use crate::drafts::record_revision;
 use crate::entries::{self, EntryInput, next_position};
 use crate::error::{Error, Result};
 use crate::schema::{ASSET, Component, Field, FieldKind, Schema, SectionKind};
@@ -358,6 +359,7 @@ impl Importer<'_> {
 					params![ms, id],
 				)?;
 			}
+			record_revision(tx, id, None)?;
 			self.report.entries += 1;
 		}
 		Ok(())
@@ -385,6 +387,7 @@ impl Importer<'_> {
 				|r| r.get(0),
 			)?;
 			let comp = self.schema.entry_type(&section.types[0]).unwrap();
+			let mut saved = false;
 			for (craft_site, global) in per_site {
 				let Some(site) = sites.get(craft_site) else {
 					continue;
@@ -401,12 +404,16 @@ impl Importer<'_> {
 					parent_id: None,
 					fields: self.fields(comp, &global.fields),
 				};
-				if let Err(err) = save(tx, self.schema, id, input) {
-					self.skip(format!(
+				match save(tx, self.schema, id, input) {
+					Ok(()) => saved = true,
+					Err(err) => self.skip(format!(
 						"global set {handle}: {}",
 						describe(err)
-					));
+					)),
 				}
+			}
+			if saved {
+				record_revision(tx, id, None)?;
 			}
 		}
 		Ok(())

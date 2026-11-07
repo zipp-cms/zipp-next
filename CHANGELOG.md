@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Content without a revision (imported, or from before revisions were
+  kept) is kept as a revision of no one before the first save or
+  publish over it, so the original can be restored; before, the first
+  revision already held the edit. `import-craft` records the imported
+  state as the first revision.
 - A new block (also a copy, a block in a rich text) gets its id in the
   studio: it stays open after saving instead of closing when the
   content loads again.

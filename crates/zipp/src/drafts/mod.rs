@@ -43,6 +43,7 @@ pub(crate) use preview::preview;
 pub use revisions::FieldChange;
 pub use revisions::Revision;
 pub(crate) use revisions::get_revision;
+pub(crate) use revisions::keep_live;
 pub(crate) use revisions::record_revision;
 pub(crate) use revisions::restore;
 pub(crate) use revisions::revisions;
@@ -364,6 +365,7 @@ pub(crate) fn publish(
 	}
 
 	let tx = conn.unchecked_transaction()?;
+	keep_live(&tx, id)?;
 	for c in &checked {
 		write(&tx, schema, c)?;
 	}

@@ -207,6 +207,12 @@ fn imports_a_site() {
 		}])
 	);
 
+	// the imported state is the first revision, the footer's too
+	let revisions: i64 = conn
+		.query_row("SELECT COUNT(*) FROM revisions", [], |r| r.get(0))
+		.unwrap();
+	assert_eq!(revisions, 4);
+
 	// only into an empty database
 	assert!(import(&conn, &schema, files.path(), &export(), &opts).is_err());
 }
