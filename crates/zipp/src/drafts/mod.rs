@@ -21,9 +21,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::AppState;
-use crate::content::{FieldError, follow};
+use crate::content::{FieldError, follow, validate_fields};
 use crate::db::{DAY_MS, marks, now};
-use crate::entries::{Dates, Entry, EntryInput, check, get_entry, write};
+use crate::entries::{
+	Dates, Entry, EntryInput, check, get_entry, slugify, write,
+};
 use crate::error::{Error, Result};
 use crate::schema::Schema;
 
@@ -278,6 +280,9 @@ pub(super) fn check_base(
 /// `updated_at`, `None` without a draft). If someone else changed the
 /// draft since, or published or discarded it, nothing is saved: the
 /// editor sees their changes first instead of overwriting them.
+///
+/// A draft that is the live content again (a change undone) is deleted:
+/// `None`, as if there never was one (see [`same_as_live`]).
 pub fn put_draft(
 	conn: &Connection,
 	schema: &Schema,
@@ -286,7 +291,7 @@ pub fn put_draft(
 	mut content: SiteDoc,
 	base: Option<i64>,
 	user_id: Option<i64>,
-) -> Result<Draft> {
+) -> Result<Option<Draft>> {
 	if schema.get_site(site).is_none() {
 		return Err(Error::Request(format!("unknown site {site}")));
 	}
@@ -311,8 +316,50 @@ pub fn put_draft(
 	}
 	doc.insert(site.into(), content);
 
+	if same_as_live(schema, &doc, &live_doc(conn, id)?) {
+		discard(conn, id)?;
+		return Ok(None);
+	}
 	store_draft(conn, id, &doc, user_id)?;
-	Ok(get_draft(conn, id)?.unwrap())
+	get_draft(conn, id)
+}
+
+/// Whether a draft changes nothing a publish would: in every site the
+/// same type, dates (no post date keeps the live one), switch, title and
+/// slug (as a save trims and slugifies them) and the same fields once
+/// cleaned like a save does. Empty values count as none (an empty text,
+/// list, group or rich text, a null), key order doesn't matter, blocks
+/// are the same with the same ids.
+fn same_as_live(schema: &Schema, doc: &Doc, live: &Doc) -> bool {
+	let slug = |sd: &SiteDoc| match sd.slug.trim() {
+		"" => slugify(sd.title.trim()),
+		s => slugify(s),
+	};
+	// half done drafts don't validate, the errors don't matter here
+	let fields = |sd: &SiteDoc| {
+		let comp = schema.entry_type(&sd.ty)?;
+		Some(validate_fields(
+			schema,
+			comp,
+			&sd.fields,
+			"",
+			false,
+			&mut vec![],
+		))
+	};
+	let same = |a: &SiteDoc, b: &SiteDoc| {
+		a.ty == b.ty
+			&& a.dates.post_date.or(b.dates.post_date) == b.dates.post_date
+			&& a.dates.expiry_date == b.dates.expiry_date
+			&& a.published == b.published
+			&& a.title.trim() == b.title.trim()
+			&& slug(a) == slug(b)
+			&& fields(a) == fields(b)
+	};
+	doc.len() == live.len()
+		&& doc
+			.iter()
+			.all(|(site, sd)| live.get(site).is_some_and(|l| same(sd, l)))
 }
 
 /// Applies the draft to the live entry in every site and keeps a

@@ -325,9 +325,20 @@ async fn resolve_value<'a>(
 		FieldKind::ButtonGroup { options } => {
 			let option = options.into_iter().find(|o| value == o.value);
 			match option {
-				Some(o) => Ok(Some(FieldValue::value(GqlValue::from_json(
-					serde_json::to_value(o)?,
-				)?))),
+				Some(o) => {
+					// websites get the Lucide name, an svg is the studio's
+					let icon = match o.icon {
+						Some(crate::schema::Icon::Lucide(name)) => Some(name),
+						_ => None,
+					};
+					let json = serde_json::json!({
+						"value": o.value,
+						"label": o.label,
+						"color": o.color,
+						"icon": icon,
+					});
+					Ok(Some(FieldValue::value(GqlValue::from_json(json)?)))
+				}
 				None => Ok(None),
 			}
 		}
@@ -369,15 +380,17 @@ pub(super) fn entry_value(e: Entry) -> FieldValue<'static> {
 }
 
 /// The option of a button group, so a website can show its label in its
-/// color.
+/// color and with its icon (the Lucide name), each null if it has none.
 pub(super) fn button_group_option() -> Object {
 	let mut obj = Object::new("ButtonGroupOption");
-	for name in ["value", "label", "color"] {
-		obj = obj.field(GqlField::new(
-			name,
-			TypeRef::named_nn(TypeRef::STRING),
-			move |ctx| value_field(ctx, name),
-		));
+	for (name, ty) in [
+		("value", TypeRef::named_nn(TypeRef::STRING)),
+		("label", TypeRef::named_nn(TypeRef::STRING)),
+		("color", TypeRef::named(TypeRef::STRING)),
+		("icon", TypeRef::named(TypeRef::STRING)),
+	] {
+		obj = obj
+			.field(GqlField::new(name, ty, move |ctx| value_field(ctx, name)));
 	}
 	obj
 }

@@ -24,6 +24,7 @@ pub struct DraftResp {
 request!(GetReq, GET "/entries/{id}/draft" => DraftResp);
 
 /// The content of a site in the draft, saved while the editor types.
+/// `None` back: the draft was the live content again and is gone.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PutReq {
 	pub id: i64,
@@ -35,7 +36,7 @@ pub struct PutReq {
 	pub content: SiteDoc,
 }
 
-request!(PutReq, PUT "/entries/{id}/draft" => Draft);
+request!(PutReq, PUT "/entries/{id}/draft" => Option<Draft>);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DiscardReq {

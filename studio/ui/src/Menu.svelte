@@ -57,7 +57,7 @@
 </script>
 
 {#if items.length}
-	<Popover bind:open bind:at align="end" width="9.625rem" {label} menu>
+	<Popover bind:open bind:at align="end" {label} menu>
 		{#snippet trigger({ toggle, open })}
 			<button
 				type="button"
@@ -104,3 +104,11 @@
 		{/each}
 	</Popover>
 {/if}
+
+<style lang="scss">
+	// as wide as the longest item, a label stays on one line
+	.popup-item {
+		min-width: 8.625rem;
+		white-space: nowrap;
+	}
+</style>

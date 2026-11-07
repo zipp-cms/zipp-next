@@ -161,7 +161,7 @@ impl Ctx<'_> {
 		id: i64,
 		site: &str,
 		change: impl FnOnce(&mut SiteDoc) -> Result<()>,
-	) -> Result<Draft> {
+	) -> Result<Option<Draft>> {
 		let base = get_draft(self.conn, id)?.map(|d| d.updated_at);
 		let (mut content, _) = current(self.conn, id, site)?;
 		change(&mut content)?;
@@ -275,7 +275,8 @@ fn tool_update_entry(t: &Ctx, input: &Value) -> ToolResult {
 		}
 		Ok(())
 	})?;
-	let title = &draft.doc[&site].title;
+	// no draft: the change made it the live content again
+	let title = draft.as_ref().map_or(&entry.title, |d| &d.doc[&site].title);
 
 	let action = Action {
 		text: format!("Changed {title} ({site})"),
@@ -284,7 +285,8 @@ fn tool_update_entry(t: &Ctx, input: &Value) -> ToolResult {
 		url: page_url(state, &site, entry.uri.as_deref()),
 		navigate: false,
 	};
-	Ok((json!({ "ok": true, "draft": true }), Some(action)))
+	let draft = draft.is_some();
+	Ok((json!({ "ok": true, "draft": draft }), Some(action)))
 }
 
 /// A new entry, live off, its draft publishes it in every site.

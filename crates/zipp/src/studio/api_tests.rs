@@ -3,7 +3,7 @@ use axum::http::{StatusCode, header};
 use super::api::*;
 use crate::error::Error;
 use crate::fixtures::site_with_roles;
-use crate::schema::{Condition, Field, Section};
+use crate::schema::{ButtonOption, Condition, Field, Section};
 use crate::testing::TestServer;
 
 #[tokio::test]
@@ -136,7 +136,13 @@ async fn field_types_bring_their_editor() {
 		"Review",
 		[
 			Field::custom("stars", "stars", serde_json::Value::Null),
-			Field::button_group("tone", [("warm", "Warm", "#c05621")]),
+			Field::button_group(
+				"tone",
+				[
+					ButtonOption::from(("warm", "Warm", "#c05621")),
+					ButtonOption::new("cold", "Cold").icon("snowflake"),
+				],
+			),
 		],
 	);
 	let ts = TestServer::new(schema);
@@ -161,7 +167,11 @@ async fn field_types_bring_their_editor() {
 		serde_json::json!({
 			"handle": "tone", "label": "Tone", "required": false,
 			"indexed": false, "translatable": false, "kind": "buttonGroup",
-			"options": [{ "value": "warm", "label": "Warm", "color": "#c05621" }],
+			"options": [
+				{ "value": "warm", "label": "Warm", "color": "#c05621" },
+				{ "value": "cold", "label": "Cold",
+					"icon": { "lucide": "snowflake" } },
+			],
 		})
 	);
 }
@@ -172,12 +182,21 @@ async fn the_schema_brings_its_lucide_icons() {
 		.icon("event", "calendar")
 		.icon("page", "calendar")
 		.icon("text", crate::Icon::svg("<svg/>"))
-		.icon("button", "no-such-icon");
+		.icon("button", "no-such-icon")
+		.block(
+			"format",
+			"Format",
+			[Field::button_group(
+				"format",
+				[ButtonOption::new("pdf", "PDF").icon("file-text")],
+			)],
+		);
 	let ts = TestServer::new(schema);
 	let resp = ts.user(None).call_json(&SchemaReq {}).await.unwrap();
 	let icons = resp["icons"].as_object().unwrap();
-	// once each, own svgs and unknown names aren't there
-	assert_eq!(icons.keys().collect::<Vec<_>>(), ["calendar"]);
+	// once each, own svgs and unknown names aren't there; those of
+	// button groups' options too
+	assert_eq!(icons.keys().collect::<Vec<_>>(), ["calendar", "file-text"]);
 	let svg = icons["calendar"].as_str().unwrap();
 	assert!(svg.starts_with("<svg") && svg.ends_with("</svg>"), "{svg}");
 }

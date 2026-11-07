@@ -67,6 +67,11 @@ export class Sortable {
 		return this.o.depths().length > 1;
 	}
 
+	/** Whether the rows are side by side, like images. */
+	grid(): boolean {
+		return this.o.grid?.() ?? false;
+	}
+
 	/** Whether row `i` is dragged: the row itself or one under it. */
 	moving(i: number): boolean {
 		const from = this.dragging;

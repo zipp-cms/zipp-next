@@ -123,6 +123,7 @@ export class DraftSaver {
 		const ed = this.ed;
 		if (ed.id === null) return false;
 		try {
+			// null: the change was undone, no draft and nothing to publish
 			ed.draft = await putDraft(
 				ed.id,
 				ed.site,

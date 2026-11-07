@@ -11,12 +11,17 @@
 	import EntryHead from './EntryHead.svelte';
 	import { t } from '../../i18n/index.svelte';
 
-	/** An old revision, read only, with the dots of what it changed. */
+	/**
+	 * An old revision, read only, with the dots of what it changed: laid
+	 * out like the editor (title, tabs, fields) under a banner with its
+	 * date, Restore and Back to editing.
+	 */
 	let {
 		schema,
 		comp,
 		refs,
 		single,
+		global = false,
 		rev,
 		doc,
 		changed,
@@ -28,6 +33,8 @@
 		comp: Component;
 		refs: Refs;
 		single: boolean;
+		/** a global has no title, like in the editor */
+		global?: boolean;
 		rev: Revision;
 		doc: SiteDoc | null;
 		changed: Set<string>;
@@ -69,18 +76,20 @@
 	<button class="light" onclick={onback}>{t('entries.backToEditing')}</button>
 </div>
 {#if doc}
-	<!-- a disabled fieldset disables every input in it -->
-	<fieldset disabled>
-		<EntryHead title={doc.title} {changed} />
-		{#if !single}
-			<p class="slug">
-				{#if changed.has('slug')}<span
-						class="changed-dot"
-					></span>{/if}{t('entries.slug')}:
-				<code>{doc.slug}</code>
-			</p>
-		{/if}
-	</fieldset>
+	{#if !global}
+		<!-- a disabled fieldset disables every input in it -->
+		<fieldset disabled>
+			<EntryHead title={doc.title} {changed} />
+			{#if !single}
+				<p class="slug">
+					{#if changed.has('slug')}<span
+							class="changed-dot"
+						></span>{/if}{t('entries.slug')}:
+					<code>{doc.slug}</code>
+				</p>
+			{/if}
+		</fieldset>
+	{/if}
 	<!-- outside the fieldset, its buttons stay clickable -->
 	{#if tabs.shown.length}
 		<div class="tabs-row">
@@ -104,20 +113,29 @@
 {/if}
 
 <style lang="scss">
+	// a banner like the editor's conflict, in the accent
 	.viewing {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		margin-bottom: 1.5rem;
-		padding: 0.75rem 1rem;
-		background: var(--input);
+		margin-bottom: 1.25rem;
+		padding: 0.625rem 0.875rem;
+		background: var(--accent-soft);
+		border: 1px solid var(--accent-ring);
+		border-radius: var(--radius-lg);
 
 		span {
 			margin-right: auto;
 		}
+
+		small {
+			color: var(--muted);
+		}
 	}
 
 	.tabs-row {
+		display: flex;
+		align-items: center;
 		margin-bottom: 1.125rem;
 	}
 

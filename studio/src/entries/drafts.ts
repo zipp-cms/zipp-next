@@ -51,14 +51,15 @@ export function getDraftWithRefs(
 
 /**
  * `base` is the version of the draft the editor knows, a 409 means someone
- * else changed it meanwhile.
+ * else changed it meanwhile. `null` back: the draft was the live content
+ * again (a change undone), the server deleted it.
  */
 export function putDraft(
 	id: number,
 	site: string,
 	content: SiteDoc,
 	base: number | null,
-): Promise<Draft> {
+): Promise<Draft | null> {
 	return request('PUT', `/entries/${id}/draft`, { site, base, ...content });
 }
 

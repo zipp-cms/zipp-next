@@ -13,7 +13,10 @@
 	import { listSortable } from 'zipp-ui/sortable';
 	import { inserted, isFull, removed } from '../core/list';
 
-	/** Entries in an order, each a chip that opens it. */
+	/**
+	 * Entries in an order, each a compact chip that opens it, side by
+	 * side and wrapping like Craft's, the Choose button at the end.
+	 */
 	let {
 		schema,
 		field,
@@ -36,6 +39,7 @@
 		() => list,
 		() => ids,
 		set,
+		{ grid: () => true },
 	);
 
 	let picking = $state(false);
@@ -52,12 +56,14 @@
 <div class="relation" bind:this={list}>
 	{#each ids as id, i (id)}
 		<div data-sort class="item" class:sort-dragging={sort.moving(i)}>
-			<DragHandle
-				sortable={sort}
-				index={i}
-				label={t('fields.moveEntry')}
-			/>
 			<EntryChip {schema} {refs} {id}>
+				{#snippet handle()}
+					<DragHandle
+						sortable={sort}
+						index={i}
+						label={t('fields.moveEntry')}
+					/>
+				{/snippet}
 				{#snippet actions()}
 					<ItemActions
 						onremove={() => set(removed(ids, i))}
@@ -70,11 +76,9 @@
 	<SortLine sortable={sort} />
 
 	{#if !isFull(ids.length, max)}
-		<div class="choose">
-			<AddButton onclick={() => (picking = true)}>
-				{chooseLabel(schema, types)}
-			</AddButton>
-		</div>
+		<AddButton onclick={() => (picking = true)}>
+			{chooseLabel(schema, types)}
+		</AddButton>
 	{/if}
 </div>
 
@@ -92,28 +96,18 @@
 {/if}
 
 <style lang="scss">
+	// the chips side by side, wrapping, the button after the last
 	.relation {
 		position: relative;
 		display: flex;
-		flex-direction: column;
+		flex-wrap: wrap;
+		align-items: center;
 		gap: 0.375rem;
 	}
 
-	// the button further from the chips than they are from each other,
-	// none above it while the field is empty
-	.item ~ .choose {
-		margin-top: 0.375rem;
-	}
-
-	// its handle, then the chip
+	// a long title gets an ellipsis instead of a wider chip than the field
 	.item {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-
-		> :global(:last-child) {
-			flex: 1;
-			min-width: 0;
-		}
+		max-width: 100%;
+		min-width: 0;
 	}
 </style>

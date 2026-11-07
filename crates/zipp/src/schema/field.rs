@@ -20,23 +20,55 @@ impl Choice {
 	}
 }
 
-/// An option of a button group: a choice with the color of its button.
+/// An option of a button group: a choice, its button with a color, an
+/// icon, both or neither.
+/// `ButtonOption::new("pdf", "PDF").color("#2b6cb0").icon("file-text")`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct ColorChoice {
+pub struct ButtonOption {
 	pub value: String,
 	pub label: String,
 	/// `#rrggbb`
-	pub color: String,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub color: Option<String>,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub icon: Option<Icon>,
 }
 
-impl ColorChoice {
-	pub fn new(value: &str, label: &str, color: &str) -> Self {
+impl ButtonOption {
+	pub fn new(value: &str, label: &str) -> Self {
 		Self {
 			value: value.into(),
 			label: label.into(),
-			color: color.into(),
+			color: None,
+			icon: None,
 		}
+	}
+
+	/// The color of its button, `#rrggbb`.
+	pub fn color(mut self, color: &str) -> Self {
+		self.color = Some(color.into());
+		self
+	}
+
+	/// An icon on its button, a Lucide name or [`Icon::svg`].
+	pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
+		self.icon = Some(icon.into());
+		self
+	}
+}
+
+/// Value and label, without a color.
+impl From<(&str, &str)> for ButtonOption {
+	fn from((value, label): (&str, &str)) -> Self {
+		Self::new(value, label)
+	}
+}
+
+/// Value, label and color.
+impl From<(&str, &str, &str)> for ButtonOption {
+	fn from((value, label, color): (&str, &str, &str)) -> Self {
+		Self::new(value, label).color(color)
 	}
 }
 
@@ -180,6 +212,10 @@ pub enum FieldKind {
 		blocks: Vec<String>,
 		#[serde(default, skip_serializing_if = "Vec::is_empty")]
 		styles: Vec<Style>,
+		/// the tools of the studio's bar in their order, see
+		/// [`Field::toolbar`]; none: the default bar
+		#[serde(default, skip_serializing_if = "Vec::is_empty")]
+		toolbar: Vec<String>,
 		/// only entries of these sections, none: all, see
 		/// [`Field::sections`]
 		#[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -228,12 +264,13 @@ pub enum FieldKind {
 	Dropdown {
 		options: Vec<Choice>,
 	},
-	/// One of some options like a dropdown, as buttons in the color of
-	/// each, like Craft's button group. The value is the option's value,
-	/// GraphQL gives value, label and color.
+	/// One of some options like a dropdown, as buttons with the color
+	/// and icon of each if it has them, like Craft's button group. The
+	/// value is the option's value, GraphQL gives value, label, color and
+	/// icon.
 	#[non_exhaustive]
 	ButtonGroup {
-		options: Vec<ColorChoice>,
+		options: Vec<ButtonOption>,
 	},
 	/// A list of blocks of the given types.
 	#[non_exhaustive]
@@ -410,7 +447,7 @@ impl Field {
 	}
 
 	/// Text with bold and italic, more with `headings`, `lists`, `links`,
-	/// `buttons`, `embed` and `styles`.
+	/// `buttons`, `embed`, `styles` and `toolbar`.
 	pub fn rich_text(handle: &str) -> Self {
 		Self::new(
 			handle,
@@ -421,6 +458,7 @@ impl Field {
 				buttons: false,
 				blocks: vec![],
 				styles: vec![],
+				toolbar: vec![],
 				sections: vec![],
 			},
 		)
@@ -485,6 +523,23 @@ impl Field {
 		self.rich(|k| {
 			if let FieldKind::RichText { styles, .. } = k {
 				*styles = list.into_iter().collect();
+			}
+		})
+	}
+
+	/// The studio's bar over the text, its tools in order with `|` for a
+	/// line between them: `["format", "|", "bold", "italic", "|",
+	/// "bulletList", "orderedList", "|", "link", "button",
+	/// "block:images", "insert"]`. Tools are `format` (the headings),
+	/// `styles`, `bold`, `italic`, `bulletList`, `orderedList`, `link`,
+	/// `button`, `block:<type>` (inserts a block of an embedded type,
+	/// with its icon) and `insert` (the Insert menu); each only if the
+	/// field allows it. Buttons and blocks that aren't in the bar go into
+	/// the Insert menu, which is at the end unless `insert` places it.
+	pub fn toolbar<'a>(self, tools: impl IntoIterator<Item = &'a str>) -> Self {
+		self.rich(|k| {
+			if let FieldKind::RichText { toolbar, .. } = k {
+				*toolbar = tools.into_iter().map(Into::into).collect();
 			}
 		})
 	}
@@ -554,16 +609,14 @@ impl Field {
 		)
 	}
 
-	/// One of the options as buttons in colors, given as value, label
-	/// and color: `("concert", "Konzert", "#2b6cb0")`.
-	pub fn button_group<'a>(
+	/// One of the options as buttons, given as value and label
+	/// `("pdf", "PDF")`, with a color `("concert", "Konzert", "#2b6cb0")`
+	/// or as [`ButtonOption`] with a color, an icon or both.
+	pub fn button_group(
 		handle: &str,
-		options: impl IntoIterator<Item = (&'a str, &'a str, &'a str)>,
+		options: impl IntoIterator<Item = impl Into<ButtonOption>>,
 	) -> Self {
-		let options = options
-			.into_iter()
-			.map(|(value, label, color)| ColorChoice::new(value, label, color))
-			.collect();
+		let options = options.into_iter().map(Into::into).collect();
 		Self::new(handle, FieldKind::ButtonGroup { options })
 	}
 

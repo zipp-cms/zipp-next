@@ -1200,17 +1200,26 @@
               {
                 "value": "concert",
                 "label": "Konzert",
-                "color": "#2b6cb0"
+                "color": "#2b6cb0",
+                "icon": {
+                  "lucide": "music"
+                }
               },
               {
                 "value": "reading",
                 "label": "Lesung",
-                "color": "#2f855a"
+                "color": "#2f855a",
+                "icon": {
+                  "lucide": "book-open"
+                }
               },
               {
                 "value": "theatre",
                 "label": "Theater",
-                "color": "#c05621"
+                "color": "#c05621",
+                "icon": {
+                  "lucide": "drama"
+                }
               }
             ]
           },
@@ -1522,6 +1531,20 @@
                 "label": "Highlight",
                 "inline": true
               }
+            ],
+            "toolbar": [
+              "format",
+              "styles",
+              "|",
+              "bold",
+              "italic",
+              "|",
+              "bulletList",
+              "orderedList",
+              "|",
+              "link",
+              "button",
+              "block:images"
             ]
           }
         ],
@@ -3124,17 +3147,26 @@
               {
                 "value": "concert",
                 "label": "Konzert",
-                "color": "#2b6cb0"
+                "color": "#2b6cb0",
+                "icon": {
+                  "lucide": "music"
+                }
               },
               {
                 "value": "reading",
                 "label": "Lesung",
-                "color": "#2f855a"
+                "color": "#2f855a",
+                "icon": {
+                  "lucide": "book-open"
+                }
               },
               {
                 "value": "theatre",
                 "label": "Theater",
-                "color": "#c05621"
+                "color": "#c05621",
+                "icon": {
+                  "lucide": "drama"
+                }
               }
             ]
           },
@@ -3443,6 +3475,20 @@
                 "label": "Highlight",
                 "inline": true
               }
+            ],
+            "toolbar": [
+              "format",
+              "styles",
+              "|",
+              "bold",
+              "italic",
+              "|",
+              "bulletList",
+              "orderedList",
+              "|",
+              "link",
+              "button",
+              "block:images"
             ]
           }
         ],

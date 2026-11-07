@@ -77,10 +77,15 @@ type FieldKind =
 	/** texts of the frontend by key, [key, text of the code] */
 	| { kind: 'texts'; keys: [string, string][] }
 	| { kind: 'dropdown'; options: { value: string; label: string }[] }
-	/** a dropdown as buttons in colors, `#rrggbb` */
+	/** a dropdown as buttons, each maybe with a color `#rrggbb`, an icon */
 	| {
 			kind: 'buttonGroup';
-			options: { value: string; label: string; color: string }[];
+			options: {
+				value: string;
+				label: string;
+				color?: string;
+				icon?: SchemaIcon;
+			}[];
 	  }
 	| { kind: 'checkboxes'; options: { value: string; label: string }[] }
 	| { kind: 'table'; columns: Column[] }
@@ -99,6 +104,11 @@ type FieldKind =
 			buttons: boolean;
 			blocks: string[];
 			styles?: Style[];
+			/**
+			 * the tools of the bar in order, `|` a line, `block:<type>` a
+			 * block; none: the default
+			 */
+			toolbar?: string[];
 			/** links only to entries of these sections, none: all */
 			sections?: string[];
 	  }

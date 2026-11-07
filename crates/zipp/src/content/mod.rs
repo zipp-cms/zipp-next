@@ -28,6 +28,7 @@ pub(crate) use validate::takes;
 pub(crate) use validate::valid_date;
 pub use validate::valid_email;
 pub use validate::validate;
+pub(crate) use validate::validate_fields;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FieldError {

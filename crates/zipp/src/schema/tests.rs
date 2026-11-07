@@ -627,6 +627,55 @@ fn columns_and_styles() {
 }
 
 #[test]
+fn rich_text_toolbar() {
+	let with = |tools: &[&str]| {
+		site()
+			.block("img", "Image", [Field::text("alt")])
+			.block(
+				"x",
+				"X",
+				[Field::rich_text("r")
+					.headings([2])
+					.links()
+					.buttons()
+					.embed(["img"])
+					.toolbar(tools.iter().copied())],
+			)
+			.check()
+	};
+	with(&["format", "|", "bold", "italic", "|", "link", "button"]).unwrap();
+	with(&["bold", "block:img", "|", "insert"]).unwrap();
+	with(&[]).unwrap();
+
+	let err = |tools: &[&str]| with(tools).unwrap_err();
+	assert_eq!(
+		err(&["bold", "strike"]),
+		"x.r: the toolbar has no tool strike"
+	);
+	assert_eq!(
+		err(&["bold", "bulletList"]),
+		"x.r: the toolbar's bulletList isn't allowed here"
+	);
+	assert_eq!(
+		err(&["block:text"]),
+		"x.r: the toolbar's block:text isn't allowed here"
+	);
+	assert_eq!(
+		err(&["bold", "|"]),
+		"x.r: a | of the toolbar goes between tools"
+	);
+	assert_eq!(
+		err(&["bold", "|", "|", "italic"]),
+		"x.r: a | of the toolbar goes between tools"
+	);
+	assert_eq!(err(&["bold", "bold"]), "x.r: the toolbar has bold twice");
+	assert_eq!(
+		err(&["button", "block:img", "insert"]),
+		"x.r: the toolbar's insert has nothing left to insert"
+	);
+}
+
+#[test]
 fn entries_are_saved_as_a_type_of_their_section() {
 	let s = site();
 	let (section, comp) = s.section_type("events", "event").unwrap();

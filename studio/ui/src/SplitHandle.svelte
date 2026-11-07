@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ui } from './texts.svelte';
 	import { untrack } from 'svelte';
+	import { innerWidth } from 'svelte/reactivity/window';
 
 	/**
 	 * The border between two panes, dragged or moved with the arrow keys
@@ -10,7 +11,9 @@
 	 * `end` one on the right; it sits in the pane, which is `position:
 	 * relative`. The width is kept in this browser under `key`.
 	 * `resizing` is on while it is dragged, a frame next to it may not
-	 * take the pointer.
+	 * take the pointer. `max` is the most it may take, by default 60% of
+	 * the window; when it gets less, e.g. the window narrower, the pane
+	 * shrinks and gets the stored width back once there is room.
 	 */
 	let {
 		width = $bindable(),
@@ -18,6 +21,7 @@
 		key,
 		initial,
 		min,
+		max: given,
 		side = 'start',
 		label,
 	}: {
@@ -26,21 +30,29 @@
 		key: string;
 		initial: number;
 		min: number;
+		max?: number;
 		side?: 'start' | 'end';
 		label: string;
 	} = $props();
 
-	// at most 60% of the window's width
-	const max = () => Math.max(min, Math.round(innerWidth * 0.6));
-	const clamp = (w: number) => Math.round(Math.min(Math.max(w, min), max()));
+	const max = $derived(
+		Math.max(min, Math.round(given ?? (innerWidth.current ?? 0) * 0.6)),
+	);
+	const clamp = (w: number) => Math.round(Math.min(Math.max(w, min), max));
 
-	width = untrack(() => clamp(Number(localStorage.getItem(key)) || initial));
+	// what was set last, the pane as wide as it may be of it
+	let wanted = untrack(() => Number(localStorage.getItem(key)) || initial);
+	width = untrack(() => clamp(wanted));
+	$effect(() => {
+		void max;
+		untrack(() => (width = clamp(wanted)));
+	});
 
 	// dragging to the right grows a pane on the left
 	const dir = $derived(side === 'start' ? 1 : -1);
 
 	function set(w: number) {
-		width = clamp(w);
+		width = wanted = clamp(w);
 		localStorage.setItem(key, `${width}`);
 	}
 
@@ -81,7 +93,7 @@
 	aria-label={label}
 	aria-valuenow={width}
 	aria-valuemin={min}
-	aria-valuemax={max()}
+	aria-valuemax={max}
 	tabindex="0"
 	title={ui.texts.resize}
 	{onpointerdown}

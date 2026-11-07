@@ -6,7 +6,8 @@
 
 	/**
 	 * Moves a row: drag it, or click it for a menu of the moves, or the
-	 * arrow keys while it has the focus (moving shouldn't need dragging).
+	 * arrow keys while it has the focus (moving shouldn't need dragging;
+	 * side by side left and right too).
 	 * Always there when the list has something to move it past.
 	 */
 	let {
@@ -46,8 +47,14 @@
 		open ? STEPS.filter(([s]) => sortable.stepDrop(at(), s)) : [],
 	);
 
+	// side by side, left and right move it too
+	const GRID_KEYS: Record<string, Step> = {
+		ArrowLeft: 'up',
+		ArrowRight: 'down',
+	};
+
 	function onkeydown(e: KeyboardEvent) {
-		const step = KEYS[e.key];
+		const step = (sortable.grid() && GRID_KEYS[e.key]) || KEYS[e.key];
 		if (!step) return;
 		e.preventDefault();
 		sortable.step(at(), step);

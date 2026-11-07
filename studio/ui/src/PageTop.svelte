@@ -51,6 +51,8 @@
 {/if}
 
 <style lang="scss">
+	@use '../vars' as *;
+
 	.page-top {
 		position: sticky;
 		top: 0;
@@ -87,5 +89,32 @@
 		align-items: center;
 		gap: 0.5rem;
 		margin-left: auto;
+	}
+
+	// a narrow page: one line, the crumbs shortened (see Crumbs) before
+	// the actions go to a line of their own
+	@mixin one-line {
+		h1 {
+			flex: 1 1 0;
+			min-width: 4rem;
+		}
+
+		.state {
+			flex-shrink: 0;
+		}
+
+		// the note on a line of its own under them
+		.note {
+			flex-basis: 100%;
+			order: 1;
+		}
+	}
+
+	@include container-max(36rem, page) {
+		@include one-line;
+	}
+
+	@include max-tablet {
+		@include one-line;
 	}
 </style>
