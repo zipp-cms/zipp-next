@@ -12,8 +12,8 @@
 	 * type, parent and slug, the outline of the blocks, copying from
 	 * another site and the revisions. A global has no page and is always
 	 * live, it has no status, slug or type. A `narrow` editor has the
-	 * status on top (`EntryStatus`, collapsed), the rest goes under the
-	 * content with the revisions closed.
+	 * status on top (`EntryStatus`, collapsed), copying in the bar's ⋯
+	 * menu, the rest goes under the content with the revisions closed.
 	 */
 	let {
 		schema,
@@ -35,7 +35,6 @@
 	} = $props();
 
 	const comp = $derived(ed.comp!);
-	const isNew = $derived(ed.id === null);
 	const multiSite = $derived(schema.sites.length > 1);
 
 	// the blocks fields on screen, each with its blocks
@@ -65,7 +64,8 @@
 		/>
 	{/each}
 
-	{#if !isNew && multiSite && ed.may.edit}
+	<!-- narrow: in the ⋯ menu of the bar instead -->
+	{#if ed.copySites.length && !narrow}
 		<div class="card">
 			<label>
 				<span>{t('entries.copyContent')}</span>
@@ -80,7 +80,7 @@
 					<option value="" disabled>
 						{t('entries.fromOtherSite')}
 					</option>
-					{#each schema.sites.filter(s => s.handle !== ed.site) as s (s.handle)}
+					{#each ed.copySites as s (s.handle)}
 						<option value={s.handle}>{s.name}</option>
 					{/each}
 				</select>

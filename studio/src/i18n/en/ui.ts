@@ -21,6 +21,8 @@ export default {
 	'ui.monthBefore': 'Month before',
 	'ui.move': 'Move',
 	'ui.moveDown': 'Move down',
+	'ui.moveEarlier': 'Move earlier',
+	'ui.moveLater': 'Move later',
 	'ui.moveIn': 'Move under the one above',
 	'ui.moveOut': 'Move out a level',
 	'ui.moveUp': 'Move up',

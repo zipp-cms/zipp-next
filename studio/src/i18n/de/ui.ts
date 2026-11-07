@@ -23,6 +23,8 @@ export default {
 	'ui.monthBefore': 'Vorheriger Monat',
 	'ui.move': 'Verschieben',
 	'ui.moveDown': 'Nach unten',
+	'ui.moveEarlier': 'Nach vorne',
+	'ui.moveLater': 'Nach hinten',
 	'ui.moveIn': 'Unter den vorherigen verschieben',
 	'ui.moveOut': 'Eine Ebene höher',
 	'ui.moveUp': 'Nach oben',

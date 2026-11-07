@@ -73,8 +73,6 @@ export default {
 		'while you were editing. Your last changes are not saved yet.',
 	'entries.loadTheirs': 'Load their changes',
 	'entries.keepMine': 'Keep mine',
-	'entries.confirmType':
-		'Change the type to {type}? It has no field like {fields}: their content is removed in every site.',
 
 	// status and sidebar
 	'entries.publishedIn': 'Published in {site}',
@@ -98,6 +96,7 @@ export default {
 	'entries.missing': 'Missing',
 	'entries.errors': { one: '{n} error', other: '{n} errors' },
 	'entries.copyContent': 'Copy content',
+	'entries.copyFrom': 'Copy content from {site}',
 	'entries.fromOtherSite': 'From another site…',
 
 	// revisions

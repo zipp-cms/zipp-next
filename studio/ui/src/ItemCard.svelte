@@ -21,7 +21,8 @@
 		children,
 		id,
 	}: {
-		kind: string;
+		/** none: the summary says enough, e.g. the only block type */
+		kind?: string;
 		/** before the kind, e.g. the icon of a block type */
 		kindIcon?: Snippet;
 		summary?: Snippet;
@@ -54,7 +55,9 @@
 					class="changed-dot"
 					title={ui.texts.changed}
 				></span>{/if}
-			<span class="kind">{@render kindIcon?.()}{kind}</span>
+			{#if kind}<span class="kind">
+					{@render kindIcon?.()}{kind}
+				</span>{/if}
 			{#if off}<span class="badge draft">{ui.texts.disabled}</span>{/if}
 			{#if summary}
 				<span class="summary truncate">{@render summary()}</span>

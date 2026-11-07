@@ -12,7 +12,29 @@
   pages; logged in website users edit their own profile with `PUT
   /site-auth/me`. The studio's user page edits the profile, a token can
   read users.
-
+- Changing an entry's type asks nothing anymore: fields of the same
+  handle and kind stay, the type's defaults fill what is empty, and
+  while the editor is open each type keeps its values, so switching
+  back brings them again. Of a saved entry the change is in the draft:
+  Discard or an older revision bring back the old type with every
+  field. A new entry with only its type's defaults has no content,
+  leaving it doesn't ask.
+- A narrow editor (a phone, or next to a wide live preview) has a ⋯
+  menu in its bar with "Copy content from <site>" and Move to the
+  trash, instead of the copy card at the end of the page.
+- The site box shows that it is a choice when there are several sites:
+  a hover background and a focus ring for the keyboard.
+- The site box at the top of the sidebar shows the website's favicon
+  instead of the site's first letter, the letter when it has none. The
+  cms fetches it (`GET /api/sites/{site}/favicon`, with a session) from
+  the site's url, only from that host, and keeps it an hour.
+- An icon next to the site at the top of the sidebar opens the website
+  of the site the studio edits (its url from `--site-url`), the first
+  site's when it has none; the rest of the box still switches sites.
+- A field that takes only one type leaves the type out: relation chips
+  show only the title, block rows only their summary (the type stays
+  when a block has no summary). Moving a chip of a relation, which wrap
+  side by side, says Move earlier / Move later.
 - GraphiQL has a schema picker like Craft's: an admin reads as the
   frontend of a token (its sections and sites, nothing unpublished)
   instead of the full schema.

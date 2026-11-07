@@ -178,6 +178,9 @@ pub struct AppState {
 	/// the wrong passwords of logins, see [`auth::Throttle`]
 	#[from_ref(skip)]
 	pub(crate) logins: Arc<auth::Throttle>,
+	/// the sites' favicons for the studio, see `studio::Favicons`
+	#[from_ref(skip)]
+	pub(crate) favicons: Arc<studio::Favicons>,
 	hooks: Arc<Vec<Hook>>,
 }
 
@@ -231,6 +234,7 @@ impl AppState {
 			mail: Default::default(),
 			public_url: Default::default(),
 			logins: Default::default(),
+			favicons: Default::default(),
 			hooks: Default::default(),
 		}
 	}

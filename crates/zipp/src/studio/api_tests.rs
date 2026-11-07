@@ -305,3 +305,110 @@ fn origins_of_urls() {
 	assert_eq!(origin("https://a.ch; script-src *"), None);
 	assert_eq!(origin("https://a.ch'"), None);
 }
+
+/// A website on a free port of 127.0.0.1: its page and icons, and how
+/// often it was asked.
+async fn website(
+	page: String,
+) -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
+	use axum::routing::get;
+	use std::sync::atomic::{AtomicUsize, Ordering};
+
+	let asked = std::sync::Arc::new(AtomicUsize::new(0));
+	let count = asked.clone();
+	let app = axum::Router::new()
+		.route(
+			"/",
+			get(move || std::future::ready(axum::response::Html(page.clone()))),
+		)
+		.route(
+			"/icon.png",
+			get(|| async { ([(header::CONTENT_TYPE, "image/png")], "png") }),
+		)
+		.route(
+			"/big.png",
+			get(|| async {
+				([(header::CONTENT_TYPE, "image/png")], vec![0; 300 * 1024])
+			}),
+		)
+		// a website that answers every path with its page
+		.route(
+			"/favicon.ico",
+			get(|| async { axum::response::Html("<p>page</p>") }),
+		)
+		.layer(axum::middleware::from_fn(
+			move |req, next: axum::middleware::Next| {
+				count.fetch_add(1, Ordering::SeqCst);
+				next.run(req)
+			},
+		));
+	let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+	let port = listener.local_addr().unwrap().port();
+	tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+	(format!("http://127.0.0.1:{port}/"), asked)
+}
+
+fn favicon_site(url: &str) -> TestServer {
+	let urls = [("de".to_string(), url.to_string())].into_iter().collect();
+	TestServer::new(site_with_roles()).site_urls(urls)
+}
+
+#[tokio::test]
+async fn the_favicon_of_a_site() {
+	use std::sync::atomic::Ordering;
+
+	let (url, asked) =
+		website(r#"<link rel="icon" href="icon.png" sizes="32x32">"#.into())
+			.await;
+	let ts = favicon_site(&url);
+
+	// any user, the icon as the website answers it
+	let resp = ts.user(Some("author")).get("/api/sites/de/favicon").await;
+	assert_eq!(resp.status(), StatusCode::OK);
+	assert_eq!(resp.headers()[header::CONTENT_TYPE], "image/png");
+	assert_eq!(crate::testing::Client::bytes(resp).await, b"png");
+	assert_eq!(asked.load(Ordering::SeqCst), 2);
+
+	// kept: the website isn't asked again
+	let resp = ts.admin().get("/api/sites/de/favicon").await;
+	assert_eq!(resp.status(), StatusCode::OK);
+	assert_eq!(asked.load(Ordering::SeqCst), 2);
+
+	let resp = ts.anonymous().get("/api/sites/de/favicon").await;
+	assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+	// a site without a url
+	let resp = ts.admin().get("/api/sites/en/favicon").await;
+	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn no_favicon_of_another_host() {
+	use std::sync::atomic::Ordering;
+
+	// the same server under another name, then /favicon.ico, which is
+	// a page, not an image
+	let (url, asked) = website(String::new()).await;
+	let port = url.rsplit(':').next().unwrap().trim_end_matches('/');
+	let page =
+		format!(r#"<link rel="icon" href="http://localhost:{port}/icon.png">"#);
+	let (url, other) = website(page).await;
+	let ts = favicon_site(&url);
+
+	let resp = ts.admin().get("/api/sites/de/favicon").await;
+	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+	assert_eq!(other.load(Ordering::SeqCst), 2);
+	assert_eq!(asked.load(Ordering::SeqCst), 0);
+
+	// none is kept too
+	let resp = ts.admin().get("/api/sites/de/favicon").await;
+	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+	assert_eq!(other.load(Ordering::SeqCst), 2);
+
+	// too big
+	let (url, _) = website(r#"<link rel="icon" href="/big.png">"#.into()).await;
+	let resp = favicon_site(&url)
+		.admin()
+		.get("/api/sites/de/favicon")
+		.await;
+	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}

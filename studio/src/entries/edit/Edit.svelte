@@ -219,6 +219,9 @@
 		ondiscard={discard}
 		onremove={remove}
 		onsave={save}
+		{narrow}
+		copySites={ed.copySites}
+		oncopy={copyFrom}
 	/>
 
 	<LivePane {ed} preview={live} {url} bind:width={editorWidth}>

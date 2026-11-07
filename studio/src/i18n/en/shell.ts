@@ -14,6 +14,7 @@ export default {
 	'shell.setupSites': 'Sites, transforms and roles',
 	'shell.menu': 'Menu',
 	'shell.site': 'Site',
+	'shell.openWebsite': 'Open the website',
 	'shell.development': 'Development',
 	'shell.production': 'Production',
 	'shell.offline': 'offline',

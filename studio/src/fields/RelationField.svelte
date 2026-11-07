@@ -56,7 +56,7 @@
 <div class="relation" bind:this={list}>
 	{#each ids as id, i (id)}
 		<div data-sort class="item" class:sort-dragging={sort.moving(i)}>
-			<EntryChip {schema} {refs} {id}>
+			<EntryChip {schema} {refs} {id} showType={types.length !== 1}>
 				{#snippet handle()}
 					<DragHandle
 						sortable={sort}

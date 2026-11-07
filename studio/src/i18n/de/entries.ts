@@ -77,8 +77,6 @@ export default {
 		'während Sie bearbeitet haben. Ihre letzten Änderungen sind noch nicht gespeichert.',
 	'entries.loadTheirs': 'Deren Änderungen laden',
 	'entries.keepMine': 'Meine behalten',
-	'entries.confirmType':
-		'Den Eintragstyp zu {type} ändern? Er hat kein Feld wie {fields}: deren Inhalt wird in jeder Website entfernt.',
 
 	// status and sidebar
 	'entries.publishedIn': 'Veröffentlicht in {site}',
@@ -102,6 +100,7 @@ export default {
 	'entries.missing': 'Fehlt',
 	'entries.errors': { one: '{n} Fehler', other: '{n} Fehler' },
 	'entries.copyContent': 'Inhalt kopieren',
+	'entries.copyFrom': 'Inhalt von {site} kopieren',
 	'entries.fromOtherSite': 'Von einer anderen Website…',
 
 	// revisions

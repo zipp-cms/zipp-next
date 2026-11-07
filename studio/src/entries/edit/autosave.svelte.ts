@@ -54,10 +54,11 @@ export class DraftSaver {
 
 	/**
 	 * A new entry with content: it has no draft, leaving or closing the
-	 * tab would lose it.
+	 * tab would lose it. Its type's defaults are no content.
 	 */
 	get unsaved(): boolean {
-		return this.ed.id === null && this.ed.snapshot() !== this.lastSaved;
+		const ed = this.ed;
+		return ed.id === null && !ed.blank && ed.snapshot() !== this.lastSaved;
 	}
 
 	/** Called on every change: the draft is saved a moment later. */
