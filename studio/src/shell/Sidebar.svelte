@@ -111,30 +111,32 @@
 				{t('shell.ai')}
 			</a>
 		{/if}
-		<hr />
+		{#if canSetup(schema) || isAdmin(schema) || canTrash(schema)}
+			<hr />
+		{/if}
 		<!-- read only, a role sees its part (unless it has no Setup) -->
 		{#if canSetup(schema)}
-		<a
-			class="item nav-item"
-			href="/admin/setup"
-			class:active={page === 'setup'}
-		>
-			<Icon name="settings" />
-			{t('shell.setup')}
-		</a>
-		{#if page === 'setup'}
-			{@const tab = current.path.split('/')[3] ?? 'overview'}
-			<div class="sub">
-				{#each setupTabs(schema) as [handle, key] (handle)}
-					<a
-						href="/admin/setup/{handle}"
-						class:active={tab === handle}
-					>
-						{t(key)}
-					</a>
-				{/each}
-			</div>
-		{/if}
+			<a
+				class="item nav-item"
+				href="/admin/setup"
+				class:active={page === 'setup'}
+			>
+				<Icon name="settings" />
+				{t('shell.setup')}
+			</a>
+			{#if page === 'setup'}
+				{@const tab = current.path.split('/')[3] ?? 'overview'}
+				<div class="sub">
+					{#each setupTabs(schema) as [handle, key] (handle)}
+						<a
+							href="/admin/setup/{handle}"
+							class:active={tab === handle}
+						>
+							{t(key)}
+						</a>
+					{/each}
+				</div>
+			{/if}
 		{/if}
 		{#if isAdmin(schema)}
 			<a
