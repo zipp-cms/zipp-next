@@ -80,10 +80,12 @@ on for old content too. Changing a default later needs no migration.
 to put there, under the label in the studio (markdown: bold, links);
 the AI chat reads them too. Both are only looks, no migration.
 `.width(50)` gives a field half of a row in the editor (25, 50, 75 or
-100 percent, 100 without it), like Craft's field widths: date, doors and
-city of an event sit in one row. A narrow editor (a phone, the flyout,
-a small block) shows every field full width; inside a block a field
-that shares its row has its label above. Also only looks.
+100 percent, 100 without it), like Craft's field widths: fields whose
+widths fit share a row. Where the labels are on the left (a block, a
+group, a card) every field keeps its own row so the labels line up, and
+the width is the share of the value column (at least what a date
+needs). A narrow editor (a phone, the flyout, a small block) shows
+every field full width. Also only looks.
 `Field::note("imageHint", "**Bild** im Querformat …")` is a note for
 editors in the field layout, like Craft's tip: its markdown text from
 the code shows in a grey box, with a width too. It holds nothing: the
@@ -368,7 +370,8 @@ What an editor sees is the field list, so it should read like the page:
   their labels above reads badly, rows with the labels on the left like
   a group read well. A tab of blocks stays without one.
 - Short fields share a row with `.width(25)` or `.width(50)`: a date,
-  a city, a price, a switch.
+  a city, a price, a switch; where the labels are on the left (a card,
+  a group, a block) they get a narrower value in their own row.
 - Labels in the editors' language, `.instructions("…")` where a field
   needs an explanation, `Field::note` for a how-to that concerns
   several fields (image sizes, what shows where).
