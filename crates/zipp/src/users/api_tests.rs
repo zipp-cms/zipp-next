@@ -226,9 +226,8 @@ async fn checks_what_admins_send() {
 	assert!(matches!(err, Error::Request(_)));
 
 	// one the cli took stays
-	let conn = ts.state.db.conn();
-	let id = super::create(&conn, "dev@localhost", "", "", None, "").unwrap();
-	drop(conn);
+	let conn = || ts.state.db.conn();
+	let id = super::create(&conn(), "dev@localhost", "", "", None, "").unwrap();
 	let mut dev = unchanged(&admin.call(&GetReq { id }).await.unwrap());
 	dev.name = "Dev".into();
 	admin.call(&dev).await.unwrap();
