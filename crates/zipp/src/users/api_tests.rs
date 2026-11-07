@@ -210,6 +210,14 @@ async fn checks_what_admins_send() {
 	short.password = "short".into();
 	let err = admin.call(&new_user("no-at", None)).await.unwrap_err();
 	assert_eq!(paths(err), ["email"]);
+	// a reset link would go to both
+	let two = new_user("a@x.ch, b@y.ch", None);
+	assert_eq!(paths(admin.call(&two).await.unwrap_err()), ["email"]);
+	let err = admin
+		.call(&new_user(" taken@x.ch", None))
+		.await
+		.unwrap_err();
+	assert_eq!(paths(err), ["email"]);
 	let err = admin.call(&new_user("taken@x.ch", None)).await.unwrap_err();
 	assert_eq!(paths(err), ["email"]);
 	assert_eq!(paths(admin.call(&short).await.unwrap_err()), ["password"]);

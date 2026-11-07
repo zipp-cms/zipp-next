@@ -5,7 +5,7 @@
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 
-use crate::content::FieldError;
+use crate::content::{FieldError, valid_email};
 use crate::db::now;
 use crate::error::{Error, Result};
 use crate::schema::Schema;
@@ -118,7 +118,8 @@ pub fn check(
 		params![email, id],
 		|r| r.get(0),
 	)?;
-	if !email.contains('@') {
+	// one address: mails of the account go to it, and to no one else
+	if !valid_email(email) {
 		error("email", "An email address");
 	} else if taken {
 		error("email", "Another user has this email");
