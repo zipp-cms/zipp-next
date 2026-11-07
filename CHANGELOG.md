@@ -12,6 +12,8 @@
   pages; logged in website users edit their own profile with `PUT
   /site-auth/me`. The studio's user page edits the profile, a token can
   read users.
+- The site box shows that it is a choice when there are several sites:
+  a hover background and a focus ring for the keyboard.
 - The site box at the top of the sidebar shows the website's favicon
   instead of the site's first letter, the letter when it has none. The
   cms fetches it (`GET /api/sites/{site}/favicon`, with a session) from

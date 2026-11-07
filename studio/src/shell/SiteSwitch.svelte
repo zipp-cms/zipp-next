@@ -35,7 +35,11 @@
 </script>
 
 <div class="site-switch">
-	<label class="choice" title={t('shell.site')}>
+	<label
+		class="choice"
+		class:multi={schema.sites.length > 1}
+		title={t('shell.site')}
+	>
 		{#if icon}
 			<img
 				class="mark icon"
@@ -91,7 +95,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
-		padding: 0.5rem 0.375rem 0.5rem 0.625rem;
+		padding: 0.25rem 0.375rem 0.25rem 0.25rem;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-lg);
 		color: var(--muted);
@@ -104,6 +108,24 @@
 		align-items: center;
 		gap: 0.625rem;
 		min-width: 0;
+		padding: 0.25rem 0.375rem;
+		border-radius: var(--radius);
+		transition: background-color 0.2s ease;
+
+		// with several sites it is a choice: it shows it under the mouse
+		// and with the keyboard
+		&.multi {
+			@include hover {
+				&:hover {
+					background: var(--hover);
+					color: var(--text);
+				}
+			}
+
+			&:has(select:focus-visible) {
+				@include focus-ring;
+			}
+		}
 	}
 
 	.open {
