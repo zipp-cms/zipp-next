@@ -51,8 +51,11 @@
 	// the field's folder before it exists (a new topic's `{slug}`): shown
 	// in the tree, empty, and made with the first upload into it
 	const NEW = -1;
-	let missing = $state<ReturnType<typeof missingFolders>>(null);
+	let ready = $state(false);
 	let inNew = $state(false);
+	const missing = $derived(
+		ready ? missingFolders(lib.folders, folderPath) : null,
+	);
 	const folders = $derived<Folder[]>(
 		missing
 			? [
@@ -66,23 +69,26 @@
 				]
 			: lib.folders,
 	);
-	const showNew = $derived(inNew && !lib.search);
+	const showNew = $derived(inNew && !!missing && !lib.search);
 
 	// the field's folder first, else where the picker was
 	lib.loadFolders().then(() => {
-		const own = folderByPath(lib.folders, folderPath);
-		missing = own ? null : missingFolders(lib.folders, folderPath);
+		ready = true;
 		if (missing) {
 			inNew = true;
 			return;
 		}
+		const own = folderByPath(lib.folders, folderPath);
 		const last = lib.folders.some(f => f.id === lastFolder);
 		lib.select(own ? own.id : last ? lastFolder : null);
 	});
 
 	function select(id: number | null) {
 		inNew = id === NEW;
-		if (inNew) return;
+		if (inNew) {
+			lib.search = '';
+			return;
+		}
 		lastFolder = id;
 		lib.select(id);
 	}
@@ -93,26 +99,26 @@
 	 * missing).
 	 */
 	async function upload(items: Upload[]) {
-		const into = inNew && missing ? missing.parent : lib.folder;
-		const dir =
-			inNew && missing
-				? missing.names
-				: lib.folder === null
-					? pathDirs(folderPath)
-					: [];
+		const intoNew = showNew ? missing : null;
+		const dir = intoNew
+			? intoNew.names
+			: lib.folder === null
+				? pathDirs(folderPath)
+				: [];
 		const room = multiple ? items.length : 1;
 		items = prepare(items, { images, extensions }, room, dir);
-		const added = await uploads.run(items, into, () => lib.loadFolders());
+		const added = await uploads.run(
+			items,
+			intoNew ? intoNew.parent : lib.folder,
+			() => lib.loadFolders(),
+		);
 		for (const a of added) onpick(a);
 
 		// the new folder is there now, it opens with its files
-		if (inNew) {
+		if (intoNew) {
 			await lib.loadFolders();
 			const own = folderByPath(lib.folders, folderPath);
-			if (own) {
-				missing = null;
-				select(own.id);
-			}
+			if (inNew && own) select(own.id);
 			return;
 		}
 		lib.assets = [...added, ...lib.assets];
@@ -165,7 +171,7 @@
 			<FolderTree
 				{folders}
 				top={lib.top}
-				current={inNew ? NEW : lib.folder}
+				current={showNew ? NEW : lib.folder}
 				searching={!!lib.search}
 				onselect={select}
 			/>
