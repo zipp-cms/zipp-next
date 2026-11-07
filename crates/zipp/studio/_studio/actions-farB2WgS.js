@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:crates/zipp/studio/_studio/actions-1Yj_vwAA.js
-import{B as c,x as o,av as i,W as d,aw as m}from"./index-Dw9atxIN.js";function x(e,n,a){c(()=>{var r=o(()=>n(e,a==null?void 0:a())||{});if(a&&(r!=null&&r.update)){var s=!1,t={};i(()=>{var f=a();d(f),s&&m(t,f)&&(t=f,r.update(f))}),s=!0}if(r!=null&&r.destroy)return()=>r.destroy()})}export{x as a};
-========
-import{B as c,x as o,av as i,W as d,aw as m}from"./index-dbQjMX3J.js";function x(e,n,a){c(()=>{var r=o(()=>n(e,a==null?void 0:a())||{});if(a&&(r!=null&&r.update)){var s=!1,t={};i(()=>{var f=a();d(f),s&&m(t,f)&&(t=f,r.update(f))}),s=!0}if(r!=null&&r.destroy)return()=>r.destroy()})}export{x as a};
->>>>>>>> 161968a1 (Lock plugin fields when their fieldset turns read only):crates/zipp/studio/_studio/actions-farB2WgS.js

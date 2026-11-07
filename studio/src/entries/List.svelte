@@ -158,9 +158,18 @@
 	}
 
 	async function remove(e: Entry) {
-		// the entries below it go with it
-		const byId = new Map(entries.map(c => [c.id, c]));
-		const below = entries.filter(c =>
+		// the entries below it go with it; while searching the list has
+		// only the matches, the count needs the whole tree
+		let all = entries;
+		if (tree && search) {
+			const r = await action.run(() =>
+				listEntries(listParams(sec.kind, section, site.current, '')),
+			);
+			if (!r) return;
+			all = r.entries;
+		}
+		const byId = new Map(all.map(c => [c.id, c]));
+		const below = all.filter(c =>
 			ancestors(byId, c).some(a => a.id === e.id),
 		).length;
 		const question = below
