@@ -281,20 +281,12 @@ async fn resolve_value<'a>(
 			None => Ok(None),
 		},
 		FieldKind::Relation { .. } => {
-			let ids: Vec<i64> = value
-				.as_array()
-				.map(|a| a.iter().filter_map(Value::as_i64).collect())
-				.unwrap_or_default();
 			// in the order of the field
-			let entries = entries_by_id(ctx, &site, &ids).await?;
+			let entries = entries_by_id(ctx, &site, &ids_of(&value)).await?;
 			Ok(Some(FieldValue::list(entries.into_iter().map(entry_value))))
 		}
 		FieldKind::Assets { .. } => {
-			let ids: Vec<i64> = value
-				.as_array()
-				.map(|a| a.iter().filter_map(Value::as_i64).collect())
-				.unwrap_or_default();
-			let mut assets = assets_by_id(ctx, &ids).await?;
+			let mut assets = assets_by_id(ctx, &ids_of(&value)).await?;
 			let kinds = kinds_of(ctx)?;
 			if !kinds.is_empty() {
 				assets.retain(|a| kinds.iter().any(|k| k.of(a)));
@@ -373,23 +365,7 @@ async fn resolve_value<'a>(
 		// the option, one that was removed since is none
 		FieldKind::ButtonGroup { options } => {
 			let option = options.into_iter().find(|o| value == o.value);
-			match option {
-				Some(o) => {
-					// websites get the Lucide name, an svg is the studio's
-					let icon = match o.icon {
-						Some(crate::schema::Icon::Lucide(name)) => Some(name),
-						_ => None,
-					};
-					let json = serde_json::json!({
-						"value": o.value,
-						"label": o.label,
-						"color": o.color,
-						"icon": icon,
-					});
-					Ok(Some(FieldValue::value(GqlValue::from_json(json)?)))
-				}
-				None => Ok(None),
-			}
+			option.map(button_option_value).transpose()
 		}
 		FieldKind::Texts { keys } => {
 			let texts = crate::content::texts_of(&keys, &value);
@@ -411,6 +387,32 @@ async fn resolve_value<'a>(
 			v => Ok(Some(FieldValue::value(GqlValue::from_json(v)?))),
 		},
 	}
+}
+
+/// The ids of a relation or assets field.
+fn ids_of(value: &Value) -> Vec<i64> {
+	value
+		.as_array()
+		.map(|a| a.iter().filter_map(Value::as_i64).collect())
+		.unwrap_or_default()
+}
+
+/// The chosen option of a button group, see [`button_group_option`].
+fn button_option_value(
+	o: crate::schema::ButtonOption,
+) -> async_graphql::Result<FieldValue<'static>> {
+	// websites get the Lucide name, an svg is the studio's
+	let icon = match o.icon {
+		Some(crate::schema::Icon::Lucide(name)) => Some(name),
+		_ => None,
+	};
+	let json = serde_json::json!({
+		"value": o.value,
+		"label": o.label,
+		"color": o.color,
+		"icon": icon,
+	});
+	Ok(FieldValue::value(GqlValue::from_json(json)?))
 }
 
 pub(super) fn block_value(
