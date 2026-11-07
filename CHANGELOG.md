@@ -1,7 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-11-07)
 
+- Website members, like Craft users without access to the control
+  panel: `Role::no_studio()` keeps a role out of the studio, any user
+  logs in on the website (`/site-auth/login`, `me`, `logout`, `reset`,
+  `password`; site sessions never open the studio's api). Entries have
+  an author (`authorId`, `author` in GraphQL, `?author=`, admins change
+  it), `Role::own(section, level)` gives access to a user's own entries.
+  The new plugin `zipp-members` lets members list, create, edit and
+  delete their own entries and upload images from the frontend, through
+  the same checks as the studio. See docs/members.md.
 - zipp-forms limits submissions per address only (5 in 10 minutes): the
   cap of 50 per form from all addresses let about ten addresses block a
   form for everyone.

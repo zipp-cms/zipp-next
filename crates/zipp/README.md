@@ -10,7 +10,7 @@ The package is `zipp-cms`, the crate is `zipp`:
 
 ```toml
 [dependencies]
-zipp = { package = "zipp-cms", version = "0.1" }
+zipp = { package = "zipp-cms", version = "0.2" }
 ```
 
 ```rust,ignore

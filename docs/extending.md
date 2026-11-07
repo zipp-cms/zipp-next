@@ -161,7 +161,7 @@ crate's `Cargo.toml`, a folder `studio` with this `package.json`:
 		"sass": "^1.63.4",
 		"svelte": "^5.0.0",
 		"vite": "^8.0.0",
-		"zipp-ui": "^0.1.0"
+		"zipp-ui": "^0.2.0"
 	}
 }
 ```
@@ -227,10 +227,10 @@ A plugin's module (`PluginStudio`) is made the same way and exports
 `sectionSetup` too, like `crates/zipp-seo/studio`.
 
 What breaks a module, so it changes only with a new minor version of
-zipp and zipp-ui before 1.0 (0.2), and a major one after: `FieldProps`,
+zipp and zipp-ui before 1.0 (0.3), and a major one after: `FieldProps`,
 `Host` and `ApiErrorLike`, the exports of zipp-ui and their props, and
 the CSS variables and classes of the studio that `studio/ui/README.md`
-lists. A module built with zipp-ui 0.1 runs in the studio of zipp 0.1.
+lists. A module built with zipp-ui 0.2 runs in the studio of zipp 0.2.
 
 ## Plugins
 

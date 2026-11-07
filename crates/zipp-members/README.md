@@ -7,8 +7,8 @@ the studio (the role's access, validation, drafts and revisions).
 
 ```toml
 [dependencies]
-zipp = { package = "zipp-cms", version = "0.1" }
-zipp-members = "0.1"
+zipp = { package = "zipp-cms", version = "0.2" }
+zipp-members = "0.2"
 ```
 
 ```rust,ignore

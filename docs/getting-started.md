@@ -19,14 +19,15 @@ dependency's name `zipp`: `zipp::migrations!()` refers to it.
 
 ```toml
 [dependencies]
-zipp = { package = "zipp-cms", version = "0.1" }
+zipp = { package = "zipp-cms", version = "0.2" }
 # plugins, if the site wants them
-zipp-seo = "0.1"
-zipp-forms = "0.1"
+zipp-seo = "0.2"
+zipp-forms = "0.2"
+zipp-members = "0.2"
 
 [dev-dependencies]
 # zipp::testing for the site's own tests
-zipp = { package = "zipp-cms", version = "0.1", features = ["testing"] }
+zipp = { package = "zipp-cms", version = "0.2", features = ["testing"] }
 ```
 
 The features: `testing` (`zipp::testing::TestServer`, the test server
