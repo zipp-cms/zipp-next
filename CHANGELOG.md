@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- A field type can hold blocks with more around each one, like a place
+  in a grid: `Field::custom(..).item_blocks(["image", "text"])` makes its
+  value a list of items with a block in `block`. zipp checks, migrates
+  and indexes those blocks like a blocks field's, the type the rest.
+  For its GraphQL `GraphqlType::List` of a plugin's type,
+  `graphql::ext::site` and `graphql::ext::block`; its studio module gets
+  `blocks` with the block types, `create`, `copy` and `mount`, the
+  studio's editor of a block.
 - Public user profiles, like Craft's user fields and WordPress' author
   pages: `.user_fields([...])` (a component `user`, in migrations), a
   unique slug of every user (admins change it), and

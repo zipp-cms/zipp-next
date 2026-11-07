@@ -287,13 +287,17 @@ pub enum FieldKind {
 		text: String,
 	},
 	/// A field type of another crate, registered in the schema; the
-	/// options are its own.
+	/// options are its own. With `blocks` its value is a list of items,
+	/// each with a block of these types in `block`, see
+	/// [`Field::item_blocks`].
 	#[non_exhaustive]
 	Custom {
 		#[serde(rename = "type")]
 		ty: String,
 		#[serde(default)]
 		options: Value,
+		#[serde(default, skip_serializing_if = "Vec::is_empty")]
+		blocks: Vec<String>,
 	},
 }
 
@@ -307,6 +311,9 @@ pub(crate) enum Holds<'a> {
 	RichText,
 	/// the fields of this component
 	Group(&'a str),
+	/// a list of items of a field type of another crate, each with its
+	/// block in `block`
+	Items,
 }
 
 impl FieldKind {
@@ -318,6 +325,7 @@ impl FieldKind {
 			Self::Blocks { .. } => Holds::Blocks,
 			Self::RichText { .. } => Holds::RichText,
 			Self::Group { component } => Holds::Group(component),
+			Self::Custom { blocks, .. } if !blocks.is_empty() => Holds::Items,
 			Self::Text { .. }
 			| Self::Number { .. }
 			| Self::Boolean
@@ -683,6 +691,7 @@ impl Field {
 			FieldKind::Custom {
 				ty: ty.into(),
 				options,
+				blocks: vec![],
 			},
 		)
 	}
@@ -843,6 +852,28 @@ impl Field {
 				*folder = Some(path.trim_matches('/').into())
 			}
 			_ => panic!("{}: folder is only for assets", self.handle),
+		}
+		self
+	}
+
+	/// Lets a field of a custom type hold blocks of these types, like a
+	/// blocks field with more around each block (a place in a grid): its
+	/// value is a list of items `{ "block": { "id", "type", "fields" },
+	/// ... }`. zipp checks, migrates and indexes the blocks, the type the
+	/// rest of each item; GraphQL gives a block with
+	/// [`graphql::ext::block`](crate::graphql::ext::block), the studio lends
+	/// the field's module `blocks` (`create`, `copy`, `mount`).
+	pub fn item_blocks<'a>(
+		mut self,
+		types: impl IntoIterator<Item = &'a str>,
+	) -> Self {
+		match &mut self.kind {
+			FieldKind::Custom { blocks, .. } => {
+				*blocks = types.into_iter().map(Into::into).collect()
+			}
+			_ => {
+				panic!("{}: item_blocks is only for custom types", self.handle)
+			}
 		}
 		self
 	}

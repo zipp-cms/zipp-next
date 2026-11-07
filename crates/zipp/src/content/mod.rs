@@ -68,18 +68,19 @@ pub(crate) fn new_block_id() -> String {
 
 /// A component in the value of a field: a block, a block embedded in a
 /// rich text, the fields of a group. `at` is where in the value, the
-/// position of a block or empty for a group.
+/// position of a block (`2`, of an item `2.block`) or none for a group.
 pub(crate) struct Inner<'a> {
 	pub comp: &'a Component,
 	pub fields: &'a Value,
-	pub at: Option<usize>,
+	pub at: Option<String>,
 }
 
 impl Inner<'_> {
-	/// The path of its fields: `body.2.` for a block, `seo.` for a group.
+	/// The path of its fields: `body.2.` for a block, `grid.2.block.` for
+	/// the block of an item, `seo.` for a group.
 	pub(crate) fn prefix(&self, path: &str) -> String {
-		match self.at {
-			Some(i) => format!("{path}.{i}."),
+		match &self.at {
+			Some(at) => format!("{path}.{at}."),
 			None => format!("{path}."),
 		}
 	}
@@ -92,7 +93,7 @@ pub(crate) fn inner<'a>(
 	field: &'a Field,
 	value: &'a Value,
 ) -> Vec<Inner<'a>> {
-	let block = |at: usize, b: &'a Value| {
+	let block = |at: String, b: &'a Value| {
 		let comp = schema.get(b["type"].as_str()?)?;
 		Some(Inner {
 			comp,
@@ -107,7 +108,14 @@ pub(crate) fn inner<'a>(
 			.into_iter()
 			.flatten()
 			.enumerate()
-			.filter_map(|(i, b)| block(i, b))
+			.filter_map(|(i, b)| block(i.to_string(), b))
+			.collect(),
+		Holds::Items => value
+			.as_array()
+			.into_iter()
+			.flatten()
+			.enumerate()
+			.filter_map(|(i, item)| block(format!("{i}.block"), &item["block"]))
 			.collect(),
 		// the position in the document, embeds keep the block in `attrs`
 		Holds::RichText => value["content"]
@@ -116,7 +124,7 @@ pub(crate) fn inner<'a>(
 			.flatten()
 			.enumerate()
 			.filter(|(_, n)| n["type"] == "embed")
-			.filter_map(|(i, n)| block(i, &n["attrs"]))
+			.filter_map(|(i, n)| block(i.to_string(), &n["attrs"]))
 			.collect(),
 		Holds::Group(component) => schema
 			.get(component)
@@ -144,6 +152,13 @@ pub(crate) fn inner_mut<'a>(
 			_ => return vec![],
 		},
 		Holds::RichText => richtext::blocks_mut(value),
+		Holds::Items => match value {
+			Value::Array(items) => items
+				.iter_mut()
+				.filter_map(|i| i.get_mut("block"))
+				.collect(),
+			_ => return vec![],
+		},
 		Holds::Group(component) => {
 			return match schema.get(component) {
 				Some(c) if !value.is_null() => vec![(c, value)],

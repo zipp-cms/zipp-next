@@ -49,6 +49,12 @@ function fieldsWithNewIds(schema: Schema, type: string, values: Values) {
 				n.attrs.id = newBlockId();
 				fieldsWithNewIds(schema, n.attrs.type, n.attrs.fields);
 			}
+		// the blocks in the items of a custom type
+		else if (f.kind === 'custom' && f.blocks && Array.isArray(v)) {
+			for (const item of v) {
+				if (item?.block) withNewIds(schema, item.block);
+			}
+		}
 	}
 }
 

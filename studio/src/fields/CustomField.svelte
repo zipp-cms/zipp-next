@@ -17,9 +17,12 @@
 </script>
 
 <script lang="ts">
+	import { getAllContexts, untrack } from 'svelte';
 	import type { FieldProps } from 'zipp-ui/field';
-	import type { FieldOf, Values } from '../core/schema';
+	import type { FieldOf, Schema, Values } from '../core/schema';
+	import type { Refs } from '../entries/api';
 	import { host } from './host.svelte';
+	import { itemBlocks } from './itemBlocks';
 	import { getEditing, editedSite } from '../core/editing';
 	import { Last } from '../core/synced.svelte';
 
@@ -29,17 +32,47 @@
 	 * (zipp-ui/field) and updates them. A module that throws breaks only
 	 * its field.
 	 */
-	let {
-		field,
-		values,
-		errors,
-		path,
-	}: {
+	let props: {
+		schema: Schema;
 		field: FieldOf<'custom'>;
 		values: Values;
 		errors: Record<string, string>;
+		refs: Refs;
 		path: string;
+		changed?: Set<string>;
 	} = $props();
+	const { field, values, errors, path } = $derived(props);
+
+	// its items hold blocks: their editor is the studio's, with the
+	// context here (the entry, the site)
+	const blocks = untrack(() => props.field.blocks?.length)
+		? itemBlocks(
+				{
+					get schema() {
+						return props.schema;
+					},
+					get field() {
+						return props.field;
+					},
+					get values() {
+						return props.values;
+					},
+					get errors() {
+						return props.errors;
+					},
+					get refs() {
+						return props.refs;
+					},
+					get path() {
+						return props.path;
+					},
+					get changed() {
+						return props.changed ?? new Set<string>();
+					},
+				},
+				getAllContexts(),
+			)
+		: null;
 
 	const editing = getEditing();
 	const site = editedSite();
@@ -64,6 +97,7 @@
 			readonly: !!target?.closest('fieldset[disabled]'),
 			error: errors[path] ?? null,
 			host,
+			blocks,
 		};
 	}
 

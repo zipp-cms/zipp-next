@@ -6,7 +6,7 @@ use serde_json::json;
 use super::tests::run;
 use super::*;
 use crate::entries::save;
-use crate::fixtures::site;
+use crate::fixtures::{png, site};
 use crate::testing::input;
 
 #[test]
@@ -614,4 +614,193 @@ async fn switched_off_blocks_and_dates() {
 	assert_eq!(e["body"], json!([{ "content": "On" }]));
 	assert_eq!(e["expiryDate"], crate::db::iso(expiry));
 	assert!(e["postDate"].as_str().is_some_and(|d| d.starts_with("20")));
+}
+
+/// A field type with blocks in its items: each block has a width in
+/// columns, GraphQL gives `Place { span block }`.
+struct Places;
+
+/// An item of [`Places`] for GraphQL, with the site for its block.
+struct Place {
+	span: i64,
+	block: Value,
+	site: String,
+}
+
+impl FieldType for Places {
+	fn name(&self) -> &'static str {
+		"places"
+	}
+
+	fn validate(
+		&self,
+		_options: &Value,
+		value: &Value,
+	) -> std::result::Result<Value, String> {
+		// the blocks come checked
+		let items = value.as_array().unwrap();
+		match items
+			.iter()
+			.all(|i| matches!(i["span"].as_u64(), Some(1..=12)))
+		{
+			true => Ok(value.clone()),
+			false => Err("a span of 1 to 12".into()),
+		}
+	}
+
+	fn graphql(&self) -> GraphqlType {
+		GraphqlType::List("Place")
+	}
+
+	fn resolve<'a>(
+		&self,
+		ctx: &ResolverContext<'a>,
+		_options: &Value,
+		value: &Value,
+	) -> async_graphql::Result<Option<FieldValue<'a>>> {
+		let site = ext::site(ctx)?;
+		// a switched off block isn't on the website, nor its item
+		let items = value.as_array().into_iter().flatten();
+		let items = items.filter(|i| i["block"]["enabled"] != false).map(|i| {
+			FieldValue::owned_any(Place {
+				span: i["span"].as_i64().unwrap_or(12),
+				block: i["block"].clone(),
+				site: site.clone(),
+			})
+		});
+		Ok(Some(FieldValue::list(items)))
+	}
+
+	fn studio(&self) -> crate::StudioModule {
+		crate::StudioModule::new("")
+	}
+}
+
+/// Registers the GraphQL type of [`Places`].
+struct PlacesPlugin;
+
+impl crate::Plugin for PlacesPlugin {
+	fn name(&self) -> &'static str {
+		"places"
+	}
+
+	fn graphql(&self, _schema: &Schema) -> crate::GraphqlExt {
+		let place = Object::new("Place")
+			.field(GqlField::new(
+				"span",
+				TypeRef::named_nn(TypeRef::INT),
+				|ctx| {
+					FieldFuture::new(async move {
+						let p = ctx.parent_value.try_downcast_ref::<Place>()?;
+						Ok(Some(FieldValue::value(p.span)))
+					})
+				},
+			))
+			.field(GqlField::new("block", TypeRef::named_nn("Block"), |ctx| {
+				FieldFuture::new(async move {
+					let p = ctx.parent_value.try_downcast_ref::<Place>()?;
+					Ok(ext::block(&p.block, &p.site))
+				})
+			}));
+		crate::GraphqlExt::new().types([place.into()])
+	}
+}
+
+#[tokio::test]
+async fn blocks_in_the_items_of_a_field_type() {
+	use crate::schema::{Field, Section};
+	let s = Arc::new(
+		site()
+			.field_type(Places)
+			.plugin(PlacesPlugin)
+			.block("photo", "Photo", [Field::images("image").max(1)])
+			.section(Section::channel("grids", ["grid"]).uri("{slug}"))
+			.entry(
+				"grid",
+				"Grid",
+				[Field::custom("places", "places", Value::Null)
+					.item_blocks(["text", "photo"])],
+			),
+	);
+	s.check().unwrap();
+	let db = Db::memory().unwrap();
+	let tmp = tempfile::tempdir().unwrap();
+	let id = {
+		let conn = db.conn();
+		let a = crate::assets::store(
+			&conn,
+			tmp.path(),
+			"hero.png",
+			&png(40, 20),
+			None,
+		)
+		.unwrap();
+
+		// zipp checks the blocks, with the path of the item's block
+		let save_places = |places: Value| {
+			let fields = json!({ "places": places });
+			save(&conn, &s, None, input("grids", "grid", "G", fields), None)
+		};
+		let Err(crate::error::Error::Invalid(errs)) = save_places(json!([
+			{ "span": 6, "block": { "type": "text", "fields": {} } },
+			{ "span": 6, "block": { "type": "button", "fields": {} } },
+		])) else {
+			panic!("should fail");
+		};
+		let errs: Vec<_> = errs.iter().map(|e| e.path.as_str()).collect();
+		assert_eq!(errs, ["places.0.block.content", "places.1.block"]);
+		// and the type the rest of an item
+		let Err(crate::error::Error::Invalid(errs)) = save_places(json!([
+			{ "span": 13, "block": { "type": "text", "fields": { "content": "A" } } },
+		])) else {
+			panic!("should fail");
+		};
+		assert_eq!(errs[0].message, "a span of 1 to 12");
+
+		let id = save_places(json!([
+			{ "span": 4, "block": { "id": "a1", "type": "photo",
+				"fields": { "image": [a.id] } } },
+			{ "span": 8, "block": { "id": "a1", "type": "text",
+				"fields": { "content": "A" } } },
+			{ "span": 6, "block": { "type": "text", "enabled": false,
+				"fields": { "content": "Off" } } },
+		]))
+		.unwrap()
+		.id;
+		// the image is in use, at the path of its block
+		let path: String = conn
+			.query_row(
+				"SELECT path FROM asset_relations WHERE asset_id = ?1",
+				[a.id],
+				|r| r.get(0),
+			)
+			.unwrap();
+		assert_eq!(path, "places.0.block.image");
+		// a copied block gets its own id
+		let saved = crate::entries::get_entry(&conn, id, "en").unwrap();
+		let places = &saved.fields["places"];
+		assert_eq!(places[0]["block"]["id"], "a1");
+		assert_ne!(places[1]["block"]["id"], "a1");
+		id
+	};
+
+	let gql = build(s, db, String::new(), SiteUrls::new()).unwrap();
+	let data = run(
+		&gql,
+		&format!(
+			r#"{{ entry(id: {id}) {{ ... on grid_Entry {{ places {{ span
+			block {{ typeHandle ... on photo_Block {{ image {{ filename }} }}
+				... on text_Block {{ content }} }} }} }} }} }}"#
+		),
+		true,
+	)
+	.await;
+	assert_eq!(
+		data["entry"]["places"],
+		json!([
+			{ "span": 4, "block": { "typeHandle": "photo",
+				"image": [{ "filename": "hero.png" }] } },
+			{ "span": 8, "block": { "typeHandle": "text", "content": "A" } },
+		])
+	);
 }

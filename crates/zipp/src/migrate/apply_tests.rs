@@ -558,3 +558,81 @@ fn unparsable_content_fails_the_migration() {
 		.unwrap();
 	assert_eq!(done, 1);
 }
+
+/// A field type whose items hold blocks.
+struct Items;
+
+impl crate::FieldType for Items {
+	fn name(&self) -> &'static str {
+		"items"
+	}
+
+	fn validate(
+		&self,
+		_options: &Value,
+		value: &Value,
+	) -> std::result::Result<Value, String> {
+		Ok(value.clone())
+	}
+
+	fn graphql(&self) -> crate::GraphqlType {
+		crate::GraphqlType::Scalar(crate::Scalar::String)
+	}
+
+	fn studio(&self) -> crate::StudioModule {
+		crate::StudioModule::new("")
+	}
+}
+
+#[test]
+fn migrations_change_the_blocks_of_items() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let with = |types: &[&str]| {
+		let mut s = site().field_type(Items).block(
+			"quote",
+			"Quote",
+			[Field::text("said")],
+		);
+		s.get_mut("event").unwrap().fields.push(
+			Field::custom("grid", "items", Value::Null)
+				.item_blocks(types.iter().copied()),
+		);
+		s
+	};
+	let s = with(&["text", "quote"]);
+	let first = migration("0001", &Schema::new(), &s, &[]);
+	apply(&conn, std::slice::from_ref(&first)).unwrap();
+	let item = |ty: &str, fields: Value| json!({ "span": 6, "block": { "type": ty, "fields": fields } });
+	let fields = json!({ "grid": [
+		item("text", json!({ "content": "A" })),
+		item("quote", json!({ "said": "B" })),
+	] });
+	let e = save(&conn, &s, None, input("events", "event", "E", fields), None)
+		.unwrap();
+
+	// text is renamed to paragraph and its field content to body
+	let mut s2 = with(&["paragraph", "quote"]);
+	let text = s2.get_mut("text").unwrap();
+	text.handle = "paragraph".into();
+	text.fields[0].handle = "body".into();
+	let renames = [
+		Rename::parse("text=paragraph").unwrap(),
+		Rename::parse("paragraph.content=body").unwrap(),
+	];
+	let second = migration("0002", &s, &s2, &renames);
+	// and quote goes, with its item
+	let mut s3 = with(&["paragraph"]);
+	s3.components.retain(|c| c.handle != "quote");
+	let p = s3.get_mut("text").unwrap();
+	p.handle = "paragraph".into();
+	p.fields[0].handle = "body".into();
+	let third = migration("0003", &s2, &s3, &[]);
+	apply(&conn, &[first, second, third]).unwrap();
+
+	let grid = &get_entry(&conn, e.id, "en").unwrap().fields["grid"];
+	assert_eq!(grid.as_array().unwrap().len(), 1);
+	assert_eq!(grid[0]["span"], 6);
+	assert_eq!(grid[0]["block"]["type"], "paragraph");
+	assert_eq!(grid[0]["block"]["fields"], json!({ "body": "A" }));
+}

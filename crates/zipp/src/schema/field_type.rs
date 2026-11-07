@@ -36,6 +36,10 @@ pub enum GraphqlType {
 	/// A type a [`Plugin`](crate::Plugin) registers, resolved by
 	/// [`FieldType::resolve`].
 	Named(&'static str),
+	/// A list of a type a plugin registers, like `Named`: the items of a
+	/// field with [`Field::item_blocks`](crate::Field::item_blocks). It is
+	/// never null, `resolve` gives an empty list for no value.
+	List(&'static str),
 }
 
 /// What a field of a custom type relates to, so assets in use are known.
