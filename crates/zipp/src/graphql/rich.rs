@@ -53,23 +53,13 @@ pub(super) fn rich_text_object() -> Object {
 							Chunk::Buttons(links) => {
 								let mut buttons = vec![];
 								for l in &links {
-									let link = resolve_link(
+									buttons.extend(resolve_link(
 										&ctx, l, &rt.site, true, &to,
-									)?;
-									if let Some(link) = link {
-										buttons.push(async_graphql::to_value(
-											link,
-										)?);
-									}
+									)?);
 								}
-								let mut o =
-									async_graphql::indexmap::IndexMap::new();
-								o.insert(
-									async_graphql::Name::new("buttons"),
-									GqlValue::List(buttons),
-								);
-								FieldValue::value(GqlValue::Object(o))
-									.with_type("Buttons")
+								let buttons =
+									serde_json::json!({ "buttons": buttons });
+								link_value(&buttons)?.with_type("Buttons")
 							}
 							Chunk::Block(attrs) => block_of(&attrs, &rt.site),
 						});
