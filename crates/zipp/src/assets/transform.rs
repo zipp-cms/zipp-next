@@ -76,7 +76,10 @@ pub(super) fn generate(
 	let (w, h) = (img.width(), img.height());
 	let (out_w, out_h) = transform_size(w, h, t);
 
-	let img = if t.crop {
+	// at its size, like `_edited`: no second image of the full size
+	let img = if (out_w, out_h) == (w, h) {
+		img
+	} else if t.crop {
 		let focal = (asset.focal_x, asset.focal_y);
 		let (x, y, cw, ch) = crop_rect(w, h, out_w, out_h, focal);
 		img.crop_imm(x, y, cw, ch).resize_exact(

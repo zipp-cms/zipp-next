@@ -337,6 +337,34 @@ async fn the_uploaded_image_only_for_the_studio() {
 }
 
 #[tokio::test]
+async fn an_edit_of_the_same_size_keeps_the_pixels() {
+	let ts = TestServer::new(site_with_roles());
+	let author = ts.user(Some("author"));
+	let mut img = image::RgbImage::new(3, 2);
+	img.put_pixel(0, 0, image::Rgb([255, 0, 0]));
+	let mut data = vec![];
+	img.write_to(&mut Cursor::new(&mut data), ImageFormat::Png)
+		.unwrap();
+	let a = upload(&author, "a.png", &data).await.unwrap();
+	let edits: Edits =
+		serde_json::from_value(json!({ "flipH": true })).unwrap();
+	let change = UpdateReq {
+		id: a.id,
+		change: AssetChange {
+			edits: Some(edits),
+			..Default::default()
+		},
+	};
+	let a = author.call(&change).await.unwrap();
+
+	// flipped as it is, not resampled
+	let (status, body) = get(&ts.anonymous(), &a.url(None)).await;
+	assert_eq!(status, StatusCode::OK);
+	let served = image::load_from_memory(&body).unwrap().to_rgb8();
+	assert_eq!(served, image::imageops::flip_horizontal(&img));
+}
+
+#[tokio::test]
 async fn usage_shows_what_the_role_sees() {
 	let schema = site_with_roles()
 		.role(Role::new("media", "Media").assets(crate::Access::View));
