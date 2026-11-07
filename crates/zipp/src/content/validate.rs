@@ -108,8 +108,7 @@ pub(crate) fn check_default(
 			| FieldKind::Dropdown { .. }
 			| FieldKind::ButtonGroup { .. }
 			| FieldKind::Checkboxes { .. }
-			| FieldKind::Custom { .. }
-	);
+	) || matches!(&field.kind, FieldKind::Custom { blocks, .. } if blocks.is_empty());
 	if !plain {
 		return Err("only fields of plain values have one".into());
 	}
@@ -421,12 +420,15 @@ fn item_blocks(
 		return None;
 	}
 
+	// the studio's editor finds a block by its id: a copied one gets its
+	// own
+	let mut ids = std::collections::HashSet::new();
 	let items = items
 		.iter()
 		.enumerate()
 		.map(|(i, item)| {
 			let mut item = item.clone();
-			item["block"] = validate_block(
+			let mut block = validate_block(
 				schema,
 				types,
 				&item["block"],
@@ -434,6 +436,12 @@ fn item_blocks(
 				hidden,
 				errors,
 			);
+			if let Some(id) = block["id"].as_str()
+				&& !ids.insert(id.to_string())
+			{
+				block["id"] = new_block_id().into();
+			}
+			item["block"] = block;
 			item
 		})
 		.collect();

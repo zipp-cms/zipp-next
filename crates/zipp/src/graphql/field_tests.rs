@@ -659,7 +659,9 @@ impl FieldType for Places {
 		value: &Value,
 	) -> async_graphql::Result<Option<FieldValue<'a>>> {
 		let site = ext::site(ctx)?;
-		let items = value.as_array().into_iter().flatten().map(|i| {
+		// a switched off block isn't on the website, nor its item
+		let items = value.as_array().into_iter().flatten();
+		let items = items.filter(|i| i["block"]["enabled"] != false).map(|i| {
 			FieldValue::owned_any(Place {
 				span: i["span"].as_i64().unwrap_or(12),
 				block: i["block"].clone(),
@@ -697,7 +699,7 @@ impl crate::Plugin for PlacesPlugin {
 			.field(GqlField::new("block", TypeRef::named_nn("Block"), |ctx| {
 				FieldFuture::new(async move {
 					let p = ctx.parent_value.try_downcast_ref::<Place>()?;
-					Ok(Some(ext::block(&p.block, &p.site)))
+					Ok(ext::block(&p.block, &p.site))
 				})
 			}));
 		crate::GraphqlExt::new().types([place.into()])
@@ -756,8 +758,12 @@ async fn blocks_in_the_items_of_a_field_type() {
 		assert_eq!(errs[0].message, "a span of 1 to 12");
 
 		let id = save_places(json!([
-			{ "span": 4, "block": { "type": "photo", "fields": { "image": [a.id] } } },
-			{ "span": 8, "block": { "type": "text", "fields": { "content": "A" } } },
+			{ "span": 4, "block": { "id": "a1", "type": "photo",
+				"fields": { "image": [a.id] } } },
+			{ "span": 8, "block": { "id": "a1", "type": "text",
+				"fields": { "content": "A" } } },
+			{ "span": 6, "block": { "type": "text", "enabled": false,
+				"fields": { "content": "Off" } } },
 		]))
 		.unwrap()
 		.id;
@@ -770,6 +776,11 @@ async fn blocks_in_the_items_of_a_field_type() {
 			)
 			.unwrap();
 		assert_eq!(path, "places.0.block.image");
+		// a copied block gets its own id
+		let saved = crate::entries::get_entry(&conn, id, "en").unwrap();
+		let places = &saved.fields["places"];
+		assert_eq!(places[0]["block"]["id"], "a1");
+		assert_ne!(places[1]["block"]["id"], "a1");
 		id
 	};
 

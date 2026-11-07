@@ -153,9 +153,10 @@ pub(crate) fn inner_mut<'a>(
 		},
 		Holds::RichText => richtext::blocks_mut(value),
 		Holds::Items => match value {
-			Value::Array(items) => {
-				items.iter_mut().map(|item| &mut item["block"]).collect()
-			}
+			Value::Array(items) => items
+				.iter_mut()
+				.filter_map(|i| i.get_mut("block"))
+				.collect(),
 			_ => return vec![],
 		},
 		Holds::Group(component) => {

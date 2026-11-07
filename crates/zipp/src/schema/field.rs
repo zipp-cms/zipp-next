@@ -861,8 +861,8 @@ impl Field {
 	/// value is a list of items `{ "block": { "id", "type", "fields" },
 	/// ... }`. zipp checks, migrates and indexes the blocks, the type the
 	/// rest of each item; GraphQL gives a block with
-	/// [`graphql::ext::block`](crate::graphql::ext::block), the studio lends the
-	/// field's module `host.mountBlock` and `host.newBlock`.
+	/// [`graphql::ext::block`](crate::graphql::ext::block), the studio lends
+	/// the field's module `blocks` (`create`, `copy`, `mount`).
 	pub fn item_blocks<'a>(
 		mut self,
 		types: impl IntoIterator<Item = &'a str>,

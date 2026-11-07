@@ -158,10 +158,15 @@ impl Op {
 				// keys are those of the other component
 				let same_kind =
 					old.is_some_and(|o| match (&o.kind, &field.kind) {
+						// blocks in the items or not is another shape
 						(
-							FieldKind::Custom { ty: a, .. },
-							FieldKind::Custom { ty: b, .. },
-						) => a == b,
+							FieldKind::Custom {
+								ty: a, blocks: x, ..
+							},
+							FieldKind::Custom {
+								ty: b, blocks: y, ..
+							},
+						) => a == b && x.is_empty() == y.is_empty(),
 						(
 							FieldKind::Group { component: a },
 							FieldKind::Group { component: b },
@@ -330,19 +335,20 @@ fn block_lists(
 	}
 }
 
-/// The blocks of the items of a custom type as one list for `f`, an item
-/// whose block went away goes too.
+/// The block of each item of a custom type for `f`, an item whose block
+/// went away goes too; items without one stay as they are.
 fn item_blocks(items: &mut Value, f: &mut impl FnMut(&mut Vec<Value>)) {
 	let Value::Array(items) = items else { return };
-	let mut blocks: Vec<Value> =
-		items.iter().map(|i| i["block"].clone()).collect();
-	f(&mut blocks);
-
 	items.retain_mut(|item| {
-		let id = &item["block"]["id"];
-		match blocks.iter().find(|b| &b["id"] == id) {
+		let Some(block) = item.get_mut("block") else {
+			return true;
+		};
+		let mut list = vec![block.take()];
+		f(&mut list);
+
+		match list.pop() {
 			Some(b) => {
-				item["block"] = b.clone();
+				*block = b;
 				true
 			}
 			None => false,

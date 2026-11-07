@@ -52,6 +52,11 @@ export type ItemBlocks = {
 	/** a new block of one of the types, with its defaults */
 	create(type: string): ItemBlock;
 	/**
+	 * A copy of a block for a copied item, with new ids: each block of the
+	 * value has its own.
+	 */
+	copy(block: ItemBlock): ItemBlock;
+	/**
 	 * The studio's editor of the block with this id in the value: its
 	 * fields (with their errors and tabs), the image picker and editor,
 	 * rich text. Its changes are in the value the module gets with

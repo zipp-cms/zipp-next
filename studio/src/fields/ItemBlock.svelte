@@ -1,32 +1,16 @@
 <script lang="ts">
-	import type { Block, FieldOf, Schema, Values } from '../core/schema';
+	import type { Block } from '../core/schema';
 	import { componentOf } from '../core/schema';
-	import type { Refs } from '../entries/api';
+	import type { Source } from './itemBlocks';
 	import BlockFields from './BlockFields.svelte';
 
 	/**
 	 * The fields of the block `id` in the items of a custom type, what
 	 * `blocks.mount` of its module shows; nothing once it left them.
 	 */
-	let {
-		schema,
-		field,
-		values,
-		errors,
-		refs,
-		path,
-		changed,
-		id,
-	}: {
-		schema: Schema;
-		field: FieldOf<'custom'>;
-		values: Values;
-		errors: Record<string, string>;
-		refs: Refs;
-		path: string;
-		changed: Set<string>;
-		id: string;
-	} = $props();
+	let { src, id }: { src: Source; id: string } = $props();
+	const { schema, field, values, errors, refs, path, changed } =
+		$derived(src);
 
 	const items = $derived(
 		(values[field.handle] as { block?: Block }[] | null) ?? [],

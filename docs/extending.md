@@ -96,9 +96,11 @@ checks the rest. In GraphQL the type is a `GraphqlType::List` of a type
 its plugin registers; `resolve` takes the site with
 `graphql::ext::site(ctx)`, and the item's `block` field gives
 `graphql::ext::block(&block, &site)`, the block as its `<type>_Block`
-of the `Block` interface. In the studio the editor gets `blocks`
+of the `Block` interface (none for a switched off block, whose item the
+type leaves out). In the studio the editor gets `blocks`
 (`ItemBlocks` of `zipp-ui/field`): the block types with their names and
-icons, `create(type)` for a new block with its defaults, and
+icons, `create(type)` for a new block with its defaults, `copy(block)`
+for a copied item (each block of the value has its own id), and
 `mount(target, id)`, the studio's own editor of a block (its fields,
 tabs, errors, the image picker, rich text), whose changes come back in
 the value.

@@ -37,7 +37,8 @@ pub enum GraphqlType {
 	/// [`FieldType::resolve`].
 	Named(&'static str),
 	/// A list of a type a plugin registers, like `Named`: the items of a
-	/// field with [`Field::item_blocks`](crate::Field::item_blocks).
+	/// field with [`Field::item_blocks`](crate::Field::item_blocks). It is
+	/// never null, `resolve` gives an empty list for no value.
 	List(&'static str),
 }
 

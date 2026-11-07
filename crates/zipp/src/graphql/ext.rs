@@ -40,10 +40,10 @@ pub fn site(ctx: &ResolverContext) -> async_graphql::Result<String> {
 /// A block `{ "id", "type", "fields" }` as its `<type>_Block` of the
 /// `Block` interface, like in a blocks field: the items of a field with
 /// [`Field::item_blocks`](crate::Field::item_blocks) give theirs so, with
-/// the [`site`] of the field. A switched off block (`"enabled": false`)
-/// isn't on the website, leave it out.
-pub fn block(block: &Value, site: &str) -> FieldValue<'static> {
-	block_of(block, site)
+/// the [`site`] of the field. None for a switched off block
+/// (`"enabled": false`): it isn't on the website, leave its item out.
+pub fn block(block: &Value, site: &str) -> Option<FieldValue<'static>> {
+	(block["enabled"] != false).then(|| block_of(block, site))
 }
 
 /// Entries of a site like the query arguments of `entries`

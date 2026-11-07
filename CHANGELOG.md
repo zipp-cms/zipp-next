@@ -8,8 +8,8 @@
   and indexes those blocks like a blocks field's, the type the rest.
   For its GraphQL `GraphqlType::List` of a plugin's type,
   `graphql::ext::site` and `graphql::ext::block`; its studio module gets
-  `blocks` with the block types, `create` and `mount`, the studio's
-  editor of a block.
+  `blocks` with the block types, `create`, `copy` and `mount`, the
+  studio's editor of a block.
 - Public user profiles, like Craft's user fields and WordPress' author
   pages: `.user_fields([...])` (a component `user`, in migrations), a
   unique slug of every user (admins change it), and

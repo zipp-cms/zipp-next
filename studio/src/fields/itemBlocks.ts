@@ -3,11 +3,11 @@ import type { ItemBlocks } from 'zipp-ui/field';
 import { componentOf, defaults } from '../core/schema';
 import type { FieldOf, Schema, Values } from '../core/schema';
 import type { Refs } from '../entries/api';
-import { newBlockId } from './blocks.svelte';
+import { newBlockId, withNewIds } from './blocks.svelte';
 import ItemBlock from './ItemBlock.svelte';
 
 /** What a custom field's editor shows its blocks with, read when used. */
-type Source = {
+export type Source = {
 	schema: Schema;
 	field: FieldOf<'custom'>;
 	values: Values;
@@ -37,35 +37,14 @@ export function itemBlocks(
 			type,
 			fields: defaults(schema, type),
 		}),
+		copy(block) {
+			// a plain copy, also of a block in the module's state
+			const b = JSON.parse(JSON.stringify(block));
+			withNewIds(schema, b);
+			return b;
+		},
 		mount(target, id) {
-			const c = mount(ItemBlock, {
-				target,
-				context,
-				props: {
-					get schema() {
-						return src.schema;
-					},
-					get field() {
-						return src.field;
-					},
-					get values() {
-						return src.values;
-					},
-					get errors() {
-						return src.errors;
-					},
-					get refs() {
-						return src.refs;
-					},
-					get path() {
-						return src.path;
-					},
-					get changed() {
-						return src.changed;
-					},
-					id,
-				},
-			});
+			const c = mount(ItemBlock, { target, context, props: { src, id } });
 			return { destroy: () => unmount(c) };
 		},
 	};
