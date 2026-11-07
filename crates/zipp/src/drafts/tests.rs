@@ -488,6 +488,42 @@ fn a_revision_keeps_the_type() {
 	assert_eq!(live.fields, fields);
 }
 
+/// Back to the live type, the other sites get their translations again:
+/// the type between had the city shared.
+#[test]
+fn back_to_the_type_brings_the_translations() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = with_concerts();
+	let fields = json!({ "city": "Bern", "price": "10", "band": "X" });
+	let e = save(
+		&conn,
+		&s,
+		None,
+		input("events", "concert", "Jazz", fields.clone()),
+		None,
+	)
+	.unwrap();
+	let en = json!({ "city": "Berne", "price": "10", "band": "X" });
+	let en = site_doc("concert", "Jazz", en);
+	put_draft(&conn, &s, e.id, "en", en, None, None).unwrap();
+	publish(&conn, &s, e.id, None).unwrap();
+
+	let event = site_doc("event", "Jazz", json!({ "city": "Bern" }));
+	let d = put_draft(&conn, &s, e.id, "de", event, None, None)
+		.unwrap()
+		.unwrap();
+	assert_eq!(d.doc["en"].fields["city"], "Bern");
+
+	let concert = site_doc("concert", "Jazz", fields);
+	let d = put_draft(&conn, &s, e.id, "de", concert, base(&conn, e.id), None)
+		.unwrap();
+	// the live entry again: no draft
+	assert!(d.is_none());
+	let live = get_entry(&conn, e.id, "en").unwrap();
+	assert_eq!(live.fields["city"], "Berne");
+}
+
 #[test]
 fn a_save_changes_the_type() {
 	let db = Db::memory().unwrap();

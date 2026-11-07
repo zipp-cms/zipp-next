@@ -27,7 +27,7 @@ use crate::entries::{
 	Dates, Entry, EntryInput, check, get_entry, slugify, write,
 };
 use crate::error::{Error, Result};
-use crate::schema::Schema;
+use crate::schema::{Component, Field, Schema};
 
 pub mod api;
 #[cfg(test)]
@@ -307,14 +307,45 @@ pub fn put_draft(
 
 	let live = live_doc(conn, id)?;
 	let mut doc = current.map_or_else(|| live.clone(), |d| d.doc);
-	for (_, sd) in doc.iter_mut().filter(|(s, _)| s.as_str() != site) {
-		sd.fields = follow(schema, &sd.ty, comp, &content.fields, &sd.fields);
+	for (s, sd) in doc.iter_mut().filter(|(s, _)| s.as_str() != site) {
+		let fields = follow(schema, &sd.ty, comp, &content.fields, &sd.fields);
+		sd.fields = match live.get(s) {
+			Some(l) if sd.ty != content.ty && l.ty == content.ty => {
+				back_to_live(schema, &sd.ty, comp, fields, &l.fields)
+			}
+			_ => fields,
+		};
 		sd.ty = content.ty.clone();
 		sd.dates = content.dates;
 	}
 	doc.insert(site.into(), content);
 
 	store_or_discard(conn, schema, id, &doc, &live, user_id)
+}
+
+/// The fields of another site whose draft goes back to its live type
+/// `to` from `from`: a translatable field that `from` didn't have as such
+/// gets its live value again, the change of type lost it in this site.
+fn back_to_live(
+	schema: &Schema,
+	from: &str,
+	to: &Component,
+	fields: Value,
+	live: &Value,
+) -> Value {
+	let from = schema.entry_type(from);
+	let kept = |f: &Field| {
+		from.and_then(|c| c.fields.iter().find(|g| g.handle == f.handle))
+			.is_some_and(|g| g.translatable && g.kind == f.kind)
+	};
+	let mut out = fields.as_object().cloned().unwrap_or_default();
+	for f in to.fields.iter().filter(|f| f.translatable && !kept(f)) {
+		match live.get(&f.handle) {
+			Some(v) => out.insert(f.handle.clone(), v.clone()),
+			None => out.remove(&f.handle),
+		};
+	}
+	Value::Object(out)
 }
 
 /// Stores the draft, or deletes it when it is the live content again
