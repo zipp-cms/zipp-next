@@ -1,1 +1,0 @@
-import{B as c,x as o,aw as i,X as d,ax as x}from"./index-DTUjkXHw.js";function u(e,n,a){c(()=>{var r=o(()=>n(e,a==null?void 0:a())||{});if(a&&(r!=null&&r.update)){var s=!1,t={};i(()=>{var f=a();d(f),s&&x(t,f)&&(t=f,r.update(f))}),s=!0}if(r!=null&&r.destroy)return()=>r.destroy()})}export{u as a};

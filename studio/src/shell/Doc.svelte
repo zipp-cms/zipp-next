@@ -1,10 +1,10 @@
 <script module lang="ts">
-	import type { Schema as SchemaT } from '../core/schema';
+	import { docOf, type Schema as SchemaT } from '../core/schema';
 	import { t } from '../i18n/index.svelte';
 
 	/** A doc of the code by its handle. */
 	export function loadProps(props: { schema: SchemaT; handle: string }) {
-		const doc = props.schema.docs.find(d => d.handle === props.handle);
+		const doc = docOf(props.schema, props.handle);
 		if (!doc) throw new Error(t('shell.noDoc', { handle: props.handle }));
 		return { doc };
 	}

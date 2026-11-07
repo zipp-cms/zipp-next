@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Schema } from '../core/schema';
+	import { roleOf, type Schema } from '../core/schema';
 	import { accessText, roleAccessText } from '../core/access';
 	import { sitesPath } from '../core/paths';
 	import Sentence from '../i18n/Sentence.svelte';
@@ -8,7 +8,7 @@
 	/** What a role may do, from the code: per section, assets, AI, Setup. */
 	let { schema, role }: { schema: Schema; role: string | null } = $props();
 
-	const def = $derived(schema.roles.find(r => r.handle === role));
+	const def = $derived(roleOf(schema, role));
 	const sections = $derived(
 		schema.sections.filter(
 			s => def?.sections[s.handle] || def?.own[s.handle],

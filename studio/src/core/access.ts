@@ -1,7 +1,9 @@
 import { session } from './session.svelte';
 import { t } from '../i18n/index.svelte';
 import {
+	docOf,
 	navGroups,
+	roleOf,
 	type Access,
 	type NavGroup,
 	type Role,
@@ -15,7 +17,7 @@ import {
 const LEVELS: Access[] = ['view', 'edit', 'publish', 'delete'];
 
 function role(schema: Schema) {
-	return schema.roles.find(r => r.handle === session.user?.role);
+	return roleOf(schema, session.user?.role);
 }
 
 function enough(has: Access | null | undefined, need: Access) {
@@ -30,12 +32,12 @@ export function roleName(schema: Schema): string {
 /** The name of a role, `null` is an admin. */
 export function roleNameOf(schema: Schema, handle: string | null): string {
 	if (handle === null) return t('common.admin');
-	return schema.roles.find(r => r.handle === handle)?.name ?? handle;
+	return roleOf(schema, handle)?.name ?? handle;
 }
 
 /** Whether users of a role log into the studio, `null` is an admin. */
 export function studioRole(schema: Schema, handle: string | null): boolean {
-	return schema.roles.find(r => r.handle === handle)?.studio ?? true;
+	return roleOf(schema, handle)?.studio ?? true;
 }
 
 /** What the user may do in a section (their own entries apart), for
@@ -126,9 +128,7 @@ export function visibleNav(schema: Schema): NavGroup[] {
 		.map(g => ({
 			...g,
 			sections: g.sections.filter(
-				h =>
-					schema.docs.some(d => d.handle === h) ||
-					canNew(schema, h, 'view'),
+				h => !!docOf(schema, h) || canNew(schema, h, 'view'),
 			),
 		}))
 		.filter(g => g.sections.length);
