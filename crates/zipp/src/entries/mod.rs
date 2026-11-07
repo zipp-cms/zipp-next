@@ -471,7 +471,7 @@ pub(crate) fn select(conn: &Connection, q: &Query) -> Result<Vec<Entry>> {
 pub(crate) fn children(conn: &Connection, q: &Query) -> Result<Vec<Entry>> {
 	let (from, params) = q.sql_from();
 	let order = q.order_by();
-	let (first, last) = (q.offset, q.offset + q.limit);
+	let (first, last) = (q.offset, q.offset.saturating_add(q.limit));
 	// the columns of the entries have different names
 	let sql = format!(
 		"SELECT * FROM (SELECT {COLUMNS}, ROW_NUMBER() OVER (
