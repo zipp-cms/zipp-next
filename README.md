@@ -45,7 +45,7 @@ A site depends on the package `zipp-cms`, the crate is called `zipp`:
 
 ```toml
 [dependencies]
-zipp = { package = "zipp-cms", version = "0.1" }
+zipp = { package = "zipp-cms", version = "0.2" }
 ```
 
 The [documentation](docs/README.md) explains the content model, editing,

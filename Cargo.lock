@@ -856,7 +856,7 @@ dependencies = [
 
 [[package]]
 name = "example-cms"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde_json",
  "tokio",
@@ -3623,7 +3623,7 @@ dependencies = [
 
 [[package]]
 name = "zipp-agent"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3634,7 +3634,7 @@ dependencies = [
 
 [[package]]
 name = "zipp-cms"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-graphql",
  "async-graphql-axum",
@@ -3669,7 +3669,7 @@ dependencies = [
 
 [[package]]
 name = "zipp-forms"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3680,7 +3680,7 @@ dependencies = [
 
 [[package]]
 name = "zipp-members"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3690,7 +3690,7 @@ dependencies = [
 
 [[package]]
 name = "zipp-seo"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",

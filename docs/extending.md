@@ -161,7 +161,7 @@ crate's `Cargo.toml`, a folder `studio` with this `package.json`:
 		"sass": "^1.63.4",
 		"svelte": "^5.0.0",
 		"vite": "^8.0.0",
-		"zipp-ui": "^0.1.0"
+		"zipp-ui": "^0.2.0"
 	}
 }
 ```

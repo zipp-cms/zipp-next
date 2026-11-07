@@ -4,7 +4,7 @@ members = ["crates/zipp", "crates/zipp-seo", "crates/zipp-agent", "crates/zipp-f
 
 # the crates are released together, in one version
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 # async-graphql 7.2 needs 1.89
 rust-version = "1.89"

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-11-07)
 
 - zipp-forms limits submissions per address only (5 in 10 minutes): the
   cap of 50 per form from all addresses let about ten addresses block a

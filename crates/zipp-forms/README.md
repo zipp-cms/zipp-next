@@ -6,8 +6,8 @@ mailed, nothing is stored.
 
 ```toml
 [dependencies]
-zipp = { package = "zipp-cms", version = "0.1" }
-zipp-forms = "0.1"
+zipp = { package = "zipp-cms", version = "0.2" }
+zipp-forms = "0.2"
 ```
 
 ```rust,ignore
