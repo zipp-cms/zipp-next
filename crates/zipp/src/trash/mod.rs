@@ -307,15 +307,7 @@ pub fn restore_asset(conn: &Connection, id: i64) -> Result<()> {
 /// with it. A child trashed on its own before stays in the trash, on the
 /// top.
 pub fn purge_entry(conn: &Connection, id: i64) -> Result<()> {
-	let deleted_at: i64 = conn
-		.query_row(
-			"SELECT deleted_at FROM entries
-			WHERE id = ?1 AND deleted_at IS NOT NULL",
-			[id],
-			|r| r.get(0),
-		)
-		.optional()?
-		.ok_or(Error::NotFound)?;
+	let (_, _, deleted_at) = trashed_owner(conn, id)?;
 	for e in with_children(conn, id, Some(deleted_at))? {
 		conn.execute(
 			"UPDATE entries SET parent_id = NULL
