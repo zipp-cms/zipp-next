@@ -58,8 +58,9 @@ GraphQL, SEO, extending and running a site.
 - `studio`: the editing ui (Svelte), its build is embedded in the zipp
   crate and served on `/admin`; `studio/ui` is `zipp-ui` on npm, the
   components for the studio modules of plugins
-- `crates/zipp-seo`, `crates/zipp-forms`: plugins (SEO, forms of the
-  website), on crates.io under their names
+- `crates/zipp-seo`, `crates/zipp-forms`, `crates/zipp-members`:
+  plugins (SEO, forms of the website, members editing their entries on
+  the website), on crates.io under their names
 - `crates/zipp-agent`: the coding agent in the AI chat, a plugin for
   development, not published
 - `example/cms`: the cms crate of an example site, with its migrations;

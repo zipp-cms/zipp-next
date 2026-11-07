@@ -328,7 +328,8 @@ impl Client {
 		Err(resp.error)
 	}
 
-	/// A multipart upload of files (name, data) to a path under `/api`.
+	/// A multipart upload of files (name, data) to a path under `/api`,
+	/// of the website for a visitor.
 	pub async fn upload(
 		&self,
 		path: &str,
@@ -351,7 +352,10 @@ impl Client {
 		body.extend(format!("--{boundary}--\r\n").bytes());
 		let req = http::Request::builder()
 			.method("POST")
-			.uri(format!("/api{path}"))
+			.uri(match self.site {
+				true => path.to_string(),
+				false => format!("/api{path}"),
+			})
 			.header(
 				header::CONTENT_TYPE,
 				format!("multipart/form-data; boundary={boundary}"),

@@ -4,7 +4,7 @@ Visitors of the website can have an account and log in there, like
 Craft users without "Access the control panel": members who edit their
 own content in the frontend. Admins create them on the Users page of the
 studio (no sign-up yet); the website routes that let them edit come from
-plugins (`zipp-members`, next).
+the plugin `zipp-members` (below).
 
 ## Members: a role without the studio
 
@@ -72,3 +72,71 @@ async fn own_recipes(user: SiteUser, State(state): State<AppState>) -> … {
 In tests, `ts.visitor(token)` sends requests like the frontend (no
 `/api`, the token as bearer) and `ts.site_user(role)` is a user logged in
 on the website.
+
+### Acting as the user
+
+A route of a plugin changes content as the user, never around zipp's
+checks: `Authed::of_site_user(&user)` is the user as the studio knows
+them, and these functions do what the studio's api does with it (the
+role's sections and own access, validation, drafts and revisions, the
+index, the search and `on_change`):
+
+| Function | Does |
+| --- | --- |
+| `entries::list_as(state, &auth, query)` | the entries of a `Query` the user sees, unpublished ones too, each with its draft (`WithDraft`), and the total |
+| `entries::get_as(state, &auth, id, site)` | one of them |
+| `entries::create_as(state, &auth, input)` | a new entry of the user, published only if they may publish |
+| `entries::update_as(state, &auth, id, input)` | saves into the draft, which goes live at once with Publish (`Saved::Live`), else stays for an editor (`Saved::Draft`) |
+| `entries::delete_as(state, &auth, id)` | to the trash, with Delete |
+| `assets::upload_as(state, &auth, &mut multipart, &rules)` | the first file of a multipart request, with asset Edit; `UploadRules::new(max_bytes).images_only().folder("Members/4")` |
+
+The author is the user who creates an entry and can't change; a
+relation to an entry the role can't view is left out like in the studio.
+
+## Editing on the website: zipp-members
+
+The plugin `zipp-members` lets members edit their own entries of some
+sections in the frontend:
+
+```rust
+Schema::new()
+	// ...
+	.role(
+		Role::new("member", "Member")
+			.own("recipes", Access::Delete)
+			.section("recipes", Access::View)
+			.assets(Access::Edit)
+			.no_studio(),
+	)
+	.plugin(
+		Members::new()
+			.section("recipes")
+			.images(10 * 1024 * 1024, "Members/{user}"),
+	)
+```
+
+Only the sections of `.section` are edited there, also when a role has
+access to others, and of them only the user's own entries (an admin's
+too: their own). What they may do with them is their role's: with own
+Publish their saves are live at once, with only Edit a new entry stays
+unpublished and a change is a draft that an editor publishes in the
+studio. The frontend forwards these routes with the visitor's site token
+(401 without one, 403 for another's entry or a section that isn't the
+plugin's):
+
+| Request | Answer |
+| --- | --- |
+| `GET /members/entries?section=recipes&site=&offset=` | `{ entries, total }`, theirs, the newest first, 100 at a time |
+| `GET /members/entries/{id}?site=` | the entry |
+| `POST /members/entries {section, type, title, fields, published?, site?}` | the new entry |
+| `PUT /members/entries/{id} {title, fields, published?, site?}` | `{ saved: "live" \| "draft", entry }` |
+| `DELETE /members/entries/{id}` | to the trash |
+| `POST /members/assets`, multipart | `{ id, url, width, height }`, an image for an image field |
+
+An entry is `{ id, section, type, site, title, slug, uri, url, published,
+postDate, fields, hasDraft }`, with the content of its draft if it has
+one (`published` is what is live). A change replaces the fields it
+sends, the others stay, and keeps the type, slug and dates; invalid
+fields answer `INVALID` with their paths like the studio's api. Images
+go into the folder of `.images` (`{user}` is the user's id), up to its
+size, only images. A user may change or upload 60 times in 10 minutes.

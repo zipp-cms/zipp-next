@@ -33,10 +33,12 @@ mod tests;
 mod throttle;
 
 pub(crate) use routes::{routes, site_routes};
+#[cfg(any(test, feature = "testing"))]
+pub(crate) use sessions::new_site_session;
 pub use sessions::{Session, end_session, short_session};
 pub(crate) use sessions::{
 	add_user, end_sessions, hash_password, login, new_session,
-	new_site_session, password_matches, renew_session, set_password_hash,
+	password_matches, renew_session, set_password_hash,
 };
 pub use site::SiteUser;
 pub(crate) use throttle::Throttle;
@@ -52,6 +54,17 @@ pub struct Authed {
 }
 
 impl Authed {
+	/// A user logged in on the website, for the routes of plugins that
+	/// act as them (see [`entries::create_as`](crate::entries::create_as)):
+	/// the same checks as in the studio, also for a role without it.
+	pub fn of_site_user(user: &SiteUser) -> Self {
+		Self {
+			user_id: user.id,
+			role: user.role.clone(),
+			token: String::new(),
+		}
+	}
+
 	pub fn admin(&self) -> bool {
 		self.role.is_none()
 	}

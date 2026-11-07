@@ -33,7 +33,8 @@
 //! - [`AppState`]: what the routes of the site get, the database, the
 //!   schema and the mailer.
 //! - [`Plugin`] and [`FieldType`]: crates that add a feature or a field
-//!   type, like `zipp-seo`. They use [`api`], [`auth`], [`entries`],
+//!   type, like `zipp-seo`. They use [`api`], [`auth`], [`entries`] (also
+//!   as a user of the website: `create_as`, ...), [`assets`],
 //!   [`drafts`] and [`graphql::ext`].
 //! - `testing::TestServer`, with the feature `testing`: the whole cms in
 //!   a test, on a database in memory.

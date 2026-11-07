@@ -20,30 +20,9 @@ async fn list_route(
 	auth: Authed,
 	Req(ListReq(params)): Req<ListReq>,
 ) -> ApiResult<ListReq> {
-	let conn = state.db.conn();
 	let mut q = Query::parse(&state.schema, &params).map_err(Error::Request)?;
-	for section in q.section.iter().chain(&q.any_sections) {
-		if !auth.can_list(&state.schema, section) {
-			return Err(Error::Forbidden);
-		}
-	}
-	// a search over all sections only finds what the role sees, also in
-	// the total, or a search would tell whether a hidden entry matches;
-	// the entries of `relatedToEntries` too; of a section with own access
-	// only the user's
-	if !auth.admin() {
-		let sections = state.schema.sections.iter();
-		let sections: Vec<String> = sections
-			.filter(|s| auth.can_list(&state.schema, &s.handle))
-			.map(|s| s.handle.clone())
-			.collect();
-		let own_only = auth.own_only(&state.schema);
-		q.each_mut(&mut |q| {
-			q.sections = Some(sections.clone());
-			q.own_only = own_only.clone();
-		});
-	}
-
+	restrict(&auth, &state.schema, &mut q)?;
+	let conn = state.db.conn();
 	let (entries, total) = list(&conn, &q)?;
 	let ids: Vec<i64> = entries.iter().map(|e| e.id).collect();
 	let mut relations = refs(&conn, &ids, &q.site, q.published_only)?;
@@ -127,20 +106,9 @@ async fn get_route(
 async fn create_route(
 	State(state): State<AppState>,
 	auth: Authed,
-	Req(CreateReq(mut input)): Req<CreateReq>,
+	Req(CreateReq(input)): Req<CreateReq>,
 ) -> ApiResult<CreateReq> {
-	// a new entry is the user's, own access is enough
-	let (schema, me) = (&state.schema, Some(auth.user_id));
-	auth.check_entry(schema, &input.section, me, Access::Edit)?;
-	// published only by who may publish
-	input.published &=
-		auth.can_entry(schema, &input.section, me, Access::Publish);
-	let entry = {
-		let conn = state.db.conn();
-		save(&conn, &state.schema, None, input, Some(auth.user_id))?
-	};
-	state.changed(entry.id, &entry.section, ChangeKind::Saved);
-	Ok(Json(entry))
+	Ok(Json(create_as(&state, &auth, input)?))
 }
 
 /// Live at once, like publishing.
@@ -185,8 +153,7 @@ async fn delete_route(
 	Req(req): Req<DeleteReq>,
 ) -> ApiResult<DeleteReq> {
 	let user = Some(access.auth.user_id);
-	crate::trash::trash_entry(&state.db.conn(), &state.schema, req.id, user)?;
-	state.changed(req.id, &access.section, ChangeKind::Deleted);
+	trash(&state, req.id, &access.section, user)?;
 	Ok(Json(()))
 }
 

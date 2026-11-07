@@ -17,7 +17,7 @@ jobs:
       id-token: write # Trusted Publishing on crates.io
     env:
       # in the order they depend on each other
-      CRATES: zipp-cms zipp-seo zipp-forms
+      CRATES: zipp-cms zipp-seo zipp-forms zipp-members
     steps:
       - uses: actions/checkout@v6
 

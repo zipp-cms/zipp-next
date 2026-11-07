@@ -217,7 +217,9 @@ A plugin is a crate that adds a whole feature, turned on with one line:
   rights of who asks, so previews show drafts.
 - `api_routes` under `/api` for the studio, made like zipp's own (see
   [The rest api](#the-rest-api)), `routes` for the website, like sitemaps
-  the frontend proxies; both get the finished schema.
+  the frontend proxies; both get the finished schema. A website route of
+  a logged in user changes content as them with `entries::create_as`
+  and the others, see [Website users](members.md).
 - `studio`: an ES module served as `/_plugins/<name>.js` with data for it;
   `sectionSetup(target, { schema, section, data, host })` adds a card to
   the setup page of a section. `PluginStudio::default().data(..)` gives
