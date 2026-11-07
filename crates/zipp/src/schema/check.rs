@@ -55,24 +55,11 @@ impl Schema {
 		if self.sites.is_empty() {
 			return Err("a schema needs at least one site".into());
 		}
-		for site in &self.sites {
-			check_handle(&site.handle)?;
-		}
-		if let Some(s) = first_twice(&self.sites, |a, b| a.handle == b.handle) {
-			return Err(format!("site {} exists twice", s.handle));
-		}
-		Ok(())
+		check_handles(&self.sites, |s| &s.handle, "site")
 	}
 
 	fn check_sections(&self) -> Result<(), String> {
-		for section in &self.sections {
-			check_handle(&section.handle)?;
-		}
-		if let Some(s) =
-			first_twice(&self.sections, |a, b| a.handle == b.handle)
-		{
-			return Err(format!("section {} exists twice", s.handle));
-		}
+		check_handles(&self.sections, |s| &s.handle, "section")?;
 		for section in &self.sections {
 			self.check_section(section)
 				.map_err(|e| format!("section {}: {e}", section.handle))?;
@@ -274,12 +261,7 @@ impl Schema {
 
 	fn check_graphql_schemas(&self) -> Result<(), String> {
 		let all = &self.graphql_schemas;
-		for s in all {
-			check_handle(&s.handle)?;
-		}
-		if let Some(s) = first_twice(all, |a, b| a.handle == b.handle) {
-			return Err(format!("graphql schema {} exists twice", s.handle));
-		}
+		check_handles(all, |s| &s.handle, "graphql schema")?;
 		for s in all {
 			let unknown = |what: &str, h: &String| {
 				format!("graphql schema {}: unknown {what} {h}", s.handle)
@@ -597,14 +579,7 @@ impl Schema {
 				if columns.is_empty() {
 					return Err("a table needs columns".into());
 				}
-				for c in columns {
-					check_handle(&c.handle)?;
-				}
-				if let Some(c) =
-					first_twice(columns, |a, b| a.handle == b.handle)
-				{
-					return Err(format!("column {} exists twice", c.handle));
-				}
+				check_handles(columns, |c| &c.handle, "column")?;
 				for c in columns {
 					// a cell is checked like the field of its kind
 					self.check_field(comp, &c.as_field())
@@ -785,6 +760,21 @@ fn holds_no_content(component: &str) -> String {
 
 /// The first item that is the same as one before it, for the handles
 /// that exist twice.
+/// Each handle is a valid one and none is there twice.
+fn check_handles<T>(
+	items: &[T],
+	handle: impl Fn(&T) -> &str,
+	what: &str,
+) -> Result<(), String> {
+	for x in items {
+		check_handle(handle(x))?;
+	}
+	match first_twice(items, |a, b| handle(a) == handle(b)) {
+		Some(x) => Err(format!("{what} {} exists twice", handle(x))),
+		None => Ok(()),
+	}
+}
+
 fn first_twice<T>(items: &[T], same: impl Fn(&T, &T) -> bool) -> Option<&T> {
 	items
 		.iter()
