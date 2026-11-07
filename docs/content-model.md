@@ -223,9 +223,9 @@ Dropdowns can be indexed.
 can have a color (`#rrggbb`), an icon, both or neither: `("pdf",
 "PDF")` has none, `ButtonOption::new("pdf", "PDF").icon("file-text")`
 an icon (a Lucide name or `Icon::svg`), `.color("#2b6cb0")` a color.
-The studio shows every option as a button with a dot in its color
-(the picked one in its color, without one in the accent) and its icon,
-the content stores the value, GraphQL gives the option as
+The studio shows the options as a segmented control (the picked one
+raised in white), each with a dot in its color and its icon, the
+content stores the value, GraphQL gives the option as
 `ButtonGroupOption { value label color icon }` (none for an option
 removed since; `color` and `icon` null if it has none, `icon` is the
 Lucide name, an own svg is only the studio's), so the website shows the

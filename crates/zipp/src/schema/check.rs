@@ -723,7 +723,7 @@ fn first_twice<T>(items: &[T], same: impl Fn(&T, &T) -> bool) -> Option<&T> {
 }
 
 /// The tools of a rich text's bar exist, are allowed by the field and
-/// are there once; the lines are between tools.
+/// are there once; the lines are between tools. Only for a rich text.
 fn check_toolbar(kind: &FieldKind) -> Result<(), String> {
 	let FieldKind::RichText {
 		headings,
@@ -736,7 +736,7 @@ fn check_toolbar(kind: &FieldKind) -> Result<(), String> {
 		..
 	} = kind
 	else {
-		return Ok(());
+		unreachable!("a toolbar is a rich text's");
 	};
 
 	for (i, tool) in toolbar.iter().enumerate() {

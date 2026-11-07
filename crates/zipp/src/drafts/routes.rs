@@ -81,6 +81,7 @@ async fn restore_route(
 	let user = Some(access.auth.user_id);
 	Ok(Json(restore(
 		&state.db.conn(),
+		&state.schema,
 		req.id,
 		req.rev,
 		req.base,

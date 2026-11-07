@@ -48,10 +48,14 @@
 	let resizing = $state(false);
 
 	// the website's most: the pane's width without the editor's least
-	// and the gap between them
+	// and the gap between them (`.live`'s gap), in rem
+	const EDITOR_MIN = 20;
+	const GAP = 1.25;
 	const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
 	let paneWidth = $state(0);
-	const maxFrame = $derived(paneWidth ? paneWidth - 21.25 * rem : undefined);
+	const maxFrame = $derived(
+		paneWidth ? paneWidth - (EDITOR_MIN + GAP) * rem : undefined,
+	);
 
 	// the editor gets the sidebar's room while the website is next to it
 	$effect(() => {

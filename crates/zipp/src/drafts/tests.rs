@@ -231,8 +231,17 @@ fn restores_a_revision_into_the_draft() {
 	publish(&conn, &s, e.id, None).unwrap();
 
 	let first = revisions(&conn, e.id).unwrap().pop().unwrap();
-	let d = restore(&conn, e.id, first.id, None, None).unwrap();
-	assert_eq!(d.doc["de"].title, "One");
+	let d = restore(&conn, &s, e.id, first.id, None, None).unwrap();
+	assert_eq!(d.unwrap().doc["de"].title, "One");
+
+	// the live revision changes nothing: no draft
+	let last = revisions(&conn, e.id).unwrap()[0].id;
+	assert!(
+		restore(&conn, &s, e.id, last, None, None)
+			.unwrap()
+			.is_none()
+	);
+	assert!(get_draft(&conn, e.id).unwrap().is_none());
 }
 
 #[test]

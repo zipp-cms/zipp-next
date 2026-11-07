@@ -79,7 +79,7 @@ pub struct RestoreReq {
 	pub base: Option<i64>,
 }
 
-request!(RestoreReq, POST "/entries/{id}/revisions/{rev}/restore" => Draft);
+request!(RestoreReq, POST "/entries/{id}/revisions/{rev}/restore" => Option<Draft>);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenResp {

@@ -75,12 +75,15 @@ export function getRevisions(id: number): Promise<Revision[]> {
 	return request('GET', `/entries/${id}/revisions`);
 }
 
-/** `base` like `putDraft`'s: the draft this editor has, its `updatedAt`. */
+/**
+ * `base` like `putDraft`'s: the draft this editor has, its `updatedAt`.
+ * null back: the revision is the live content, there is no draft.
+ */
 export function restoreRevision(
 	id: number,
 	rev: number,
 	base: number | null,
-): Promise<Draft> {
+): Promise<Draft | null> {
 	return request('POST', `/entries/${id}/revisions/${rev}/restore`, {
 		base,
 	});

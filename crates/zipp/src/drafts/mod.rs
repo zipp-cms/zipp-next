@@ -305,10 +305,8 @@ pub fn put_draft(
 
 	check_base(current.as_ref(), base, user_id)?;
 
-	let mut doc = match current {
-		Some(d) => d.doc,
-		None => live_doc(conn, id)?,
-	};
+	let live = live_doc(conn, id)?;
+	let mut doc = current.map_or_else(|| live.clone(), |d| d.doc);
 	for (_, sd) in doc.iter_mut().filter(|(s, _)| s.as_str() != site) {
 		sd.fields = follow(schema, &sd.ty, comp, &content.fields, &sd.fields);
 		sd.ty = content.ty.clone();
@@ -316,11 +314,24 @@ pub fn put_draft(
 	}
 	doc.insert(site.into(), content);
 
-	if same_as_live(schema, &doc, &live_doc(conn, id)?) {
+	store_or_discard(conn, schema, id, &doc, &live, user_id)
+}
+
+/// Stores the draft, or deletes it when it is the live content again
+/// (see [`same_as_live`]): `None`, as if there never was one.
+pub(super) fn store_or_discard(
+	conn: &Connection,
+	schema: &Schema,
+	id: i64,
+	doc: &Doc,
+	live: &Doc,
+	user_id: Option<i64>,
+) -> Result<Option<Draft>> {
+	if same_as_live(schema, doc, live) {
 		discard(conn, id)?;
 		return Ok(None);
 	}
-	store_draft(conn, id, &doc, user_id)?;
+	store_draft(conn, id, doc, user_id)?;
 	get_draft(conn, id)
 }
 
@@ -329,23 +340,21 @@ pub fn put_draft(
 /// slug (as a save trims and slugifies them) and the same fields once
 /// cleaned like a save does. Empty values count as none (an empty text,
 /// list, group or rich text, a null), key order doesn't matter, blocks
-/// are the same with the same ids.
+/// are the same with the same ids. A draft with a value a save refuses
+/// stays, so the editor sees the error on publish.
 fn same_as_live(schema: &Schema, doc: &Doc, live: &Doc) -> bool {
 	let slug = |sd: &SiteDoc| match sd.slug.trim() {
 		"" => slugify(sd.title.trim()),
 		s => slugify(s),
 	};
-	// half done drafts don't validate, the errors don't matter here
+	// as hidden: a half done draft needn't be filled, but cleaning drops
+	// invalid values, so only a draft without errors can be the same
 	let fields = |sd: &SiteDoc| {
 		let comp = schema.entry_type(&sd.ty)?;
-		Some(validate_fields(
-			schema,
-			comp,
-			&sd.fields,
-			"",
-			false,
-			&mut vec![],
-		))
+		let mut errors = vec![];
+		let v =
+			validate_fields(schema, comp, &sd.fields, "", true, &mut errors);
+		errors.is_empty().then_some(v)
 	};
 	let same = |a: &SiteDoc, b: &SiteDoc| {
 		a.ty == b.ty
@@ -354,7 +363,7 @@ fn same_as_live(schema: &Schema, doc: &Doc, live: &Doc) -> bool {
 			&& a.published == b.published
 			&& a.title.trim() == b.title.trim()
 			&& slug(a) == slug(b)
-			&& fields(a) == fields(b)
+			&& fields(a).is_some_and(|f| Some(f) == fields(b))
 	};
 	doc.len() == live.len()
 		&& doc

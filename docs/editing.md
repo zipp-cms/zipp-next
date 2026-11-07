@@ -10,7 +10,9 @@ live content until it is published. A change undone (the draft is the
 live content again) deletes the draft, as if there never was one: the
 same type, title, slug, switch and dates, and fields that are the same
 once cleaned like a save (an empty text, list, group or rich text is no
-value, key order doesn't count, blocks with the same ids). Publishing checks every site and
+value, key order doesn't count, blocks with the same ids). A draft
+with a value a save refuses stays, so publishing shows the error;
+restoring the live revision leaves no draft either. Publishing checks every site and
 writes them in one transaction and keeps a revision; an old revision
 opens read only in the editor's layout (title, tabs, fields, dots on
 what it changed) under a banner with its date, and can be restored

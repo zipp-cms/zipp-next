@@ -77,7 +77,7 @@ async fn drafts_until_published() {
 		rev: first,
 		base,
 	};
-	let restored = editor.call(&restore(None)).await.unwrap();
+	let restored = editor.call(&restore(None)).await.unwrap().unwrap();
 	assert_eq!(restored.doc["de"].title, "Start");
 
 	// not over someone else's draft they haven't seen
@@ -129,7 +129,7 @@ async fn content_from_before_revisions_stays_restorable() {
 		rev: first.id,
 		base: None,
 	};
-	let restored = editor.call(&restore).await.unwrap();
+	let restored = editor.call(&restore).await.unwrap().unwrap();
 	assert_eq!(restored.doc["de"].title, "Start");
 
 	// the next publish has its revision already
@@ -408,13 +408,15 @@ async fn a_change_undone_leaves_no_draft() {
 	let undo = draft("en", "Start", back.clone(), Some(d.updated_at));
 	assert_eq!(a.call(&undo).await.unwrap(), None);
 
-	// a real change stays: another block, a seo title, the switch
+	// a real change stays: another block, a seo title, the switch; and
+	// a value a save refuses, so publishing shows the error
 	let other = json!({ "intro": "Hi", "body": [{ "id": "b2", "type": "text",
 		"fields": { "content": "Hallo" } }] });
 	let seo = json!({ "intro": "Hi", "body": [block], "seo": {
 		"title": "T"
 	} });
-	for fields in [other, seo] {
+	let invalid = json!({ "intro": "Hi", "body": [block], "price": 1 });
+	for fields in [other, seo, invalid] {
 		let d = a.call(&draft("de", "Start", fields, None)).await.unwrap();
 		a.call(&DiscardReq { id }).await.unwrap();
 		assert!(d.is_some());
