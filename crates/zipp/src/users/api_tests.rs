@@ -225,6 +225,14 @@ async fn checks_what_admins_send() {
 	let err = admin.call(&boss).await.unwrap_err();
 	assert!(matches!(err, Error::Request(_)));
 
+	// one the cli took stays
+	let conn = ts.state.db.conn();
+	let id = super::create(&conn, "dev@localhost", "", "", None, "").unwrap();
+	drop(conn);
+	let mut dev = unchanged(&admin.call(&GetReq { id }).await.unwrap());
+	dev.name = "Dev".into();
+	admin.call(&dev).await.unwrap();
+
 	// not oneself
 	let me = admin.call(&SessionReq {}).await.unwrap().user;
 	let err = admin.call(&DeleteReq { id: me.id }).await.unwrap_err();
