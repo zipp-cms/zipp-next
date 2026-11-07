@@ -330,6 +330,10 @@ async fn the_uploaded_image_only_for_the_studio() {
 	// the uploaded file for who sees assets
 	let path = format!("/api/assets/{}/original", a.id);
 	assert_eq!(get(&author, &path).await, (StatusCode::OK, png(20, 10)));
+	// no shared cache keeps it
+	let resp = author.get(&path).await;
+	let cache = &resp.headers()[axum::http::header::CACHE_CONTROL];
+	assert_eq!(cache, "private, no-store");
 	let reader = ts.user(Some("reader"));
 	assert_eq!(get(&reader, &path).await.0, StatusCode::FORBIDDEN);
 	let anon = get(&ts.anonymous(), &path).await.0;

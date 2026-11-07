@@ -76,14 +76,15 @@ pub(super) async fn unzip_route(
 ) -> Result<Json<Unzipped>> {
 	// the folder is there, before the zip comes
 	check_folder(&state.db.conn(), params.folder)?;
-	let _unzipping =
-		state.unzipping.clone().try_lock_owned().map_err(|_| {
-			Error::Conflict("another zip is being unpacked, try again".into())
-		})?;
+	let unzipping = state.unzipping.clone().try_lock_owned().map_err(|_| {
+		Error::Conflict("another zip is being unpacked, try again".into())
+	})?;
 
 	let (_, tmp) = first_file(&state.files, &mut multipart).await?;
 	let user = Some(auth.user_id);
 	let unzipped = tokio::task::spawn_blocking(move || {
+		// held until it is unpacked, also when the request goes away
+		let _unzipping = unzipping;
 		let zip = read_zip(&state.files, tmp.as_file(), &Limits::default())?;
 		let conn = state.db.conn();
 		unzip(&conn, &state.files, zip, params.folder, user)
@@ -93,7 +94,8 @@ pub(super) async fn unzip_route(
 }
 
 /// `GET /assets/{id}/original`: the file as it was uploaded, for the
-/// image editor; the public url serves an image with its edits.
+/// image editor; the public url serves an image with its edits. No
+/// shared cache keeps it: the session is in a header a proxy can't see.
 pub(super) async fn original_route(
 	State(state): State<AppState>,
 	_access: AssetAccess<View>,
@@ -101,7 +103,12 @@ pub(super) async fn original_route(
 	req: axum::extract::Request,
 ) -> Result<Response> {
 	let asset = get_asset(&state.db.conn(), id)?;
-	serve_uploaded(&state, &asset, req).await
+	let mut resp = serve_uploaded(&state, &asset, req).await?;
+	resp.headers_mut().insert(
+		header::CACHE_CONTROL,
+		header::HeaderValue::from_static("private, no-store"),
+	);
+	Ok(resp)
 }
 
 #[derive(Deserialize)]
