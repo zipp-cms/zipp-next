@@ -1,7 +1,7 @@
 use super::api::*;
 use super::*;
 use crate::api::{ApiResult, ApiRouter, Req};
-use crate::auth::{Delete, EntryAccess, Publish, View};
+use crate::auth::{Admin, Delete, EntryAccess, Publish, View};
 
 /// Only the related entries the role sees: the chips of the others would
 /// show their titles and pages.
@@ -10,7 +10,9 @@ pub(crate) fn viewable_refs(
 	schema: &Schema,
 	refs: &mut BTreeMap<i64, EntryRef>,
 ) {
-	refs.retain(|_, r| auth.can(schema, &r.section, Access::View));
+	refs.retain(|_, r| {
+		auth.can_entry(schema, &r.section, r.author_id, Access::View)
+	});
 }
 
 async fn list_route(
@@ -21,18 +23,25 @@ async fn list_route(
 	let conn = state.db.conn();
 	let mut q = Query::parse(&state.schema, &params).map_err(Error::Request)?;
 	for section in q.section.iter().chain(&q.any_sections) {
-		auth.check(&state.schema, section, Access::View)?;
+		if !auth.can_list(&state.schema, section) {
+			return Err(Error::Forbidden);
+		}
 	}
 	// a search over all sections only finds what the role sees, also in
 	// the total, or a search would tell whether a hidden entry matches;
-	// the entries of `relatedToEntries` too
+	// the entries of `relatedToEntries` too; of a section with own access
+	// only the user's
 	if !auth.admin() {
 		let sections = state.schema.sections.iter();
 		let sections: Vec<String> = sections
-			.filter(|s| auth.can(&state.schema, &s.handle, Access::View))
+			.filter(|s| auth.can_list(&state.schema, &s.handle))
 			.map(|s| s.handle.clone())
 			.collect();
-		q.each_mut(&mut |q| q.sections = Some(sections.clone()));
+		let own_only = auth.own_only(&state.schema);
+		q.each_mut(&mut |q| {
+			q.sections = Some(sections.clone());
+			q.own_only = own_only.clone();
+		});
 	}
 
 	let (entries, total) = list(&conn, &q)?;
@@ -79,17 +88,18 @@ async fn choices_route(
 		.iter()
 		.filter(|s| s.types.iter().any(|t| types.contains(&t.as_str())))
 		.filter(|s| only.is_empty() || only.contains(&s.handle.as_str()))
-		.filter(|s| auth.can(schema, &s.handle, Access::View))
+		.filter(|s| auth.can_list(schema, &s.handle))
 		.map(|s| s.handle.as_str())
 		.collect();
+	let own = auth.own_only(schema);
 	let conn = state.db.conn();
 	let search = req.search.as_deref().map(str::trim).unwrap_or_default();
 	Ok(Json(match search {
 		"" => {
 			let offset = req.offset.unwrap_or(0).max(0);
-			choices(&conn, schema, &types, &sections, &site, offset)?
+			choices(&conn, schema, &types, &sections, &site, offset, own)?
 		}
-		q => search_choices(&conn, schema, &types, &sections, &site, q)?,
+		q => search_choices(&conn, schema, &types, &sections, &site, q, own)?,
 	}))
 }
 
@@ -104,8 +114,14 @@ async fn get_route(
 	let entry = get_entry(&conn, req.id, &site)?;
 	let mut relations = refs(&conn, &[req.id], &site, false)?;
 	viewable_refs(&access.auth, &state.schema, &mut relations);
+	let ids: Vec<i64> = entry.author_id.into_iter().collect();
+	let author = authors(&conn, &ids)?.into_values().next();
 
-	Ok(Json(EntryResp { entry, relations }))
+	Ok(Json(EntryResp {
+		entry,
+		relations,
+		author,
+	}))
 }
 
 async fn create_route(
@@ -113,9 +129,12 @@ async fn create_route(
 	auth: Authed,
 	Req(CreateReq(mut input)): Req<CreateReq>,
 ) -> ApiResult<CreateReq> {
-	auth.check(&state.schema, &input.section, Access::Edit)?;
+	// a new entry is the user's, own access is enough
+	let (schema, me) = (&state.schema, Some(auth.user_id));
+	auth.check_entry(schema, &input.section, me, Access::Edit)?;
 	// published only by who may publish
-	input.published &= auth.can(&state.schema, &input.section, Access::Publish);
+	input.published &=
+		auth.can_entry(schema, &input.section, me, Access::Publish);
 	let entry = {
 		let conn = state.db.conn();
 		save(&conn, &state.schema, None, input, Some(auth.user_id))?
@@ -151,6 +170,15 @@ async fn move_route(
 	Ok(Json(()))
 }
 
+async fn author_route(
+	State(state): State<AppState>,
+	_admin: Admin,
+	Req(req): Req<AuthorReq>,
+) -> ApiResult<AuthorReq> {
+	set_author(&state.db.conn(), req.id, req.author_id)?;
+	Ok(Json(()))
+}
+
 async fn delete_route(
 	State(state): State<AppState>,
 	access: EntryAccess<Delete>,
@@ -170,5 +198,6 @@ pub(crate) fn routes() -> Router<AppState> {
 		.api::<CreateReq, _>(create_route)
 		.api::<UpdateReq, _>(update_route)
 		.api::<MoveReq, _>(move_route)
+		.api::<AuthorReq, _>(author_route)
 		.api::<DeleteReq, _>(delete_route)
 }

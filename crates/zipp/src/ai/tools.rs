@@ -151,8 +151,8 @@ struct Ctx<'a> {
 
 impl Ctx<'_> {
 	fn need(&self, id: i64, access: Access) -> Result<()> {
-		let section = crate::entries::section_of(self.conn, id)?;
-		self.auth.check(self.schema, &section, access)
+		let (section, author) = crate::entries::owner_of(self.conn, id)?;
+		self.auth.check_entry(self.schema, &section, author, access)
 	}
 
 	/// Changes what the editor sees of an entry in a site as its draft.
@@ -217,10 +217,10 @@ fn tool_list_entries(t: &Ctx, input: &Value) -> ToolResult {
 	let q = Query::parse(schema, &params).map_err(Error::Request)?;
 	let entries = select(conn, &q)?;
 	let mut out = vec![];
-	for e in entries
-		.iter()
-		.filter(|e| t.auth.can(schema, &e.section, Access::View))
-	{
+	for e in entries.iter().filter(|e| {
+		t.auth
+			.can_entry(schema, &e.section, e.author_id, Access::View)
+	}) {
 		let (content, draft) = current(conn, e.id, &site)?;
 		out.push(json!({ "id": e.id, "section": e.section, "type": e.ty,
 				"title": content.title, "uri": e.uri,
@@ -297,7 +297,10 @@ fn tool_create_entry(t: &Ctx, input: &Value) -> ToolResult {
 	let site = t.site.clone();
 
 	let req = |k: &str| input[k].as_str().unwrap_or_default().to_string();
-	t.auth.check(schema, &req("section"), Access::Edit)?;
+	// a new entry is the user's, own access is enough
+	let me = Some(t.user_id);
+	t.auth
+		.check_entry(schema, &req("section"), me, Access::Edit)?;
 	// live it is off, the draft publishes it in every site
 	let entry = save(
 		conn,

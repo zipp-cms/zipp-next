@@ -48,6 +48,8 @@ pub struct TrashedEntry {
 	pub deleted_at: i64,
 	/// the email of who deleted it
 	pub deleted_by: Option<String>,
+	/// who made it
+	pub author_id: Option<i64>,
 }
 
 /// An asset in the trash.
@@ -93,13 +95,16 @@ fn with_children(
 	Ok(ids)
 }
 
-/// The section of an entry in the trash.
-pub fn trashed_section(conn: &Connection, id: i64) -> Result<String> {
+/// The section of an entry in the trash and who made it.
+pub fn trashed_owner(
+	conn: &Connection,
+	id: i64,
+) -> Result<(String, Option<i64>)> {
 	conn.query_row(
-		"SELECT section FROM entries WHERE id = ?1
+		"SELECT section, author_id FROM entries WHERE id = ?1
 		AND deleted_at IS NOT NULL",
 		[id],
-		|r| r.get(0),
+		|r| Ok((r.get(0)?, r.get(1)?)),
 	)
 	.optional()?
 	.ok_or(Error::NotFound)
@@ -303,8 +308,8 @@ pub fn purge_asset(conn: &Connection, files: &Path, id: i64) -> Result<()> {
 	crate::assets::delete(conn, files, id)
 }
 
-/// What a user sees of the trash: entries of the sections they may
-/// delete in, assets if they may delete those. An entry that went with
+/// What a user sees of the trash: entries they may delete (of their
+/// sections, their own with own access), assets if they may delete those. An entry that went with
 /// its parent shows as one of its children.
 pub fn list(
 	conn: &Connection,
@@ -320,7 +325,7 @@ pub fn list(
 				UNION ALL
 				SELECT c.id FROM entries c JOIN tree t ON c.parent_id = t.id
 				WHERE c.deleted_at = e.deleted_at
-			) SELECT COUNT(*) - 1 FROM tree)
+			) SELECT COUNT(*) - 1 FROM tree), e.author_id
 		FROM entries e
 		JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?1
 		LEFT JOIN entries p ON p.id = e.parent_id
@@ -338,11 +343,14 @@ pub fn list(
 				deleted_at: r.get(4)?,
 				deleted_by: r.get(5)?,
 				children: r.get(6)?,
+				author_id: r.get(7)?,
 			})
 		})?
 		.collect::<rusqlite::Result<Vec<_>>>()?
 		.into_iter()
-		.filter(|e| auth.can(schema, &e.section, Access::Delete))
+		.filter(|e| {
+			auth.can_entry(schema, &e.section, e.author_id, Access::Delete)
+		})
 		.collect();
 	let assets = match auth.can_assets(schema, Access::Delete) {
 		true => crate::assets::trashed(conn)?,

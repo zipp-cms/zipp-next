@@ -32,7 +32,8 @@ export function studioRole(schema: Schema, handle: string | null): boolean {
 	return schema.roles.find(r => r.handle === handle)?.studio ?? true;
 }
 
-/** What the user may do in a section, for showing it. */
+/** What the user may do in a section (their own entries apart), for
+ * showing it. */
 export function accessOf(schema: Schema, section: string): Access | null {
 	if (isAdmin(schema)) return 'delete';
 	return role(schema)?.sections[section] ?? null;
@@ -54,6 +55,26 @@ export function can(schema: Schema, section: string, need: Access): boolean {
 	return isAdmin(schema) || enough(role(schema)?.sections[section], need);
 }
 
+/**
+ * What the user may do with an entry of a section that `author` made:
+ * the section's access, for their own entries also the role's own one.
+ */
+export function canEntry(
+	schema: Schema,
+	section: string,
+	author: number | null,
+	need: Access,
+): boolean {
+	if (can(schema, section, need)) return true;
+	const mine = author !== null && author === session.user?.id;
+	return mine && enough(role(schema)?.own[section], need);
+}
+
+/** What the user may do with a new entry of a section: it is theirs. */
+export function canNew(schema: Schema, section: string, need: Access) {
+	return canEntry(schema, section, session.user?.id ?? null, need);
+}
+
 export function canAssets(schema: Schema, need: Access): boolean {
 	return isAdmin(schema) || enough(role(schema)?.assets, need);
 }
@@ -64,7 +85,10 @@ export function canTrash(schema: Schema): boolean {
 	return (
 		isAdmin(schema) ||
 		enough(r?.assets, 'delete') ||
-		Object.values(r?.sections ?? {}).some(a => enough(a, 'delete'))
+		[
+			...Object.values(r?.sections ?? {}),
+			...Object.values(r?.own ?? {}),
+		].some(a => enough(a, 'delete'))
 	);
 }
 
@@ -84,7 +108,7 @@ export function visibleNav(schema: Schema): NavGroup[] {
 			sections: g.sections.filter(
 				h =>
 					schema.docs.some(d => d.handle === h) ||
-					can(schema, h, 'view'),
+					canNew(schema, h, 'view'),
 			),
 		}))
 		.filter(g => g.sections.length);

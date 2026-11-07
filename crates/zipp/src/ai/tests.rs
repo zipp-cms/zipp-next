@@ -95,3 +95,49 @@ fn tools_change_drafts_only() {
 	assert_eq!(draft.doc["de"].title, "Neuer");
 	assert_eq!(draft.doc["de"].fields["intro"], "Hi");
 }
+
+#[test]
+fn tools_of_own_access_reach_only_own_entries() {
+	let schema = site_with_roles().role(
+		crate::schema::Role::new("member", "Member")
+			.own("events", Access::Edit)
+			.ai(),
+	);
+	let ts = TestServer::new(schema);
+	let conn = ts.state.db.conn();
+	crate::auth::add_user(&conn, "m@x.ch", "password1", Some("member"))
+		.unwrap();
+	let user_id = conn.last_insert_rowid();
+	let input = crate::testing::input("events", "event", "Jazz", json!({}));
+	let theirs =
+		crate::entries::save(&conn, &ts.state.schema, None, input, None)
+			.unwrap()
+			.id;
+	drop(conn);
+	let member = Authed {
+		user_id,
+		role: Some("member".into()),
+		token: String::new(),
+	};
+	let run =
+		|name: &str, input: Value| run_tool(&ts.state, &member, name, &input);
+
+	let new = json!({ "section": "events", "type": "event", "title": "Rock" });
+	let (out, _) = run("create_entry", new).unwrap();
+	let mine = out["id"].as_i64().unwrap();
+	let (list, _) =
+		run("list_entries", json!({ "section": "events" })).unwrap();
+	let ids: Vec<i64> = list
+		.as_array()
+		.unwrap()
+		.iter()
+		.map(|e| e["id"].as_i64().unwrap())
+		.collect();
+	assert_eq!(ids, [mine]);
+	let err = run("get_entry", json!({ "id": theirs })).unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	let change = |id| json!({ "id": id, "title": "Mine" });
+	let err = run("update_entry", change(theirs)).unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	run("update_entry", change(mine)).unwrap();
+}

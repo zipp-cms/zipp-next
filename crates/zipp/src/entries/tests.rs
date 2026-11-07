@@ -626,7 +626,7 @@ fn choices_are_in_the_order_of_their_section() {
 	};
 	crate::drafts::put_draft(&conn, &s, ids[1], "de", doc, None, None).unwrap();
 
-	let got = choices(&conn, &s, &["page"], &["pages"], "de", 0).unwrap();
+	let got = choices(&conn, &s, &["page"], &["pages"], "de", 0, None).unwrap();
 	let all = got.entries;
 	let titles: Vec<&str> = all.iter().map(|c| c.title.as_str()).collect();
 	assert_eq!(titles, ["A", "B"]);
@@ -639,7 +639,7 @@ fn choices_are_in_the_order_of_their_section() {
 		pickable: 2,
 	};
 	assert_eq!(got.totals["pages"], count);
-	assert!(choices(&conn, &s, &["page"], &["pages"], "fr", 0).is_err());
+	assert!(choices(&conn, &s, &["page"], &["pages"], "fr", 0, None).is_err());
 }
 
 #[test]
@@ -659,7 +659,7 @@ fn choices_of_a_tree_count_its_types_and_search_with_parents() {
 	}
 
 	// the event is there as a parent, but only pages count to pick
-	let got = choices(&conn, &s, &["page"], &["docs"], "de", 0).unwrap();
+	let got = choices(&conn, &s, &["page"], &["docs"], "de", 0, None).unwrap();
 	assert_eq!(got.entries.len(), 3);
 	let count = ChoiceCount {
 		entries: 3,
@@ -669,7 +669,8 @@ fn choices_of_a_tree_count_its_types_and_search_with_parents() {
 
 	// a search finds only pages, with all their parents for the path
 	let found =
-		search_choices(&conn, &s, &["page"], &["docs"], "de", "late").unwrap();
+		search_choices(&conn, &s, &["page"], &["docs"], "de", "late", None)
+			.unwrap();
 	let titles: Vec<&str> =
 		found.entries.iter().map(|c| c.title.as_str()).collect();
 	assert_eq!(titles, ["Late"]);
@@ -678,7 +679,8 @@ fn choices_of_a_tree_count_its_types_and_search_with_parents() {
 	assert_eq!(parents, ids[..2]);
 	assert_eq!(found.totals["docs"].pickable, 1);
 	let none =
-		search_choices(&conn, &s, &["page"], &["docs"], "de", "jazz").unwrap();
+		search_choices(&conn, &s, &["page"], &["docs"], "de", "jazz", None)
+			.unwrap();
 	assert!(none.entries.is_empty());
 }
 

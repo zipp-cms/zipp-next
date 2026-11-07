@@ -116,6 +116,10 @@ pub(crate) const ENTRY_FIELDS: &[&str] = &[
 	"localized",
 ];
 
+/// Fields every entry has unless its type has a field of the name: they
+/// came after 0.1.0, sites may have such fields.
+pub(crate) const OPTIONAL_ENTRY_FIELDS: &[&str] = &["authorId", "author"];
+
 /// Fields every block has.
 pub(crate) const BLOCK_FIELDS: &[&str] = &["id", "typeHandle"];
 
@@ -257,7 +261,16 @@ pub(crate) fn build(
 	}
 
 	let mut entry_iface = Interface::new("Entry");
+	let own_field = |name: &str| {
+		schema
+			.components
+			.iter()
+			.any(|c| c.entry && c.fields.iter().any(|f| f.handle == name))
+	};
 	for (name, ty) in entry_common() {
+		if OPTIONAL_ENTRY_FIELDS.contains(&name) && own_field(name) {
+			continue;
+		}
 		let mut field = InterfaceField::new(name, ty);
 		if name == "children" {
 			for (arg, ty) in children_args(&schema) {
@@ -298,6 +311,7 @@ pub(crate) fn build(
 		.register(where_input())
 		.register(criteria_input(&schema))
 		.register(site_object())
+		.register(user_object())
 		.register(asset_object(&schema))
 		.register(link_object())
 		.register(nav_item_object())

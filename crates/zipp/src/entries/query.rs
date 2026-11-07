@@ -5,6 +5,7 @@
 //!   `notTypes` leave them out
 //! - `slug`, `uri`: exact match
 //! - `ids=1,2,3`: only these entries
+//! - `author=4`: the entries user 4 made, one or several `4,5`
 //! - `parent=5`: the children of entry 5 in a structure
 //! - `level=1`: the entries at that level of a structure, 1 the top
 //! - `search`: part of the title
@@ -73,6 +74,8 @@ pub struct Query {
 	pub slug: Option<String>,
 	pub uri: Option<String>,
 	pub ids: Option<Vec<i64>>,
+	/// made by one of these users
+	pub authors: Vec<i64>,
 	/// children of these entries, `parent=5`; GraphQL loads the children
 	/// of several entries at once
 	pub parents: Vec<i64>,
@@ -102,6 +105,34 @@ pub struct Query {
 	pub with_uri: bool,
 	/// no entries at all, an offline site for a frontend
 	pub(crate) nothing: bool,
+	/// of some sections only the entries of the user, see
+	/// [`Role::own`](crate::schema::Role::own)
+	pub(crate) own_only: Option<OwnOnly>,
+}
+
+/// Of these sections only the entries `author` made, what a role with
+/// own access to them sees in the studio.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct OwnOnly {
+	pub author: i64,
+	pub sections: Vec<String>,
+}
+
+impl OwnOnly {
+	/// The condition on the entries `e` and its params.
+	pub(crate) fn sql(&self) -> (String, Vec<Value>) {
+		let mut values: Vec<Value> = self
+			.sections
+			.iter()
+			.map(|s| Value::Text(s.clone()))
+			.collect();
+		values.push(Value::Integer(self.author));
+		let sql = format!(
+			"(e.section NOT IN ({}) OR e.author_id = ?)",
+			marks(self.sections.len())
+		);
+		(sql, values)
+	}
 }
 
 /// Entries whose relation field points to one of some entries, or to
@@ -180,6 +211,7 @@ impl Query {
 			slug: None,
 			uri: None,
 			ids: None,
+			authors: vec![],
 			parents: vec![],
 			level: None,
 			search: None,
@@ -197,6 +229,7 @@ impl Query {
 			preview_sections: vec![],
 			with_uri: false,
 			nothing: false,
+			own_only: None,
 		}
 	}
 
@@ -310,6 +343,7 @@ impl Query {
 				"search" => q.search = Some(value.clone()),
 				"text" => q.text = Some(value.clone()),
 				"parent" => q.parents = vec![int(key, value)?],
+				"author" => q.authors = parse_ids(key, value)?,
 				"related" => q.related = Some(int(key, value)?),
 				_ if key.starts_with("r.") => {
 					let field = key[2..].to_string();
@@ -572,6 +606,16 @@ impl Query {
 			let marks = marks(ids.len());
 			let values = ids.iter().map(|i| Value::Integer(*i)).collect();
 			cond(format!("e.id IN ({marks})"), values);
+		}
+		if !self.authors.is_empty() {
+			let marks = marks(self.authors.len());
+			let values =
+				self.authors.iter().map(|i| Value::Integer(*i)).collect();
+			cond(format!("e.author_id IN ({marks})"), values);
+		}
+		if let Some(own) = &self.own_only {
+			let (sql, values) = own.sql();
+			cond(sql, values);
 		}
 		if !self.parents.is_empty() {
 			let marks = marks(self.parents.len());

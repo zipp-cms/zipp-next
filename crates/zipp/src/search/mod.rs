@@ -5,6 +5,7 @@
 //! searched, drafts are not. The website's search is the same index
 //! through GraphQL, see [`hits`].
 
+use rusqlite::types::Value::Text;
 use rusqlite::{Connection, params, params_from_iter};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -13,7 +14,7 @@ use crate::assets::Asset;
 use crate::auth::Authed;
 use crate::content::{inner, markdown_text, richtext};
 use crate::db::marks;
-use crate::entries::query::Query;
+use crate::entries::query::{OwnOnly, Query};
 use crate::entries::{COLUMNS, Entry, from_row};
 use crate::error::Result;
 use crate::schema::{Access, ColumnKind, Component, FieldKind, Schema};
@@ -206,10 +207,12 @@ pub fn search(
 		.sections
 		.iter()
 		.map(|s| s.handle.as_str())
-		.filter(|s| auth.can(schema, s, Access::View))
+		.filter(|s| auth.can_list(schema, s))
 		.collect();
 
-	let entries = find_entries(conn, site, &sections, &words)?;
+	let own_only = auth.own_only(schema);
+	let entries =
+		find_entries(conn, site, &sections, own_only.as_ref(), &words)?;
 	let assets = match auth.can_assets(schema, Access::View) {
 		true => crate::assets::find(conn, &words, LIMIT)?,
 		false => vec![],
@@ -218,16 +221,18 @@ pub fn search(
 }
 
 /// The entries of the sections that have all the words, the title
-/// counts most, then the slug.
+/// counts most, then the slug; of `own_only` only the user's.
 fn find_entries(
 	conn: &Connection,
 	site: &str,
 	sections: &[&str],
+	own_only: Option<&OwnOnly>,
 	words: &[String],
 ) -> Result<Vec<EntryHit>> {
 	if sections.is_empty() {
 		return Ok(vec![]);
 	}
+	let own = own_only.map_or(("1".into(), vec![]), OwnOnly::sql);
 	let sql = format!(
 		"SELECT e.id, e.section, e.type, t.title, s.published,
 		snippet(entry_search, 2, char(1), char(1), '…', 12)
@@ -236,12 +241,14 @@ fn find_entries(
 		JOIN entries e ON e.id = t.entry_id
 		JOIN entry_sites s ON s.entry_id = t.entry_id AND s.site = t.site
 		WHERE entry_search MATCH ? AND t.site = ? AND e.deleted_at IS NULL
-		AND e.section IN ({})
+		AND e.section IN ({}) AND {}
 		ORDER BY {RANK} LIMIT {LIMIT}",
-		marks(sections.len())
+		marks(sections.len()),
+		own.0
 	);
-	let mut values = vec![fts_query(words), site.to_string()];
-	values.extend(sections.iter().map(|s| s.to_string()));
+	let mut values = vec![Text(fts_query(words)), Text(site.into())];
+	values.extend(sections.iter().map(|s| Text(s.to_string())));
+	values.extend(own.1);
 
 	let mut stmt = conn.prepare(&sql)?;
 	let hits = stmt

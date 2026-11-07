@@ -434,3 +434,38 @@ async fn a_change_undone_leaves_no_draft() {
 		Error::Conflict("the draft was published or discarded".into())
 	);
 }
+
+#[tokio::test]
+async fn own_access_drafts_only_own_entries() {
+	let schema = site_with_roles().role(
+		crate::schema::Role::new("member", "Member")
+			.own("events", crate::schema::Access::Publish),
+	);
+	let ts = TestServer::new(schema);
+	let member = ts.user(Some("member"));
+	let theirs = create(&ts.admin(), "events", "event").await;
+	let mine = input("events", "event", "Mine", json!({}));
+	let mine = member.call(&CreateReq(mine)).await.unwrap().id;
+
+	let err = member.call(&put(theirs, "event", "Mine", None)).await;
+	assert_eq!(err.unwrap_err(), Error::Forbidden);
+	let err = member.call(&RevisionsReq { id: theirs }).await;
+	assert_eq!(err.unwrap_err(), Error::Forbidden);
+	let err = member.call(&PublishReq { id: theirs }).await;
+	assert_eq!(err.unwrap_err(), Error::Forbidden);
+
+	member
+		.call(&put(mine, "event", "Mine", None))
+		.await
+		.unwrap();
+	member.call(&PublishReq { id: mine }).await.unwrap();
+	assert_eq!(live_title(&member, mine).await, "Mine");
+	// a draft keeps the author
+	let got = member
+		.call(&GetEntry {
+			id: mine,
+			site: None,
+		})
+		.await;
+	assert!(got.unwrap().entry.author_id.is_some());
+}

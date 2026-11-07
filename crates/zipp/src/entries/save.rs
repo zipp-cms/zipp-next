@@ -152,6 +152,7 @@ pub(crate) fn check(
 		uris,
 		fields,
 		dates: input.dates,
+		author_id: if id.is_none() { user_id } else { None },
 	})
 }
 
@@ -239,8 +240,8 @@ pub(crate) fn write(
 			let post = c.dates.post_date.or(c.published.then_some(now));
 			conn.execute(
 				"INSERT INTO entries (section, type, parent_id, position,
-				created_at, updated_at, post_date, expiry_date)
-				VALUES (?1, ?2, ?3, ?4, ?5, ?5, ?6, ?7)",
+				created_at, updated_at, post_date, expiry_date, author_id)
+				VALUES (?1, ?2, ?3, ?4, ?5, ?5, ?6, ?7, ?8)",
 				params![
 					section.handle,
 					c.ty,
@@ -248,7 +249,8 @@ pub(crate) fn write(
 					position,
 					now,
 					post,
-					c.dates.expiry_date
+					c.dates.expiry_date,
+					c.author_id
 				],
 			)?;
 			let id = conn.last_insert_rowid();
@@ -300,21 +302,25 @@ pub(crate) fn check_relations(
 		let (kind, sql) = match rel.target {
 			Target::Entries { .. } => (
 				LinkKind::Entry,
-				"SELECT section FROM entries
+				"SELECT section, author_id FROM entries
 				WHERE id = ?1 AND deleted_at IS NULL",
 			),
 			Target::Assets { .. } => (
 				LinkKind::Asset,
-				"SELECT '' FROM assets WHERE id = ?1 AND deleted_at IS NULL",
+				"SELECT '', NULL FROM assets
+				WHERE id = ?1 AND deleted_at IS NULL",
 			),
 		};
 		for id in rel.ids {
-			let section: Option<String> =
-				conn.query_row(sql, [id], |r| r.get(0)).optional()?;
-			let visible = section.is_some_and(|s| match (&user, kind) {
+			let found: Option<(String, Option<i64>)> = conn
+				.query_row(sql, [id], |r| Ok((r.get(0)?, r.get(1)?)))
+				.optional()?;
+			let visible = found.is_some_and(|(s, a)| match (&user, kind) {
 				(None, _) => true,
 				_ if before.contains(&(kind, id)) => true,
-				(Some(u), LinkKind::Entry) => u.can(schema, &s, Access::View),
+				(Some(u), LinkKind::Entry) => {
+					u.can_entry(schema, &s, a, Access::View)
+				}
 				(Some(u), _) => u.can_assets(schema, Access::View),
 			});
 			if !visible {

@@ -30,7 +30,12 @@ export type Entry = Dates & {
 	fields: Values;
 	createdAt: number;
 	updatedAt: number;
+	/** who made it, null: the system or a deleted user */
+	authorId: number | null;
 };
+
+/** Who made an entry, the public part of a user. */
+export type Author = { id: number; name: string };
 
 export type EntryRef = Dates & {
 	id: number;
@@ -41,6 +46,7 @@ export type EntryRef = Dates & {
 	uri: string | null;
 	/** in the site */
 	published: boolean;
+	authorId: number | null;
 };
 
 export type Refs = Record<number, EntryRef>;
@@ -99,8 +105,13 @@ export function listEntries(
 export function getEntry(
 	id: number,
 	site: string,
-): Promise<{ entry: Entry; relations: Refs }> {
+): Promise<{ entry: Entry; relations: Refs; author: Author | null }> {
 	return request('GET', `/entries/${id}?site=${site}`);
+}
+
+/** Gives an entry another author, admins only. */
+export function setAuthor(id: number, authorId: number | null): Promise<void> {
+	return request('PUT', `/entries/${id}/author`, { authorId });
 }
 
 export function moveEntry(

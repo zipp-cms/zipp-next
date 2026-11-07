@@ -18,7 +18,7 @@ use crate::content::{
 };
 use crate::db::{marks, now};
 use crate::drafts::{keep_live, record_revision};
-use crate::entries::query::Query;
+use crate::entries::query::{OwnOnly, Query};
 use crate::error::{Error, Result};
 use crate::schema::Access;
 use crate::schema::{Component, LinkKind, Schema, Section, SectionKind};
@@ -76,6 +76,9 @@ pub struct Entry {
 	pub updated_at: i64,
 	#[serde(flatten)]
 	pub dates: Dates,
+	/// the user who made it, like Craft's author; `None`: the system
+	/// (the command line, an import) or a deleted user
+	pub author_id: Option<i64>,
 }
 
 /// When an entry is live, in all its sites, like Craft's post and expiry
@@ -159,10 +162,12 @@ pub struct EntryRef {
 	/// whether it is live now, for its status
 	#[serde(flatten)]
 	pub dates: Dates,
+	/// who made it, see [`Entry::author_id`]
+	pub author_id: Option<i64>,
 }
 
 /// An [`EntryRef`] of `e.id, e.section, e.type, s.title, s.slug, s.uri,
-/// s.published, e.post_date, e.expiry_date`.
+/// s.published, e.post_date, e.expiry_date, e.author_id`.
 fn entry_ref(r: &rusqlite::Row) -> rusqlite::Result<EntryRef> {
 	Ok(EntryRef {
 		id: r.get(0)?,
@@ -176,12 +181,13 @@ fn entry_ref(r: &rusqlite::Row) -> rusqlite::Result<EntryRef> {
 			post_date: r.get(7)?,
 			expiry_date: r.get(8)?,
 		},
+		author_id: r.get(9)?,
 	})
 }
 
 pub(crate) const COLUMNS: &str = "e.id, e.section, e.type, s.site, s.title, s.slug, \
 	s.uri, s.published, e.parent_id, s.fields, e.created_at, s.updated_at, \
-	e.post_date, e.expiry_date";
+	e.post_date, e.expiry_date, e.author_id";
 
 pub(crate) fn from_row(row: &Row) -> rusqlite::Result<Entry> {
 	let fields: String = row.get(9)?;
@@ -202,6 +208,7 @@ pub(crate) fn from_row(row: &Row) -> rusqlite::Result<Entry> {
 			post_date: row.get(12)?,
 			expiry_date: row.get(13)?,
 		},
+		author_id: row.get(14)?,
 	})
 }
 
@@ -256,6 +263,7 @@ pub struct Choices {
 /// structure as its tree, so its other types are there too as the
 /// parents; a channel newest first, only the types. At most
 /// [`CHOICES_LIMIT`] per section from `offset`, a picker loads more.
+/// Of the sections of `own_only` only the user's entries.
 pub(crate) fn choices(
 	conn: &Connection,
 	schema: &Schema,
@@ -263,6 +271,7 @@ pub(crate) fn choices(
 	sections: &[&str],
 	site: &str,
 	offset: i64,
+	own_only: Option<OwnOnly>,
 ) -> Result<Choices> {
 	if schema.get_site(site).is_none() {
 		return Err(Error::Request(format!("unknown site {site}")));
@@ -279,6 +288,7 @@ pub(crate) fn choices(
 			types: types.iter().map(|t| t.to_string()).collect(),
 			limit: CHOICES_LIMIT,
 			offset,
+			own_only: own_only.clone(),
 			..Query::new(schema)
 		};
 		of_types.section_order(schema);
@@ -311,6 +321,7 @@ pub(crate) fn search_choices(
 	sections: &[&str],
 	site: &str,
 	search: &str,
+	own_only: Option<OwnOnly>,
 ) -> Result<Choices> {
 	if schema.get_site(site).is_none() {
 		return Err(Error::Request(format!("unknown site {site}")));
@@ -322,6 +333,7 @@ pub(crate) fn search_choices(
 		order: query::Order::Relevance,
 		desc: false,
 		limit: CHOICES_LIMIT,
+		own_only: own_only.clone(),
 		..Query::new(schema)
 	};
 
@@ -361,6 +373,7 @@ pub(crate) fn search_choices(
 			site: site.into(),
 			ids: Some(std::mem::take(&mut up)),
 			limit: query::MAX_LIMIT,
+			own_only: own_only.clone(),
 			..Query::new(schema)
 		};
 		let level = select(conn, &q)?;
@@ -513,6 +526,8 @@ pub(crate) struct Checked {
 	uris: HashMap<String, Option<String>>,
 	fields: Value,
 	dates: Dates,
+	/// of a new entry
+	author_id: Option<i64>,
 }
 
 /// The published entries whose post or expiry date passed in `(from,
@@ -567,7 +582,7 @@ pub(crate) fn refs(
 ) -> Result<BTreeMap<i64, EntryRef>> {
 	let sql = format!(
 		"SELECT DISTINCT e.id, e.section, e.type, s.title, s.slug, s.uri,
-			s.published, e.post_date, e.expiry_date
+			s.published, e.post_date, e.expiry_date, e.author_id
 		FROM entry_relations r
 		JOIN entries e ON e.id = r.target_id
 		JOIN entry_sites s ON s.entry_id = e.id AND s.site = r.site
@@ -590,7 +605,7 @@ pub(crate) fn refs_of(
 ) -> Result<BTreeMap<i64, EntryRef>> {
 	let sql = format!(
 		"SELECT e.id, e.section, e.type, s.title, s.slug, s.uri, s.published,
-			e.post_date, e.expiry_date
+			e.post_date, e.expiry_date, e.author_id
 		FROM entries e JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?
 		WHERE e.deleted_at IS NULL AND e.id IN ({})",
 		marks(ids.len())
@@ -649,6 +664,75 @@ pub(crate) fn published_per_site(
 		out.entry(id).or_default().insert(site, published);
 	}
 	Ok(out)
+}
+
+/// The public part of a user, who made an entry: no email.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct Author {
+	pub id: i64,
+	/// empty when it isn't set
+	pub name: String,
+}
+
+/// The authors of these ids, the ones that exist.
+pub(crate) fn authors(
+	conn: &Connection,
+	ids: &[i64],
+) -> Result<HashMap<i64, Author>> {
+	let sql = format!(
+		"SELECT id, name FROM users WHERE id IN ({})",
+		marks(ids.len())
+	);
+	let mut stmt = conn.prepare(&sql)?;
+	let rows = stmt.query_map(params_from_iter(ids), |r| {
+		Ok(Author {
+			id: r.get(0)?,
+			name: r.get(1)?,
+		})
+	})?;
+	let mut out = HashMap::new();
+	for a in rows {
+		let a = a?;
+		out.insert(a.id, a);
+	}
+	Ok(out)
+}
+
+/// Gives an entry another author, `None` for none. Not a change of its
+/// content: no revision, drafts keep theirs.
+pub(crate) fn set_author(
+	conn: &Connection,
+	id: i64,
+	author: Option<i64>,
+) -> Result<()> {
+	if let Some(a) = author
+		&& authors(conn, &[a])?.is_empty()
+	{
+		return Err(Error::Request(format!("unknown user {a}")));
+	}
+	let n = conn.execute(
+		"UPDATE entries SET author_id = ?1
+		WHERE id = ?2 AND deleted_at IS NULL",
+		params![author, id],
+	)?;
+	match n {
+		0 => Err(Error::NotFound),
+		_ => Ok(()),
+	}
+}
+
+/// The section of an entry and who made it, what its access depends on.
+pub(crate) fn owner_of(
+	conn: &Connection,
+	id: i64,
+) -> Result<(String, Option<i64>)> {
+	Ok(conn.query_row(
+		"SELECT section, author_id FROM entries
+		WHERE id = ?1 AND deleted_at IS NULL",
+		[id],
+		|r| Ok((r.get(0)?, r.get(1)?)),
+	)?)
 }
 
 pub(crate) fn section_of(conn: &Connection, id: i64) -> Result<String> {

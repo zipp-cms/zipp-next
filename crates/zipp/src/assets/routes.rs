@@ -235,7 +235,10 @@ pub(super) async fn usage_route(
 	Ok(Json(
 		found
 			.into_iter()
-			.filter(|u| auth.can(&state.schema, &u.section, Access::View))
+			.filter(|u| {
+				let (section, author) = (&u.section, u.author_id);
+				auth.can_entry(&state.schema, section, author, Access::View)
+			})
 			.collect(),
 	))
 }

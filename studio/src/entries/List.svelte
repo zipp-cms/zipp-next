@@ -41,7 +41,7 @@
 	import { Busy } from '../core/busy.svelte';
 	import EntryBadges from './EntryBadges.svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
-	import { can } from '../core/access';
+	import { can, canEntry, canNew } from '../core/access';
 	import { sectionCrumbs } from '../core/paths';
 	import { entryUrl, type Schema } from '../core/schema';
 	import { deleteEntry, moveEntry, type Entry } from './api';
@@ -144,7 +144,10 @@
 				icon: 'external',
 				href: url,
 			});
-		if (sec.kind !== 'single' && can(schema, section, 'delete'))
+		if (
+			sec.kind !== 'single' &&
+			canEntry(schema, section, e.authorId, 'delete')
+		)
 			items.push({
 				label: t('common.delete'),
 				icon: 'delete',
@@ -173,7 +176,7 @@
 
 <PageTop crumbs={sectionCrumbs(schema, section)}>
 	{#snippet actions()}
-		{#if sec.kind !== 'single' && can(schema, section, 'edit')}
+		{#if sec.kind !== 'single' && canNew(schema, section, 'edit')}
 			<button
 				class="primary"
 				onclick={() => go(entryPath(section, 'new'))}

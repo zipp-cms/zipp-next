@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::{Choices, Entry, EntryInput, EntryRef};
+use super::{Author, Choices, Entry, EntryInput, EntryRef};
 use crate::request;
 
 /// Entries of a [`Query`](crate::entries::query::Query): its params as pairs,
@@ -59,6 +59,8 @@ pub struct GetReq {
 pub struct EntryResp {
 	pub entry: Entry,
 	pub relations: BTreeMap<i64, EntryRef>,
+	/// who made it, `None` without one or a deleted user
+	pub author: Option<Author>,
 }
 
 request!(GetReq, GET "/entries/{id}" => EntryResp);
@@ -89,6 +91,16 @@ pub struct MoveReq {
 }
 
 request!(MoveReq, POST "/entries/{id}/move" => ());
+
+/// Gives an entry another author (admins), `null` for none.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorReq {
+	pub id: i64,
+	pub author_id: Option<i64>,
+}
+
+request!(AuthorReq, PUT "/entries/{id}/author" => ());
 
 /// Moves an entry to the trash, in a structure with its children.
 #[derive(Debug, Serialize, Deserialize)]

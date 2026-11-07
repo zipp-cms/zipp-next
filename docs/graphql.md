@@ -123,7 +123,10 @@ block has a field named so. Image transforms may
 have Craft's names like `land_w800`. Ids of entries and
 assets are strings (`ID`) like Craft's. Entries have
 `postDate`, `expiryDate`, `dateCreated`, `dateUpdated`, `language`,
-`siteHandle` and `localized`, the entry in the other sites for a
+`siteHandle`, `authorId` and `author { id name }` (who made it, never
+the email; on `Entry` and each type unless a type has a field named
+so), `entries(authorId: 4)` (one or several) what a user made, and
+`localized`, the entry in the other sites for a
 language switch (`localized { siteId siteHandle language title uri url
 }`): only where it is live and the request may read it, like any query
 of that site (published, no offline site for frontends, the sites of

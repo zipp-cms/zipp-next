@@ -665,7 +665,8 @@ async fn the_name_lists_match_the_types() {
 	};
 	let set = |l: &[&str]| l.iter().map(|s| s.to_string()).collect();
 
-	assert_eq!(names(&v["entry"]["fields"]), set(ENTRY_FIELDS));
+	let all = [ENTRY_FIELDS, OPTIONAL_ENTRY_FIELDS].concat();
+	assert_eq!(names(&v["entry"]["fields"]), set(&all));
 	assert_eq!(names(&v["asset"]["fields"]), set(ASSET_FIELDS));
 
 	// the arguments of entries, and the relation field of the test site

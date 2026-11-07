@@ -26,6 +26,7 @@ export type Entry<T extends string, F> = {
 	fields: F;
 	createdAt: number;
 	updatedAt: number;
+	authorId: number | null;
 };
 
 export type Block<T extends string, F> = { id: string; type: T; fields: F };

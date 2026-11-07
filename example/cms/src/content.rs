@@ -133,7 +133,10 @@ pub fn schema() -> Schema {
 		.role(
 			Role::new("author", "Author")
 				.section("events", Access::Edit)
-				.section("news", Access::Edit)
+				// their own news they publish and delete, the others
+				// they read, like Craft's authors
+				.section("news", Access::View)
+				.own("news", Access::Delete)
 				.section("categories", Access::View)
 				.section("pages", Access::View)
 				.assets(Access::Edit),

@@ -13,6 +13,7 @@ use rusqlite::Connection;
 
 use crate::AppState;
 use crate::db::{Db, now};
+use crate::entries::query::OwnOnly;
 use crate::error::{Error, Result};
 use crate::schema::{Access, Role, Schema};
 
@@ -73,6 +74,45 @@ impl Authed {
 				.is_some_and(|a| *a >= need)
 	}
 
+	/// Whether the user may do `need` with an entry of a section that
+	/// `author` made: the section's access, for their own entries also
+	/// the role's own access ([`Role::own`]). A new entry is theirs.
+	pub fn can_entry(
+		&self,
+		schema: &Schema,
+		section: &str,
+		author: Option<i64>,
+		need: Access,
+	) -> bool {
+		self.can(schema, section, need)
+			|| (author == Some(self.user_id)
+				&& self
+					.role(schema)
+					.and_then(|r| r.own.get(section))
+					.is_some_and(|a| *a >= need))
+	}
+
+	/// Whether the user sees entries of a section, all or their own.
+	pub fn can_list(&self, schema: &Schema, section: &str) -> bool {
+		self.can_entry(schema, section, Some(self.user_id), Access::View)
+	}
+
+	/// The sections of which the user sees only their own entries, for
+	/// the queries of lists.
+	pub(crate) fn own_only(&self, schema: &Schema) -> Option<OwnOnly> {
+		let sections: Vec<String> = self
+			.role(schema)?
+			.own
+			.keys()
+			.filter(|s| !self.can(schema, s, Access::View))
+			.cloned()
+			.collect();
+		(!sections.is_empty()).then_some(OwnOnly {
+			author: self.user_id,
+			sections,
+		})
+	}
+
 	pub fn can_assets(&self, schema: &Schema, need: Access) -> bool {
 		self.admin()
 			|| self
@@ -98,6 +138,17 @@ impl Authed {
 		need: Access,
 	) -> Result<()> {
 		allowed(self.can(schema, section, need))
+	}
+
+	/// [`Authed::can_entry`] as an error, where no extractor checks it.
+	pub fn check_entry(
+		&self,
+		schema: &Schema,
+		section: &str,
+		author: Option<i64>,
+		need: Access,
+	) -> Result<()> {
+		allowed(self.can_entry(schema, section, author, need))
 	}
 
 	/// [`Authed::can_assets`] as an error, where no extractor checks it.
@@ -181,10 +232,13 @@ impl FromRequestParts<AppState> for Admin {
 	}
 }
 
-/// A user who may do `L` in the section of the entry `{id}` of the path.
+/// A user who may do `L` with the entry `{id}` of the path: in its
+/// section, or as its author with the role's own access.
 pub struct EntryAccess<L> {
 	pub auth: Authed,
 	pub section: String,
+	/// who made the entry
+	pub author_id: Option<i64>,
 	level: PhantomData<L>,
 }
 
@@ -205,11 +259,13 @@ impl<L: Level> FromRequestParts<AppState> for EntryAccess<L> {
 			.and_then(|(_, v)| v.parse().ok())
 			.ok_or(Error::NotFound)?;
 
-		let section = crate::entries::section_of(&state.db.conn(), id)?;
-		auth.check(&state.schema, &section, L::ACCESS)?;
+		let (section, author_id) =
+			crate::entries::owner_of(&state.db.conn(), id)?;
+		auth.check_entry(&state.schema, &section, author_id, L::ACCESS)?;
 		Ok(Self {
 			auth,
 			section,
+			author_id,
 			level: PhantomData,
 		})
 	}
