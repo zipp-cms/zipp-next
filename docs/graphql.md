@@ -13,7 +13,7 @@ content { ... on images_Block { images { url alt } } } } }`. `entries`
 and `entryCount` take the same filters as the rest api (`where: [{
 field: "city", value: "Bern" }]`). Without a session only live entries
 show: published, after their post date and before their expiry date;
-switched off blocks never.
+switched off blocks never, also not the ones in rich text.
 Values are typed like their fields: numbers `Float`, booleans
 `Boolean`, links `Link` (`url label defaultLabel target`), also in the
 cells of a table row; rich text has `html` and `chunks`, its styles as

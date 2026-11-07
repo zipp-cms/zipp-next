@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A switched off block in rich text (`"enabled": false`) is left out of
+  GraphQL's `chunks` like a switched off block of a blocks field.
 - GraphQL's `related` and the relation field arguments (`offerCategory:
   5`, `":notempty:"`, `":empty:"`) only count the entries the viewer
   may see, like `relatedTo`: a token learned through them that an entry

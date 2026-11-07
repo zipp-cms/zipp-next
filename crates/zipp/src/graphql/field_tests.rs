@@ -125,6 +125,8 @@ async fn rich_text_in_chunks() {
 				{ "type": "url", "value": "https://y.ch" } } },
 			{ "type": "embed", "attrs": { "type": "text",
 				"fields": { "content": "boxed" } } },
+			{ "type": "embed", "attrs": { "type": "text", "enabled": false,
+				"fields": { "content": "switched off" } } },
 			{ "type": "paragraph" },
 		] });
 		save(

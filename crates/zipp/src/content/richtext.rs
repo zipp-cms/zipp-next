@@ -340,12 +340,13 @@ pub(crate) type Resolve<'a> =
 	dyn FnMut(&Value) -> Option<(String, Option<String>)> + 'a;
 
 /// The chunks of a document: html between rows of buttons (the buttons
-/// next to each other) and blocks.
+/// next to each other) and blocks, without the ones switched off.
 pub(crate) fn chunks(doc: &Value, resolve: &mut Resolve) -> Vec<Chunk> {
 	let mut out = vec![];
 	let mut html = String::new();
 	for node in doc["content"].as_array().into_iter().flatten() {
 		match node["type"].as_str() {
+			Some("embed") if node["attrs"]["enabled"] == false => {}
 			Some("button") | Some("embed") => {
 				if !html.is_empty() {
 					out.push(Chunk::Html(std::mem::take(&mut html)));
