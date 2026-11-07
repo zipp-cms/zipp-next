@@ -1,0 +1,1 @@
+import{ar as n,t as o,c as i,d as m,p as u,bZ as c,ap as f,b as v,h as d,o as h}from"./index-D57DDjHQ.js";var _=d('<span aria-hidden="true"> </span>');function b(e,a){u(a,!0);let l=n(a,"small",3,!1);var s=_();let t;var r=h(s,!0);o(p=>{t=f(s,1,"avatar svelte-1jxla4b",null,t,{small:l()}),v(r,p)},[()=>c(a.user)]),i(e,s),m()}export{b as A};
