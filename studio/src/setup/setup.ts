@@ -1,4 +1,11 @@
-import type { Component, Field, Role, Schema, Section } from '../core/schema';
+import type {
+	Component,
+	Field,
+	Role,
+	Schema,
+	Section,
+	Tab,
+} from '../core/schema';
 import { componentOf, sectionOf } from '../core/schema';
 import { can, canSetup, isAdmin, visibleNav } from '../core/access';
 import { listEntries } from '../entries/api';
@@ -151,6 +158,39 @@ export function setupCrumbs(
 		out.push({ label: own ?? handle });
 	}
 	return out;
+}
+
+/** The fields of a component by the tabs of its editor, else in one card. */
+export function fieldGroups(c: Component): {
+	name: string;
+	fields: Field[];
+	when: Tab['when'];
+	card: boolean | undefined;
+}[] {
+	if (!c.tabs?.length)
+		return [
+			{
+				name: t('setup.fields'),
+				fields: c.fields,
+				when: undefined,
+				card: c.card,
+			},
+		];
+	const tabs = c.tabs;
+	const byTab = tabs.map(tab => ({
+		name: tab.name,
+		fields: c.fields.filter(f => tab.fields.includes(f.handle)),
+		when: tab.when,
+		card: c.card || tab.card,
+	}));
+	const rest = c.fields.filter(
+		f => !tabs.some(tab => tab.fields.includes(f.handle)),
+	);
+	if (!rest.length) return byTab;
+	return [
+		...byTab,
+		{ name: t('setup.other'), fields: rest, when: undefined, card: false },
+	];
 }
 
 /** The blocks or groups a field holds, by handle. */
