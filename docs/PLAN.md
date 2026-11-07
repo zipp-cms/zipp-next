@@ -198,3 +198,6 @@ commit.
 - [x] Import mapping for Craft: fill a group from flat Craft fields, so a
       port can group fields that were flat in Craft (textrem, 2026-11-01);
       by handle, also `contactHeading` into `contact.heading`
+- [ ] Navigation items without a link (operator 2026-11-07, later): an
+      item that is only a label for its children, so a sub navigation
+      that opens on click or hover needs no hack (textrem's header)
