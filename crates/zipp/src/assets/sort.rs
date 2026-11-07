@@ -32,21 +32,26 @@ pub(crate) fn sort_assets(
 	schema: &Schema,
 ) -> Result<Sorted> {
 	let mut wanted: BTreeMap<i64, BTreeSet<String>> = BTreeMap::new();
+	// an asset of an entry goes by the slug of its first site, the
+	// primary one if it has it, so translated slugs aren't several
+	let mut seen: BTreeSet<(i64, String, i64)> = BTreeSet::new();
 	let mut stmt = conn.prepare(
-		"SELECT e.section, e.type, s.slug, s.fields
+		"SELECT e.id, e.section, e.type, s.slug, s.fields
 		FROM entries e JOIN entry_sites s ON s.entry_id = e.id
-		WHERE e.deleted_at IS NULL",
+		WHERE e.deleted_at IS NULL
+		ORDER BY e.id, s.site = ?1 DESC, s.site",
 	)?;
-	let rows = stmt.query_map([], |r| {
+	let rows = stmt.query_map([&schema.primary_site().handle], |r| {
 		Ok((
-			r.get::<_, String>(0)?,
+			r.get::<_, i64>(0)?,
 			r.get::<_, String>(1)?,
 			r.get::<_, String>(2)?,
 			r.get::<_, String>(3)?,
+			r.get::<_, String>(4)?,
 		))
 	})?;
 	for row in rows {
-		let (section, ty, slug, fields) = row?;
+		let (entry, section, ty, slug, fields) = row?;
 		let Some(comp) = schema.get(&ty) else {
 			continue;
 		};
@@ -55,11 +60,16 @@ pub(crate) fn sort_assets(
 		for (folder, ids) in asset_folders(schema, comp, &fields) {
 			let path = fill(folder, &slug, &section, &ty);
 			for id in ids {
+				if !seen.insert((entry, folder.to_string(), id)) {
+					continue;
+				}
 				wanted.entry(id).or_default().insert(path.clone());
 			}
 		}
 	}
 
+	// all or nothing
+	let tx = conn.unchecked_transaction()?;
 	let mut sorted = Sorted {
 		moved: 0,
 		shared: 0,
@@ -75,14 +85,15 @@ pub(crate) fn sort_assets(
 		}
 		let mut folder = None;
 		for name in path.split('/') {
-			folder = Some(folder_named(conn, folder, name)?);
+			folder = Some(folder_named(&tx, folder, name)?);
 		}
-		sorted.moved += conn.execute(
+		sorted.moved += tx.execute(
 			"UPDATE assets SET folder_id = ?1
 			WHERE id = ?2 AND deleted_at IS NULL AND folder_id IS NOT ?1",
 			params![folder, id],
 		)?;
 	}
+	tx.commit()?;
 	Ok(sorted)
 }
 
