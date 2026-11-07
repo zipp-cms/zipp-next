@@ -15,7 +15,7 @@ use zipp::{
 use crate::graphql::{
 	SEO_JSON, entry_seo, entry_seo_field, root_fields, seo_types,
 };
-use crate::resolve::social_transform;
+use crate::resolve::{is_empty, social_transform};
 use crate::{ROBOTS, Seo, add_settings, add_targets};
 
 /// The handle of the plugin and of its field type.
@@ -164,9 +164,8 @@ impl FieldType for SeoField {
 		};
 		let mut out = Map::new();
 		for (key, v) in seo {
-			let empty = v.is_null() || v == "" || v == &json!([]);
 			let valid = match key.as_str() {
-				_ if empty => true,
+				_ if is_empty(v) => true,
 				"title" | "description" | "socialTitle"
 				| "socialDescription" => v.is_string(),
 				"image" | "socialImage" => v.as_array().is_some_and(|a| {
@@ -182,7 +181,7 @@ impl FieldType for SeoField {
 			if !valid {
 				return Err(format!("{key}: not a valid value"));
 			}
-			if !empty {
+			if !is_empty(v) {
 				out.insert(key.clone(), v.clone());
 			}
 		}

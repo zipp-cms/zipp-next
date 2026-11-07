@@ -141,6 +141,7 @@ async fn seo_like_the_craft_plugin() {
 		serde_json::from_str(j["jsonLd"].as_str().unwrap()).unwrap();
 	let graph = ld["@graph"].as_array().unwrap();
 	assert_eq!(graph[0]["@type"], "MedicalClinic");
+	assert_eq!(graph[0]["address"]["@type"], "PostalAddress");
 	assert_eq!(graph[0]["address"]["addressLocality"], "Thun");
 	assert_eq!(graph[0]["openingHoursSpecification"][0]["opens"], "08:00");
 	let page = graph.iter().find(|g| g["@type"] == "WebPage").unwrap();

@@ -4,7 +4,7 @@
 use serde_json::{Map, Value, json};
 
 use crate::ORGANIZATION_TYPES;
-use crate::resolve::{Page, first_id, image_data, text};
+use crate::resolve::{Page, first_id, image_data, is_empty, text};
 use zipp::assets::Asset;
 use zipp::db::iso;
 
@@ -33,7 +33,7 @@ fn without_nulls(v: Value) -> Value {
 	match v {
 		Value::Object(o) => Value::Object(
 			o.into_iter()
-				.filter(|(_, v)| !v.is_null() && v != "" && *v != json!([]))
+				.filter(|(_, v)| !is_empty(v))
 				.collect::<Map<_, _>>(),
 		),
 		v => v,
@@ -60,20 +60,16 @@ pub(crate) fn json_ld(
 		let person = ty == "Person";
 		let local = ORGANIZATION_TYPES.iter().any(|(t, l)| *t == ty && *l);
 		let address = without_nulls(json!({
+			"@type": "PostalAddress",
 			"streetAddress": s("street"),
 			"postalCode": s("postalCode"),
 			"addressLocality": s("locality"),
 			"addressRegion": s("region"),
 			"addressCountry": s("country"),
 		}));
-		let address = match address.as_object().is_some_and(|a| !a.is_empty()) {
-			true => {
-				let mut a = json!({ "@type": "PostalAddress" });
-				a.as_object_mut()
-					.unwrap()
-					.extend(address.as_object().unwrap().clone());
-				a
-			}
+		// more than its type
+		let address = match address.as_object().is_some_and(|a| a.len() > 1) {
+			true => address,
 			false => Value::Null,
 		};
 		let geo = match (

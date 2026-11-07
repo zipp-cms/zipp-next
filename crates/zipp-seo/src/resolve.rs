@@ -127,6 +127,11 @@ pub(crate) fn first_id(v: &Value) -> Option<i64> {
 	v.as_array()?.iter().find_map(Value::as_i64)
 }
 
+/// Null, an empty text or an empty list.
+pub(crate) fn is_empty(v: &Value) -> bool {
+	v.is_null() || v == "" || v.as_array().is_some_and(Vec::is_empty)
+}
+
 /// `own` and `primary` are the fields of `seoSettings` in the site and the
 /// primary site.
 pub fn globals(site: &Site, own: &Value, primary: &Value) -> Globals {
