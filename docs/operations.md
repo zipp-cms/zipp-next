@@ -272,7 +272,7 @@ is a new image: `serve` applies its migrations at the start.
   favicon (the letter of the site without one). The cms fetches it from
   the site's `--site-url` (its `<link rel="icon">`, `"shortcut icon"` or
   `"apple-touch-icon"`: an svg, else the largest up to 64px, else
-  `/favicon.ico`), only from that host, within 3 seconds, an image of
+  `/favicon.ico`), only from that host (with or without `www.`), within 3 seconds, an image of
   up to 256 KB, and keeps it (or that there is none) an hour. A
   website behind a login or offline has none.
 

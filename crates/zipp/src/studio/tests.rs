@@ -1,4 +1,6 @@
-use super::favicon::{Link, best, links};
+use reqwest::Url;
+
+use super::favicon::{Link, best, links, same_host};
 
 fn link(href: &str, svg: bool, size: Option<u32>) -> Link {
 	Link {
@@ -57,4 +59,13 @@ fn the_best_icon_for_the_sidebar() {
 	let other = link("/other.ico", false, None);
 	assert_eq!(best(&[ico.clone(), other]).unwrap().href, ico.href);
 	assert!(best(&[]).is_none());
+}
+
+#[test]
+fn www_is_the_same_site() {
+	let url = |s: &str| Url::parse(s).unwrap();
+	assert!(same_host(&url("https://x.ch/"), &url("https://www.x.ch/a")));
+	assert!(same_host(&url("https://www.x.ch/"), &url("https://x.ch/")));
+	assert!(!same_host(&url("https://x.ch/"), &url("https://y.ch/")));
+	assert!(!same_host(&url("https://x.ch/"), &url("https://cdn.x.ch/")));
 }

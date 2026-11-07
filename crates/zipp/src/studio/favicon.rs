@@ -1,6 +1,6 @@
 //! The favicon of a site for the studio's sidebar: the studio can't read
 //! another origin's page, so the cms fetches it from the site's url (of
-//! `--site-url`, never one of the request), only from that host.
+//! `--site-url`, never one of the request), only from that host (with or without `www.`).
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -140,8 +140,13 @@ fn web(url: &Url) -> bool {
 	matches!(url.scheme(), "http" | "https")
 }
 
-fn same_host(a: &Url, b: &Url) -> bool {
-	a.host_str().is_some() && a.host_str() == b.host_str()
+pub(crate) fn same_host(a: &Url, b: &Url) -> bool {
+	// x.ch and www.x.ch are one site, a redirect between them is common
+	let bare = |u: &Url| {
+		u.host_str()
+			.map(|h| h.strip_prefix("www.").unwrap_or(h).to_owned())
+	};
+	bare(a).is_some() && bare(a) == bare(b)
 }
 
 /// An icon a page links to.
