@@ -104,6 +104,26 @@ fn page_size(schema: &Schema) -> i64 {
 	Seo::of(schema).sitemap_page_size as i64
 }
 
+/// How many pages of `size` the sitemap of `count` entries has.
+fn pages(count: i64, size: i64) -> i64 {
+	(count + size - 1) / size
+}
+
+/// The start of every sitemap, before its root element.
+const XML: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+
+/// The namespace of a sitemap's root element.
+const NS: &str = "xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"";
+
+/// A sitemap in the index, with when it last changed.
+fn sitemap(loc: &str, last: Option<i64>) -> String {
+	let mut out = format!("\t<sitemap>\n\t\t<loc>{}</loc>\n", escape(loc));
+	if let Some(last) = last {
+		out += &format!("\t\t<lastmod>{}</lastmod>\n", iso(last));
+	}
+	out + "\t</sitemap>\n"
+}
+
 fn escape(s: &str) -> String {
 	s.replace('&', "&amp;")
 		.replace('<', "&lt;")
@@ -159,10 +179,7 @@ async fn index(
 	let origin_ = frontend(&state, &p);
 	let conn = state.db.conn();
 	let size = page_size(&state.schema);
-	let mut out = String::from(
-		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
-		<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
-	);
+	let mut out = format!("{XML}<sitemapindex {NS}>\n");
 	for site in sites_for(&state, &origin_) {
 		let globals = published_globals(&conn, &state.schema, site)?;
 		for section in sections(&state.schema, &globals) {
@@ -174,20 +191,13 @@ async fn index(
 				&[("section", section), ("order", "-updated")],
 				(1, 0),
 			)?;
-			let pages = (count + size - 1) / size;
 			let last = last.first().map(|e| e.updated_at);
-			for page in 1..=pages {
-				out += &format!(
-					"\t<sitemap>\n\t\t<loc>{}</loc>\n",
-					escape(&format!(
-						"{origin_}/sitemap-{}-{section}-{page}.xml",
-						site.handle
-					))
+			for page in 1..=pages(count, size) {
+				let loc = format!(
+					"{origin_}/sitemap-{}-{section}-{page}.xml",
+					site.handle
 				);
-				if let Some(last) = last {
-					out += &format!("\t\t<lastmod>{}</lastmod>\n", iso(last));
-				}
-				out += "\t</sitemap>\n";
+				out += &sitemap(&loc, last);
 			}
 		}
 		// the pages of users, see `Schema::user_pages`
@@ -196,14 +206,10 @@ async fn index(
 		}
 		let (_, count) =
 			zipp::user_page_uris(&conn, &state.schema, &site.handle, 0, 0)?;
-		for page in 1..=(count + size - 1) / size {
-			out += &format!(
-				"\t<sitemap>\n\t\t<loc>{}</loc>\n\t</sitemap>\n",
-				escape(&format!(
-					"{origin_}/sitemap-{}-{USERS}-{page}.xml",
-					site.handle
-				))
-			);
+		for page in 1..=pages(count, size) {
+			let loc =
+				format!("{origin_}/sitemap-{}-{USERS}-{page}.xml", site.handle);
+			out += &sitemap(&loc, None);
 		}
 	}
 	out += "</sitemapindex>\n";
@@ -261,11 +267,8 @@ async fn page(
 		others.extend(list.into_iter().map(|e| (s, e)));
 	}
 
-	let mut out = String::from(
-		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
-		<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" \
-		xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n",
-	);
+	let xhtml = "xmlns:xhtml=\"http://www.w3.org/1999/xhtml\"";
+	let mut out = format!("{XML}<urlset {NS} {xhtml}>\n");
 	for e in &found {
 		let Some(url) = zipp::page_url(
 			&state.site_urls,
@@ -312,10 +315,7 @@ fn users_page(
 	if uris.is_empty() && page > 1 {
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	}
-	let mut out = String::from(
-		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
-		<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
-	);
+	let mut out = format!("{XML}<urlset {NS}>\n");
 	for uri in uris {
 		if let Some(url) = zipp::page_url(&state.site_urls, &site.handle, &uri)
 		{
