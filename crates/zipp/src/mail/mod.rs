@@ -140,7 +140,6 @@ impl Mailer {
 			.map_err(|e| format!("--smtp-url: {e}"))?
 			.build();
 		// the host and port, without the user and password
-		let rest = url.split_once("://").map_or(url, |(_, r)| r);
 		let rest = rest.rsplit_once('@').map_or(rest, |(_, r)| r);
 		let server = rest.split(['/', '?']).next().map(String::from);
 		Self::new(Transport::Smtp(transport), Some(from), server)
