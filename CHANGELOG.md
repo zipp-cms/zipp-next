@@ -12,6 +12,10 @@
   pages; logged in website users edit their own profile with `PUT
   /site-auth/me`. The studio's user page edits the profile, a token can
   read users.
+- The site box at the top of the sidebar shows the website's favicon
+  instead of the site's first letter, the letter when it has none. The
+  cms fetches it (`GET /api/sites/{site}/favicon`, with a session) from
+  the site's url, only from that host, and keeps it an hour.
 - An icon next to the site at the top of the sidebar opens the website
   of the site the studio edits (its url from `--site-url`), the first
   site's when it has none; the rest of the box still switches sites.

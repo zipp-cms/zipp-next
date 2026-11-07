@@ -3,24 +3,49 @@
 	import { setSite, site } from '../core/router.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { t } from '../i18n/index.svelte';
+	import { Latest } from '../core/latest.svelte';
+	import { favicon } from './favicon';
 
 	/**
 	 * The site the studio edits, and where it runs; the box opens a
-	 * choice, the icon next to it the website of that site.
+	 * choice, the icon next to it the website of that site. The mark is
+	 * the website's favicon, the name's first letter without one.
 	 */
 	let { schema }: { schema: Schema } = $props();
 
 	const current = $derived(siteOf(schema, site.current));
-	const url = $derived(
-		schema.siteUrls[site.current] ??
-			schema.siteUrls[schema.sites[0]?.handle],
+	// the site of the website, the first one's when this has no url
+	const urlSite = $derived(
+		schema.siteUrls[site.current] ? site.current : schema.sites[0]?.handle,
 	);
+	const url = $derived(urlSite && schema.siteUrls[urlSite]);
 	const offline = (handle: string) => schema.offline.includes(handle);
+
+	let icon: string | null = $state(null);
+	const loads = new Latest();
+	$effect(() => {
+		const handle = urlSite;
+		icon = null;
+		if (handle)
+			loads.run(
+				() => favicon(handle),
+				i => (icon = i),
+			);
+	});
 </script>
 
 <div class="site-switch">
 	<label class="choice" title={t('shell.site')}>
-		<span class="mark">{(current?.name ?? '?')[0]}</span>
+		{#if icon}
+			<img
+				class="mark icon"
+				src={icon}
+				alt=""
+				onerror={() => (icon = null)}
+			/>
+		{:else}
+			<span class="mark">{(current?.name ?? '?')[0]}</span>
+		{/if}
 		<span class="name">
 			<strong class="truncate">{current?.name}</strong>
 			<small>
@@ -109,6 +134,12 @@
 		color: var(--on-accent);
 		font-weight: 700;
 		font-size: var(--fs-md);
+
+		// the favicon on the box's background, its own colors
+		&.icon {
+			background: none;
+			object-fit: contain;
+		}
 	}
 
 	.name {

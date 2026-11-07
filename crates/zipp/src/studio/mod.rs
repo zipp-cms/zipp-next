@@ -4,8 +4,12 @@
 pub mod api;
 #[cfg(test)]
 mod api_tests;
+mod favicon;
 mod routes;
+#[cfg(test)]
+mod tests;
 
+pub(crate) use favicon::Favicons;
 pub(crate) use routes::graphiql;
 pub use routes::{api_routes, routes};
 

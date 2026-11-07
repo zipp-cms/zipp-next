@@ -10,6 +10,7 @@ use super::Files;
 use super::api::*;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::auth::Authed;
+use crate::error::{Error, Result};
 use crate::{AppState, origin};
 
 async fn file(State(state): State<AppState>, uri: Uri) -> Response {
@@ -192,7 +193,44 @@ async fn schema_route(
 	}))
 }
 
-/// What the studio loads first: the schema and its settings.
+/// `GET /sites/{site}/favicon`: the favicon of the site's website for the
+/// sidebar, NOT_FOUND when it has none. It may be an svg: it gets no
+/// rights of the studio's origin, the studio only shows it in an `<img>`.
+async fn favicon_route(
+	State(state): State<AppState>,
+	_auth: Authed,
+	Path(site): Path<String>,
+) -> Result<Response> {
+	let url = state.site_urls.get(&site).ok_or(Error::NotFound)?;
+	let icon = state
+		.favicons
+		.get(&site, url)
+		.await
+		.ok_or(Error::NotFound)?;
+	Ok((
+		[
+			(header::CONTENT_TYPE, icon.mime),
+			(
+				header::CACHE_CONTROL,
+				"private, max-age=3600".parse().unwrap(),
+			),
+			(header::X_CONTENT_TYPE_OPTIONS, "nosniff".parse().unwrap()),
+			(
+				header::CONTENT_SECURITY_POLICY,
+				"default-src 'none'; style-src 'unsafe-inline'"
+					.parse()
+					.unwrap(),
+			),
+		],
+		icon.data,
+	)
+		.into_response())
+}
+
+/// What the studio loads first: the schema and its settings; the sites'
+/// favicons.
 pub fn api_routes() -> Router<AppState> {
-	Router::new().api::<SchemaReq, _>(schema_route)
+	Router::new()
+		.route("/sites/{site}/favicon", get(favicon_route))
+		.api::<SchemaReq, _>(schema_route)
 }

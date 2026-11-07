@@ -3646,6 +3646,7 @@ dependencies = [
  "lettre",
  "pulldown-cmark",
  "rand 0.9.5",
+ "reqwest",
  "rusqlite",
  "rust-embed",
  "serde",
