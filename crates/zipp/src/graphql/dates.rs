@@ -83,14 +83,14 @@ impl DateArgs {
 		ctx: &ResolverContext,
 		site: &str,
 	) -> async_graphql::Result<Option<Self>> {
-		let arg = |k: &str| -> async_graphql::Result<Option<String>> {
-			match ctx.args.get(k).filter(|v| !v.is_null()) {
+		let text = |k: &str| -> async_graphql::Result<Option<String>> {
+			match arg(ctx, k) {
 				Some(v) => Ok(Some(v.string()?.to_string())),
 				None => Ok(None),
 			}
 		};
 		let (format, tz, locale) =
-			(arg("format")?, arg("timezone")?, arg("locale")?);
+			(text("format")?, text("timezone")?, text("locale")?);
 		if format.is_none() && tz.is_none() && locale.is_none() {
 			return Ok(None);
 		}

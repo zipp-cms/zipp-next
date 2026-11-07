@@ -31,8 +31,6 @@ fn assets_args(field: GqlField) -> GqlField {
 fn list_of(
 	ctx: &ResolverContext,
 ) -> async_graphql::Result<Option<(AssetList, String)>> {
-	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
-
 	let site = site_arg(ctx)?;
 	// like entries, nothing of a site the token doesn't read; the list
 	// only for a schema with assets
@@ -44,14 +42,14 @@ fn list_of(
 	let mut q = AssetList::default();
 	// every folder in them too, like a volume with its folders
 	let mut folders = None;
-	if let Some(paths) = arg("folder") {
+	if let Some(paths) = arg(ctx, "folder") {
 		let known = folder_paths(ctx)?;
 		let ids = all(&paths)?
 			.into_iter()
 			.flat_map(|p| assets::folders_under(known, &p));
 		folders = Some(ids.collect::<Vec<_>>());
 	}
-	if let Some(ids) = arg("folderId") {
+	if let Some(ids) = arg(ctx, "folderId") {
 		let ids = all(&ids)?.into_iter().map(|id| {
 			id.parse::<i64>()
 				.map_err(|_| GqlError::new(format!("folderId {id}")))
@@ -65,20 +63,20 @@ fn list_of(
 	}
 	q.folders = folders;
 	q.kinds = kinds_of(ctx)?;
-	if let Some(s) = arg("search") {
+	if let Some(s) = arg(ctx, "search") {
 		q.words = s.string()?.split_whitespace().map(Into::into).collect();
 	}
-	if let Some(o) = arg("orderBy") {
+	if let Some(o) = arg(ctx, "orderBy") {
 		q.order_by = Some(o.string()?.into());
 	}
 	// never more than a request may load, a big library isn't read
 	// before the error
-	let limit = match arg("limit") {
+	let limit = match arg(ctx, "limit") {
 		Some(l) => l.i64()?,
 		None => MAX_LOADED as i64,
 	};
 	q.limit = Some(limit.clamp(0, MAX_LOADED as i64));
-	if let Some(o) = arg("offset") {
+	if let Some(o) = arg(ctx, "offset") {
 		q.offset = Some(o.i64()?);
 	}
 	Ok(Some((q, site)))
@@ -89,7 +87,7 @@ fn list_of(
 pub(super) fn kinds_of(
 	ctx: &ResolverContext,
 ) -> async_graphql::Result<Vec<Kind>> {
-	let Some(kind) = ctx.args.get("kind").filter(|v| !v.is_null()) else {
+	let Some(kind) = arg(ctx, "kind") else {
 		return Ok(vec![]);
 	};
 	let kinds = all(&kind)?.into_iter().map(|k| Kind::parse(&k));

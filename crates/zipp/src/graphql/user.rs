@@ -129,8 +129,7 @@ fn query_of(
 	let Some(mut q) = public_query(schema, viewer, &site) else {
 		return Ok(None);
 	};
-	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
-	if let Some(h) = arg("hasEntries") {
+	if let Some(h) = arg(ctx, "hasEntries") {
 		let section = h.object()?.try_get("section")?.string()?.to_string();
 		if schema.get_section(&section).is_none() {
 			return Err(GqlError::new(format!("unknown section {section}")));
@@ -141,14 +140,14 @@ fn query_of(
 		}
 		q.has_entries = Some(section);
 	}
-	if let Some(id) = arg("id") {
+	if let Some(id) = arg(ctx, "id") {
 		let id = first(&id)?.and_then(|i| i.parse().ok()).unwrap_or(0);
 		q.ids = Some(vec![id]);
 	}
-	if let Some(slug) = arg("slug") {
+	if let Some(slug) = arg(ctx, "slug") {
 		q.slug = Some(slug.string()?.into());
 	}
-	if let Some(order) = arg("orderBy") {
+	if let Some(order) = arg(ctx, "orderBy") {
 		let order = order.string()?;
 		let (field, dir) = order.split_once(' ').unwrap_or((order, "ASC"));
 		q.by_id = match field {
@@ -162,10 +161,10 @@ fn query_of(
 		};
 		q.desc = dir.trim().eq_ignore_ascii_case("desc");
 	}
-	if let Some(limit) = arg("limit") {
+	if let Some(limit) = arg(ctx, "limit") {
 		q.limit = Some(limit.i64()?.clamp(0, MAX_LIMIT));
 	}
-	if let Some(offset) = arg("offset") {
+	if let Some(offset) = arg(ctx, "offset") {
 		q.offset = offset.i64()?.max(0);
 	}
 	Ok(Some(q))

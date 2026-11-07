@@ -288,14 +288,16 @@ fn params_of<'a>(
 /// The site of the `site` or `siteId` argument, else the primary site.
 pub(super) fn site_arg(ctx: &ResolverContext) -> async_graphql::Result<String> {
 	let schema = ctx.data::<Arc<Schema>>()?;
-	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
-	if let Some(v) = arg("site").map(|v| first(&v)).transpose()?.flatten() {
+	if let Some(v) = arg(ctx, "site").map(|v| first(&v)).transpose()?.flatten()
+	{
 		return match schema.get_site(&v) {
 			Some(_) => Ok(v),
 			None => Err(GqlError::new(format!("unknown site {v}"))),
 		};
 	}
-	if let Some(v) = arg("siteId").map(|v| first(&v)).transpose()?.flatten() {
+	if let Some(v) =
+		arg(ctx, "siteId").map(|v| first(&v)).transpose()?.flatten()
+	{
 		return site_of(schema, &v);
 	}
 	Ok(schema.primary_site().handle.clone())

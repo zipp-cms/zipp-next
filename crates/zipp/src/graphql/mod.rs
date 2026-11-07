@@ -231,6 +231,14 @@ fn resolver<'a>(
 	}
 }
 
+/// An argument of the field, none when it is missing or null.
+fn arg<'a>(
+	ctx: &'a ResolverContext,
+	name: &str,
+) -> Option<async_graphql::dynamic::ValueAccessor<'a>> {
+	ctx.args.get(name).filter(|v| !v.is_null())
+}
+
 /// A block as parent of its fields, it knows its site for relations.
 struct Block {
 	id: String,
