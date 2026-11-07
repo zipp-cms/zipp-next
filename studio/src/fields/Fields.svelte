@@ -137,7 +137,7 @@
 		min-width: 0;
 	}
 
-	@container (min-width: 36rem) {
+	@include container-min(36rem) {
 		.field {
 			grid-column: span var(--span);
 		}
@@ -178,7 +178,7 @@
 	}
 
 	// fields that share a row keep their label above
-	@container (min-width: 36rem) {
+	@include container-min(36rem) {
 		.nested .part {
 			display: flex;
 			align-items: stretch;
@@ -190,7 +190,7 @@
 		}
 	}
 
-	@include max-tablet {
+	@include fields-narrow {
 		.nested .field {
 			display: flex;
 			align-items: stretch;

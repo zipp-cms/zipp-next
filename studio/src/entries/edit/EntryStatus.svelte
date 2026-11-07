@@ -14,8 +14,9 @@
 	/**
 	 * The status of the entry in each site and the dates that keep it off
 	 * the website first, then what it is: type, parent and slug. In the
-	 * sidebar, or `compact` on top of a narrow editor: the switch in a row
-	 * and the inputs next to each other as far as they fit.
+	 * sidebar, or `compact` on top of a narrow editor: closed under a line
+	 * with the status and the date, open the switch in a row and the
+	 * inputs next to each other as far as they fit.
 	 */
 	let {
 		schema,
@@ -36,11 +37,49 @@
 
 	/** a published entry its dates keep off the website, and why */
 	const waiting = $derived(dateState(ed.dates));
+
+	// compact: open by a click, or when one of its fields has an error
+	let open = $state(false);
+	$effect(() => {
+		if (ed.errors.expiryDate || ed.errors.slug) open = true;
+	});
+	const changed = $derived(
+		['published', 'postDate', 'expiryDate', 'type', 'slug'].some(k =>
+			ed.changed.has(k),
+		),
+	);
 </script>
+
+{#if compact}
+	<details class="card status compact" bind:open>
+		<summary>
+			{#if changed}<span class="changed-dot"></span>{/if}
+			<span class="published" class:waiting={ed.published && waiting}>
+				{ed.published
+					? t('entries.publishedIn', {
+							site: siteName(schema, ed.site),
+						})
+					: t('entries.notPublishedIn', {
+							site: siteName(schema, ed.site),
+						})}
+			</span>
+			{#if ed.dates.postDate !== null}
+				<span class="muted">
+					· {t('entries.postDateAt', {
+						time: shortTime(ed.dates.postDate),
+					})}
+				</span>
+			{/if}
+		</summary>
+		<div class="body">{@render parts()}</div>
+	</details>
+{:else}
+	<div class="card status">{@render parts()}</div>
+{/if}
 
 <!-- read only for a role that may only look, and while publishing,
 discarding or restoring: what is typed then would be lost -->
-<div class="card status" class:compact>
+{#snippet parts()}
 	<div class="part">
 		<fieldset class="inline" disabled={!may.edit || ed.busy}>
 			<Switch bind:checked={ed.published} disabled={!may.publish}>
@@ -168,7 +207,7 @@ discarding or restoring: what is typed then would be lost -->
 			</label>
 		{/if}
 	</fieldset>
-</div>
+{/snippet}
 
 <style lang="scss">
 	// in parts with a line between them
@@ -189,12 +228,30 @@ discarding or restoring: what is typed then would be lost -->
 		}
 	}
 
-	// the switch on its own row, the inputs next to each other as far as
-	// they fit; a date has a day and a time
+	// a line with the status and the post date, open under it the switch
+	// on its own row, the inputs next to each other as far as they fit; a
+	// date has a day and a time
 	.compact {
+		display: block;
+	}
+
+	summary {
+		padding: 0.625rem 0.75rem;
+		font-size: var(--fs-sm);
+		cursor: pointer;
+
+		.published {
+			font-size: var(--fs-sm);
+			font-weight: 600;
+		}
+	}
+
+	.compact .body {
+		display: flex;
 		flex-flow: row wrap;
 		gap: 0.625rem 0.75rem;
 		padding: 0.625rem 0.75rem;
+		border-top: 1px solid var(--line);
 
 		.part {
 			display: contents;

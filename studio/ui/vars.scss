@@ -24,6 +24,38 @@ $label-gap: 1.25rem;
 	}
 }
 
+// by the width of the closest container (`container-type`) instead of
+// the window's, or of the one named `$name`: a pane narrower than the
+// window, e.g. the editor next to the live preview
+@mixin container-max($width, $name: '') {
+	@container #{$name} (width < #{$width}) {
+		@content;
+	}
+}
+
+@mixin container-min($width, $name: '') {
+	@container #{$name} (width >= #{$width}) {
+		@content;
+	}
+}
+
+// the entry editor (`container: editor`) too narrow for its sidebar:
+// the status collapsed on top, the rest under the content; Edit.svelte
+// measures the same width for what changes the markup
+@mixin editor-narrow {
+	@include container-max(56rem, editor) {
+		@content;
+	}
+}
+
+// a box of fields too narrow for the labels on their left (Fields'
+// blocks, FieldGroup): each label above its value
+@mixin fields-narrow {
+	@include container-max(26rem) {
+		@content;
+	}
+}
+
 // with a pointer that hovers: no sticky hover on touch screens
 @mixin hover {
 	@media (hover: hover) {

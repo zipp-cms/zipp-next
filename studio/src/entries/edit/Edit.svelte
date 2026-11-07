@@ -109,8 +109,9 @@
 	);
 
 	// too narrow for the entry's sidebar next to the content (live
-	// preview, tablets, phones): its status goes on top, the rest under
-	// it; the window's width until the editor is measured
+	// preview, tablets, phones): the CSS lays it out (editor-narrow),
+	// this moves the status on top, collapsed; the same width as the
+	// mixin's, the window's until the editor is measured
 	const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
 	let editorWidth = $state(0);
 	const narrow = $derived((editorWidth || innerWidth) < 56 * rem);
@@ -210,7 +211,7 @@
 			onkeepmine={() => ed.keepMine()}
 		/>
 
-		<div class="with-aside" class:narrow>
+		<div class="with-aside">
 			<div class="main">
 				{#if ed.error}<p class="error">{ed.error}</p>{/if}
 
@@ -304,11 +305,14 @@
 {/if}
 
 <style lang="scss">
-	// the entry's sidebar next to the content when there is room
+	// the entry's sidebar next to the content when the editor has room,
+	// also in a window that has none for other pages' asides
 	.with-aside {
 		grid-template-columns: minmax(0, 1fr) 18.75rem;
+	}
 
-		&.narrow {
+	@include editor-narrow {
+		.with-aside {
 			grid-template-columns: minmax(0, 1fr);
 		}
 	}

@@ -157,7 +157,7 @@
 		}
 	}
 
-	@container page (max-width: 48rem) {
+	@include container-max(48rem, page) {
 		@include compact;
 	}
 

@@ -12,8 +12,8 @@
 	 * type, parent and slug, the outline of the blocks, copying from
 	 * another site and the revisions. A global has no page and is always
 	 * live, it has no status, slug or type. A `narrow` editor has the
-	 * status on top (`EntryStatus`), the rest goes under the content with
-	 * the revisions closed.
+	 * status on top (`EntryStatus`, collapsed), the rest goes under the
+	 * content with the revisions closed.
 	 */
 	let {
 		schema,
@@ -51,7 +51,7 @@
 	);
 </script>
 
-<aside class:narrow>
+<aside>
 	{#if !ed.global && !narrow}
 		<EntryStatus {schema} {ed} />
 	{/if}
@@ -122,9 +122,11 @@
 		gap: 0.75rem;
 		max-height: calc(100vh - 5rem);
 		overflow-y: auto;
+	}
 
-		// under the content
-		&.narrow {
+	// under the content
+	@include editor-narrow {
+		aside {
 			position: static;
 			max-height: none;
 			overflow: visible;

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- The live preview opens as wide as a phone (400px) and goes down to
+  280px. The entry editor lays out by its own width (container
+  queries, mixins in `vars.scss`): too narrow for the sidebar, the
+  entry's status, dates, type and slug are a closed line on top with
+  the state and the post date; labels of fields in blocks and
+  `FieldRow`s go above their value when their box is narrow, not only
+  on a phone.
 - An asset field's folder can be per entry, like Craft's upload
   subpath: `.folder("Topics/{slug}")`, also `{section}` and `{type}`;
   the studio fills them in from the entry being edited (also in its

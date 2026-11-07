@@ -71,7 +71,7 @@
 		grid-column: 2;
 	}
 
-	@include max-tablet {
+	@include fields-narrow {
 		.field-row {
 			display: flex;
 			flex-direction: column;

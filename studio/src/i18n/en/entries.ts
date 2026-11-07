@@ -78,6 +78,8 @@ export default {
 
 	// status and sidebar
 	'entries.publishedIn': 'Published in {site}',
+	'entries.notPublishedIn': 'Not published in {site}',
+	'entries.postDateAt': 'Post date {time}',
 	'entries.notLiveYet': 'Not live yet, from {time}',
 	'entries.notLiveAnymore': 'Not live anymore, expired {time}',
 	'entries.postDate': 'Post date',

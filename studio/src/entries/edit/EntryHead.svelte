@@ -61,7 +61,7 @@
 	}
 
 	// a narrow editor, see Edit's .main
-	@container (max-width: 30rem) {
+	@include container-max(30rem) {
 		.head {
 			margin-bottom: 0.875rem;
 		}

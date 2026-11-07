@@ -22,7 +22,8 @@
 
 	/**
 	 * The editor, `children`, with the website on the right while the
-	 * live preview is on; it shows the draft after every save.
+	 * live preview is on; it shows the draft after every save. The
+	 * website starts as wide as a phone, the editor keeps the room.
 	 */
 	let {
 		ed,
@@ -66,7 +67,7 @@
 </script>
 
 <div class:live={!!preview} style:--frame="{frameWidth}px">
-	<div bind:clientWidth={width}>
+	<div class="editor" bind:clientWidth={width}>
 		{@render children()}
 	</div>
 
@@ -76,8 +77,8 @@
 				bind:width={frameWidth}
 				bind:resizing
 				key="zipp-live-preview-width"
-				initial={560}
-				min={320}
+				initial={400}
+				min={280}
 				side="end"
 				label={t('entries.websiteWidth')}
 			/>
@@ -87,6 +88,11 @@
 </div>
 
 <style lang="scss">
+	// the editor lays out by its own width, see editor-narrow
+	.editor {
+		container: editor / inline-size;
+	}
+
 	// the website on the right, as high as the window under the bar
 	.live {
 		display: grid;
