@@ -48,14 +48,15 @@ fn answer(status: StatusCode, body: Value) -> Response {
 	(status, zipp::axum::Json(body)).into_response()
 }
 
+fn failure(status: StatusCode, message: &str) -> Response {
+	answer(status, json!({ "success": false, "message": message }))
+}
+
 /// The visitor gets a short reason, the log the whole one.
 fn unavailable(why: &str) -> Response {
 	tracing::warn!("forms: {why}");
 	let message = "The form can't send right now, please try again later";
-	answer(
-		StatusCode::SERVICE_UNAVAILABLE,
-		json!({ "success": false, "message": message }),
-	)
+	failure(StatusCode::SERVICE_UNAVAILABLE, message)
 }
 
 async fn submit(
@@ -71,10 +72,7 @@ async fn submit(
 	};
 	let Ok(values) = serde_json::from_slice::<Map<String, Value>>(&body) else {
 		let message = "a JSON object of the fields";
-		return answer(
-			StatusCode::BAD_REQUEST,
-			json!({ "success": false, "message": message }),
-		);
+		return failure(StatusCode::BAD_REQUEST, message);
 	};
 	let site = state
 		.schema
@@ -110,10 +108,7 @@ async fn submit(
 	};
 	if !forms.may_send(&handle, client) {
 		let message = "Too many messages, please try again in a few minutes";
-		return answer(
-			StatusCode::TOO_MANY_REQUESTS,
-			json!({ "success": false, "message": message }),
-		);
+		return failure(StatusCode::TOO_MANY_REQUESTS, message);
 	}
 	if settings.to.is_empty() {
 		return unavailable(&format!("{handle} has no recipient in Forms"));
