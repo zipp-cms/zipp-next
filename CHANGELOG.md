@@ -24,6 +24,12 @@ the fixes of a review of the whole codebase. New crate: `zipp-members`.
   zipp (`Field::button_group`).
 - zipp-forms limits submissions per address only (5 in 10 minutes),
   the cap of 50 per form is gone.
+- The search leaves out switched off blocks from an entry's next save
+  or the next migration on (it rebuilds the index); until then their
+  text is still found.
+- Emails of users made before are kept as they are: look for ones with
+  several addresses (`,`, `;` or spaces) and fix them, mails still go
+  to every address in them.
 
 ### Security
 
@@ -97,9 +103,10 @@ the fixes of a review of the whole codebase. New crate: `zipp-members`.
 - `Field::rich_text(..).toolbar([..])` sets the studio's bar of a rich
   text: which tools, in which order, `|` for a line between them;
   `block:<type>` gives an embedded block an icon of its own, `button`
-  a button tool. Buttons and blocks without a tool go into the Insert
-  menu. The schema check refuses unknown tools and tools the field
-  doesn't allow.
+  a button tool. Without it a rich text with buttons has the button
+  tool after the link. Buttons and blocks without a tool go into the
+  Insert menu. The schema check refuses unknown tools and tools the
+  field doesn't allow.
 - A field type can hold blocks with more around each one, like a place
   in a grid: `Field::custom(..).item_blocks(["image", "text"])` makes
   its value a list of items with a block in `block`. zipp checks,
@@ -178,7 +185,7 @@ the fixes of a review of the whole codebase. New crate: `zipp-members`.
   preview: the top bar stays one line, the entry's status, dates, type
   and slug are a closed line on top, the rich text toolbar scrolls
   sideways, a block's hide, duplicate and remove and "Copy content from
-  <site>" and Move to the trash go into ⋯ menus.
+  …" and Move to the trash go into ⋯ menus.
 - The live preview opens as wide as a phone (400px), goes down to 280px
   and up to as wide as the window allows (the editor keeps 20rem). Live
   preview also for a new entry of a section with pages: the button
@@ -186,7 +193,8 @@ the fixes of a review of the whole codebase. New crate: `zipp-members`.
 - Labels on the left of their field (in a group, a block or a card) sit
   at the top of their row with the handle on the name's line; fields
   with a width keep their own row there, the width is their share of
-  the value column.
+  the value column. Above its field (half width fields, narrow boxes) a
+  label has the handle on its line too, for every kind.
 - The entries of a relation field are compact chips side by side that
   wrap, like Craft's; they move by dragging or with the arrow keys
   (Move earlier / Move later). A field that takes only one type leaves
