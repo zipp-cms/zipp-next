@@ -295,11 +295,7 @@ pub(crate) fn build(
 	}
 	for f in &entry_fields {
 		// unless an entry type has a field of its own named so
-		let own = schema
-			.components
-			.iter()
-			.any(|c| c.entry && c.fields.iter().any(|x| x.handle == f.name));
-		if !own {
+		if !own_field(&f.name) {
 			entry_iface = entry_iface
 				.field(InterfaceField::new(f.name.clone(), f.ty.clone()));
 		}
