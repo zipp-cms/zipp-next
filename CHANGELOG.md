@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- A field that changes its kind keeps plain values the new kind takes
+  as they are (text to a dropdown or button group whose options have
+  them, a dropdown to a button group); the others start over with the
+  default as before.
 - A group without a value yet (a new entry) checks the fields it
   requires: a new Mappe of textrem could be saved without its price.
 - A group is always an object in GraphQL, also for an entry saved

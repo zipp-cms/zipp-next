@@ -19,7 +19,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::content::{default_of, walk_mut};
+use crate::content::{default_of, takes, walk_mut};
 use crate::schema::{
 	Column, Component, Field, FieldKind, Holds, Schema, Section, Site,
 };
@@ -62,7 +62,8 @@ pub(crate) enum Op {
 		to: String,
 	},
 	/// A new kind or new settings. Values start over with the default if
-	/// the kind changed (a group of another component too),
+	/// the kind changed (a group of another component too), but plain
+	/// values the new kind takes as they are (text to a dropdown),
 	/// a field that is no longer translatable gets the value of the
 	/// primary site everywhere.
 	ChangeField {

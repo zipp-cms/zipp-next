@@ -171,11 +171,21 @@ impl Op {
 								== std::mem::discriminant(b)
 						}
 					});
-				// another kind starts over like a new field, with its default
+				// another kind starts over like a new field, with its
+				// default; a plain value the new kind takes as it is stays
+				// (text "pdf" for a button group with the option pdf)
 				if !same_kind {
 					let default = default_of(schema, field);
+					let keeps = old.is_some_and(|o| plain(&o.kind))
+						&& plain(&field.kind);
 					walk_mut(schema, comp, fields, &mut |c, obj| {
 						if &c.handle != component {
+							return;
+						}
+						let value = obj.get(&field.handle);
+						if keeps
+							&& value.is_some_and(|v| takes(schema, field, v))
+						{
 							return;
 						}
 						match &default {
@@ -249,12 +259,12 @@ impl Op {
 				) =>
 			{
 				format!(
-					"  change field {component}.{} (content starts over if the kind changed, a save refuses what it no longer allows until it is removed)",
+					"  change field {component}.{} (content starts over if the kind changed, but values it takes as they are; a save refuses what it no longer allows until it is removed)",
 					field.handle
 				)
 			}
 			Self::ChangeField { component, field } => format!(
-				"  change field {component}.{} (content starts over if the kind changed)",
+				"  change field {component}.{} (content starts over if the kind changed, but values it takes as they are)",
 				field.handle
 			),
 			Self::AddSite { site } => format!(
@@ -343,4 +353,21 @@ fn embedded_blocks(doc: &mut Value, f: &mut impl FnMut(&mut Vec<Value>)) {
 		}
 	}
 	*content = out;
+}
+
+/// A kind of plain values (no ids, blocks or documents), see
+/// [`Op::ChangeField`].
+fn plain(kind: &FieldKind) -> bool {
+	matches!(
+		kind,
+		FieldKind::Text { .. }
+			| FieldKind::Email
+			| FieldKind::Number { .. }
+			| FieldKind::Boolean
+			| FieldKind::Date { .. }
+			| FieldKind::Markdown
+			| FieldKind::Dropdown { .. }
+			| FieldKind::ButtonGroup { .. }
+			| FieldKind::Checkboxes { .. }
+	)
 }

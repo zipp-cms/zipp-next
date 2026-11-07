@@ -65,8 +65,8 @@ fn diff_with_renames() {
 		[
 			"  rename component text to paragraph",
 			"  rename field page.intro to lead",
-			"  change field page.body (content starts over if the kind changed)",
-			"  change field event.city (content starts over if the kind changed)",
+			"  change field page.body (content starts over if the kind changed, but values it takes as they are)",
+			"  change field event.city (content starts over if the kind changed, but values it takes as they are)",
 			"! remove field button.label, its content is deleted",
 		]
 	);

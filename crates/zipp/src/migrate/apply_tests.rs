@@ -447,7 +447,7 @@ fn a_group_of_another_component_starts_over() {
 }
 
 #[test]
-fn a_dropdown_that_becomes_a_button_group_starts_over() {
+fn a_dropdown_that_becomes_a_button_group_keeps_its_values() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();
 	let with = |genre: Field| {
@@ -461,8 +461,11 @@ fn a_dropdown_that_becomes_a_button_group_starts_over() {
 	let fields = json!({ "genre": "talk" });
 	let e = save(&conn, &s, None, input("events", "event", "E", fields), None)
 		.unwrap();
+	let none = input("events", "event", "N", json!({}));
+	let none = save(&conn, &s, None, none, None).unwrap();
 
-	// another kind brings its default, other options and colors don't
+	// another kind keeps a value it takes, else brings its default; other
+	// options and colors change nothing
 	let buttons = |color: &str| {
 		Field::button_group(
 			"genre",
@@ -476,6 +479,10 @@ fn a_dropdown_that_becomes_a_button_group_starts_over() {
 	apply(&conn, &[first.clone(), second.clone()]).unwrap();
 	assert_eq!(
 		get_entry(&conn, e.id, "de").unwrap().fields["genre"],
+		"talk"
+	);
+	assert_eq!(
+		get_entry(&conn, none.id, "de").unwrap().fields["genre"],
 		"concert"
 	);
 

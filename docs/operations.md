@@ -277,7 +277,9 @@ code changed without one. Labels, names, `required` and the field order
 change freely. Deleted entries leave their children to their parent (or
 the top), drafts and revisions of a type that goes take their entry's
 type, a field of another kind (also a group of another component)
-starts over with its default, and content that doesn't parse stops the
+starts over with its default, but keeps a plain value the new kind takes
+as it is (text `pdf` for a dropdown or button group with the option
+`pdf`, a whole number for text doesn't: it is no string), and content that doesn't parse stops the
 migration instead of being emptied; it runs in one transaction.
 
 The files start with `"format": 1`, the version of their format (a file
