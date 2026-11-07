@@ -23,19 +23,19 @@ use crate::resolve::{
 };
 use crate::{SEO_SETTINGS, Seo};
 
-/// Published entries of a site and how many there are in all, with
-/// `with_uri` only the ones with a page.
+/// Published entries of a site with a page and how many there are in
+/// all.
 fn entries(
 	conn: &Connection,
 	schema: &Schema,
 	site: &str,
 	extra: &[(&str, &str)],
-	(limit, offset, with_uri): (i64, i64, bool),
+	(limit, offset): (i64, i64),
 ) -> Result<(Vec<Entry>, i64)> {
 	let mut params = vec![("site", site)];
 	params.extend(extra);
 	let mut q = Query::published(schema, &params).map_err(Error::Request)?;
-	q.with_uri = with_uri;
+	q.with_uri = true;
 	q.limit = limit;
 	q.offset = offset;
 	list(conn, &q)
@@ -172,7 +172,7 @@ async fn index(
 				&state.schema,
 				&site.handle,
 				&[("section", section), ("order", "-updated")],
-				(1, 0, true),
+				(1, 0),
 			)?;
 			let pages = (count + size - 1) / size;
 			let last = last.first().map(|e| e.updated_at);
@@ -238,7 +238,7 @@ async fn page(
 	}
 	let size = page_size(schema);
 	let section = [("section", p.section.as_str()), ("order", "created")];
-	let page = (size, (p.page - 1) * size, true);
+	let page = (size, (p.page - 1) * size);
 	let (found, _) = entries(&conn, schema, &site.handle, &section, page)?;
 	if found.is_empty() && p.page > 1 {
 		return Ok(StatusCode::NOT_FOUND.into_response());
@@ -251,17 +251,14 @@ async fn page(
 		.collect::<Vec<_>>()
 		.join(",");
 	let mut others = vec![];
-	for s in schema
+	let online = schema
 		.sites
 		.iter()
-		.filter(|s| !schema.is_offline(&s.handle))
-	{
-		if !ids.is_empty() {
-			let all = (size, 0, true);
-			let (list, _) =
-				entries(&conn, schema, &s.handle, &[("ids", &ids)], all)?;
-			others.extend(list.into_iter().map(|e| (s, e)));
-		}
+		.filter(|s| !schema.is_offline(&s.handle));
+	for s in online.filter(|_| !ids.is_empty()) {
+		let (list, _) =
+			entries(&conn, schema, &s.handle, &[("ids", &ids)], (size, 0))?;
+		others.extend(list.into_iter().map(|e| (s, e)));
 	}
 
 	let mut out = String::from(
