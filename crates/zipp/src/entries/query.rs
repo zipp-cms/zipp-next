@@ -293,6 +293,14 @@ impl Query {
 							format!("{key} must be url encoded parameters")
 						})?;
 					let mut of = Self::parse(schema, &params)?;
+					// each level doubles the sql, so only one
+					let nested = of
+						.related_to
+						.iter()
+						.any(|r| matches!(r, Related::Entries(_)));
+					if nested {
+						return Err(format!("{key} can't have another one"));
+					}
 					// only which entries, no tree to order by
 					of.order = Order::Column("updated_at");
 					q.related_to.push(Related::Entries(Box::new(of)));

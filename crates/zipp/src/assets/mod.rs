@@ -44,11 +44,12 @@ pub(crate) use archive::{
 pub(crate) use edits::Edits;
 #[cfg(test)]
 use edits::{Canvas, Crop, Resize};
+use folders::folder;
 pub(crate) use folders::{
-	Folder, check_folder, create_folder, delete_folder, folder_paths, folders,
-	folders_under, move_assets, top_count, update_folder,
+	Folder, check_folder, create_folder, delete_folder, folder_named,
+	folder_paths, folders, folders_under, move_assets, top_count,
+	update_folder,
 };
-use folders::{folder, folder_named};
 #[cfg(feature = "craft")]
 pub(crate) use manage::check_fields;
 pub(crate) use manage::{

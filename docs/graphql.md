@@ -108,7 +108,8 @@ are the entries that point to 1 or 2 or that they point to, in any
 field, `["and", 1, 2]` to both; `relatedToEntries: [{ section: "wiki"
 }]` the same with the entries of criteria (the arguments of `entries`
 without site, order and page, in the site of the query and only what
-the viewer may see), each criteria of the list must hold, like Craft's.
+the viewer may see, without another `relatedToEntries`), each criteria
+of the list must hold, like Craft's.
 `children` takes the arguments of `entries` that are about the
 children (`type`, `id`, `slug`, `relatedTo`, `relatedToEntries`,
 relation fields, `where`, `orderBy`, `limit` and `offset` per parent):

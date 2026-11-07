@@ -165,6 +165,10 @@ fn related_to_entries_are_a_query_of_the_site() {
 	assert!(Query::published(&site(), &news).is_err());
 	assert!(parse("relatedTo=one").is_err());
 	assert!(parse("relatedTo=").unwrap().related_to.is_empty());
+
+	// each level doubles the sql
+	let nested = [("relatedToEntries", "relatedToEntries=section%3Dpages")];
+	assert!(Query::published(&site(), &nested).is_err());
 }
 
 #[test]

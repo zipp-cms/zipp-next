@@ -6,7 +6,7 @@ use super::api::*;
 use super::*;
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
-use crate::auth::{Admin, Authed};
+use crate::auth::{Admin, SetupAccess};
 
 async fn list_route(
 	State(state): State<AppState>,
@@ -18,13 +18,10 @@ async fn list_route(
 
 async fn create_route(
 	State(state): State<AppState>,
-	auth: Authed,
+	// they come from Setup
+	SetupAccess(auth): SetupAccess,
 	Req(req): Req<CreateReq>,
 ) -> ApiResult<CreateReq> {
-	// they come from Setup
-	if !auth.can_setup(&state.schema) {
-		return Err(Error::Forbidden);
-	}
 	let (created, admins) = {
 		let conn = state.db.conn();
 		let created =

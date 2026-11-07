@@ -2,7 +2,7 @@ use serde_json::json;
 
 use super::sort::Sorted;
 use super::*;
-use crate::entries::api::CreateReq;
+use crate::entries::api::{CreateReq, UpdateReq};
 use crate::fixtures::png;
 use crate::schema::{Field, Schema, Section};
 use crate::testing::{TestServer, input};
@@ -100,4 +100,41 @@ async fn sorts_assets_into_their_fields_folders() {
 			shared: 1
 		}
 	);
+}
+
+#[tokio::test]
+async fn translated_slugs_are_one_folder() {
+	let ts = TestServer::new(schema().site("en", "English", "en-GB"));
+	let admin = ts.admin();
+	let conn = || ts.state.db.conn();
+	let wool = store(&conn(), &ts.state.files, "wool.png", &png(10, 10), None)
+		.unwrap()
+		.id;
+	let fields = json!({ "image": [wool] });
+	let entry = admin
+		.call(&CreateReq(input("topics", "topic", "Wool", fields.clone())))
+		.await
+		.unwrap();
+	let mut en = input("topics", "topic", "Laine", fields);
+	en.site = Some("en".into());
+	admin
+		.call(&UpdateReq {
+			id: entry.id,
+			input: en,
+		})
+		.await
+		.unwrap();
+
+	// the slug of the primary site
+	let sorted = sort_assets(&conn(), &ts.state.schema).unwrap();
+	assert_eq!(
+		sorted,
+		Sorted {
+			moved: 1,
+			shared: 0
+		}
+	);
+	let a = get_asset(&conn(), wool).unwrap();
+	let paths = folder_paths(&conn()).unwrap();
+	assert_eq!(paths[&a.folder_id.unwrap()], "Topics/wool");
 }

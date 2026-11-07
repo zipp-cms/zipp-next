@@ -86,7 +86,6 @@ pub fn import(
 		schema,
 		entries: HashMap::new(),
 		assets: HashMap::new(),
-		folders: HashMap::new(),
 		report: Report::default(),
 	};
 
@@ -216,8 +215,6 @@ struct Importer<'a> {
 	entries: HashMap<i64, i64>,
 	/// Craft asset id to zipp asset id
 	assets: HashMap<i64, i64>,
-	/// a folder's parent and name to its id
-	folders: HashMap<(Option<i64>, String), i64>,
 	report: Report,
 }
 
@@ -519,22 +516,13 @@ impl Importer<'_> {
 	/// The folder of a path of names, made if it isn't there; empty names
 	/// stay where they are, so a volume without a name is the top.
 	fn folder<'p>(
-		&mut self,
+		&self,
 		conn: &Connection,
 		path: impl Iterator<Item = &'p str>,
 	) -> Result<Option<i64>> {
 		let mut parent = None;
 		for name in path.filter(|n| !n.is_empty()) {
-			let key = (parent, name.to_string());
-			let id = match self.folders.get(&key) {
-				Some(id) => *id,
-				None => {
-					let id = assets::create_folder(conn, parent, name)?.id;
-					self.folders.insert(key, id);
-					id
-				}
-			};
-			parent = Some(id);
+			parent = Some(assets::folder_named(conn, parent, name)?);
 		}
 		Ok(parent)
 	}

@@ -242,6 +242,22 @@ impl FromRequestParts<AppState> for AiAccess {
 	}
 }
 
+/// A user who may see Setup, the model read only.
+pub(crate) struct SetupAccess(pub Authed);
+
+impl FromRequestParts<AppState> for SetupAccess {
+	type Rejection = Error;
+
+	async fn from_request_parts(
+		parts: &mut Parts,
+		state: &AppState,
+	) -> Result<Self> {
+		let auth = Authed::from_request_parts(parts, state).await?;
+		allowed(auth.can_setup(&state.schema))?;
+		Ok(Self(auth))
+	}
+}
+
 /// The user of a request, `None` without a token. Public routes use it to
 /// show unpublished entries to editors.
 pub(crate) fn session(
