@@ -573,8 +573,12 @@ pub(crate) fn valid_date(s: &str, time: bool) -> bool {
 
 /// A url a link may have: the web, or a path or anchor of the site. No
 /// `javascript:` and the like, they run as the website, and no `//` or
-/// `/\\`, browsers go to another host with them.
+/// `/\\`, browsers go to another host with them; no control characters,
+/// browsers drop tabs and newlines (`/\t/host` is `//host`).
 pub(crate) fn safe_url(u: &str) -> bool {
+	if u.chars().any(char::is_control) {
+		return false;
+	}
 	u.starts_with("https://")
 		|| u.starts_with("http://")
 		|| (u.starts_with('/') && !u.starts_with("//") && !u.starts_with("/\\"))

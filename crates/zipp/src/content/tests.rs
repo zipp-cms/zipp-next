@@ -481,7 +481,14 @@ fn urls_stay_on_the_web_or_the_site() {
 	for ok in ["https://x.ch", "http://x.ch", "/about", "#top"] {
 		assert!(safe_url(ok), "{ok}");
 	}
-	for bad in ["javascript:x", "//evil.ch", "/\\evil.ch", "data:x"] {
+	let bad = [
+		"javascript:x",
+		"//evil.ch",
+		"/\\evil.ch",
+		"/\t/evil.ch",
+		"data:x",
+	];
+	for bad in bad {
 		assert!(!safe_url(bad), "{bad}");
 	}
 }
