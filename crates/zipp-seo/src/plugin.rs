@@ -41,11 +41,10 @@ impl Plugin for Seo {
 	}
 
 	fn schema(&self, schema: Schema) -> Schema {
-		let schema = add_settings(schema)
+		add_settings(schema)
 			.field_type(SeoField)
 			// the image of a page when it is shared
-			.transform(social_transform());
-		add_targets(schema)
+			.transform(social_transform())
 	}
 
 	fn finish(&self, schema: Schema) -> Schema {
