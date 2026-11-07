@@ -3,7 +3,6 @@ use axum::http::{Request, header};
 use serde_json::{Value, json};
 
 use super::api::CreateTokenReq;
-use super::tokens::Scope;
 use crate::SiteUrls;
 use crate::entries::api::CreateReq;
 use crate::fixtures::site_with_roles;
@@ -58,10 +57,10 @@ async fn as_token(ts: &TestServer, token: &str, query: &str) -> Value {
 	serde_json::from_slice(&body).unwrap()
 }
 
-async fn token(ts: &TestServer, scope: Scope) -> String {
+async fn token(ts: &TestServer, schema: &str) -> String {
 	let req = CreateTokenReq {
 		name: "Website".into(),
-		scope,
+		schema: schema.into(),
 		expires_at: None,
 	};
 	ts.admin().call(&req).await.unwrap().token
@@ -137,14 +136,7 @@ async fn users_with_live_entries_are_public() {
 async fn tokens_need_the_users_scope() {
 	let ts = server();
 	cook(&ts, Some("editor"), "Mia", "events", true).await;
-	let without = token(
-		&ts,
-		Scope {
-			users: false,
-			..Scope::ALL
-		},
-	)
-	.await;
+	let without = token(&ts, "live").await;
 
 	// no users, the author only by name
 	let query = "{ users { name } userCount user(slug: \"mia\") { name }
@@ -163,14 +155,10 @@ async fn tokens_need_the_users_scope() {
 	);
 
 	// with the scope, of the sections it reads
-	let with = token(&ts, Scope::ALL).await;
+	let with = token(&ts, "website").await;
 	let body = as_token(&ts, &with, "{ users { name } }").await;
 	assert_eq!(body["data"]["users"], json!([{ "name": "Mia" }]));
-	let pages = Scope {
-		sections: Some(vec!["pages".into()]),
-		..Scope::ALL
-	};
-	let pages = token(&ts, pages).await;
+	let pages = token(&ts, "pages").await;
 	let body = as_token(&ts, &pages, "{ users { name } }").await;
 	assert_eq!(body["data"]["users"], json!([]));
 }

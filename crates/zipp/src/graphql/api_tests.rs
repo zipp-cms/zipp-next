@@ -3,7 +3,6 @@ use axum::http::{Request, StatusCode, header};
 use serde_json::{Value, json};
 
 use super::api::*;
-use super::tokens::Scope;
 use crate::SiteUrls;
 use crate::drafts::SiteDoc;
 use crate::drafts::api::{PreviewReq, PutReq, SitePreviewReq};
@@ -115,15 +114,10 @@ async fn preview_tokens_show_the_draft() {
 	assert_eq!(titles(&body), ["Jazz"]);
 
 	// only for tokens that may show drafts
-	let no_drafts = Scope {
-		previews: false,
-		users: false,
-		..Scope::ALL
-	};
-	let frontend = new_token(&admin, no_drafts, None).await;
+	let frontend = new_token(&admin, "live", None).await;
 	let (_, body) = graphql(&anon, &path, TITLES, Some(&frontend)).await;
 	assert_eq!(titles(&body), ["Jazz"]);
-	let frontend = new_token(&admin, Scope::ALL, None).await;
+	let frontend = new_token(&admin, "website", None).await;
 	let (_, body) = graphql(&anon, &path, TITLES, Some(&frontend)).await;
 	assert_eq!(titles(&body), ["Jazz am Abend"]);
 }
@@ -191,15 +185,15 @@ async fn site_previews_show_the_drafts_the_user_sees() {
 	assert_eq!(titles(&body), ["Jazz"]);
 }
 
-/// A token of the studio with a scope, made by an admin.
+/// A token of the studio with a GraphQL schema, made by an admin.
 async fn new_token(
 	admin: &Client,
-	scope: Scope,
+	schema: &str,
 	expires_at: Option<i64>,
 ) -> String {
 	let req = CreateTokenReq {
 		name: "Website".into(),
-		scope,
+		schema: schema.into(),
 		expires_at,
 	};
 	admin.call(&req).await.unwrap().token
@@ -209,44 +203,34 @@ async fn new_token(
 async fn admins_manage_tokens() {
 	let ts = TestServer::new(site_with_roles());
 	let admin = ts.admin();
-	let scope = Scope {
-		sections: Some(vec!["events".into()]),
-		sites: None,
-		previews: false,
-		users: false,
-	};
 	let req = CreateTokenReq {
 		name: "Website".into(),
-		scope: scope.clone(),
+		schema: "events".into(),
 		expires_at: None,
 	};
 	let created = admin.call(&req).await.unwrap();
 	assert_eq!(created.token.len(), 32);
-	assert_eq!(created.info.scope, scope);
+	assert_eq!(created.info.schema, "events");
 
-	// the list never shows the token again
+	// the list never shows the token again; the schemas of the code
 	let list = admin.call(&TokensReq {}).await.unwrap();
 	assert!(list.env_token);
 	assert_eq!(list.tokens, std::slice::from_ref(&created.info));
+	assert_eq!(list.schemas, ts.state.schema.graphql_schemas);
 	let json = admin.call_json(&TokensReq {}).await.unwrap();
 	assert!(!json.to_string().contains(&created.token));
 
-	// a name and what the schema has
+	// a name and a schema of the code
 	let bad = CreateTokenReq {
 		name: " ".into(),
-		scope: Scope {
-			sections: Some(vec!["news".into()]),
-			sites: Some(vec!["fr".into()]),
-			previews: false,
-			users: false,
-		},
+		schema: "news".into(),
 		expires_at: None,
 	};
 	let Error::Invalid(fields) = admin.call(&bad).await.unwrap_err() else {
 		panic!("not invalid");
 	};
 	let paths: Vec<_> = fields.iter().map(|f| f.path.as_str()).collect();
-	assert_eq!(paths, ["name", "sections", "sites"]);
+	assert_eq!(paths, ["name", "schema"]);
 
 	// only admins
 	let editor = ts.user(Some("editor"));
@@ -285,13 +269,7 @@ async fn tokens_read_their_scope() {
 		.call(&CreateReq(input("pages", "page", "Team", json!({}))))
 		.await
 		.unwrap();
-	let events_de = Scope {
-		sections: Some(vec!["events".into()]),
-		sites: Some(vec!["de".into()]),
-		previews: false,
-		users: false,
-	};
-	let token = new_token(&admin, events_de, None).await;
+	let token = new_token(&admin, "eventsDe", None).await;
 	let token = Some(token.as_str());
 	let anon = ts.anonymous();
 
@@ -316,16 +294,16 @@ async fn tokens_read_their_scope() {
 	assert_eq!(body["data"]["sites"], json!([{ "handle": "de", "id": 1 }]));
 }
 
-/// GraphiQL's query with the schema of token `id` picked.
-async fn as_token(
+/// GraphiQL's query with a GraphQL schema picked.
+async fn as_schema(
 	client: &Client,
 	body: &str,
-	id: &str,
+	schema: &str,
 	bearer: Option<&str>,
 ) -> (StatusCode, Value) {
 	let mut req = Request::post("/api/graphql")
 		.header(header::CONTENT_TYPE, "application/json")
-		.header("x-zipp-schema", id)
+		.header("x-zipp-schema", schema)
 		.body(Body::from(body.to_string()))
 		.unwrap();
 	if let Some(t) = bearer {
@@ -339,7 +317,7 @@ async fn as_token(
 }
 
 #[tokio::test]
-async fn graphiql_reads_as_a_token() {
+async fn graphiql_reads_as_a_schema() {
 	let ts = TestServer::new(site_with_roles());
 	let admin = ts.admin();
 	let mut draft = input("events", "event", "Hidden", json!({}));
@@ -353,48 +331,28 @@ async fn graphiql_reads_as_a_token() {
 		.call(&CreateReq(input("pages", "page", "Team", json!({}))))
 		.await
 		.unwrap();
-	let events = Scope {
-		sections: Some(vec!["events".into()]),
-		sites: None,
-		previews: false,
-		users: false,
-	};
-	new_token(&admin, events, None).await;
-	let id = admin.call(&TokensReq {}).await.unwrap().tokens[0].id;
-
 	let all = r#"{"query": "{ entries { title } }"}"#;
-	let id = id.to_string();
 
-	// what its frontend sees: its sections, nothing unpublished
-	let (_, body) = as_token(&admin, all, &id, None).await;
+	// what its frontends see: its sections, nothing unpublished; no
+	// token needed
+	let (_, body) = as_schema(&admin, all, "events", None).await;
 	assert_eq!(titles(&body), ["Jazz"]);
 	let (_, body) = graphql(&admin, "/api/graphql", all, None).await;
 	assert!(titles(&body).contains(&"Hidden"));
 	assert!(titles(&body).contains(&"Team"));
 
-	// an unknown token, and an expired one like for its frontend
-	let (status, _) = as_token(&admin, all, "999", None).await;
-	assert_eq!(status, StatusCode::NOT_FOUND);
-	let past = crate::db::now() - 1000;
-	new_token(&admin, Scope::ALL, Some(past)).await;
-	let expired = admin.call(&TokensReq {}).await.unwrap().tokens[1].id;
-	let (status, _) = as_token(&admin, all, &expired.to_string(), None).await;
+	// a schema the code doesn't have
+	let (status, _) = as_schema(&admin, all, "news", None).await;
 	assert_eq!(status, StatusCode::UNAUTHORIZED);
 
 	// only for admins: others read with their own token
-	let pages = Scope {
-		sections: Some(vec!["pages".into()]),
-		sites: None,
-		previews: false,
-		users: false,
-	};
-	let bearer = new_token(&admin, pages, None).await;
+	let bearer = new_token(&admin, "pages", None).await;
 	let author = ts.user(Some("author"));
-	let (status, _) = as_token(&author, all, &id, None).await;
+	let (status, _) = as_schema(&author, all, "events", None).await;
 	assert_eq!(status, StatusCode::UNAUTHORIZED);
-	let (_, body) = as_token(&author, all, &id, Some(&bearer)).await;
+	let (_, body) = as_schema(&author, all, "events", Some(&bearer)).await;
 	assert_eq!(titles(&body), ["Team"]);
-	let (status, _) = as_token(&ts.anonymous(), all, &id, None).await;
+	let (status, _) = as_schema(&ts.anonymous(), all, "events", None).await;
 	assert_eq!(status, StatusCode::UNAUTHORIZED);
 }
 
@@ -409,14 +367,14 @@ async fn unknown_and_expired_tokens_are_out() {
 	assert_eq!(body["error"]["type"], "MISSING_ENDPOINT_TOKEN");
 
 	let past = crate::db::now() - 1000;
-	let expired = new_token(&admin, Scope::ALL, Some(past)).await;
+	let expired = new_token(&admin, "website", Some(past)).await;
 	let (status, _) =
 		graphql(&anon, "/api/graphql", TITLES, Some(&expired)).await;
 	assert_eq!(status, StatusCode::UNAUTHORIZED);
 
 	// a token in use shows when it was used last
 	let later = crate::db::now() + 60_000;
-	let valid = new_token(&admin, Scope::ALL, Some(later)).await;
+	let valid = new_token(&admin, "website", Some(later)).await;
 	let (status, _) =
 		graphql(&anon, "/api/graphql", TITLES, Some(&valid)).await;
 	assert_eq!(status, StatusCode::OK);
@@ -478,11 +436,7 @@ async fn development_is_open_without_a_token() {
 	// a wrong token fails like on the server, a token reads its scope
 	let (status, _) = graphql(&anon, "/api/graphql", all, Some("wrong")).await;
 	assert_eq!(status, StatusCode::UNAUTHORIZED);
-	let events = Scope {
-		sections: Some(vec!["events".into()]),
-		..Scope::ALL
-	};
-	let token = new_token(&admin, events, None).await;
+	let token = new_token(&admin, "events", None).await;
 	let (_, body) = graphql(&anon, "/api/graphql", all, Some(&token)).await;
 	assert!(titles(&body).is_empty());
 }
@@ -517,11 +471,12 @@ async fn frontends_list_the_assets() {
 		data["data"],
 		json!({ "assets": [{ "filename": "logo.png" }], "de": 1 })
 	);
-	let only_en = Scope {
-		sites: Some(vec!["en".into()]),
-		..Scope::ALL
-	};
-	let token = new_token(&admin, only_en, None).await;
+	let token = new_token(&admin, "english", None).await;
+	let (_, data) = graphql(&anon, "/api/graphql", body, Some(&token)).await;
+	assert_eq!(data["data"], json!({ "assets": [], "de": 0 }));
+
+	// only a schema with assets lists them
+	let token = new_token(&admin, "events", None).await;
 	let (_, data) = graphql(&anon, "/api/graphql", body, Some(&token)).await;
 	assert_eq!(data["data"], json!({ "assets": [], "de": 0 }));
 }

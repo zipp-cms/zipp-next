@@ -23,9 +23,9 @@
 //!
 //! Where to start:
 //!
-//! - [`Schema`], [`Section`], [`Field`], [`Role`]: the content model and
-//!   who may change what, made with their builder methods, see
-//!   [`schema`].
+//! - [`Schema`], [`Section`], [`Field`], [`Role`], [`GraphqlSchema`]:
+//!   the content model, who may change what and what frontends read,
+//!   made with their builder methods, see [`schema`].
 //! - [`Cms`]: what [`run`] can't do, routes of the site, a hook after
 //!   every change and data migrations.
 //! - [`migrations!`]: the migrations in the `migrations/` of the site's
@@ -94,9 +94,9 @@ use server::serve;
 pub use crate::plugin::{EntryField, GraphqlExt, Plugin, PluginStudio};
 pub use crate::schema::{
 	Access, ButtonOption, Choice, Column, ColumnKind, Condition, Field,
-	FieldKind, FieldRelation, FieldType, Format, GraphqlType, Icon, LinkKind,
-	Role, Scalar, Schema, Section, Site, StudioModule, Style, Target,
-	Transform, UserPages,
+	FieldKind, FieldRelation, FieldType, Format, GraphqlSchema, GraphqlType,
+	Icon, LinkKind, Role, Scalar, Schema, Section, Site, StudioModule, Style,
+	Target, Transform, UserPages,
 };
 pub use async_graphql;
 pub use axum;

@@ -331,6 +331,13 @@ impl Schema {
 		self
 	}
 
+	/// What the tokens of frontends may read, see [`GraphqlSchema`]:
+	/// admins give each token of the studio one.
+	pub fn graphql_schema(mut self, schema: GraphqlSchema) -> Self {
+		self.graphql_schemas.push(schema);
+		self
+	}
+
 	pub fn transform(mut self, transform: Transform) -> Self {
 		self.transforms.push(transform);
 		self

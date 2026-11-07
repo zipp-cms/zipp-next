@@ -2,8 +2,8 @@
 //! blocks, plugins and roles.
 
 use zipp::{
-	Access, ButtonOption, Column, Condition, Field, Format, LinkKind, Role,
-	Schema, Section, Style, Transform,
+	Access, ButtonOption, Column, Condition, Field, Format, GraphqlSchema,
+	LinkKind, Role, Schema, Section, Style, Transform,
 };
 use zipp_forms::{Form, FormField, Forms};
 use zipp_seo::{Seo, SeoDefaults, seo_field};
@@ -140,6 +140,30 @@ pub fn schema() -> Schema {
 				.section("categories", Access::View)
 				.section("pages", Access::View)
 				.assets(Access::Edit),
+		)
+		// what the website's token reads in GraphQL, admins make it in the
+		// studio; the token of `serve` reads everything
+		.graphql_schema(
+			GraphqlSchema::new("website", "Website")
+				.sections([
+					"pages",
+					"news",
+					"categories",
+					"events",
+					"header",
+					"footer",
+					"translations",
+					"seoSettings",
+					"formSettings",
+				])
+				.assets()
+				.users()
+				.previews(),
+		)
+		// a partner's app that lists the events
+		.graphql_schema(
+			GraphqlSchema::new("eventsFeed", "Events feed")
+				.sections(["events"]),
 		)
 		// texts of the frontend, editors translate them
 		.translations(

@@ -38,8 +38,10 @@ fn list_of(
 	if schema.get_site(&site).is_none() {
 		return Err(GqlError::new(format!("unknown site {site}")));
 	}
-	// like entries, nothing of a site the token doesn't read
-	if !ctx.data::<Viewer>()?.scope.site(&site) {
+	// like entries, nothing of a site the token doesn't read; the list
+	// only for a schema with assets
+	let scope = &ctx.data::<Viewer>()?.scope;
+	if !scope.assets || !scope.site(&site) {
 		return Ok(None);
 	}
 

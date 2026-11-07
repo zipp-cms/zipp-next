@@ -42,7 +42,8 @@ url, `excerpt` the words around the match (the start of the texts when
 only the title matched), `excerptHtml` the same escaped with the
 matched words in `<mark>`; `searchCount` with the same arguments counts
 the hits for the pages. What a viewer may see counts like everywhere
-(published, the token's sections and sites, a preview's drafts).
+(published, the sections and sites of the token's schema, a
+preview's drafts).
 
 Relations, links, parents, `children`, `localized` and assets load
 together per request: the images of 30 events are one query, not 30,
@@ -59,28 +60,50 @@ reads it as `ENDPOINT_TOKEN` from `../craft/.env`), and the studio with
 its session. An unknown, revoked or expired token gets 401 like none.
 The rest api is the studio's, it needs a session.
 
-## Tokens
+## Schemas and tokens
 
-Admins make the tokens of frontends in the studio
-under GraphQL, like Craft's GraphQL schemas: a name, the sections and
-sites it reads (all or some), whether preview links show drafts with it
-(`?token=` of a preview, for the website that shows the studio's
-previews; without it they show what is live), whether it reads users
-(their public profiles, like Craft's schema permission, see
-[Users](#users)), an optional expiry. The
-token shows once when it is made, zipp keeps only its hash; the list
-shows when each was used last, a token is revoked there. The token of
-`serve --graphql-token` (`ZIPP_GRAPHQL_TOKEN`) reads everything, like
-before; an empty one is refused at the start.
+What a frontend reads is code, like Craft's GraphQL schemas in its
+project config: the site's schema has a `GraphqlSchema` for each kind of
+frontend.
+
+```rust
+Schema::new()
+    // ...
+    .graphql_schema(
+        GraphqlSchema::new("website", "Website")
+            .sections(["pages", "news", "header", "footer"])
+            .assets()
+            .previews(),
+    )
+```
+
+`sections` are the sections it reads (none without, globals are
+sections too), `sites` only some sites (all without), `assets` lists
+the library with `assets` and `assetCount`, `users` reads the public
+profiles of users (see [Users](#users)) and `previews` lets preview
+links show drafts (`?token=` of a preview, for the website that shows
+the studio's previews; without it they show what is live). zipp checks
+the handles at the start like the rest of the schema.
+
+Admins make the tokens of frontends in the studio under GraphQL: a
+name, one of the schemas and an optional expiry; several tokens can
+share a schema. The token shows once when it is made, zipp keeps only
+its hash; the list shows when each was used last, a token is revoked
+there. A token reads what its schema says now, so a change of the code
+applies to its tokens at the next start, and a token whose schema is
+gone reads nothing (401). The token of `serve --graphql-token`
+(`ZIPP_GRAPHQL_TOKEN`) reads everything and is the first row of the
+list; an empty one is refused at the start. GraphQL has no mutations,
+frontends write over the rest api of the site (see members.md).
 
 A token reads only its sections and sites: `entries`, `entry`,
 `entryCount`, `globalSet`, `translations`, relations and links leave out
 the other entries, `sites` and `crelteSites` the other sites (the ids
 stay). Plugins load entries the same way: the SEO plugin's `seoJson`
 reads its settings from the section `seoSettings`, a token without it
-gets the defaults. Assets aren't scoped, their files are public by
-url: a token gets the assets of the entries it reads, and `assets`
-lists the library for a site it reads.
+gets the defaults. The files of assets are public by url: a token gets
+the assets of the entries it reads, and with `assets` its schema lists
+the library for a site it reads.
 
 ## GraphiQL
 
@@ -88,9 +111,9 @@ A GET on `/api/graphql` opens GraphiQL. Its queries send the
 session of the studio, so an admin sees drafts and unpublished entries
 like in the studio (Try it on the GraphQL page opens it); without a
 session it goes to the login. Like Craft's schema picker, a menu at the
-top right reads as the frontend of a token instead: its sections and
-sites, nothing unpublished (the request header `x-zipp-schema: <token
-id>`, only for admins). In development (`serve --dev`,
+top right reads as a frontend with one of the schemas instead: its
+sections and sites, nothing unpublished (the request header
+`x-zipp-schema: <handle>`, only for admins). In development (`serve --dev`,
 `ZIPP_DEV=1`) GraphQL is open without a token, unless `serve` has one;
 a wrong token gets 401 there too and a token reads only its scope.
 GraphiQL is bundled with the studio (`studio/graphiql.html`, its own
@@ -202,7 +225,7 @@ another section. `user` takes `id` or `slug`, the three take `site` or
 `name`, `slug`, `uri` and `url` (with user pages) and the user fields,
 never the email, the role or logins.
 
-Only tokens with users switched on read them, and `serve
+Only tokens whose schema has `users` read them, and `serve
 --graphql-token`, admins in GraphiQL and development; for the others
 `users` is empty, `userCount` 0 and `user` null. An entry's `author` is
 a `User` for every token that reads the entry: the profile when the

@@ -14,6 +14,7 @@ impl Schema {
 			p.check(self).map_err(|e| format!("{}: {e}", p.name()))?;
 		}
 		self.check_roles()?;
+		self.check_graphql_schemas()?;
 		self.check_docs()?;
 		self.check_transforms()?;
 		self.check_user_pages()?;
@@ -266,6 +267,35 @@ impl Schema {
 				.find(|s| self.get_section(s).is_none())
 			{
 				return Err(format!("role {}: unknown section {s}", r.handle));
+			}
+		}
+		Ok(())
+	}
+
+	fn check_graphql_schemas(&self) -> Result<(), String> {
+		let all = &self.graphql_schemas;
+		for s in all {
+			check_handle(&s.handle)?;
+		}
+		if let Some(s) = first_twice(all, |a, b| a.handle == b.handle) {
+			return Err(format!("graphql schema {} exists twice", s.handle));
+		}
+		for s in all {
+			let unknown = |what: &str, h: &String| {
+				format!("graphql schema {}: unknown {what} {h}", s.handle)
+			};
+			if let Some(h) =
+				s.sections.iter().find(|h| self.get_section(h).is_none())
+			{
+				return Err(unknown("section", h));
+			}
+			if let Some(h) = s
+				.sites
+				.iter()
+				.flatten()
+				.find(|h| self.get_site(h).is_none())
+			{
+				return Err(unknown("site", h));
 			}
 		}
 		Ok(())

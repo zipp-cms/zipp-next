@@ -15,34 +15,44 @@
 	import { Busy } from '../core/busy.svelte';
 	import { go } from '../core/router.svelte';
 	import { date, time } from '../core/format';
-	import { deleteToken, openGraphiql, type GraphqlToken } from './api';
+	import {
+		deleteToken,
+		openGraphiql,
+		type GraphqlSchema,
+		type GraphqlToken,
+	} from './api';
+	import { names } from './schemas';
 	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
-	 * The tokens frontends send to GraphQL, for admins, like Craft's
-	 * schemas: what each reads, until when and when it was used; a new
-	 * one, revoking one, and GraphiQL to try queries with the session.
+	 * The tokens frontends send to GraphQL, for admins, like Craft's: the
+	 * schema of the code each reads, until when and when it was used, the
+	 * token of `serve` first; a new one, revoking one, and GraphiQL to try
+	 * queries with the session. Under them the schemas themselves.
 	 */
 	let {
 		schema,
 		tokens: loaded,
+		schemas,
 		envToken,
-	}: { schema: Schema; tokens: GraphqlToken[]; envToken: boolean } = $props();
+	}: {
+		schema: Schema;
+		tokens: GraphqlToken[];
+		schemas: GraphqlSchema[];
+		envToken: boolean;
+	} = $props();
 
 	let tokens = $state(untrack(() => loaded));
 	const action = new Busy();
 
-	/** The names of some handles, or all. */
-	function names(
-		handles: string[] | null,
-		all: { handle: string; name: string }[],
-	) {
-		if (handles === null) return t('graphql.all');
-		if (!handles.length) return t('common.none');
-		return handles
-			.map(h => all.find(x => x.handle === h)?.name ?? h)
-			.join(', ');
+	/** the token of `serve` is a row too, so the list shows what reads */
+	const rows = $derived<(GraphqlToken | 'env')[]>(
+		envToken ? ['env', ...tokens] : tokens,
+	);
+
+	function schemaName(handle: string) {
+		return schemas.find(s => s.handle === handle)?.name;
 	}
 
 	async function revoke(token: GraphqlToken) {
@@ -59,7 +69,12 @@
 			<Icon name="external" />
 			{t('graphql.tryIt')}
 		</button>
-		<button class="primary" onclick={() => go('/admin/graphql/new')}>
+		<button
+			class="primary"
+			onclick={() => go('/admin/graphql/new')}
+			disabled={!schemas.length}
+			title={schemas.length ? undefined : t('graphql.noSchemas')}
+		>
 			<Icon name="add" />
 			{t('graphql.newToken')}
 		</button>
@@ -68,80 +83,123 @@
 
 {#if action.error}<p class="error">{action.error}</p>{/if}
 
-<div class="card">
-	<p class="muted">
-		<Sentence
-			key="graphql.intro"
-			params={{
-				header: 'Authorization: Bearer …',
-				path: '/api/graphql',
-			}}
-		/>
-		{#if envToken}
+<div class="cards">
+	<div class="card">
+		<p class="muted">
 			<Sentence
-				key="graphql.envToken"
-				params={{ env: 'ZIPP_GRAPHQL_TOKEN' }}
+				key="graphql.intro"
+				params={{
+					header: 'Authorization: Bearer …',
+					path: '/api/graphql',
+				}}
 			/>
-		{/if}
-	</p>
-	<Table
-		rows={tokens}
-		key={token => token.id}
-		columns={[
-			t('graphql.token'),
-			t('graphql.sections'),
-			t('graphql.sites'),
-			t('graphql.expires'),
-			t('graphql.lastUsed'),
-			'',
-		]}
-		empty={t('graphql.noTokens')}
-	>
-		{#snippet row(token)}
-			<td>
-				<strong>{token.name}</strong>
-				{#if token.previews}<span class="badge">
-						{t('graphql.drafts')}
-					</span>{/if}
-				{#if token.users}<span class="badge">
-						{t('graphql.users')}
-					</span>{/if}
-			</td>
-			<td>{names(token.sections, schema.sections)}</td>
-			<td>{names(token.sites, schema.sites)}</td>
-			<td class="muted">
-				{#if token.expiresAt === null}
-					{t('common.never')}
-				{:else if token.expiresAt < Date.now()}
-					<span class="badge">{t('graphql.expired')}</span>
+		</p>
+		<Table
+			{rows}
+			key={row => (row === 'env' ? 'env' : row.id)}
+			columns={[
+				t('graphql.token'),
+				t('graphql.schema'),
+				t('graphql.expires'),
+				t('graphql.lastUsed'),
+				'',
+			]}
+			empty={t('graphql.noTokens')}
+		>
+			{#snippet row(token)}
+				{#if token === 'env'}
+					<td>
+						<strong>{t('graphql.serverToken')}</strong>
+						<code>ZIPP_GRAPHQL_TOKEN</code>
+					</td>
+					<td>{t('graphql.everything')}</td>
+					<td class="muted">{t('common.never')}</td>
+					<td class="muted">–</td>
+					<td></td>
 				{:else}
-					{date(token.expiresAt)}
+					<td><strong>{token.name}</strong></td>
+					<td>
+						{#if schemaName(token.schema)}
+							{schemaName(token.schema)}
+						{:else}
+							<span
+								class="badge"
+								title={t('graphql.unknownSchemaNote')}
+							>
+								{t('graphql.unknownSchema', {
+									handle: token.schema || '–',
+								})}
+							</span>
+						{/if}
+					</td>
+					<td class="muted">
+						{#if token.expiresAt === null}
+							{t('common.never')}
+						{:else if token.expiresAt < Date.now()}
+							<span class="badge">{t('graphql.expired')}</span>
+						{:else}
+							{date(token.expiresAt)}
+						{/if}
+					</td>
+					<td class="muted">
+						{token.lastUsedAt
+							? time(token.lastUsedAt)
+							: t('common.never')}
+					</td>
+					<td class="actions">
+						<button
+							class="icon"
+							onclick={() => revoke(token)}
+							disabled={action.busy}
+							title={t('graphql.revoke')}
+							aria-label={t('graphql.revoke')}
+						>
+							<Icon name="delete" />
+						</button>
+					</td>
 				{/if}
-			</td>
-			<td class="muted">
-				{token.lastUsedAt ? time(token.lastUsedAt) : t('common.never')}
-			</td>
-			<td class="actions">
-				<button
-					class="icon"
-					onclick={() => revoke(token)}
-					disabled={action.busy}
-					title={t('graphql.revoke')}
-					aria-label={t('graphql.revoke')}
-				>
-					<Icon name="delete" />
-				</button>
-			</td>
-		{/snippet}
-	</Table>
+			{/snippet}
+		</Table>
+	</div>
+
+	<div class="card">
+		<h2>{t('graphql.schemas')}</h2>
+		<p class="muted">
+			<Sentence
+				key="graphql.schemasNote"
+				params={{ code: 'Schema::graphql_schema' }}
+			/>
+		</p>
+		<Table
+			rows={schemas}
+			key={s => s.handle}
+			columns={[
+				t('graphql.schema'),
+				t('graphql.sections'),
+				t('graphql.sites'),
+				t('graphql.assets'),
+				t('graphql.users'),
+				t('graphql.drafts'),
+			]}
+			empty={t('graphql.noSchemas')}
+		>
+			{#snippet row(s)}
+				<td>
+					{s.name}
+					<code>{s.handle}</code>
+				</td>
+				<td>{names(s.sections, schema.sections)}</td>
+				<td>{names(s.sites, schema.sites)}</td>
+				<td>{s.assets ? t('common.yes') : '–'}</td>
+				<td>{s.users ? t('common.yes') : '–'}</td>
+				<td>{s.previews ? t('common.yes') : '–'}</td>
+			{/snippet}
+		</Table>
+	</div>
 </div>
 
 <style lang="scss">
 	.actions {
 		text-align: right;
-	}
-
-	.badge {
-		margin-left: 0.5rem;
 	}
 </style>

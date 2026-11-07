@@ -26,6 +26,7 @@ use crate::schema::field_type::FieldTypes;
 pub use field_type::{
 	FieldRelation, FieldType, GraphqlType, Scalar, StudioModule, Target,
 };
+pub use graphql_schema::GraphqlSchema;
 pub use role::{Access, Role};
 
 mod builders;
@@ -34,6 +35,7 @@ mod column;
 mod condition;
 mod field;
 mod field_type;
+mod graphql_schema;
 mod role;
 #[cfg(test)]
 mod tests;
@@ -83,6 +85,9 @@ pub struct Schema {
 	/// Roles of studio users, not part of the content model.
 	#[serde(skip)]
 	pub(crate) roles: Vec<Role>,
+	/// What the tokens of frontends read, see [`Schema::graphql_schema`].
+	#[serde(skip)]
+	pub(crate) graphql_schemas: Vec<GraphqlSchema>,
 	/// Plugins, see [`Schema::plugin`].
 	#[serde(skip)]
 	pub(crate) plugins: crate::plugin::Plugins,
@@ -370,6 +375,13 @@ impl Schema {
 
 	pub(crate) fn get_role(&self, handle: &str) -> Option<&Role> {
 		self.roles.iter().find(|r| r.handle == handle)
+	}
+
+	pub(crate) fn get_graphql_schema(
+		&self,
+		handle: &str,
+	) -> Option<&GraphqlSchema> {
+		self.graphql_schemas.iter().find(|s| s.handle == handle)
 	}
 
 	pub fn get_transform(&self, handle: &str) -> Option<&Transform> {

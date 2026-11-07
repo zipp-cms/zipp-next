@@ -5,7 +5,7 @@ use std::io::Cursor;
 use image::{ImageFormat, RgbImage};
 
 use crate::schema::{
-	Access, Field, LinkKind, Role, Schema, Section, Transform,
+	Access, Field, GraphqlSchema, LinkKind, Role, Schema, Section, Transform,
 };
 
 /// A site with two languages, pages, events and blocks; the tests of
@@ -87,7 +87,41 @@ pub fn site_with_roles() -> Schema {
 				.section("pages", Access::View)
 				.assets(Access::Edit),
 		)
+		.graphql_schema(
+			GraphqlSchema::new("website", "Website")
+				.sections(ALL)
+				.assets()
+				.users()
+				.previews(),
+		)
+		.graphql_schema(
+			GraphqlSchema::new("live", "Without drafts")
+				.sections(ALL)
+				.assets(),
+		)
+		.graphql_schema(
+			GraphqlSchema::new("english", "English")
+				.sections(ALL)
+				.sites(["en"])
+				.assets(),
+		)
+		.graphql_schema(
+			GraphqlSchema::new("events", "Events").sections(["events"]),
+		)
+		.graphql_schema(
+			GraphqlSchema::new("eventsDe", "Events in German")
+				.sections(["events"])
+				.sites(["de"]),
+		)
+		.graphql_schema(
+			GraphqlSchema::new("pages", "Pages")
+				.sections(["pages"])
+				.users(),
+		)
 }
+
+/// The sections of [`site`].
+const ALL: [&str; 3] = ["home", "pages", "events"];
 
 /// A black PNG of a size.
 pub fn png(width: u32, height: u32) -> Vec<u8> {

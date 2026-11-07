@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- GraphQL schemas are code, like Craft's in its project config:
+  `Schema::graphql_schema(GraphqlSchema::new("website", "Website")
+  .sections(["pages", "news"]).assets().previews())` says which
+  sections and sites a frontend reads, whether it lists the assets
+  (`assets`, `assetCount`: only with `.assets()` now), reads users and
+  shows drafts in previews. A token of the studio gets one of them
+  instead of its own sections and sites; tokens made before have none
+  and read nothing, make them again. The GraphQL page shows the schemas
+  and the token of `serve` (`ZIPP_GRAPHQL_TOKEN`) as its first row,
+  GraphiQL's picker reads as a schema (`x-zipp-schema: <handle>`).
 - A field type can hold blocks with more around each one, like a place
   in a grid: `Field::custom(..).item_blocks(["image", "text"])` makes its
   value a list of items with a block in `block`. zipp checks, migrates
@@ -15,11 +25,10 @@
   unique slug of every user (admins change it), and
   `.user_pages(UserPages::new("cooks/{slug}").with_entries_in("recipes"))`
   for pages of the users with a live entry. GraphQL has `users(hasEntries:)`,
-  `userCount` and `user(slug:)` for tokens with the new users scope,
+  `userCount` and `user(slug:)` for schemas with `.users()`,
   `author` is a `User` with the profile; the SEO sitemap lists the user
   pages; logged in website users edit their own profile with `PUT
-  /site-auth/me`. The studio's user page edits the profile, a token can
-  read users.
+  /site-auth/me`. The studio's user page edits the profile.
 - Changing an entry's type asks nothing anymore: fields of the same
   handle and kind stay, the type's defaults fill what is empty, and
   while the editor is open each type keeps its values, so switching
@@ -43,9 +52,9 @@
   show only the title, block rows only their summary (the type stays
   when a block has no summary). Moving a chip of a relation, which wrap
   side by side, says Move earlier / Move later.
-- GraphiQL has a schema picker like Craft's: an admin reads as the
-  frontend of a token (its sections and sites, nothing unpublished)
-  instead of the full schema.
+- GraphiQL has a schema picker like Craft's: an admin reads as a
+  frontend with one of the GraphQL schemas (its sections and sites,
+  nothing unpublished) instead of everything.
 - The live preview's website gets as wide as the window allows: the
   editor keeps 20rem, before it kept 40% of the window. A narrower
   window shrinks the website, it gets its width back when there is

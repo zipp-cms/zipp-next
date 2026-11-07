@@ -70,7 +70,7 @@ password.
 | `--files` | `ZIPP_FILES` | where uploads go, default `files` |
 | `--public-url` | `ZIPP_PUBLIC_URL` | put before asset urls when the frontend runs elsewhere |
 | `--site-url de=https://…` | `ZIPP_SITE_URL` | the url of each site (environment: separated by commas), another origin than the cms, see below |
-| `--graphql-token` | `ZIPP_GRAPHQL_TOKEN` | a token frontends send that reads everything; admins make more in the studio (GraphQL), see docs/graphql.md |
+| `--graphql-token` | `ZIPP_GRAPHQL_TOKEN` | a token frontends send that reads everything; admins make more in the studio (GraphQL), each with a schema of the code, see docs/graphql.md |
 | `--dev` | `ZIPP_DEV` | development: GraphQL open without a token, noindex |
 | `--noindex` | `ZIPP_NOINDEX` | a staging site: noindex everywhere, robots.txt disallows all |
 | `--openrouter-key-file` | `ZIPP_OPENROUTER_KEY_FILE` | turns on the AI chat |

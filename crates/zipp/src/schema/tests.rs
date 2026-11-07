@@ -784,3 +784,26 @@ fn sections_of_relations_and_links() {
 	let json = serde_json::to_value(rel().sections(["pages"])).unwrap();
 	assert_eq!(json["sections"], serde_json::json!(["pages"]));
 }
+
+#[test]
+fn graphql_schemas_read_what_the_site_has() {
+	let check = |s: GraphqlSchema| site().graphql_schema(s).check();
+	check(
+		GraphqlSchema::new("web", "Web")
+			.sections(["pages"])
+			.sites(["en"]),
+	)
+	.unwrap();
+	assert_eq!(
+		check(GraphqlSchema::new("web", "Web").sections(["news"])).unwrap_err(),
+		"graphql schema web: unknown section news"
+	);
+	assert_eq!(
+		check(GraphqlSchema::new("web", "Web").sites(["fr"])).unwrap_err(),
+		"graphql schema web: unknown site fr"
+	);
+	let twice = site_with_roles()
+		.graphql_schema(GraphqlSchema::new("events", "Again"))
+		.check();
+	assert_eq!(twice.unwrap_err(), "graphql schema events exists twice");
+}
