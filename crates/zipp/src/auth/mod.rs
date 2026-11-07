@@ -1,8 +1,10 @@
 //! Logins, sessions and what a user may do. A handler says who may call
 //! it with its extractor: [`Authed`] any user, [`Admin`], [`EntryAccess`]
 //! and [`AssetAccess`] a level of a role, [`AiAccess`] the AI chat.
+//! Website routes have [`SiteUser`], a login on the website.
 
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use axum::extract::{FromRef, FromRequestParts, RawPathParams};
 use axum::http::HeaderMap;
@@ -22,16 +24,20 @@ pub(crate) mod links;
 mod links_tests;
 mod routes;
 mod sessions;
+pub(crate) mod site;
+#[cfg(test)]
+mod site_tests;
 #[cfg(test)]
 mod tests;
 mod throttle;
 
-pub(crate) use routes::routes;
+pub(crate) use routes::{routes, site_routes};
 pub use sessions::{Session, end_session, short_session};
 pub(crate) use sessions::{
 	add_user, end_sessions, hash_password, login, new_session,
-	password_matches, renew_session, set_password_hash,
+	new_site_session, password_matches, renew_session, set_password_hash,
 };
+pub use site::SiteUser;
 pub(crate) use throttle::Throttle;
 
 /// Extractor that only succeeds with a valid `session-token` header.
@@ -111,6 +117,7 @@ impl<S> FromRequestParts<S> for Authed
 where
 	S: Send + Sync,
 	Db: FromRef<S>,
+	Arc<Schema>: FromRef<S>,
 {
 	type Rejection = Error;
 
@@ -123,6 +130,10 @@ where
 			return Err(Error::MissingSessionToken);
 		};
 		let role = role_of(&conn, user_id)?;
+		// a role that lost the studio: its sessions are gone for it
+		if !studio_role(&Arc::<Schema>::from_ref(state), role.as_deref()) {
+			return Err(Error::InvalidSessionToken);
+		}
 		Ok(Self {
 			user_id,
 			role,
@@ -268,7 +279,7 @@ pub(crate) fn session(
 		return Ok(None);
 	};
 
-	match sessions::get_session(conn, token)? {
+	match sessions::get_session(conn, token, false)? {
 		Some(s) if s.expires_at > now() => Ok(Some(s.user_id)),
 		_ => Err(Error::InvalidSessionToken),
 	}
@@ -308,4 +319,11 @@ pub(crate) fn role_of(
 		[user_id],
 		|r| r.get(0),
 	)?)
+}
+
+/// Whether users of a role may use the studio, see [`Role::no_studio`];
+/// admins always.
+pub(crate) fn studio_role(schema: &Schema, role: Option<&str>) -> bool {
+	role.and_then(|r| schema.get_role(r))
+		.is_none_or(|r| r.studio)
 }

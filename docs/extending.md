@@ -314,7 +314,9 @@ assert_eq!(err, Error::Forbidden);
 `ts.routes(...)` adds the site's routes, `ts.dev()` development mode,
 `ts.site_urls(...)` the urls of the sites, `ts.indexing(false)` like
 `serve --noindex`,
-`ts.login(email, password)` logs in like the studio, `ts.graphql(query,
+`ts.login(email, password)` logs in like the studio, `ts.visitor(token)`
+sends to the website's routes like a frontend and `ts.site_user(role)`
+is logged in there (members.md), `ts.graphql(query,
 variables)` asks like a frontend with its token; `client.get(path)`
 fetches a page or a file, `client.send(...)` any request and
 `client.upload(...)` files; `testing::input(section, type, title,

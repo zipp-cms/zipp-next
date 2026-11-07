@@ -354,6 +354,8 @@ export type Role = {
 	ai: boolean;
 	/** the content model read only under Setup */
 	setup: boolean;
+	/** logs into the studio; without, members log in on the website */
+	studio: boolean;
 };
 
 /** Lookups in the schema by handle. */

@@ -18,6 +18,8 @@
 	<p class="muted">{t('users.adminMay')}</p>
 {:else}
 	<dl>
+		<dt>{t('users.studio')}</dt>
+		<dd>{def.studio ? t('common.yes') : t('users.websiteOnly')}</dd>
 		{#each sections as s (s.handle)}
 			<dt>{s.name}</dt>
 			<dd>{accessText(def.sections[s.handle])}</dd>

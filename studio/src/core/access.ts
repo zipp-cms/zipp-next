@@ -27,6 +27,11 @@ export function roleNameOf(schema: Schema, handle: string | null): string {
 	return schema.roles.find(r => r.handle === handle)?.name ?? handle;
 }
 
+/** Whether users of a role log into the studio, `null` is an admin. */
+export function studioRole(schema: Schema, handle: string | null): boolean {
+	return schema.roles.find(r => r.handle === handle)?.studio ?? true;
+}
+
 /** What the user may do in a section, for showing it. */
 export function accessOf(schema: Schema, section: string): Access | null {
 	if (isAdmin(schema)) return 'delete';

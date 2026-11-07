@@ -72,6 +72,7 @@
 				t('setup.assets'),
 				t('setup.ai'),
 				t('setup.setup'),
+				t('setup.studio'),
 			]}
 		>
 			{#snippet row(r)}
@@ -85,6 +86,7 @@
 				<td>{accessText(r.assets)}</td>
 				<td>{r.ai ? t('common.yes') : '–'}</td>
 				<td>{r.setup ? t('common.yes') : '–'}</td>
+				<td>{r.studio ? t('common.yes') : t('setup.websiteOnly')}</td>
 			{/snippet}
 		</Table>
 	</div>

@@ -8,6 +8,8 @@
 - [GraphQL and crelte](graphql.md): what frontends read and how
 - [SEO](seo.md): like the Craft plugin meierlabs-seo
 - [Forms](forms.md): a contact form, mailed, like Craft's Contact Form
+- [Website users](members.md): members, roles without the studio, logins
+  on the website
 - [Extending](extending.md): routes, hooks, field types of other crates,
   plugins, the rest api and tests
 - [Running and deploying](operations.md): commands, options, migrations,

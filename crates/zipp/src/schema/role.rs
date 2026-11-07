@@ -39,6 +39,10 @@ pub struct Role {
 	/// admins for changes
 	#[serde(default = "yes")]
 	pub setup: bool,
+	/// whether its users may log into the studio; without, they only log
+	/// in on the website (members), see `auth::SiteUser`
+	#[serde(default = "yes")]
+	pub studio: bool,
 }
 
 fn yes() -> bool {
@@ -54,6 +58,7 @@ impl Role {
 			assets: None,
 			ai: false,
 			setup: true,
+			studio: true,
 		}
 	}
 
@@ -85,6 +90,16 @@ impl Role {
 
 	/// Hides Setup, like Craft's settings for an editor who only writes.
 	pub fn without_setup(mut self) -> Self {
+		self.setup = false;
+		self
+	}
+
+	/// Users of the role can't log into the studio, only on the website,
+	/// like Craft's "Access the control panel" unchecked: members who
+	/// edit their own content in the frontend. Admins still manage them
+	/// on the Users page.
+	pub fn no_studio(mut self) -> Self {
+		self.studio = false;
 		self.setup = false;
 		self
 	}

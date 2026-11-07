@@ -253,6 +253,11 @@ pub(crate) const MIGRATIONS: &[&str] = &[
 	UPDATE assets SET kind = 'video'
 	WHERE kind = 'file' AND mime LIKE 'video/%';
 "#,
+	// sessions of the website, see auth/site.rs: a frontend logs users in
+	// for it, they never open the studio's api
+	r#"
+	ALTER TABLE sessions ADD COLUMN site INTEGER NOT NULL DEFAULT 0;
+"#,
 ];
 
 /// `?, ?, ?` for an `IN` of `n` values.

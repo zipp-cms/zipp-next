@@ -144,6 +144,7 @@ impl TestServer {
 		Client {
 			app: self.app.clone(),
 			token: None,
+			site: false,
 		}
 	}
 
@@ -152,6 +153,7 @@ impl TestServer {
 		Client {
 			app: self.app.clone(),
 			token: Some(token.into()),
+			site: false,
 		}
 	}
 
@@ -193,7 +195,33 @@ impl TestServer {
 		Client {
 			app: self.app.clone(),
 			token: Some(token),
+			site: false,
 		}
+	}
+
+	/// The frontend of the website for a visitor, with the token of a
+	/// site login (`None`: not logged in): requests go to the website's
+	/// routes (no `/api`), the token as `Authorization: Bearer`.
+	pub fn visitor(&self, token: Option<&str>) -> Client {
+		Client {
+			app: self.app.clone(),
+			token: token.map(Into::into),
+			site: true,
+		}
+	}
+
+	/// A user with a role (`None` is an admin) logged in on the website,
+	/// like [`TestServer::user`] in the studio; see [`TestServer::visitor`].
+	pub fn site_user(&self, role: Option<&str>) -> Client {
+		let n = self.users.fetch_add(1, Ordering::Relaxed);
+		let email = format!("{}{n}@test.ch", role.unwrap_or("admin"));
+		let conn = self.state.db.conn();
+		let user_id =
+			crate::users::create(&conn, &email, "", password_hash(), role, "")
+				.unwrap();
+		let token =
+			crate::auth::new_site_session(&conn, user_id).unwrap().token;
+		self.visitor(Some(&token))
 	}
 
 	/// The mails sent so far: a test server keeps them.
@@ -244,6 +272,8 @@ fn password_hash() -> &'static str {
 pub struct Client {
 	app: Router,
 	pub token: Option<String>,
+	/// the website's frontend, see [`TestServer::visitor`]
+	site: bool,
 }
 
 #[derive(Deserialize)]
@@ -269,7 +299,8 @@ impl Client {
 	}
 
 	async fn call_bytes<R: Request>(&self, req: &R) -> Result<Vec<u8>> {
-		let mut uri = format!("/api{}", path_of(req));
+		let prefix = if self.site { "" } else { "/api" };
+		let mut uri = format!("{prefix}{}", path_of(req));
 		let body = if has_query(&R::METHOD) {
 			let query = serde_urlencoded::to_string(req).unwrap();
 			if !query.is_empty() {
@@ -358,9 +389,17 @@ impl Client {
 
 	/// Any request, with the session of the client.
 	pub async fn send(&self, mut req: http::Request<Body>) -> Response {
-		if let Some(token) = &self.token {
-			req.headers_mut()
-				.insert("session-token", token.parse().unwrap());
+		match &self.token {
+			Some(token) if self.site => {
+				let bearer = format!("Bearer {token}");
+				req.headers_mut()
+					.insert(header::AUTHORIZATION, bearer.parse().unwrap());
+			}
+			Some(token) => {
+				req.headers_mut()
+					.insert("session-token", token.parse().unwrap());
+			}
+			None => {}
 		}
 		self.app.clone().oneshot(req).await.unwrap()
 	}

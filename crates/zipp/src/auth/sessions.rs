@@ -30,15 +30,18 @@ pub struct Session {
 	pub impersonated_by: Option<i64>,
 }
 
+/// A session of the studio or, with `site`, of the website: a token is
+/// only the one or the other.
 pub(super) fn get_session(
 	conn: &Connection,
 	token: &str,
+	site: bool,
 ) -> Result<Option<Session>> {
 	Ok(conn
 		.query_row(
 			"SELECT user_id, expires_at, impersonated_by FROM sessions
-			WHERE hash = ?1",
-			[token_hash(token)],
+			WHERE hash = ?1 AND site = ?2",
+			params![token_hash(token), site],
 			|r| {
 				Ok(Session {
 					token: token.into(),
@@ -52,9 +55,14 @@ pub(super) fn get_session(
 }
 
 /// The valid session of a token, renewed when less than `RENEW_BELOW_MS`
-/// are left: who uses the studio stays logged in.
-pub(crate) fn renew_session(conn: &Connection, token: &str) -> Result<Session> {
-	let mut s = get_session(conn, token)?
+/// are left: who uses the studio stays logged in. `site` like
+/// [`get_session`].
+pub(crate) fn renew_session(
+	conn: &Connection,
+	token: &str,
+	site: bool,
+) -> Result<Session> {
+	let mut s = get_session(conn, token, site)?
 		.filter(|s| s.expires_at > now())
 		.ok_or(Error::InvalidSessionToken)?;
 	// logging in as someone ends when it ends, a short session too
@@ -144,7 +152,20 @@ pub(crate) fn new_session(conn: &Connection, user_id: i64) -> Result<Session> {
 		"UPDATE users SET last_login_at = ?1 WHERE id = ?2",
 		params![now(), user_id],
 	)?;
-	insert_session(conn, user_id, SESSION_DURATION_MS, true, None)
+	insert_session(conn, user_id, SESSION_DURATION_MS, true, None, false)
+}
+
+/// A new session of a user on the website, a login there; it lasts and
+/// renews like one of the studio but never opens it.
+pub(crate) fn new_site_session(
+	conn: &Connection,
+	user_id: i64,
+) -> Result<Session> {
+	conn.execute(
+		"UPDATE users SET last_login_at = ?1 WHERE id = ?2",
+		params![now(), user_id],
+	)?;
+	insert_session(conn, user_id, SESSION_DURATION_MS, true, None, true)
 }
 
 /// A session of a user for a tool that acts as them, like the coding
@@ -155,7 +176,7 @@ pub fn short_session(
 	user_id: i64,
 	ms: i64,
 ) -> Result<Session> {
-	insert_session(conn, user_id, ms, false, None)
+	insert_session(conn, user_id, ms, false, None, false)
 }
 
 /// Stores a new session that ends in `ms`. Ended sessions go.
@@ -165,6 +186,7 @@ pub(super) fn insert_session(
 	ms: i64,
 	renews: bool,
 	impersonated_by: Option<i64>,
+	site: bool,
 ) -> Result<Session> {
 	conn.execute("DELETE FROM sessions WHERE expires_at < ?1", [now()])?;
 	let session = Session {
@@ -175,22 +197,37 @@ pub(super) fn insert_session(
 	};
 	conn.execute(
 		"INSERT INTO sessions
-		(hash, user_id, created_at, expires_at, renews, impersonated_by)
-		VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+		(hash, user_id, created_at, expires_at, renews, impersonated_by,
+			site)
+		VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
 		params![
 			token_hash(&session.token),
 			user_id,
 			now(),
 			session.expires_at,
 			renews,
-			impersonated_by
+			impersonated_by,
+			site
 		],
 	)?;
 	Ok(session)
 }
 
+/// Ends a session of the studio.
 pub fn end_session(conn: &Connection, token: &str) -> Result<()> {
-	conn.execute("DELETE FROM sessions WHERE hash = ?1", [token_hash(token)])?;
+	conn.execute(
+		"DELETE FROM sessions WHERE hash = ?1 AND NOT site",
+		[token_hash(token)],
+	)?;
+	Ok(())
+}
+
+/// Ends a session of the website, a logout there.
+pub(crate) fn end_site_session(conn: &Connection, token: &str) -> Result<()> {
+	conn.execute(
+		"DELETE FROM sessions WHERE hash = ?1 AND site",
+		[token_hash(token)],
+	)?;
 	Ok(())
 }
 

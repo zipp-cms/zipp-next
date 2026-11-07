@@ -391,4 +391,5 @@ its user can, the studio hides the rest. A relation or link to an
 entry of a section the role can't view (or to an asset without asset
 access) is left out on save like one to a deleted entry, unless the
 entry linked to it before. Only admins see drafts in GraphQL with their
-session.
+session. `.no_studio()` makes a role of members who only log in on the
+website, see [Website users](members.md).

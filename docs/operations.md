@@ -48,6 +48,9 @@ meanwhile is saved after it. Another user logging in there loads the
 studio new, logged in as someone else it only goes back to the own
 account or to the login.
 
+Logins on the website (`/site-auth/...`) are sessions of their own with
+the same rules, see [Website users](members.md).
+
 ## Users
 
 Admins manage the users in the studio (Users): a page per user with
