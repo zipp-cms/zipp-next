@@ -1,40 +1,37 @@
 use super::*;
 
+/// The fields every entry has, see [`ENTRY_FIELDS`].
 pub(super) fn entry_common() -> Vec<(&'static str, TypeRef)> {
+	let names = ENTRY_FIELDS.iter().chain(OPTIONAL_ENTRY_FIELDS);
+	names.map(|&n| (n, entry_common_type(n))).collect()
+}
+
+fn entry_common_type(name: &str) -> TypeRef {
 	let s = || TypeRef::named_nn(TypeRef::STRING);
-	vec![
+	match name {
 		// Craft's ids are strings
-		("id", TypeRef::named_nn(TypeRef::ID)),
-		("sectionHandle", s()),
-		("typeHandle", s()),
-		("site", s()),
-		// Craft's name of it
-		("siteHandle", s()),
+		"id" => TypeRef::named_nn(TypeRef::ID),
+		// siteHandle is Craft's name of the site
+		"sectionHandle" | "typeHandle" | "site" | "siteHandle" => s(),
 		// the position of the site, crelte knows sites by number
-		("siteId", TypeRef::named_nn(TypeRef::INT)),
-		("url", TypeRef::named(TypeRef::STRING)),
-		("title", s()),
-		("slug", s()),
-		("uri", TypeRef::named(TypeRef::STRING)),
-		("published", TypeRef::named_nn(TypeRef::BOOLEAN)),
-		("parent", TypeRef::named("Entry")),
-		("children", TypeRef::named_nn_list_nn("Entry")),
+		"siteId" => TypeRef::named_nn(TypeRef::INT),
+		"url" | "uri" => TypeRef::named(TypeRef::STRING),
+		"title" | "slug" | "language" => s(),
+		"published" => TypeRef::named_nn(TypeRef::BOOLEAN),
+		"parent" => TypeRef::named("Entry"),
+		// localized: the entry in the other sites, for a language switch
+		"children" | "localized" => TypeRef::named_nn_list_nn("Entry"),
 		// milliseconds since 1970, too big for Int
-		("createdAt", TypeRef::named_nn(TypeRef::FLOAT)),
-		("updatedAt", TypeRef::named_nn(TypeRef::FLOAT)),
+		"createdAt" | "updatedAt" => TypeRef::named_nn(TypeRef::FLOAT),
 		// Craft's, as `2026-10-28T08:00:00+00:00`
-		("postDate", s()),
+		"postDate" | "dateCreated" | "dateUpdated" => s(),
 		// none: it doesn't expire
-		("expiryDate", TypeRef::named(TypeRef::STRING)),
-		("dateCreated", s()),
-		("dateUpdated", s()),
-		("language", s()),
-		// the entry in the other sites, for a language switch
-		("localized", TypeRef::named_nn_list_nn("Entry")),
+		"expiryDate" => TypeRef::named(TypeRef::STRING),
 		// who made it, Craft's; none: the system or a deleted user
-		("authorId", TypeRef::named(TypeRef::ID)),
-		("author", TypeRef::named("User")),
-	]
+		"authorId" => TypeRef::named(TypeRef::ID),
+		"author" => TypeRef::named("User"),
+		_ => unreachable!("{name} is no field of every entry"),
+	}
 }
 
 /// The dates of entries, with the arguments of [`dates`].
@@ -42,11 +39,7 @@ pub(super) const DATES: [&str; 4] =
 	["postDate", "expiryDate", "dateCreated", "dateUpdated"];
 
 pub(super) fn entry_common_field(name: &'static str) -> GqlField {
-	let ty = entry_common()
-		.into_iter()
-		.find(|(n, _)| *n == name)
-		.unwrap()
-		.1;
+	let ty = entry_common_type(name);
 	let field = GqlField::new(name, ty, move |ctx| {
 		FieldFuture::new(async move {
 			let e = ctx.parent_value.try_downcast_ref::<Entry>()?;
