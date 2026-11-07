@@ -65,8 +65,8 @@ fn settings_fields(form: &Form) -> Vec<Field> {
 #[derive(Debug, Clone, Default)]
 pub struct Forms {
 	pub forms: Vec<Form>,
-	/// the times of submissions per address and form, see [`routes`]
-	limits: Arc<Mutex<HashMap<routes::Limit, Vec<i64>>>>,
+	/// the times of submissions per address, see [`routes`]
+	limits: Arc<Mutex<HashMap<std::net::IpAddr, Vec<i64>>>>,
 }
 
 /// A form: its fields in the order of the mail.

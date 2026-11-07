@@ -161,17 +161,20 @@ async fn a_visitor_s_header_doesn_t_count() {
 }
 
 #[tokio::test]
-async fn a_form_takes_a_limited_number_from_all() {
+async fn many_addresses_don_t_block_a_form() {
 	let ts = TestServer::new(schema()).trusted_proxy("127.0.0.1");
 	settings(&ts, "luisa@example.ch", "");
-	for i in 0..50 {
+	for i in 0..12 {
 		let ip = format!("7.7.7.{i}");
-		let (status, _) = post(&ts, "/forms/contact", valid(), &ip).await;
-		assert_eq!(status, StatusCode::OK);
+		for _ in 0..5 {
+			let (status, _) = post(&ts, "/forms/contact", valid(), &ip).await;
+			assert_eq!(status, StatusCode::OK);
+		}
 	}
+	// another visitor still sends
 	let (status, _) = post(&ts, "/forms/contact", valid(), "7.7.8.1").await;
-	assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
-	assert_eq!(ts.mails().len(), 50);
+	assert_eq!(status, StatusCode::OK);
+	assert_eq!(ts.mails().len(), 61);
 }
 
 #[tokio::test]

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- zipp-forms limits submissions per address only (5 in 10 minutes): the
+  cap of 50 per form from all addresses let about ten addresses block a
+  form for everyone.
 - zipp-seo's root `seo` and `seoJson` are null for a site the token's
   GraphQL schema doesn't read; plugins check it with
   `graphql::ext::reads_site`.

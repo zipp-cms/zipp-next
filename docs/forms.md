@@ -33,5 +33,6 @@ true, "message": "…" }`, invalid fields `422 { "success": false,
 many `429`, a mail that can't go `503`. Against spam: a filled honeypot
 field (`website`, `.honeypot("company")` for another name, hidden from
 people) is answered like a success and dropped, an address (IPv6: its
-/64) sends at most 5 in 10 minutes and a form takes at most 50 from all
-in 10 minutes. The recipients get one mail together. Mails need `serve --smtp-url`, see operations.md.
+/64) sends at most 5 in 10 minutes. The limit is per address only: a
+few addresses can't block a form for everyone, many addresses together
+can send many mails. The recipients get one mail together. Mails need `serve --smtp-url`, see operations.md.
