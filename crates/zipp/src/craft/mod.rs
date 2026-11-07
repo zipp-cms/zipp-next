@@ -465,10 +465,11 @@ impl Importer<'_> {
 				Some(f) => f.as_str(),
 				None => a.volume_name.as_deref().unwrap_or(handle),
 			};
+			// a volume without a name is the top
 			let path = [top]
 				.into_iter()
 				.chain(dirs.into_iter().flat_map(|d| d.split('/')));
-			let folder = match self.folder(conn, path) {
+			let folder = match assets::folder_path(conn, path) {
 				Ok(f) => f,
 				Err(e) => {
 					self.skip(format!("asset {}: {e}", a.path));
@@ -511,20 +512,6 @@ impl Importer<'_> {
 			self.report.assets += 1;
 		}
 		Ok(())
-	}
-
-	/// The folder of a path of names, made if it isn't there; empty names
-	/// stay where they are, so a volume without a name is the top.
-	fn folder<'p>(
-		&self,
-		conn: &Connection,
-		path: impl Iterator<Item = &'p str>,
-	) -> Result<Option<i64>> {
-		let mut parent = None;
-		for name in path.filter(|n| !n.is_empty()) {
-			parent = Some(assets::folder_named(conn, parent, name)?);
-		}
-		Ok(parent)
 	}
 
 	/// The asset fields, once the entries exist that they may link.

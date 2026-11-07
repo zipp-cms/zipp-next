@@ -48,8 +48,8 @@ use edits::{Canvas, Crop, Resize};
 use folders::folder;
 pub(crate) use folders::{
 	Folder, check_folder, create_folder, delete_folder, folder_at,
-	folder_named, folder_paths, folders, folders_under, move_assets, top_count,
-	update_folder,
+	folder_named, folder_path, folder_paths, folders, folders_under,
+	move_assets, top_count, update_folder,
 };
 pub(crate) use manage::{
 	AssetChange, AssetList, InFolder, Kind, Usage, count, delete, find, list,

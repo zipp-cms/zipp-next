@@ -42,11 +42,11 @@ pub use as_user::{
 pub(crate) use routes::routes;
 pub(crate) use routes::viewable_refs;
 pub(crate) use save::check;
+pub(crate) use save::check_fields;
 pub(crate) use save::reindex;
 pub(crate) use save::reindex_all;
 pub use save::save;
 pub(crate) use save::write;
-pub(crate) use save::check_fields;
 pub(crate) use structure::move_entry;
 pub(crate) use structure::refresh_uris;
 use structure::*;

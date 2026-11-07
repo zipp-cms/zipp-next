@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use rusqlite::{Connection, params};
 use serde_json::Value;
 
-use super::folder_named;
+use super::folder_path;
 use crate::content::asset_folders;
 use crate::error::{Error, Result};
 use crate::schema::Schema;
@@ -83,10 +83,7 @@ pub(crate) fn sort_assets(
 		if path.is_empty() {
 			continue;
 		}
-		let mut folder = None;
-		for name in path.split('/') {
-			folder = Some(folder_named(&tx, folder, name)?);
-		}
+		let folder = folder_path(&tx, path.split('/'))?;
 		sorted.moved += tx.execute(
 			"UPDATE assets SET folder_id = ?1
 			WHERE id = ?2 AND deleted_at IS NULL AND folder_id IS NOT ?1",
