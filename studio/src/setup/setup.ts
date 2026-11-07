@@ -1,7 +1,9 @@
 import type { Component, Field, Role, Schema, Section } from '../core/schema';
-import { componentOf } from '../core/schema';
-import { can, isAdmin, visibleNav } from '../core/access';
+import { componentOf, sectionOf } from '../core/schema';
+import { can, canSetup, isAdmin, visibleNav } from '../core/access';
 import { listEntries } from '../entries/api';
+import { listRequests } from './api';
+import { SETUP_TABS } from './tabs';
 import { describeField } from './fieldKind';
 import { session } from '../core/session.svelte';
 import { t } from '../i18n/index.svelte';
@@ -93,6 +95,62 @@ export async function entryCounts(
 		),
 	);
 	return Object.fromEntries(counts);
+}
+
+/**
+ * The data of a page of Setup: a section of its own its first entries;
+ * the overview and the sections their counts, the requests their list.
+ */
+export async function loadSetup(
+	schema: Schema,
+	tab: string,
+	handle: string | undefined,
+) {
+	if (!canSetup(schema)) throw new Error(t('setup.notForRole'));
+	if (tab === 'requests') return { requests: await listRequests() };
+	if (tab === 'overview') {
+		const [counts, requests] = await Promise.all([
+			entryCounts(schema),
+			isAdmin(schema) ? listRequests() : Promise.resolve([]),
+		]);
+		return {
+			counts,
+			openRequests: requests.filter(r => !r.done).length,
+		};
+	}
+	if (tab === 'sections' && !handle)
+		return { counts: await entryCounts(schema) };
+	if (tab !== 'sections' || !handle) return {};
+	const section = sectionOf(schema, handle);
+	if (!section) throw new Error(t('setup.noSectionThere', { handle }));
+	const params: Record<string, string> = {
+		section: section.handle,
+		site: schema.sites[0].handle,
+		limit: '1000',
+	};
+	if (section.kind === 'structure') params.order = 'structure';
+	return { list: await listEntries(params) };
+}
+
+/** Setup, the tab, the section or type of a page of its own. */
+export function setupCrumbs(
+	schema: Schema,
+	tab: string,
+	handle: string | null,
+): { label: string; href?: string }[] {
+	const key = SETUP_TABS.find(([h]) => h === tab)?.[1];
+	const out: { label: string; href?: string }[] = [
+		{ label: t('setup.setup'), href: '/admin/setup' },
+		{ label: key ? t(key) : tab, href: `/admin/setup/${tab}` },
+	];
+	if (handle) {
+		const own =
+			tab === 'sections'
+				? sectionOf(schema, handle)?.name
+				: componentOf(schema, handle)?.name;
+		out.push({ label: own ?? handle });
+	}
+	return out;
 }
 
 /** The blocks or groups a field holds, by handle. */
