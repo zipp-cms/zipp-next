@@ -103,6 +103,9 @@
 				{#if token.previews}<span class="badge">
 						{t('graphql.drafts')}
 					</span>{/if}
+				{#if token.users}<span class="badge">
+						{t('graphql.users')}
+					</span>{/if}
 			</td>
 			<td>{names(token.sections, schema.sections)}</td>
 			<td>{names(token.sites, schema.sites)}</td>

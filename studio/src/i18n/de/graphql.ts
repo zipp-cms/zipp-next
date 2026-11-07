@@ -16,6 +16,10 @@ export default {
 	'graphql.previewsShowDrafts': 'Vorschau-Links zeigen Entwürfe',
 	'graphql.previewsNote':
 		'Für die Website, die die Vorschau des Studios zeigt; andere Frontends lesen nur, was live ist.',
+	'graphql.users': 'Benutzer',
+	'graphql.usersPublic': 'Liest die öffentlichen Profile der Benutzer',
+	'graphql.usersNote':
+		'Name, Slug, Seite und Benutzerfelder der Benutzer mit einem veröffentlichten Eintrag, nie die E-Mail oder die Rolle. Ohne haben die Autoren von Einträgen nur ihren Namen.',
 	'graphql.all': 'Alle',
 	'graphql.confirmRevoke':
 		'{name} widerrufen? Frontends, die ihn senden, erhalten keine Inhalte mehr.',

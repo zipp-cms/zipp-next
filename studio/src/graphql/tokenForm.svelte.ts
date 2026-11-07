@@ -13,6 +13,7 @@ export class TokenForm extends Busy {
 	allSites = $state(true);
 	sites = $state<string[]>([]);
 	previews = $state(false);
+	users = $state(false);
 	/** `2026-12-31`, empty for never */
 	expires = $state('');
 	/** the token itself after saving, it doesn't show again */
@@ -35,6 +36,7 @@ export class TokenForm extends Busy {
 				sections: this.allSections ? null : this.sections,
 				sites: this.allSites ? null : this.sites,
 				previews: this.previews,
+				users: this.users,
 				expiresAt,
 			}),
 		);

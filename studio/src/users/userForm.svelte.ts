@@ -2,6 +2,8 @@ import { Busy } from '../core/busy.svelte';
 import { session } from '../core/session.svelte';
 import { time } from '../core/format';
 import { t } from '../i18n/index.svelte';
+import type { Values } from '../core/schema';
+import { clean } from '../core/values';
 import {
 	createUser,
 	deleteUser,
@@ -12,6 +14,11 @@ import {
 	updateUser,
 	type Account,
 } from './api';
+
+/** The values without empty ones, as the server keeps them. */
+function filled(v: Values): Values {
+	return (clean(v) ?? {}) as Values;
+}
 
 /**
  * The account page of a user, or of a new one (`account` null): what it
@@ -25,6 +32,10 @@ export class UserForm extends Busy {
 	role = $state<string | null>(null);
 	/** of the studio, empty is the browser's */
 	language = $state('');
+	/** of the user's page, admins change it */
+	slug = $state('');
+	/** of the user fields */
+	values = $state<Values>({});
 	password = $state('');
 	currentPassword = $state('');
 	/** a new user without a password gets the invite by mail */
@@ -61,12 +72,22 @@ export class UserForm extends Busy {
 		return this.snapshot() !== this.initial || this.password !== '';
 	}
 
+	/** The errors of the user fields, by their path in the fields. */
+	get valueErrors(): Record<string, string> {
+		const out: Record<string, string> = {};
+		for (const [path, message] of Object.entries(this.fields))
+			if (path.startsWith('fields.')) out[path.slice(7)] = message;
+		return out;
+	}
+
 	private snapshot() {
 		return JSON.stringify([
 			this.name,
 			this.email,
 			this.role,
 			this.language,
+			this.slug,
+			filled($state.snapshot(this.values)),
 		]);
 	}
 
@@ -76,6 +97,8 @@ export class UserForm extends Busy {
 		this.email = account?.email ?? '';
 		this.role = account?.role ?? null;
 		this.language = account?.language ?? '';
+		this.slug = account?.slug ?? '';
+		this.values = { ...account?.fields };
 		this.password = '';
 		this.currentPassword = '';
 		this.initial = this.snapshot();
@@ -109,6 +132,8 @@ export class UserForm extends Busy {
 				language,
 				password,
 				currentPassword: current,
+				slug: this.slug,
+				fields: filled($state.snapshot(this.values)),
 			});
 		});
 		if (!saved) return null;

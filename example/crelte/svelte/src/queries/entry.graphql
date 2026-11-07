@@ -143,6 +143,10 @@ query ($uri: [String], $siteId: [QueryArgument]) {
 		}
 		... on article_Entry {
 			postDate @formatDateTime(format: "j. F Y")
+			author {
+				name
+				bio
+			}
 			categories {
 				id
 				title

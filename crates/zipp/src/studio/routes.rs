@@ -149,6 +149,7 @@ async fn schema_route(
 	Ok(Json(SchemaResp {
 		roles: state.schema.roles.clone(),
 		offline: state.schema.offline.clone(),
+		user_pages: state.schema.user_pages.clone(),
 		dev: state.dev,
 		icons: (*state.icons).clone(),
 		plugins: state

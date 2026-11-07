@@ -6,6 +6,8 @@ type Scope = {
 	sites: string[] | null;
 	/** whether preview tokens show drafts */
 	previews: boolean;
+	/** whether it reads the public profiles of users */
+	users: boolean;
 };
 
 /** A token of a frontend, without the token itself. */

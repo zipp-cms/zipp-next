@@ -87,6 +87,10 @@ fn sections<'a>(schema: &'a Schema, globals: &Globals) -> Vec<&'a str> {
 		.collect()
 }
 
+/// The name of the sitemap of the users' pages in place of a section's,
+/// no handle starts with `_`.
+const USERS: &str = "_users";
+
 fn page_size(schema: &Schema) -> i64 {
 	Seo::of(schema).sitemap_page_size as i64
 }
@@ -177,6 +181,18 @@ async fn index(
 				out += "\t</sitemap>\n";
 			}
 		}
+		// the pages of users, see `Schema::user_pages`
+		let (_, count) =
+			zipp::user_page_uris(&conn, &state.schema, &site.handle, 0, 0)?;
+		for page in 1..=(count + size - 1) / size {
+			out += &format!(
+				"\t<sitemap>\n\t\t<loc>{}</loc>\n\t</sitemap>\n",
+				escape(&format!(
+					"{origin_}/sitemap-{}-{USERS}-{page}.xml",
+					site.handle
+				))
+			);
+		}
 	}
 	out += "</sitemapindex>\n";
 	Ok(xml(out))
@@ -201,6 +217,9 @@ async fn page(
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	};
 	let conn = state.db.conn();
+	if p.section == USERS && p.page >= 1 {
+		return users_page(&state, &conn, site, p.page);
+	}
 	let globals = published_globals(&conn, schema, site)?;
 	if p.page < 1 || !sections(schema, &globals).contains(&p.section.as_str()) {
 		return Ok(StatusCode::NOT_FOUND.into_response());
@@ -265,6 +284,37 @@ async fn page(
 			);
 		}
 		out += "\t</url>\n";
+	}
+	out += "</urlset>\n";
+	Ok(xml(out))
+}
+
+/// A page of the sitemap of the users' pages of a site.
+fn users_page(
+	state: &AppState,
+	conn: &Connection,
+	site: &Site,
+	page: i64,
+) -> Result<Response> {
+	let size = page_size(&state.schema);
+	let offset = (page - 1) * size;
+	let (uris, _) =
+		zipp::user_page_uris(conn, &state.schema, &site.handle, size, offset)?;
+	if uris.is_empty() && page > 1 {
+		return Ok(StatusCode::NOT_FOUND.into_response());
+	}
+	let mut out = String::from(
+		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+		<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
+	);
+	for uri in uris {
+		if let Some(url) = zipp::page_url(&state.site_urls, &site.handle, &uri)
+		{
+			out += &format!(
+				"\t<url>\n\t\t<loc>{}</loc>\n\t</url>\n",
+				escape(&url)
+			);
+		}
 	}
 	out += "</urlset>\n";
 	Ok(xml(out))

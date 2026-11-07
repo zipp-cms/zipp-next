@@ -1,5 +1,6 @@
 //! The users of the studio, managed by admins. Roles are code, see
-//! [`Role`](crate::Role); a user without one is an admin.
+//! [`Role`](crate::Role); a user without one is an admin. Their public
+//! profiles are in `profile.rs`.
 
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
@@ -12,7 +13,10 @@ use crate::schema::Schema;
 pub mod api;
 #[cfg(test)]
 mod api_tests;
+pub(crate) mod profile;
 mod routes;
+#[cfg(test)]
+mod tests;
 
 pub use routes::routes;
 
@@ -25,6 +29,11 @@ pub struct User {
 	pub role: Option<String>,
 	/// of the studio, one of [`LANGUAGES`]; empty is the browser's
 	pub language: String,
+	/// of the user's page, unique, see `profile.rs`
+	pub slug: String,
+	/// the values of the user fields, see
+	/// [`Schema::user_fields`](crate::Schema::user_fields)
+	pub fields: serde_json::Value,
 }
 
 /// The languages the studio is translated to.
@@ -49,7 +58,7 @@ const ACCOUNT: &str = "SELECT id, email, name, role, language, created_at,
 	last_login_at,
 	(SELECT COUNT(*) FROM sessions s
 		WHERE s.user_id = users.id AND s.expires_at > ?1),
-	password_hash = ''
+	password_hash = '', slug, fields
 	FROM users";
 
 fn account(r: &rusqlite::Row) -> rusqlite::Result<Account> {
@@ -60,6 +69,9 @@ fn account(r: &rusqlite::Row) -> rusqlite::Result<Account> {
 			name: r.get(2)?,
 			role: r.get(3)?,
 			language: r.get(4)?,
+			slug: r.get(9)?,
+			fields: serde_json::from_str(&r.get::<_, String>(10)?)
+				.unwrap_or_default(),
 		},
 		created_at: r.get(5)?,
 		last_login_at: r.get(6)?,
@@ -126,7 +138,7 @@ pub fn password_error(password: &str) -> Option<&'static str> {
 }
 
 /// A new user with a password's hash, see `auth::hash_password`; an
-/// empty one is invited.
+/// empty one is invited. The slug comes from the name.
 pub fn create(
 	conn: &Connection,
 	email: &str,
@@ -141,7 +153,9 @@ pub fn create(
 		VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
 		params![email, name.trim(), hash, role, language, now()],
 	)?;
-	Ok(conn.last_insert_rowid())
+	let id = conn.last_insert_rowid();
+	profile::set_slug(conn, id, &profile::free_slug(conn, id, name)?)?;
+	Ok(id)
 }
 
 pub fn update(
@@ -157,17 +171,17 @@ pub fn update(
 	)?;
 	match n {
 		0 => Err(Error::NotFound),
-		_ => Ok(()),
+		_ => profile::rename_placeholder(conn, id, name),
 	}
 }
 
-/// The name a user gave when setting their password.
+/// The name a user gave when setting their password or on the website.
 pub fn set_name(conn: &Connection, id: i64, name: &str) -> Result<()> {
 	conn.execute(
 		"UPDATE users SET name = ?1 WHERE id = ?2",
 		params![name.trim(), id],
 	)?;
-	Ok(())
+	profile::rename_placeholder(conn, id, name)
 }
 
 /// A role of the schema, `None` is an admin.

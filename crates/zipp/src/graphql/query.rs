@@ -149,18 +149,6 @@ pub(super) fn sites_field(name: &str) -> GqlField {
 	})
 }
 
-/// The author of an entry, the public part of a user.
-pub(super) fn user_object() -> Object {
-	let field = |name: &'static str, ty: &'static str| {
-		GqlField::new(name, TypeRef::named_nn(ty), move |ctx| {
-			value_field(ctx, name)
-		})
-	};
-	Object::new("User")
-		.field(field("id", TypeRef::ID))
-		.field(field("name", TypeRef::STRING))
-}
-
 pub(super) fn site_object() -> Object {
 	let field = |name: &'static str, ty: &'static str| {
 		GqlField::new(name, TypeRef::named_nn(ty), move |ctx| {

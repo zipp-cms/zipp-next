@@ -307,6 +307,24 @@ impl Schema {
 		self.component(ASSET, "Asset", false, fields)
 	}
 
+	/// Profile fields of every user beside the name, like a bio or a
+	/// photo: `.user_fields([Field::text("bio").multiline()])`. Like
+	/// [`Schema::asset_fields`] they are a component (`user`), checked
+	/// and migrated like a block's fields, the same in all sites. GraphQL
+	/// has them on `User` for tokens that read users, see
+	/// [`Schema::user_pages`].
+	pub fn user_fields(self, fields: impl IntoIterator<Item = Field>) -> Self {
+		self.component(USER, "User", false, fields)
+	}
+
+	/// Pages of users on the website, like author pages:
+	/// `.user_pages(UserPages::new("cooks/{slug}").with_entries_in("recipes"))`
+	/// gives the users with a live recipe a `uri` and `url` in GraphQL.
+	pub fn user_pages(mut self, pages: UserPages) -> Self {
+		self.user_pages = Some(pages);
+		self
+	}
+
 	/// A role of studio users, see [`Role`].
 	pub fn role(mut self, role: Role) -> Self {
 		self.roles.push(role);

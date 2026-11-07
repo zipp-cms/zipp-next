@@ -245,6 +245,8 @@ export type Schema = {
 	/** sites not on the website yet */
 	offline: string[];
 	roles: Role[];
+	/** the pages of users on the website, see `Schema::user_pages` */
+	userPages: UserPages | null;
 	/** development mode, see `serve --dev` */
 	dev: boolean;
 	/** the svgs of the Lucide icons it names, by name */
@@ -331,6 +333,16 @@ export function navGroups(schema: Schema): NavGroup[] {
 		},
 	];
 }
+
+/**
+ * The pages of users, `cooks/{slug}`: a user has one while they have a
+ * live entry in `section` (any section without it).
+ */
+export type UserPages = {
+	uri: string;
+	siteUris?: Record<string, string>;
+	section?: string;
+};
 
 /** The url of an entry on the website, if the site has one. */
 export function entryUrl(

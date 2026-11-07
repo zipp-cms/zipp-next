@@ -7,8 +7,8 @@ use zipp::SiteUrls;
 use zipp::drafts::{SiteDoc, put_draft};
 use zipp::entries::save;
 use zipp::error::Error;
-use zipp::testing::{TestServer, input};
-use zipp::{Field, Schema, Section};
+use zipp::testing::{Client, TestServer, input};
+use zipp::{Field, Schema, Section, UserPages};
 
 /// The site as its crate builds it, before [`Cms`](zipp::Cms) finishes it.
 fn schema() -> Schema {
@@ -239,4 +239,39 @@ async fn defaults_for_the_studio() {
 	assert!(matches!(err, Error::Request(_)));
 	let err = ts.anonymous().call(&wrong).await.unwrap_err();
 	assert_eq!(err, Error::MissingSessionToken);
+}
+
+#[tokio::test]
+async fn the_sitemap_lists_the_pages_of_users() {
+	let pages = UserPages::new("cooks/{slug}").with_entries_in("events");
+	let urls = SiteUrls::from([("de".to_string(), "https://x.ch".to_string())]);
+	let ts = TestServer::new(schema().user_pages(pages)).site_urls(urls);
+	let s = ts.state.schema.clone();
+	{
+		// Mia has a live event, the other user nothing
+		let conn = ts.state.db.conn();
+		let user = "INSERT INTO users (email, password_hash, created_at, slug)
+			VALUES (?1, '', 0, ?2)";
+		conn.execute(user, ["mia@x.ch", "mia"]).unwrap();
+		let mia = conn.last_insert_rowid();
+		conn.execute(user, ["sam@x.ch", "sam"]).unwrap();
+		let event = input("events", "event", "Konzert", json!({}));
+		save(&conn, &s, None, event, Some(mia)).unwrap();
+	}
+	let text = async |path: &str| {
+		let resp = ts.anonymous().get(path).await;
+		String::from_utf8(Client::bytes(resp).await).unwrap()
+	};
+
+	let index = text("/actions/meierlabs-seo/sitemap/index").await;
+	assert!(
+		index.contains("https://x.ch/sitemap-de-_users-1.xml"),
+		"{index}"
+	);
+	let page = text(
+		"/actions/meierlabs-seo/sitemap/page?site=de&section=_users&page=1",
+	)
+	.await;
+	assert!(page.contains("<loc>https://x.ch/cooks/mia</loc>"), "{page}");
+	assert!(!page.contains("sam"), "{page}");
 }

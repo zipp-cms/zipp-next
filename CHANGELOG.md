@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Public user profiles, like Craft's user fields and WordPress' author
+  pages: `.user_fields([...])` (a component `user`, in migrations), a
+  unique slug of every user (admins change it), and
+  `.user_pages(UserPages::new("cooks/{slug}").with_entries_in("recipes"))`
+  for pages of the users with a live entry. GraphQL has `users(hasEntries:)`,
+  `userCount` and `user(slug:)` for tokens with the new users scope,
+  `author` is a `User` with the profile; the SEO sitemap lists the user
+  pages; logged in website users edit their own profile with `PUT
+  /site-auth/me`. The studio's user page edits the profile, a token can
+  read users.
+
 - GraphiQL has a schema picker like Craft's: an admin reads as the
   frontend of a token (its sections and sites, nothing unpublished)
   instead of the full schema.

@@ -19,6 +19,10 @@ pub(crate) struct Scope {
 	pub sites: Option<Vec<String>>,
 	/// whether preview tokens show drafts
 	pub previews: bool,
+	/// whether it reads the public profiles of users, like Craft's
+	/// schema permission
+	#[serde(default)]
+	pub users: bool,
 }
 
 impl Scope {
@@ -27,6 +31,7 @@ impl Scope {
 		sections: None,
 		sites: None,
 		previews: true,
+		users: true,
 	};
 
 	pub(crate) fn section(&self, handle: &str) -> bool {
@@ -57,7 +62,7 @@ pub(crate) struct GraphqlToken {
 }
 
 const TOKEN: &str = "SELECT id, name, sections, sites, previews, created_at,
-	expires_at, last_used_at FROM graphql_tokens";
+	expires_at, last_used_at, users FROM graphql_tokens";
 
 fn token_row(r: &rusqlite::Row) -> rusqlite::Result<GraphqlToken> {
 	let list = |i: usize| -> rusqlite::Result<Option<Vec<String>>> {
@@ -71,6 +76,7 @@ fn token_row(r: &rusqlite::Row) -> rusqlite::Result<GraphqlToken> {
 			sections: list(2)?,
 			sites: list(3)?,
 			previews: r.get(4)?,
+			users: r.get(8)?,
 		},
 		created_at: r.get(5)?,
 		expires_at: r.get(6)?,
@@ -131,8 +137,8 @@ pub(crate) fn create(
 	};
 	conn.execute(
 		"INSERT INTO graphql_tokens
-		(name, hash, sections, sites, previews, created_at, expires_at)
-		VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+		(name, hash, sections, sites, previews, created_at, expires_at, users)
+		VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
 		params![
 			name.trim(),
 			token_hash(&token),
@@ -141,6 +147,7 @@ pub(crate) fn create(
 			scope.previews,
 			now(),
 			expires_at,
+			scope.users,
 		],
 	)?;
 	Ok((get(conn, conn.last_insert_rowid())?, token))

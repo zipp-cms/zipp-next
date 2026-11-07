@@ -2,6 +2,7 @@ use axum::extract::State;
 use axum::{Json, Router};
 
 use super::api::*;
+use super::profile::{check_fields, check_slug, set_fields, set_slug};
 use super::{
 	check, check_role, create, delete, email_mail, get, list, set_role, update,
 };
@@ -68,6 +69,12 @@ async fn update_route(
 		return Err(Error::Request("you can't change your own role".into()));
 	}
 	check_role(&state.schema, req.role.as_deref())?;
+	// the address of a page, like an entry's slug
+	if !auth.admin()
+		&& req.slug.as_ref().is_some_and(|s| *s != current.user.slug)
+	{
+		return Err(Error::Forbidden);
+	}
 
 	let password = req.password.as_deref().filter(|p| !p.is_empty());
 	let mut errors = check(
@@ -90,6 +97,31 @@ async fn update_route(
 			));
 		}
 	}
+	let slug = match &req.slug {
+		Some(s) => match check_slug(&state.db.conn(), req.id, s)? {
+			Ok(s) => Some(s),
+			Err(e) => {
+				errors.push(e);
+				None
+			}
+		},
+		None => None,
+	};
+	let fields = match &req.fields {
+		Some(f) => {
+			let conn = state.db.conn();
+			let old = &current.user.fields;
+			match check_fields(&conn, &state.schema, f, old, auth.user_id) {
+				Ok(f) => Some(f),
+				Err(Error::Invalid(e)) => {
+					errors.extend(e);
+					None
+				}
+				Err(e) => return Err(e),
+			}
+		}
+		None => None,
+	};
 	if !errors.is_empty() {
 		return Err(Error::Invalid(errors));
 	}
@@ -103,6 +135,12 @@ async fn update_route(
 		// all of it or nothing
 		let tx = conn.unchecked_transaction()?;
 		update(&tx, req.id, &req.email, &req.name, &req.language)?;
+		if let Some(slug) = &slug {
+			set_slug(&tx, req.id, slug)?;
+		}
+		if let Some(fields) = &fields {
+			set_fields(&tx, req.id, fields)?;
+		}
 		// a link sent to the old address sets no password anymore
 		if new_email {
 			end_password_links(&tx, req.id)?;

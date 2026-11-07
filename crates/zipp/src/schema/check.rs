@@ -16,7 +16,29 @@ impl Schema {
 		self.check_roles()?;
 		self.check_docs()?;
 		self.check_transforms()?;
+		self.check_user_pages()?;
 		self.check_timezone()
+	}
+
+	fn check_user_pages(&self) -> Result<(), String> {
+		let Some(p) = &self.user_pages else {
+			return Ok(());
+		};
+		for uri in std::iter::once(&p.uri).chain(p.site_uris.values()) {
+			if !uri.contains("{slug}") {
+				return Err(format!("user pages: {uri:?} needs a {{slug}}"));
+			}
+		}
+		if let Some(s) = p.site_uris.keys().find(|s| self.get_site(s).is_none())
+		{
+			return Err(format!("user pages: unknown site {s}"));
+		}
+		match &p.section {
+			Some(s) if self.get_section(s).is_none() => {
+				Err(format!("user pages: unknown section {s}"))
+			}
+			_ => Ok(()),
+		}
 	}
 
 	fn check_timezone(&self) -> Result<(), String> {
@@ -114,6 +136,11 @@ impl Schema {
 				"{ASSET} is the handle of the asset fields, not of an entry type"
 			));
 		}
+		if comp.handle == USER && comp.entry {
+			return Err(format!(
+				"{USER} is the handle of the user fields, not of an entry type"
+			));
+		}
 
 		for tab in &comp.tabs {
 			if tab.name.trim().is_empty() {
@@ -152,6 +179,7 @@ impl Schema {
 		let reserved = match comp.entry {
 			true => crate::graphql::ENTRY_FIELDS,
 			false if comp.handle == ASSET => crate::graphql::ASSET_FIELDS,
+			false if comp.handle == USER => crate::graphql::USER_FIELDS,
 			false => crate::graphql::BLOCK_FIELDS,
 		};
 		for field in &comp.fields {
@@ -385,6 +413,10 @@ impl Schema {
 		if comp.handle == ASSET && field.default.is_some() {
 			return Err("asset fields have no defaults".into());
 		}
+		// users are made without a schema too (the command line)
+		if comp.handle == USER && field.default.is_some() {
+			return Err("user fields have no defaults".into());
+		}
 		crate::content::check_default(self, field)
 			.map_err(|e| format!("default: {e}"))?;
 
@@ -571,8 +603,8 @@ impl Schema {
 				if self.group_holds(component, &comp.handle) {
 					return Err("a group can't hold its own component".into());
 				}
-				if component == ASSET {
-					return Err(asset_holds_no_content());
+				if component == ASSET || component == USER {
+					return Err(holds_no_content(component));
 				}
 				Ok(())
 			}
@@ -645,8 +677,8 @@ impl Schema {
 	/// The components a relation (`entry`) or blocks field holds.
 	fn check_types(&self, types: &[String], entry: bool) -> Result<(), String> {
 		// the asset fields only live on assets
-		if types.iter().any(|t| t == ASSET) {
-			return Err(asset_holds_no_content());
+		if let Some(t) = types.iter().find(|t| *t == ASSET || *t == USER) {
+			return Err(holds_no_content(t));
 		}
 		for t in types {
 			match self.get(t) {
@@ -711,8 +743,9 @@ fn is_color(c: &str) -> bool {
 		&& c[1..].chars().all(|c| c.is_ascii_hexdigit())
 }
 
-fn asset_holds_no_content() -> String {
-	format!("{ASSET} holds the asset fields, no content")
+/// The asset or user fields only live on assets and users.
+fn holds_no_content(component: &str) -> String {
+	format!("{component} holds the {component} fields, no content")
 }
 
 /// The first item that is the same as one before it, for the handles

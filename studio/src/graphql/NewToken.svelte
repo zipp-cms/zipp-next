@@ -151,6 +151,16 @@
 				{t('graphql.previewsNote')}
 			</p>
 		</div>
+
+		<div class="card">
+			<h2>{t('graphql.users')}</h2>
+			<Switch bind:checked={form.users}>
+				{t('graphql.usersPublic')}
+			</Switch>
+			<p class="note">
+				{t('graphql.usersNote')}
+			</p>
+		</div>
 	</form>
 {/if}
 

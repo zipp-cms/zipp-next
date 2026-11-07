@@ -117,6 +117,7 @@ async fn preview_tokens_show_the_draft() {
 	// only for tokens that may show drafts
 	let no_drafts = Scope {
 		previews: false,
+		users: false,
 		..Scope::ALL
 	};
 	let frontend = new_token(&admin, no_drafts, None).await;
@@ -212,6 +213,7 @@ async fn admins_manage_tokens() {
 		sections: Some(vec!["events".into()]),
 		sites: None,
 		previews: false,
+		users: false,
 	};
 	let req = CreateTokenReq {
 		name: "Website".into(),
@@ -236,6 +238,7 @@ async fn admins_manage_tokens() {
 			sections: Some(vec!["news".into()]),
 			sites: Some(vec!["fr".into()]),
 			previews: false,
+			users: false,
 		},
 		expires_at: None,
 	};
@@ -286,6 +289,7 @@ async fn tokens_read_their_scope() {
 		sections: Some(vec!["events".into()]),
 		sites: Some(vec!["de".into()]),
 		previews: false,
+		users: false,
 	};
 	let token = new_token(&admin, events_de, None).await;
 	let token = Some(token.as_str());
@@ -353,6 +357,7 @@ async fn graphiql_reads_as_a_token() {
 		sections: Some(vec!["events".into()]),
 		sites: None,
 		previews: false,
+		users: false,
 	};
 	new_token(&admin, events, None).await;
 	let id = admin.call(&TokensReq {}).await.unwrap().tokens[0].id;
@@ -381,6 +386,7 @@ async fn graphiql_reads_as_a_token() {
 		sections: Some(vec!["pages".into()]),
 		sites: None,
 		previews: false,
+		users: false,
 	};
 	let bearer = new_token(&admin, pages, None).await;
 	let author = ts.user(Some("author"));

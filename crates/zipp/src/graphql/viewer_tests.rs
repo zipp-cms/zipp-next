@@ -244,6 +244,7 @@ fn tokens_are_kept_hashed() {
 		sections: Some(vec!["events".into()]),
 		sites: None,
 		previews: false,
+		users: false,
 	};
 	let (info, token) =
 		tokens::create(&conn, " Website ", &scope, None).unwrap();

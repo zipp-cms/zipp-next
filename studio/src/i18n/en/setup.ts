@@ -7,6 +7,7 @@ export default {
 	'setup.noBlock': 'No block {handle}',
 	'setup.noSection': 'No section {handle}',
 	'setup.everyAsset': 'every asset',
+	'setup.everyUser': 'every user',
 	'setup.sectionName': 'section {name}',
 	'setup.handle': 'Handle',
 	'setup.kind': 'Kind',

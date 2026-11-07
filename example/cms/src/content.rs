@@ -177,6 +177,11 @@ pub fn schema() -> Schema {
 			)
 			.width(50),
 		])
+		// the public profile of every user beside the name, GraphQL has
+		// them on User: the articles show their author with it
+		.user_fields([Field::text("bio").multiline().max(300).instructions(
+			"A few words about them, shown under their articles.",
+		)])
 		// big photos: WebP is a third smaller than a jpeg
 		.transform(
 			Transform::new("hero")

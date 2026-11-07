@@ -1,5 +1,6 @@
 use axum::routing::get;
 use axum::{Json, Router};
+use serde_json::{Value, json};
 
 use super::api::*;
 use super::throttle::MAX_FAILS;
@@ -316,4 +317,75 @@ async fn a_reset_link_leads_where_the_user_logs_in() {
 	let sent = mails(&ts).await;
 	assert_eq!(sent.len(), 2);
 	assert!(sent[1].text.contains("http://zipp.test/admin/password/"));
+}
+
+/// `PUT /site-auth/me` with any JSON, its status and answer.
+async fn put_me(client: &crate::testing::Client, body: Value) -> (u16, Value) {
+	let req = axum::http::Request::put("/site-auth/me")
+		.header(axum::http::header::CONTENT_TYPE, "application/json")
+		.body(axum::body::Body::from(body.to_string()))
+		.unwrap();
+	let resp = client.send(req).await;
+	let status = resp.status().as_u16();
+	let body = crate::testing::Client::bytes(resp).await;
+	(status, serde_json::from_slice(&body).unwrap_or_default())
+}
+
+#[tokio::test]
+async fn site_users_edit_their_profile() {
+	let schema = site().user_fields([
+		crate::schema::Field::text("bio").multiline(),
+		crate::schema::Field::text("city").max(10),
+	]);
+	let ts = TestServer::new(schema);
+	let member = ts.site_user(Some("member"));
+
+	let (status, me) = put_me(
+		&member,
+		json!({ "name": "Mia", "fields": { "bio": "Cook" } }),
+	)
+	.await;
+	assert_eq!(status, 200, "{me}");
+	assert_eq!(me["name"], "Mia");
+	assert_eq!(me["fields"], json!({ "bio": "Cook" }));
+	let slug = me["slug"].clone();
+	assert_eq!(slug, "mia");
+	// the fields it sends, the others stay
+	let (_, me) =
+		put_me(&member, json!({ "fields": { "city": "Bern" } })).await;
+	assert_eq!(me["fields"], json!({ "bio": "Cook", "city": "Bern" }));
+	assert_eq!(me["name"], "Mia");
+
+	// checked like in the studio
+	let too_long = json!({ "fields": { "city": "Ober-Unterdorf" } });
+	let (status, err) = put_me(&member, too_long).await;
+	assert_eq!(status, 400);
+	assert_eq!(err["error"]["detail"][0]["path"], "fields.city", "{err}");
+	let (status, _) = put_me(&member, json!({ "name": " " })).await;
+	assert_eq!(status, 400);
+
+	// slug, email and role are an admin's
+	for body in [
+		json!({ "slug": "queen" }),
+		json!({ "email": "x@x.ch" }),
+		json!({ "role": null }),
+	] {
+		let (status, _) = put_me(&member, body).await;
+		assert_eq!(status, 400);
+	}
+	let me = member.call(&SiteMeReq {}).await.unwrap().user;
+	assert_eq!(
+		(me.slug, me.role.as_deref()),
+		("mia".into(), Some("member"))
+	);
+
+	// only with a site session, never a studio's
+	let (status, _) = put_me(&ts.visitor(None), json!({ "name": "X" })).await;
+	assert_eq!(status, 401);
+	let studio = ts.user(Some("member"));
+	let req = axum::http::Request::put("/site-auth/me")
+		.header(axum::http::header::CONTENT_TYPE, "application/json")
+		.body(axum::body::Body::from(r#"{"name":"X"}"#))
+		.unwrap();
+	assert_eq!(studio.send(req).await.status().as_u16(), 401);
 }

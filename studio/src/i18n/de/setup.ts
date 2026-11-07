@@ -10,6 +10,7 @@ export default {
 	'setup.noBlock': 'Kein Block {handle}',
 	'setup.noSection': 'Kein Abschnitt {handle}',
 	'setup.everyAsset': 'jede Datei',
+	'setup.everyUser': 'jeder Benutzer',
 	'setup.sectionName': 'Abschnitt {name}',
 	'setup.handle': 'Handle',
 	'setup.kind': 'Art',

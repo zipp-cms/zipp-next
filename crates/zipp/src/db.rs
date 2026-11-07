@@ -265,6 +265,15 @@ pub(crate) const MIGRATIONS: &[&str] = &[
 	ADD COLUMN author_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
 	CREATE INDEX entries_author ON entries(author_id);
 "#,
+	// public profiles of users (users/profile.rs): the values of the user
+	// fields and the slug of their page, filled from the name on start;
+	// tokens that read them
+	r#"
+	ALTER TABLE users ADD COLUMN slug TEXT NOT NULL DEFAULT '';
+	ALTER TABLE users ADD COLUMN fields TEXT NOT NULL DEFAULT '{}';
+	CREATE UNIQUE INDEX users_slug ON users(slug) WHERE slug <> '';
+	ALTER TABLE graphql_tokens ADD COLUMN users INTEGER NOT NULL DEFAULT 0;
+"#,
 ];
 
 /// `?, ?, ?` for an `IN` of `n` values.

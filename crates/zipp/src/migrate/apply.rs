@@ -16,7 +16,7 @@ use crate::drafts::Doc;
 use crate::entries::{INDEX_TABLES, next_position, refresh_uris, reindex_all};
 use crate::error::{Error, Result};
 use crate::migrate::{DataTx, Migration, Op, unmigrated};
-use crate::schema::{ASSET, Schema, SectionKind};
+use crate::schema::{ASSET, Schema, SectionKind, USER};
 
 /// Brings the database up to the code before the server or a command
 /// uses it: refuses when the code changed since the last migration,
@@ -170,6 +170,7 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 		_ => {
 			change_content(conn, schema, op)?;
 			change_assets(conn, schema, op)?;
+			change_users(conn, schema, op)?;
 			change_docs(conn, &["drafts", "revisions"], |doc| {
 				// each with its own type, a draft or revision may have
 				// another than the entry
@@ -250,6 +251,32 @@ fn change_assets(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 		}
 		conn.execute(
 			"UPDATE assets SET fields = ?1 WHERE id = ?2",
+			params![fields.to_string(), id],
+		)?;
+	}
+
+	Ok(())
+}
+
+/// Runs an op over the values of the user fields of every user, like
+/// [`change_assets`].
+fn change_users(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
+	if schema.get(USER).is_none() {
+		return Ok(());
+	}
+	let mut stmt = conn.prepare("SELECT id, fields FROM users")?;
+	let rows = stmt
+		.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+		.collect::<rusqlite::Result<Vec<(i64, String)>>>()?;
+
+	for (id, fields) in rows {
+		let mut fields: Value = parse(&fields)?;
+		let mut ty = USER.to_string();
+		if !op.apply_entry(schema, &mut ty, &mut fields) {
+			fields = Value::Object(Default::default());
+		}
+		conn.execute(
+			"UPDATE users SET fields = ?1 WHERE id = ?2",
 			params![fields.to_string(), id],
 		)?;
 	}

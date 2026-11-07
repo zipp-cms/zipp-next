@@ -139,6 +139,26 @@ fn migrations_change_asset_fields() {
 }
 
 #[test]
+fn migrations_change_user_fields() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site().user_fields([Field::text("bio"), Field::text("city")]);
+	let first = migration("0001", &Schema::new(), &s, &[]);
+	apply(&conn, std::slice::from_ref(&first)).unwrap();
+	let id = crate::users::create(&conn, "a@x.ch", "A", "", None, "").unwrap();
+	let fields = json!({ "bio": "Cook", "city": "Bern" });
+	crate::users::profile::set_fields(&conn, id, &fields).unwrap();
+	let fields = || crate::users::user(&conn, id).unwrap().fields;
+
+	// bio is renamed to about, city goes
+	let s2 = site().user_fields([Field::text("about")]);
+	let renames = [Rename::parse("user.bio=about").unwrap()];
+	let second = migration("0002", &s, &s2, &renames);
+	apply(&conn, &[first, second]).unwrap();
+	assert_eq!(fields(), json!({ "about": "Cook" }));
+}
+
+#[test]
 fn new_fields_bring_their_default() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();

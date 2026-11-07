@@ -124,6 +124,20 @@ pub(crate) struct SiteMeReq {}
 
 request!(SiteMeReq, GET "/site-auth/me" => SiteAuthenticated);
 
+/// The public profile of the logged in website user: a new name and the
+/// user fields it sends, the others stay. The slug, email and role are
+/// an admin's.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SiteProfileReq {
+	#[serde(default)]
+	pub name: Option<String>,
+	#[serde(default)]
+	pub fields: Option<serde_json::Map<String, serde_json::Value>>,
+}
+
+request!(SiteProfileReq, PUT "/site-auth/me" => SiteUser);
+
 /// Mails a link to the website's `/reset-password?token=…` if there is a
 /// user with the email; the answer is the same either way. `site` picks
 /// the site's url, else the first one's.
