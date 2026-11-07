@@ -79,12 +79,16 @@ export default {
 	'assets.square': 'Square',
 	'assets.portrait': 'Portrait',
 	'assets.cropNote':
-		'Drag the crop past the image for room around it. On the keyboard the arrow keys move it or a corner, with Shift in bigger steps.',
+		'Drag the crop past the image for room around it; near the border of the image its edges snap to it. A side changes only that side, Alt resizes around the middle. On the keyboard the arrow keys move it, a corner or a side, with Shift in bigger steps.',
 	'assets.cropAt': 'At {x} %, {y} %, {w} × {h} %',
 	'assets.cornerNw': 'Top left corner of the crop',
 	'assets.cornerNe': 'Top right corner of the crop',
 	'assets.cornerSw': 'Bottom left corner of the crop',
 	'assets.cornerSe': 'Bottom right corner of the crop',
+	'assets.sideN': 'Top edge of the crop',
+	'assets.sideE': 'Right edge of the crop',
+	'assets.sideS': 'Bottom edge of the crop',
+	'assets.sideW': 'Left edge of the crop',
 	'assets.transparentNote':
 		'Transparent needs a PNG: a JPEG is delivered as PNG then.',
 	'assets.focalNote':
