@@ -1,11 +1,10 @@
 //! The handlers of [`api`](crate::api): who (a [`SiteUser`]), whether
-//! the entry is theirs and in a section of the plugin, then zipp's
-//! functions as the user, which check the role.
+//! the entry is in a section of the plugin, then zipp's functions as the
+//! user, which check the role (its sections, own access for the author).
 
 use std::sync::Arc;
 
 use serde_json::Value;
-use zipp::AppState;
 use zipp::api::{ApiResult, ApiRouter, Req};
 use zipp::assets::{UploadRules, upload_as};
 use zipp::auth::{Authed, SiteUser};
@@ -18,6 +17,7 @@ use zipp::entries::{
 	EntryInput, WithDraft, create_as, delete_as, get_as, list_as, update_as,
 };
 use zipp::error::{Error, Result};
+use zipp::{Access, AppState};
 
 use crate::Members;
 use crate::api::*;
@@ -53,8 +53,8 @@ impl Members {
 		}
 	}
 
-	/// The user's entry of a section of the plugin, with its draft.
-	fn own(
+	/// An entry of a section of the plugin the user sees, with its draft.
+	fn entry(
 		&self,
 		state: &AppState,
 		auth: &Authed,
@@ -63,10 +63,7 @@ impl Members {
 	) -> Result<WithDraft> {
 		let e = get_as(state, auth, id, site)?;
 		self.check_section(&e.entry.section)?;
-		match e.entry.author_id == Some(auth.user_id) {
-			true => Ok(e),
-			false => Err(Error::Forbidden),
-		}
+		Ok(e)
 	}
 
 	/// Whether the user may change something now; counts it.
@@ -122,16 +119,22 @@ async fn list(
 	Req(req): Req<ListReq>,
 ) -> ApiResult<ListReq> {
 	members.check_section(&req.section)?;
+	let auth = Authed::of_site_user(&user);
+	// all of the section only for who sees it all, not just their own
+	if req.all && !auth.can(&state.schema, &req.section, Access::View) {
+		return Err(Error::Forbidden);
+	}
 	let mut params = vec![
 		("section".to_string(), req.section),
-		("author".into(), user.id.to_string()),
 		("order".into(), "-created".into()),
 		("offset".into(), req.offset.to_string()),
 	];
+	if !req.all {
+		params.push(("author".into(), user.id.to_string()));
+	}
 	params.extend(req.site.map(|s| ("site".into(), s)));
 	let q = Query::parse(&state.schema, &params).map_err(Error::Request)?;
 
-	let auth = Authed::of_site_user(&user);
 	let (entries, total) = list_as(&state, &auth, q)?;
 	let entries = entries
 		.into_iter()
@@ -147,7 +150,7 @@ async fn get(
 	Req(req): Req<GetReq>,
 ) -> ApiResult<GetReq> {
 	let auth = Authed::of_site_user(&user);
-	let e = members.own(&state, &auth, req.id, req.site)?;
+	let e = members.entry(&state, &auth, req.id, req.site)?;
 	Ok(Json(member_entry(&state, e)))
 }
 
@@ -178,7 +181,7 @@ async fn update(
 ) -> ApiResult<UpdateReq> {
 	let auth = Authed::of_site_user(&user);
 	let WithDraft { entry, draft, .. } =
-		members.own(&state, &auth, req.id, req.site)?;
+		members.entry(&state, &auth, req.id, req.site)?;
 	members.may_write(user.id)?;
 
 	// what the request doesn't change stays as it is, in the draft if
@@ -222,7 +225,7 @@ async fn delete(
 	Req(req): Req<DeleteReq>,
 ) -> ApiResult<DeleteReq> {
 	let auth = Authed::of_site_user(&user);
-	members.own(&state, &auth, req.id, None)?;
+	members.entry(&state, &auth, req.id, None)?;
 	members.may_write(user.id)?;
 	delete_as(&state, &auth, req.id)?;
 	Ok(Json(()))

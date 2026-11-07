@@ -19,9 +19,10 @@
 //!     )
 //! ```
 //!
-//! Only the sections of [`Members::section`] are edited here, of them
-//! only the user's own entries, and only as far as their role allows:
-//! every change goes through zipp's own checks, as in the studio
+//! Only the sections of [`Members::section`] are edited here, and only
+//! as far as the user's role allows: a member their own entries, an
+//! admin or editor also the others'. Every change goes through zipp's
+//! own checks, as in the studio
 //! (`zipp::entries::create_as` and the others). See [`api`] for the
 //! routes.
 

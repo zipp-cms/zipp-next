@@ -49,6 +49,7 @@ fn schema() -> Schema {
 				.own("posts", Access::Edit)
 				.no_studio(),
 		)
+		.role(Role::new("editor", "Editor").section("posts", Access::Delete))
 		.role(
 			Role::new("reader", "Reader")
 				.own("posts", Access::Delete)
@@ -108,6 +109,7 @@ async fn member_edits_own_entries() {
 		section: "posts".into(),
 		site: None,
 		offset: 0,
+		all: false,
 	};
 	let found = member.call(&list).await.unwrap();
 	let titles: Vec<&str> =
@@ -154,12 +156,12 @@ async fn only_own_entries_of_the_sections() {
 	let ben = ts.site_user(Some("member"));
 	let e = anna.call(&new_post("Zopf")).await.unwrap();
 
-	// ben sees posts in the studio's sense, but edits only his own
+	// ben views posts, but edits only his own
 	let get = GetReq {
 		id: e.id,
 		site: None,
 	};
-	assert_eq!(ben.call(&get).await.unwrap_err(), Error::Forbidden);
+	assert_eq!(ben.call(&get).await.unwrap().title, "Zopf");
 	let put = change(e.id, "Mine", json!({}));
 	assert_eq!(ben.call(&put).await.unwrap_err(), Error::Forbidden);
 	let del = DeleteReq { id: e.id };
@@ -185,6 +187,7 @@ async fn only_own_entries_of_the_sections() {
 		section: "notes".into(),
 		site: None,
 		offset: 0,
+		all: false,
 	};
 	assert_eq!(anna.call(&list).await.unwrap_err(), Error::Forbidden);
 
@@ -197,6 +200,63 @@ async fn only_own_entries_of_the_sections() {
 	assert_eq!(anna.call(&page).await.unwrap_err(), Error::Forbidden);
 }
 
+/// Admins and editors edit the members' entries on the website too, as
+/// their role allows in the studio.
+#[tokio::test]
+async fn editors_edit_all_entries() {
+	let ts = TestServer::new(schema());
+	let member = ts.site_user(Some("member"));
+	let zopf = member.call(&new_post("Zopf")).await.unwrap();
+	let brot = member.call(&new_post("Brot")).await.unwrap();
+
+	let mut list = ListReq {
+		section: "posts".into(),
+		site: None,
+		offset: 0,
+		all: true,
+	};
+	for (role, e) in [(None, &zopf), (Some("editor"), &brot)] {
+		let editor = ts.site_user(role);
+		// their own by default, all with `all`
+		list.all = false;
+		assert_eq!(editor.call(&list).await.unwrap().total, 0);
+		list.all = true;
+		let found = editor.call(&list).await.unwrap();
+		assert!(found.entries.iter().any(|f| f.id == e.id), "{role:?}");
+
+		let get = GetReq {
+			id: e.id,
+			site: None,
+		};
+		assert_eq!(editor.call(&get).await.unwrap().id, e.id);
+		let r = editor
+			.call(&change(e.id, "Neu", json!({ "body": "Mehl" })))
+			.await
+			.unwrap();
+		assert_eq!(r.saved, Saved::Live);
+		assert_eq!(r.entry.fields["intro"], "Hi");
+		assert_eq!(r.entry.fields["body"], "Mehl");
+		editor.call(&DeleteReq { id: e.id }).await.unwrap();
+		assert_eq!(editor.call(&get).await.unwrap_err(), Error::NotFound);
+	}
+
+	// a member with only own access lists only their own
+	let reader = ts.site_user(Some("reader"));
+	assert_eq!(reader.call(&list).await.unwrap_err(), Error::Forbidden);
+	// the editor's role has no notes, the plugin no pages
+	let editor = ts.site_user(Some("editor"));
+	list.section = "notes".into();
+	assert_eq!(editor.call(&list).await.unwrap_err(), Error::Forbidden);
+	let page = input("pages", "page", "Page", json!({}));
+	let page = ts.admin().call(&StudioCreate(page)).await.unwrap();
+	let get = GetReq {
+		id: page.id,
+		site: None,
+	};
+	let admin = ts.site_user(None);
+	assert_eq!(admin.call(&get).await.unwrap_err(), Error::Forbidden);
+}
+
 #[tokio::test]
 async fn website_login_needed() {
 	let ts = TestServer::new(schema());
@@ -204,6 +264,7 @@ async fn website_login_needed() {
 		section: "posts".into(),
 		site: None,
 		offset: 0,
+		all: false,
 	};
 	let err = ts.visitor(None).call(&list).await.unwrap_err();
 	assert_eq!(err, Error::MissingSessionToken);

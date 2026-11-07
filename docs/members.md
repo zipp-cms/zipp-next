@@ -116,17 +116,18 @@ Schema::new()
 ```
 
 Only the sections of `.section` are edited there, also when a role has
-access to others, and of them only the user's own entries (an admin's
-too: their own). What they may do with them is their role's: with own
-Publish their saves are live at once, with only Edit a new entry stays
-unpublished and a change is a draft that an editor publishes in the
-studio. The frontend forwards these routes with the visitor's site token
-(401 without one, 403 for another's entry or a section that isn't the
-plugin's):
+access to others. Of them a user edits what their role allows, as in
+the studio: a member with own access their own entries, an admin or an
+editor with the section's access the members' entries too. What they may
+do with them is their role's: with Publish their saves are live at once,
+with only Edit a new entry stays unpublished and a change is a draft
+that an editor publishes in the studio. The frontend forwards these
+routes with the visitor's site token (401 without one, 403 for an entry
+the role may not touch or a section that isn't the plugin's):
 
 | Request | Answer |
 | --- | --- |
-| `GET /members/entries?section=recipes&site=&offset=` | `{ entries, total }`, theirs, the newest first, 100 at a time |
+| `GET /members/entries?section=recipes&site=&offset=&all=` | `{ entries, total }`, theirs, the newest first, 100 at a time; with `all=true` all of the section (needs View of the section, 403 with only own access) |
 | `GET /members/entries/{id}?site=` | the entry |
 | `POST /members/entries {section, type, title, fields, published?, site?}` | the new entry |
 | `PUT /members/entries/{id} {title, fields, published?, site?}` | `{ saved: "live" \| "draft", entry }` |

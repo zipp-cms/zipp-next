@@ -1,11 +1,14 @@
 //! The routes of the website, JSON with the site token of a logged in
-//! user (`Authorization: Bearer`): 401 without one, 403 for what isn't
-//! theirs or what their role may not do. Invalid fields answer like the
+//! user (`Authorization: Bearer`): 401 without one, 403 for what their
+//! role may not do (another's entry needs the section's access, own
+//! access is only for theirs). Invalid fields answer like the
 //! studio's api (`INVALID` with the paths).
 //!
 //! - `GET /members/entries?section=recipes`: their entries, the newest
-//!   first, unpublished ones too
-//! - `GET /members/entries/{id}`
+//!   first, unpublished ones too; `&all=true` all of the section, for
+//!   who may view it (admins, editors)
+//! - `GET /members/entries/{id}`: theirs, or another's their role may
+//!   view
 //! - `POST /members/entries`: a new one
 //! - `PUT /members/entries/{id}`: live if their role may publish, else a
 //!   draft for an editor
@@ -47,6 +50,10 @@ pub struct ListReq {
 	pub site: Option<String>,
 	#[serde(default)]
 	pub offset: i64,
+	/// all entries of the section, not just the user's: needs View of
+	/// the section, own access isn't enough
+	#[serde(default)]
+	pub all: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
