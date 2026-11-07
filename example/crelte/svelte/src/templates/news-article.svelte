@@ -20,10 +20,23 @@
 </p>
 <Intro {entry} />
 <Content {blocks} />
+{#if entry.author?.name}
+	<p class="author">
+		<strong>{entry.author.name}</strong>
+		{#if entry.author.bio}<br />{entry.author.bio}{/if}
+	</p>
+{/if}
 
 <style>
 	.meta {
 		margin-top: 1.5rem;
+		color: #666;
+	}
+
+	.author {
+		margin-top: 2rem;
+		padding-top: 1rem;
+		border-top: 1px solid #ddd;
 		color: #666;
 	}
 </style>

@@ -114,6 +114,40 @@ fn asset_fields() {
 }
 
 #[test]
+fn user_fields_and_pages() {
+	let s = site().user_fields([Field::text("bio").multiline()]);
+	s.check().unwrap();
+	assert_eq!(s.get(USER).unwrap().fields[0].handle, "bio");
+
+	let with = |f: Field| site().user_fields([f]).check().unwrap_err();
+	assert_eq!(
+		with(Field::text("slug")),
+		"field user.slug: slug is built in"
+	);
+	assert!(with(Field::text("t").translatable()).contains("translatable"));
+	assert!(with(Field::text("t").default("x")).contains("no defaults"));
+	let s = site().block("x", "X", [Field::blocks("b", ["user"])]);
+	let s = s.user_fields([]);
+	assert!(s.check().unwrap_err().contains("holds the user fields"));
+
+	let pages = |p: UserPages| site().user_pages(p).check();
+	pages(UserPages::new("cooks/{slug}").with_entries_in("events")).unwrap();
+	assert!(
+		pages(UserPages::new("cooks"))
+			.unwrap_err()
+			.contains("{slug}")
+	);
+	let unknown = UserPages::new("{slug}").with_entries_in("recipes");
+	assert!(pages(unknown).unwrap_err().contains("unknown section"));
+	let unknown = UserPages::new("{slug}").site_uri("fr", "{slug}");
+	assert!(pages(unknown).unwrap_err().contains("unknown site"));
+
+	let p = UserPages::new("cooks/{slug}").site_uri("en", "/chefs/{slug}/");
+	assert_eq!(p.render_uri("de", "mia"), "cooks/mia");
+	assert_eq!(p.render_uri("en", "mia"), "chefs/mia");
+}
+
+#[test]
 fn widths_and_notes() {
 	let with = |f: Field| site().block("x", "X", [f]).check();
 	with(Field::text("t").width(25)).unwrap();

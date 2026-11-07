@@ -58,4 +58,11 @@ export default {
 	'users.levels':
 		'View sees entries, Edit changes them as drafts, Publish makes them live, Delete deletes them. The roles are code, {setup} shows all of them.',
 	'users.setup': 'Setup',
+	'users.profile': 'Public profile',
+	'users.profileNote':
+		'The name and these fields show on the website, never the email or the role.',
+	'users.slug': 'Slug of the page',
+	'users.pageWithEntries':
+		'A page while they have a live entry in {section}:',
+	'users.pageWithAnyEntry': 'A page while they have a live entry:',
 };

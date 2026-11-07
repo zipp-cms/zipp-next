@@ -795,6 +795,27 @@
     {
       "op": "addComponent",
       "component": {
+        "handle": "user",
+        "name": "User",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "bio",
+            "label": "Bio",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "A few words about them, shown under their articles.",
+            "kind": "text",
+            "max": 300,
+            "multiline": true
+          }
+        ]
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
         "handle": "home",
         "name": "Home",
         "entry": true,
@@ -2753,6 +2774,24 @@
                 "label": "Press image"
               }
             ]
+          }
+        ]
+      },
+      {
+        "handle": "user",
+        "name": "User",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "bio",
+            "label": "Bio",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "A few words about them, shown under their articles.",
+            "kind": "text",
+            "max": 300,
+            "multiline": true
           }
         ]
       },

@@ -16,7 +16,7 @@ use crate::drafts::Doc;
 use crate::entries::{INDEX_TABLES, next_position, refresh_uris, reindex_all};
 use crate::error::{Error, Result};
 use crate::migrate::{DataTx, Migration, Op, unmigrated};
-use crate::schema::{ASSET, Schema, SectionKind};
+use crate::schema::{ASSET, Schema, SectionKind, USER};
 
 /// Brings the database up to the code before the server or a command
 /// uses it: refuses when the code changed since the last migration,
@@ -169,7 +169,8 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 		}
 		_ => {
 			change_content(conn, schema, op)?;
-			change_assets(conn, schema, op)?;
+			change_fields_of(conn, schema, op, "assets", ASSET)?;
+			change_fields_of(conn, schema, op, "users", USER)?;
 			change_docs(conn, &["drafts", "revisions"], |doc| {
 				// each with its own type, a draft or revision may have
 				// another than the entry
@@ -230,26 +231,32 @@ fn change_content(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 	Ok(())
 }
 
-/// Runs an op over the values of the asset fields of every asset, like
-/// over an entry of the type `asset`; removing the asset fields empties
-/// them.
-fn change_assets(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
-	if schema.get(ASSET).is_none() {
+/// Runs an op over the values of the asset fields of every asset (or
+/// the user fields of every user), like over an entry of the type
+/// `asset` (`user`); removing the fields empties them.
+fn change_fields_of(
+	conn: &Connection,
+	schema: &Schema,
+	op: &Op,
+	table: &str,
+	component: &str,
+) -> Result<()> {
+	if schema.get(component).is_none() {
 		return Ok(());
 	}
-	let mut stmt = conn.prepare("SELECT id, fields FROM assets")?;
+	let mut stmt = conn.prepare(&format!("SELECT id, fields FROM {table}"))?;
 	let rows = stmt
 		.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
 		.collect::<rusqlite::Result<Vec<(i64, String)>>>()?;
 
 	for (id, fields) in rows {
 		let mut fields: Value = parse(&fields)?;
-		let mut ty = ASSET.to_string();
+		let mut ty = component.to_string();
 		if !op.apply_entry(schema, &mut ty, &mut fields) {
 			fields = Value::Object(Default::default());
 		}
 		conn.execute(
-			"UPDATE assets SET fields = ?1 WHERE id = ?2",
+			&format!("UPDATE {table} SET fields = ?1 WHERE id = ?2"),
 			params![fields.to_string(), id],
 		)?;
 	}

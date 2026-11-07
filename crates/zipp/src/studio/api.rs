@@ -46,6 +46,8 @@ pub struct SchemaResp {
 	pub roles: Vec<Role>,
 	/// sites not on the website yet
 	pub offline: Vec<String>,
+	/// the pages of users, see `Schema::user_pages`
+	pub user_pages: Option<crate::schema::UserPages>,
 	/// the plugins with a studio module and its data
 	pub plugins: Vec<PluginResp>,
 	/// what every plugin added to the content model, for Setup

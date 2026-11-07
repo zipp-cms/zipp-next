@@ -56,6 +56,30 @@ password to `/site-auth/password`. A link works once, an invite a week,
 a reset an hour, and a reset mail goes at most every 2 minutes per user.
 Mails need `serve --smtp-url`.
 
+## Their profile
+
+Every user has a public profile: their name (the display name), a slug
+and the user fields of the schema, see [User fields and user
+pages](content-model.md#user-fields-and-user-pages). The users with
+live entries are public in GraphQL (`users`, `author`, see
+[GraphQL](graphql.md#users)), so on chochbuech a recipe's cook is its
+author: the cooks are the members themselves, with a page at
+`cooks/{slug}`. The user page of the studio shows and edits the profile,
+the slug only for admins. On the website the logged in user edits their
+own:
+
+| Request | Answer |
+| --- | --- |
+| `PUT /site-auth/me {name?, fields?}` | the user, like `user` of login: `{ id, name, email, role, slug, fields }` |
+
+A new name and the fields it sends replace theirs, the others stay;
+they are checked like in the studio (`INVALID` with paths like
+`fields.bio`, an empty name is refused, a name up to 100 characters and
+the fields up to 64 KB). A member edits every user field, so a field
+only admins set (like `verified`) doesn't belong there. Anything else, the slug, the
+email or the role, is refused with 400: those are an admin's. `GET
+/site-auth/me` and the login have the slug and fields too.
+
 ## Website routes of plugins
 
 `zipp::auth::SiteUser` is the extractor of a logged in website user

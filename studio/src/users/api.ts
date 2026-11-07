@@ -1,5 +1,9 @@
 import { request } from '../core/client';
 import type { User } from '../core/session.svelte';
+import type { UserPages, Values } from '../core/schema';
+
+/** The component of the user fields, see `Schema::user_fields`. */
+export const USER_FIELDS = 'user';
 
 /** A studio user, `role: null` is an admin. */
 export type { User };
@@ -12,6 +16,10 @@ export type Account = User & {
 	sessions: number;
 	/** invited, no password yet: the invite link sets it */
 	invited: boolean;
+	/** of the user's page, unique */
+	slug: string;
+	/** the values of the user fields, their public profile */
+	fields: Values;
 };
 
 /** A link for a user, see `passwordLink` and `loginAsLink`. */
@@ -55,6 +63,9 @@ export function updateUser(
 		language: string;
 		password: string | null;
 		currentPassword: string | null;
+		/** only admins change it */
+		slug: string;
+		fields: Values;
 	},
 ): Promise<Account> {
 	return request('PUT', `/users/${id}`, user);
@@ -80,6 +91,12 @@ export function passwordLink(id: number, send: boolean): Promise<UserLink> {
 /** A link that logs in as the user once, for admins. */
 export function loginAsLink(id: number): Promise<UserLink> {
 	return request('POST', `/users/${id}/login-as`);
+}
+
+/** The uri of a user's page in a site, see `Schema::user_pages`. */
+export function userUri(pages: UserPages, site: string, slug: string): string {
+	const format = pages.siteUris?.[site] ?? pages.uri;
+	return format.replace('{slug}', slug).replace(/^\/+|\/+$/g, '');
 }
 
 /** The name of a user, else the email. */

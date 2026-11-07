@@ -12,9 +12,15 @@
 
 <script lang="ts">
 	import { onDestroy, untrack } from 'svelte';
-	import type { Schema } from '../core/schema';
+	import {
+		componentOf,
+		entryUrl,
+		sectionName,
+		type Schema,
+	} from '../core/schema';
 	import type { Account } from './api';
-	import { displayName } from './api';
+	import { displayName, USER_FIELDS, userUri } from './api';
+	import Fields from '../fields/Fields.svelte';
 	import { UserForm } from './userForm.svelte';
 	import RoleAccess from './RoleAccess.svelte';
 	import UserAccess from './UserAccess.svelte';
@@ -31,7 +37,8 @@
 	import { browserLang, LANGUAGES, t, type Lang } from '../i18n/index.svelte';
 
 	/**
-	 * A user's account: name and email, the role and what it may do, a new
+	 * A user's account: name and email, the public profile (the user
+	 * fields, the slug of their page), the role and what it may do, a new
 	 * password, the sessions. Admins see everyone, a user their own (from
 	 * the user menu), without changing the role. Admins invite a new user
 	 * without a password, send or copy a reset link and log in as a user
@@ -60,6 +67,18 @@
 				]
 			: [{ label: t('common.yourAccount') }],
 	);
+
+	const userFields = $derived(componentOf(schema, USER_FIELDS));
+	const hasProfile = $derived(
+		!!userFields?.fields.length || schema.userPages !== null,
+	);
+	// the page in the primary site, while it has one
+	const pageUrl = $derived.by(() => {
+		const pages = schema.userPages;
+		if (!pages || !form.slug) return null;
+		const site = schema.sites[0].handle;
+		return entryUrl(schema, site, userUri(pages, site, form.slug));
+	});
 
 	// empty follows the browser, it says which that is
 	const languages = $derived([
@@ -180,6 +199,48 @@
 				/>
 			</div>
 		</div>
+
+		{#if !isNew && hasProfile}
+			<div class="card">
+				<h2>{t('users.profile')}</h2>
+				<p class="muted">{t('users.profileNote')}</p>
+				{#if schema.userPages}
+					<label class="stacked">
+						{t('users.slug')}
+						<input
+							bind:value={form.slug}
+							disabled={!admin}
+							required
+						/>
+						{#if form.fields.slug}
+							<span class="error">{form.fields.slug}</span>
+						{/if}
+					</label>
+					<p class="note">
+						{schema.userPages.section
+							? t('users.pageWithEntries', {
+									section: sectionName(
+										schema,
+										schema.userPages.section,
+									),
+								})
+							: t('users.pageWithAnyEntry')}
+						{#if pageUrl}<span class="truncate">
+								{pageUrl}
+							</span>{/if}
+					</p>
+				{/if}
+				{#if userFields?.fields.length}
+					<Fields
+						{schema}
+						component={userFields}
+						values={form.values}
+						errors={form.valueErrors}
+						refs={{}}
+					/>
+				{/if}
+			</div>
+		{/if}
 
 		<div class="card">
 			<h2>{t('users.role')}</h2>

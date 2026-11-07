@@ -13,6 +13,10 @@ export default {
 	'graphql.previewsShowDrafts': 'Preview links show drafts',
 	'graphql.previewsNote':
 		"For the website that shows the studio's previews; other frontends only read what is live.",
+	'graphql.users': 'Users',
+	'graphql.usersPublic': 'Reads the public profiles of users',
+	'graphql.usersNote':
+		'Name, slug, page and user fields of the users with a live entry, never the email or the role. Without it the authors of entries only have their name.',
 	'graphql.all': 'All',
 	'graphql.confirmRevoke':
 		'Revoke {name}? Frontends that send it get no content any more.',

@@ -54,6 +54,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Block titles | a page's blocks: Button, Images, Upcoming events · Setup → Blocks → Button | a block's head and the outline show the field the code names (`.block_title`): the button's link, the caption, the city |
 | Globals | Settings → Header, Footer | singles without a url, crelte reads them like Craft's globals |
 | Session ends | type in an entry, in a second browser: your user → **Log out everywhere else** · type on | a dialog asks for the password, the page stays; after it the draft has what you typed |
+| User fields | a user's page → Public profile · the website → a news article | the bio of every user (`.user_fields`); the article ends with its author's name and bio from GraphQL (`author { name bio }`) |
 | Users, invites, login as | Users → New user without a password · a user's page → Access · the login → Forgot your password? | the invite and reset mails (on dev in Mailpit), **Log in as** with the bar to come back |
 | Contact form | the website → /kontakt · Settings → Forms | `crates/zipp-forms`: the form is code, the mail goes to who Forms names (on dev: Mailpit), the message after sending is from there |
 | Mail | Setup → Sites, transforms and roles → Mail (admins) | where mails go; **Send a test mail to me**. Without `--smtp-url` they are only logged |

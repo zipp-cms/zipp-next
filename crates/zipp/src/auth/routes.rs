@@ -18,6 +18,7 @@ use crate::api::{ApiResult, ApiRouter, Req};
 use crate::client::ClientAddr;
 use crate::content::FieldError;
 use crate::error::{Error, Result};
+use crate::users::profile::{check_fields, set_fields};
 use crate::users::{password_error, set_name, user};
 
 /// A user of a role without the studio, see `Role::no_studio`: an error
@@ -261,6 +262,68 @@ async fn site_me_route(
 	Ok(Json(site_authenticated(&conn, session)?))
 }
 
+async fn site_profile_route(
+	State(state): State<AppState>,
+	user: SiteUser,
+	Req(req): Req<SiteProfileReq>,
+) -> ApiResult<SiteProfileReq> {
+	let mut errors = vec![];
+	let name = req.name.as_deref().map(str::trim);
+	match name {
+		Some("") => errors.push(FieldError::new("name", "is required")),
+		Some(n) if n.chars().count() > MAX_NAME => {
+			errors.push(FieldError::new("name", "is too long"))
+		}
+		_ => {}
+	}
+
+	// one lock from reading the fields to writing them, a save at the
+	// same time doesn't lose what this one doesn't send
+	let conn = state.db.conn();
+	// the fields it sends replace theirs, the others stay
+	let fields = match req.fields {
+		Some(sent) => {
+			let old = SiteUser::get(&conn, user.id)?.fields;
+			let mut all = old.as_object().cloned().unwrap_or_default();
+			all.extend(sent);
+			let all = serde_json::Value::Object(all);
+			match check_fields(&conn, &state.schema, &all, &old, user.id) {
+				// a profile is public, it stays small
+				Ok(f) if f.to_string().len() > MAX_FIELDS => {
+					errors.push(FieldError::new("fields", "are too long"));
+					None
+				}
+				Ok(f) => Some(f),
+				Err(Error::Invalid(e)) => {
+					errors.extend(e);
+					None
+				}
+				Err(e) => return Err(e),
+			}
+		}
+		None => None,
+	};
+	if !errors.is_empty() {
+		return Err(Error::Invalid(errors));
+	}
+
+	let tx = conn.unchecked_transaction()?;
+	if let Some(name) = name {
+		set_name(&tx, user.id, name)?;
+	}
+	if let Some(fields) = &fields {
+		set_fields(&tx, user.id, fields)?;
+	}
+	tx.commit()?;
+	Ok(Json(SiteUser::get(&conn, user.id)?))
+}
+
+/// The longest name a member gives themselves, in characters.
+const MAX_NAME: usize = 100;
+
+/// The most a member's user fields take as JSON, in bytes.
+const MAX_FIELDS: usize = 64 * 1024;
+
 async fn site_logout_route(
 	State(state): State<AppState>,
 	headers: HeaderMap,
@@ -318,6 +381,7 @@ pub(crate) fn site_routes() -> Router<AppState> {
 		.api::<SiteLoginReq, _>(site_login_route)
 		.api::<SiteLogoutReq, _>(site_logout_route)
 		.api::<SiteMeReq, _>(site_me_route)
+		.api::<SiteProfileReq, _>(site_profile_route)
 		.api::<SiteResetReq, _>(site_reset_route)
 		.api::<SitePasswordReq, _>(site_password_route)
 }

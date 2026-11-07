@@ -14,6 +14,7 @@ use crate::content::link_kind;
 use crate::entries::Author;
 use crate::entries::query::MAX_IDS;
 use crate::schema::LinkKind;
+use crate::users::profile::Profile;
 
 /// The loaders of a request, see [`Loaded`].
 pub(super) struct Loaders {
@@ -21,6 +22,7 @@ pub(super) struct Loaders {
 	children: DataLoader<Children, HashMapCache>,
 	assets: DataLoader<Assets, HashMapCache>,
 	authors: DataLoader<Authors, HashMapCache>,
+	public_users: DataLoader<PublicUsers, HashMapCache>,
 }
 
 /// What the loaders read with: the database, the schema and who asks.
@@ -45,6 +47,9 @@ struct Assets(Db);
 /// The authors of entries by user id.
 struct Authors(Db);
 
+/// The public profiles of users by site and id, see [`public_query`].
+struct PublicUsers(Arc<Source>);
+
 impl Loaders {
 	fn of<'a>(ctx: &ResolverContext<'a>) -> async_graphql::Result<&'a Self> {
 		let viewer = ctx.data::<Viewer>()?;
@@ -58,7 +63,8 @@ impl Loaders {
 			});
 			Loaders {
 				entries: batched(Entries(source.clone())),
-				children: batched(Children(source)),
+				children: batched(Children(source.clone())),
+				public_users: batched(PublicUsers(source)),
 				assets: batched(Assets(db.clone())),
 				authors: batched(Authors(db.clone())),
 			}
@@ -320,6 +326,42 @@ impl Loader<i64> for Authors {
 	) -> async_graphql::Result<HashMap<i64, Author>> {
 		Ok(crate::entries::authors(&self.0.conn(), ids)?)
 	}
+}
+
+impl Loader<(String, i64)> for PublicUsers {
+	type Value = Profile;
+	type Error = GqlError;
+
+	async fn load(
+		&self,
+		keys: &[(String, i64)],
+	) -> async_graphql::Result<HashMap<(String, i64), Profile>> {
+		let Source { db, schema, viewer } = &*self.0;
+		let mut out = HashMap::new();
+		for (site, ids) in by_site(keys) {
+			let Some(mut q) = public_query(schema, viewer, site) else {
+				continue;
+			};
+			q.ids = Some(ids);
+			for p in crate::users::profile::public(&db.conn(), &q)? {
+				out.insert((site.to_string(), p.id), p);
+			}
+		}
+		Ok(out)
+	}
+}
+
+/// The profile of an author if they are public to the viewer.
+pub(super) async fn public_author(
+	ctx: &ResolverContext<'_>,
+	site: &str,
+	id: i64,
+) -> async_graphql::Result<Option<Profile>> {
+	if !ctx.data::<Viewer>()?.scope.users {
+		return Ok(None);
+	}
+	let key = (site.to_string(), id);
+	Loaders::of(ctx)?.public_users.load_one(key).await
 }
 
 /// The author of an entry, `None` if the user is gone.

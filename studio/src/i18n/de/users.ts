@@ -64,4 +64,12 @@ export default {
 	'users.levels':
 		'Ansehen zeigt Einträge, Bearbeiten ändert sie als Entwurf, Veröffentlichen stellt sie online, Löschen löscht sie. Die Rollen sind Code, {setup} zeigt alle.',
 	'users.setup': 'Einrichtung',
+	'users.profile': 'Öffentliches Profil',
+	'users.profileNote':
+		'Der Name und diese Felder erscheinen auf der Website, nie die E-Mail oder die Rolle.',
+	'users.slug': 'Slug der Seite',
+	'users.pageWithEntries':
+		'Eine Seite, solange ein Eintrag in {section} veröffentlicht ist:',
+	'users.pageWithAnyEntry':
+		'Eine Seite, solange ein Eintrag veröffentlicht ist:',
 } satisfies Texts<typeof en>;

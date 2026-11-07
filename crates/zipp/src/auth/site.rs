@@ -38,6 +38,10 @@ pub struct SiteUser {
 	pub email: String,
 	/// `None` is an admin
 	pub role: Option<String>,
+	/// of their page, see [`Schema::user_pages`](crate::Schema::user_pages)
+	pub slug: String,
+	/// the values of the user fields, their public profile
+	pub fields: serde_json::Value,
 }
 
 impl SiteUser {
@@ -56,6 +60,8 @@ impl SiteUser {
 			name: u.name,
 			email: u.email,
 			role: u.role,
+			slug: u.slug,
+			fields: u.fields,
 		})
 	}
 }

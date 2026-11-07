@@ -79,16 +79,25 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 					Some(a) => GqlValue::from(a.to_string()),
 					None => GqlValue::Null,
 				},
+				// the public part, never the email; the profile if the
+				// viewer reads users and they are public
 				"author" => {
 					let Some(a) = e.author_id else {
 						return Ok(None);
 					};
+					if let Some(p) = public_author(&ctx, &e.site, a).await? {
+						return Ok(Some(user_value(GqlUser {
+							profile: p,
+							site: e.site.clone(),
+							public: true,
+						})));
+					}
 					let Some(a) = author_by_id(&ctx, a).await? else {
 						return Ok(None);
 					};
-					// the public part, never the email
-					let a = serde_json::json!({ "id": a.id.to_string(), "name": a.name });
-					GqlValue::from_json(a)?
+					return Ok(Some(user_value(GqlUser::named(
+						a.id, a.name, &e.site,
+					))));
 				}
 				"language" => {
 					let schema = ctx.data::<Arc<Schema>>()?;
@@ -168,6 +177,8 @@ pub(super) fn content_field(
 				(&e.fields, e.site.clone())
 			} else if let Some(a) = parent.downcast_ref::<SiteAsset>() {
 				(&a.asset.fields, a.site.clone())
+			} else if let Some(u) = parent.downcast_ref::<GqlUser>() {
+				(&u.profile.fields, u.site.clone())
 			} else {
 				let b = parent.try_downcast_ref::<Block>()?;
 				(&b.fields, b.site.clone())
@@ -470,8 +481,9 @@ pub(super) fn content_objects(
 		}
 	}
 
-	// the asset fields are on `Asset`
-	for comp in schema.components.iter().filter(|c| c.handle != ASSET) {
+	// the asset fields are on `Asset`, the user fields on `User`
+	let own_type = |c: &&Component| c.handle != ASSET && c.handle != USER;
+	for comp in schema.components.iter().filter(own_type) {
 		let mut obj = if comp.entry {
 			let mut obj = Object::new(format!("{}_Entry", comp.handle))
 				.implement("Entry");

@@ -65,7 +65,9 @@ Admins make the tokens of frontends in the studio
 under GraphQL, like Craft's GraphQL schemas: a name, the sections and
 sites it reads (all or some), whether preview links show drafts with it
 (`?token=` of a preview, for the website that shows the studio's
-previews; without it they show what is live), an optional expiry. The
+previews; without it they show what is live), whether it reads users
+(their public profiles, like Craft's schema permission, see
+[Users](#users)), an optional expiry. The
 token shows once when it is made, zipp keeps only its hash; the list
 shows when each was used last, a token is revoked there. The token of
 `serve --graphql-token` (`ZIPP_GRAPHQL_TOKEN`) reads everything, like
@@ -123,9 +125,9 @@ block has a field named so. Image transforms may
 have Craft's names like `land_w800`. Ids of entries and
 assets are strings (`ID`) like Craft's. Entries have
 `postDate`, `expiryDate`, `dateCreated`, `dateUpdated`, `language`,
-`siteHandle`, `authorId` and `author { id name }` (who made it, never
-the email; on `Entry` and each type unless a type has a field named
-so), `entries(authorId: 4)` (one or several) what a user made, and
+`siteHandle`, `authorId` and `author { id name }` (who made it, a
+`User`, never the email; on `Entry` and each type unless a type has a
+field named so), `entries(authorId: 4)` (one or several) what a user made, and
 `localized`, the entry in the other sites for a
 language switch (`localized { siteId siteHandle language title uri url
 }`): only where it is live and the request may read it, like any query
@@ -174,6 +176,38 @@ every word in the filename, title or alt text; `orderBy` is `title`,
 newest first without; `limit` and `offset` page it. `site` or `siteId`
 is the site of the alt texts, the primary site without. Each asset
 counts against the 10000 of a request.
+
+## Users
+
+Like Craft's users query, frontends read the public profiles of users
+(see [User fields and user pages](content-model.md#user-fields-and-user-pages)):
+
+```graphql
+{
+	users(hasEntries: { section: "recipes" }, orderBy: "name", limit: 20) {
+		id name slug uri url
+		bio photo { url(transform: "thumb") }
+	}
+	userCount(hasEntries: { section: "recipes" })
+	user(slug: "anna-muster") { name bio }
+}
+```
+
+A user is public in a site while they are the author of a live entry
+there, of the section of the user pages (`with_entries_in`), else of
+any section the token reads; `hasEntries` narrows it to the authors of
+another section. `user` takes `id` or `slug`, the three take `site` or
+`siteId` (the primary site without), `users` `orderBy` (`name` or `id`,
+`ASC` or `DESC`), `limit` (at most 1000) and `offset`. `User` has `id`,
+`name`, `slug`, `uri` and `url` (with user pages) and the user fields,
+never the email, the role or logins.
+
+Only tokens with users switched on read them, and `serve
+--graphql-token`, admins in GraphiQL and development; for the others
+`users` is empty, `userCount` 0 and `user` null. An entry's `author` is
+a `User` for every token that reads the entry: the profile when the
+token reads users and the author is public, else only `id` and `name`
+(the rest null).
 
 ## crelte
 

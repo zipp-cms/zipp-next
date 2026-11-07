@@ -96,11 +96,12 @@ pub use crate::schema::{
 	Access, ButtonOption, Choice, Column, ColumnKind, Condition, Field,
 	FieldKind, FieldRelation, FieldType, Format, GraphqlType, Icon, LinkKind,
 	Role, Scalar, Schema, Section, Site, StudioModule, Style, Target,
-	Transform,
+	Transform, UserPages,
 };
 pub use async_graphql;
 pub use axum;
 pub use rusqlite;
+pub use users::profile::page_uris as user_page_uris;
 
 #[doc(hidden)]
 pub use rust_embed;

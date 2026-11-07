@@ -52,6 +52,12 @@ pub struct UpdateReq {
 	pub password: Option<String>,
 	/// with a new password or email of oneself
 	pub current_password: Option<String>,
+	/// of the user's page, only admins change it; `None` keeps it
+	#[serde(default)]
+	pub slug: Option<String>,
+	/// all values of the user fields; `None` keeps them
+	#[serde(default)]
+	pub fields: Option<serde_json::Value>,
 }
 
 request!(UpdateReq, PUT "/users/{id}" => Account);

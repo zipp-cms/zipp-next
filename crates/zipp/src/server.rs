@@ -71,6 +71,7 @@ pub(super) async fn serve(
 		info!("applied migration {name}");
 	}
 	assets::index_usage(&db.conn(), &schema)?;
+	users::profile::fill_slugs(&db.conn())?;
 
 	let schema = Arc::new(schema);
 	let ai = match key_file {

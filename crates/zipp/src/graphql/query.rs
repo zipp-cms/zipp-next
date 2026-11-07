@@ -149,18 +149,6 @@ pub(super) fn sites_field(name: &str) -> GqlField {
 	})
 }
 
-/// The author of an entry, the public part of a user.
-pub(super) fn user_object() -> Object {
-	let field = |name: &'static str, ty: &'static str| {
-		GqlField::new(name, TypeRef::named_nn(ty), move |ctx| {
-			value_field(ctx, name)
-		})
-	};
-	Object::new("User")
-		.field(field("id", TypeRef::ID))
-		.field(field("name", TypeRef::STRING))
-}
-
 pub(super) fn site_object() -> Object {
 	let field = |name: &'static str, ty: &'static str| {
 		GqlField::new(name, TypeRef::named_nn(ty), move |ctx| {
@@ -304,6 +292,25 @@ fn params_of<'a>(
 		}
 	}
 	Ok(params)
+}
+
+/// The site of the `site` or `siteId` argument, else the primary site.
+pub(super) fn site_arg(ctx: &ResolverContext) -> async_graphql::Result<String> {
+	let schema = ctx.data::<Arc<Schema>>()?;
+	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
+	if let Some(v) = arg("site").map(|v| first(&v)).transpose()?.flatten() {
+		return Ok(v);
+	}
+	if let Some(v) = arg("siteId").map(|v| first(&v)).transpose()?.flatten() {
+		let site = match v.parse::<i64>() {
+			Ok(n) => schema.site_by_id(n),
+			Err(_) => schema.get_site(&v),
+		};
+		let site =
+			site.ok_or_else(|| GqlError::new(format!("unknown site {v}")))?;
+		return Ok(site.handle.clone());
+	}
+	Ok(schema.primary_site().handle.clone())
 }
 
 /// The first value of a list argument, as text. A single value counts

@@ -6,6 +6,7 @@ import { describeField } from './fieldKind';
 import { session } from '../core/session.svelte';
 import { t } from '../i18n/index.svelte';
 import { ASSET_FIELDS } from '../assets/api';
+import { USER_FIELDS } from '../users/api';
 import { componentPath, fieldPath, setupPath, sitesPath } from '../core/paths';
 
 /** What Setup shows of the schema: only what the role may see. */
@@ -35,9 +36,13 @@ export function visibleEntryTypes(schema: Schema): Component[] {
 	);
 }
 
-/** The GraphQL type of an entry type or block, the asset fields' is `Asset`. */
+/**
+ * The GraphQL type of an entry type or block, the asset fields' is
+ * `Asset`, the user fields' `User`.
+ */
 export function gqlType(c: Pick<Component, 'handle' | 'entry'>): string {
 	if (!c.entry && c.handle === ASSET_FIELDS) return 'Asset';
+	if (!c.entry && c.handle === USER_FIELDS) return 'User';
 	return `${c.handle}_${c.entry ? 'Entry' : 'Block'}`;
 }
 
@@ -53,6 +58,8 @@ export function usedIn(
 ): { text: string; href: string }[] {
 	if (!c.entry && c.handle === ASSET_FIELDS)
 		return [{ text: t('setup.everyAsset'), href: '/admin/assets' }];
+	if (!c.entry && c.handle === USER_FIELDS)
+		return [{ text: t('setup.everyUser'), href: '/admin/users' }];
 	const out = visibleSections(schema)
 		.filter(s => s.types.includes(c.handle))
 		.map(s => ({

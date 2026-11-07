@@ -318,7 +318,8 @@ every asset) and are edited in the asset panel; GraphQL has them on
 `Asset` (`image { url credit }`), `zipp types` writes `AssetFields`.
 Their values are the same in all sites (unlike the alt text), they have
 no defaults and can't be indexed; their relations don't count as the
-usage of an asset or entry.
+usage of an asset or entry. Users have fields the same way,
+`.user_fields`, see [User fields and user pages](#user-fields-and-user-pages).
 
 Videos are a kind of their own like in Craft: `Field::videos("clip")`
 takes mp4, webm and mov (`.extensions` of those), GraphQL's `kind` is
@@ -413,3 +414,25 @@ access) is left out on save like one to a deleted entry, unless the
 entry linked to it before. Only admins see drafts in GraphQL with their
 session. `.no_studio()` makes a role of members who only log in on the
 website, see [Website users](members.md).
+
+## User fields and user pages
+
+Users have a public profile, like Craft's user field layout and
+WordPress' author pages: their name, a `slug` and the user fields,
+`.user_fields([Field::text("bio").multiline(), Field::images("photo")
+.max(1)])`. Like the asset fields they are a component (`user`): checked
+like a block's fields, in migrations (`--rename user.bio=about`) and
+`DataTx::each("user", …)`, the same in all sites, no defaults, not
+indexed, and `id`, `name`, `slug`, `url` and `uri` are built in. A
+user's slug comes from their name when they are made (`anna-muster`,
+`-2` when it is taken, `user-4` without a name until they set one), then
+stays: admins change it on the user's page, unique like an entry's.
+
+`.user_pages(UserPages::new("cooks/{slug}").site_uri("fr",
+"cuisiniers/{slug}").with_entries_in("recipes"))` gives users a page on
+the website, like a section's uri. Only users with a live entry of
+`recipes` in the site have one and are public (in GraphQL, the
+sitemap): admins and new members without a published recipe are on no
+page. Without `with_entries_in` any live entry makes a user public.
+The uris aren't stored, so they aren't part of migrations. GraphQL has
+them in `users` and on `author`, see [GraphQL](graphql.md#users).

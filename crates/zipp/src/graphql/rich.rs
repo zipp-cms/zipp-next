@@ -8,7 +8,7 @@ pub(super) fn chunk_union(schema: &Schema) -> Union {
 	for c in schema
 		.components
 		.iter()
-		.filter(|c| !c.entry && c.handle != ASSET)
+		.filter(|c| !c.entry && c.handle != ASSET && c.handle != USER)
 	{
 		u = u.possible_type(format!("{}_Block", c.handle));
 	}

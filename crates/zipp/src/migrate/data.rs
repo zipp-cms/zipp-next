@@ -22,7 +22,7 @@ use serde_json::{Map, Value};
 
 use crate::content::walk_mut;
 use crate::migrate::apply::each_doc;
-use crate::schema::{ASSET, Schema};
+use crate::schema::{ASSET, Schema, USER};
 
 /// What a step returns: `?` works on any error, it stops the migration
 /// and rolls back all of them.
@@ -48,11 +48,13 @@ pub struct DataTx<'a> {
 }
 
 /// The fields of one entry or block in one site, of the live content, a
-/// draft or a revision, or of an asset.
+/// draft or a revision, or of an asset or a user.
 pub struct Content<'a> {
-	/// The entry's id, of an asset the asset's.
+	/// The entry's id, of an asset or a user theirs.
 	pub entry_id: i64,
-	/// Empty for an asset, assets have no sites.
+	/// The entry's type, `asset` or `user` for their fields.
+	pub ty: &'a str,
+	/// Empty for an asset or a user, they have no sites.
 	pub site: &'a str,
 	/// The title of the entry in the site, of a block too.
 	pub title: &'a str,
@@ -94,8 +96,8 @@ impl DataTx<'_> {
 
 	/// Calls `f` with every entry of an entry type or every block (or
 	/// group) of a component, in every site, in the live content, drafts
-	/// and revisions, and in the fields of assets (`"asset"`). What `f`
-	/// changes is written, an error stops.
+	/// and revisions, and in the fields of assets (`"asset"`) and users
+	/// (`"user"`). What `f` changes is written, an error stops.
 	pub fn each(
 		&self,
 		component: &str,
@@ -164,6 +166,25 @@ impl DataTx<'_> {
 			}
 		}
 
+		// users neither, their title is their name
+		let mut stmt =
+			self.conn.prepare("SELECT id, name, fields FROM users")?;
+		let rows = stmt
+			.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+			.collect::<rusqlite::Result<Vec<(i64, String, String)>>>()?;
+		drop(stmt);
+
+		for (id, name, fields) in rows {
+			let mut fields: Value = serde_json::from_str(&fields)?;
+			let at = (id, "", name.as_str());
+			if self.run(component, USER, &mut fields, at, &mut f)? {
+				self.conn.execute(
+					"UPDATE users SET fields = ?1 WHERE id = ?2",
+					params![fields.to_string(), id],
+				)?;
+			}
+		}
+
 		Ok(())
 	}
 
@@ -189,6 +210,7 @@ impl DataTx<'_> {
 			}
 			res = f(&mut Content {
 				entry_id,
+				ty,
 				site,
 				title,
 				fields: obj,

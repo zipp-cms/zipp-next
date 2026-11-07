@@ -43,7 +43,9 @@ use crate::db::Db;
 use crate::drafts::{Preview, docs_of};
 use crate::entries::query::Query;
 use crate::entries::{Entry, count, select};
-use crate::schema::{ASSET, ColumnKind, FieldKind, Format, Schema, Transform};
+use crate::schema::{
+	ASSET, ColumnKind, Component, FieldKind, Format, Schema, Transform, USER,
+};
 use crate::schema::{FieldType, GraphqlType, Scalar as FieldScalar};
 use ext::value_field;
 
@@ -75,6 +77,9 @@ mod search_tests;
 pub(crate) mod tests;
 mod texts;
 pub(crate) mod tokens;
+mod user;
+#[cfg(test)]
+mod user_tests;
 #[cfg(test)]
 mod viewer_tests;
 
@@ -90,6 +95,7 @@ pub(crate) use routes::routes;
 use search::*;
 use texts::*;
 pub(crate) use tokens::Scope;
+use user::*;
 
 /// Fields every entry has, field handles can't use them.
 pub(crate) const ENTRY_FIELDS: &[&str] = &[
@@ -143,6 +149,9 @@ pub(crate) const ASSET_FIELDS: &[&str] = &[
 	"height",
 	"srcset",
 ];
+
+/// Fields every user has, user fields can't use them.
+pub(crate) const USER_FIELDS: &[&str] = &["id", "name", "slug", "url", "uri"];
 
 /// Put before asset urls.
 struct PublicUrl(String);
@@ -311,7 +320,8 @@ pub(crate) fn build(
 		.register(where_input())
 		.register(criteria_input(&schema))
 		.register(site_object())
-		.register(user_object())
+		.register(user_object(&schema))
+		.register(has_entries_input())
 		.register(asset_object(&schema))
 		.register(link_object())
 		.register(nav_item_object())
@@ -354,7 +364,8 @@ pub(crate) fn build(
 		builder = builder.register(obj);
 	}
 	let mut query = query_object(&schema);
-	for field in search_fields().into_iter().chain(asset_list_fields()) {
+	let more = search_fields().into_iter().chain(asset_list_fields());
+	for field in more.chain(user_fields()) {
 		query = query.field(field);
 	}
 	for field in root_fields {

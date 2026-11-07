@@ -475,3 +475,13 @@ fn a_required_table_needs_a_row() {
 	assert_eq!(err[0].path, "rows");
 	assert_eq!(err[0].message, "is required");
 }
+
+#[test]
+fn urls_stay_on_the_web_or_the_site() {
+	for ok in ["https://x.ch", "http://x.ch", "/about", "#top"] {
+		assert!(safe_url(ok), "{ok}");
+	}
+	for bad in ["javascript:x", "//evil.ch", "/\\evil.ch", "data:x"] {
+		assert!(!safe_url(bad), "{bad}");
+	}
+}

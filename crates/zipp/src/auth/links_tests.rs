@@ -136,6 +136,8 @@ async fn links_end_with_a_new_password_or_email() {
 		language: String::new(),
 		password: None,
 		current_password: None,
+		slug: None,
+		fields: None,
 	};
 	admin.call(&change).await.unwrap();
 	assert!(matches!(gone(&token).await, Error::Request(_)));

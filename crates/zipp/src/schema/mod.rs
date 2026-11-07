@@ -53,6 +53,10 @@ pub(crate) const TRANSLATIONS: &str = "translations";
 /// The component of the fields of assets, see [`Schema::asset_fields`].
 pub(crate) const ASSET: &str = "asset";
 
+/// The component of the profile fields of users, see
+/// [`Schema::user_fields`].
+pub(crate) const USER: &str = "user";
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct Schema {
@@ -92,6 +96,58 @@ pub struct Schema {
 	/// The time zone of formatted dates, see [`Schema::timezone`].
 	#[serde(skip)]
 	pub(crate) timezone: Option<String>,
+	/// The pages of users on the website, see [`Schema::user_pages`].
+	/// Not in migrations: their uris aren't stored.
+	#[serde(skip)]
+	pub(crate) user_pages: Option<UserPages>,
+}
+
+/// The public pages of users, like WordPress' author pages: a user has
+/// one while they have a live entry in the section of
+/// [`UserPages::with_entries_in`] (any section without it), so admins and
+/// new members are on no page.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UserPages {
+	/// `cooks/{slug}`
+	pub uri: String,
+	/// another uri in one site, like a section's
+	#[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+	pub site_uris: BTreeMap<String, String>,
+	/// only authors of live entries of this section have a page
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub section: Option<String>,
+}
+
+impl UserPages {
+	/// Pages at a uri with `{slug}`, the user's slug.
+	pub fn new(uri: &str) -> Self {
+		Self {
+			uri: uri.into(),
+			site_uris: BTreeMap::new(),
+			section: None,
+		}
+	}
+
+	/// Another uri in one site, like `cuisiniers/{slug}` in French.
+	pub fn site_uri(mut self, site: &str, uri: &str) -> Self {
+		self.site_uris.insert(site.into(), uri.into());
+		self
+	}
+
+	/// Only users with a live entry in the section have a page and are
+	/// public in GraphQL.
+	pub fn with_entries_in(mut self, section: &str) -> Self {
+		self.section = Some(section.into());
+		self
+	}
+
+	/// The uri of a user's page in a site.
+	pub(crate) fn render_uri(&self, site: &str, slug: &str) -> String {
+		let format = self.site_uris.get(site).unwrap_or(&self.uri);
+		format.replace("{slug}", slug).trim_matches('/').into()
+	}
 }
 
 /// A markdown file of the project shown in the studio, like a readme.
@@ -389,6 +445,11 @@ impl Schema {
 
 	pub fn entry_type(&self, handle: &str) -> Option<&Component> {
 		self.get(handle).filter(|c| c.entry)
+	}
+
+	/// The pages of users, see [`Schema::user_pages`].
+	pub fn get_user_pages(&self) -> Option<&UserPages> {
+		self.user_pages.as_ref()
 	}
 
 	pub fn get_section(&self, handle: &str) -> Option<&Section> {

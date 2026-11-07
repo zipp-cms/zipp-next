@@ -1,7 +1,10 @@
+use serde_json::json;
+
 use super::api::*;
 use crate::auth::api::SessionReq;
 use crate::error::Error;
 use crate::fixtures::site_with_roles;
+use crate::schema::Field;
 use crate::testing::TestServer;
 
 fn new_user(email: &str, role: Option<&str>) -> CreateReq {
@@ -24,6 +27,8 @@ fn unchanged(a: &super::Account) -> UpdateReq {
 		language: a.user.language.clone(),
 		password: None,
 		current_password: None,
+		slug: None,
+		fields: None,
 	}
 }
 
@@ -221,4 +226,89 @@ async fn checks_what_admins_send() {
 	role.role = Some("author".into());
 	let err = admin.call(&role).await.unwrap_err();
 	assert!(matches!(err, Error::Request(_)));
+}
+
+#[tokio::test]
+async fn profiles_are_checked_and_saved() {
+	let schema = site_with_roles().user_fields([
+		Field::text("bio").multiline(),
+		Field::number("years"),
+		Field::relation("favourite", ["event"]).max(1),
+	]);
+	let ts = TestServer::new(schema);
+	let admin = ts.admin();
+	let mut anna = new_user("anna@x.ch", Some("author"));
+	anna.name = "Anna Muster".into();
+	let created = admin.call(&anna).await.unwrap();
+	assert_eq!(created.user.slug, "anna-muster");
+	assert_eq!(created.user.fields, json!({}));
+	// the same name gets a number
+	let mut other = new_user("other@x.ch", None);
+	other.name = "Anna Muster".into();
+	let other = admin.call(&other).await.unwrap();
+	assert_eq!(other.user.slug, "anna-muster-2");
+
+	// the fields are checked like a block's
+	let mut change = unchanged(&created);
+	change.fields = Some(json!({ "bio": "Cook", "years": "many" }));
+	let err = admin.call(&change).await.unwrap_err();
+	assert_eq!(paths(err), ["fields.years"]);
+	change.fields = Some(json!({ "bio": "Cook", "years": 3 }));
+	let saved = admin.call(&change).await.unwrap();
+	assert_eq!(saved.user.fields, json!({ "bio": "Cook", "years": 3 }));
+	// none keeps them
+	change.fields = None;
+	let saved = admin.call(&change).await.unwrap();
+	assert_eq!(saved.user.fields["bio"], "Cook");
+
+	// admins change the slug, like an entry's; one of another is taken
+	change.slug = Some("Anna M".into());
+	let saved = admin.call(&change).await.unwrap();
+	assert_eq!(saved.user.slug, "anna-m");
+	change.slug = Some("anna-muster-2".into());
+	let err = admin.call(&change).await.unwrap_err();
+	assert_eq!(paths(err), ["slug"]);
+	change.slug = Some(" ".into());
+	let err = admin.call(&change).await.unwrap_err();
+	assert_eq!(paths(err), ["slug"]);
+
+	// the user changes their fields, not their slug
+	let user = ts.login("anna@x.ch", "password1").await;
+	let own = user
+		.call(&GetReq {
+			id: created.user.id,
+		})
+		.await
+		.unwrap();
+	let mut change = unchanged(&own);
+	change.fields = Some(json!({ "bio": "Chef" }));
+	let saved = user.call(&change).await.unwrap();
+	assert_eq!(saved.user.fields, json!({ "bio": "Chef" }));
+	change.slug = Some("anna-m".into());
+	user.call(&change).await.unwrap();
+	change.slug = Some("queen".into());
+	let err = user.call(&change).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	// nor another user's
+	let mut theirs = unchanged(&other);
+	theirs.fields = Some(json!({ "bio": "Hacked" }));
+	let err = user.call(&theirs).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+}
+
+#[tokio::test]
+async fn a_placeholder_slug_follows_a_name_from_the_studio() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	let mut nameless = new_user("x@x.ch", None);
+	nameless.name = String::new();
+	let created = admin.call(&nameless).await.unwrap();
+	let placeholder = format!("user-{}", created.user.id);
+	assert_eq!(created.user.slug, placeholder);
+	// the studio sends the slug it shows along
+	let mut change = unchanged(&created);
+	change.name = "Anna".into();
+	change.slug = Some(placeholder);
+	let saved = admin.call(&change).await.unwrap();
+	assert_eq!(saved.user.slug, "anna");
 }
