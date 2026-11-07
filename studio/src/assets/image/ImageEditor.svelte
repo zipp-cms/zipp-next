@@ -48,17 +48,28 @@
 	]);
 
 	let img = $state<HTMLImageElement | null>(null);
+	let error = $state('');
 	// with the session, the public url has the edits; once loaded the
-	// image draws without its url
+	// image draws without its url. Only the load of the current id counts.
 	$effect(() => {
-		originalFile(id).then(blob => {
-			const i = new Image();
-			i.onload = () => {
-				img = i;
-				URL.revokeObjectURL(i.src);
-			};
-			i.src = URL.createObjectURL(blob);
-		});
+		let stale = false;
+		img = null;
+		error = '';
+		originalFile(id).then(
+			blob => {
+				if (stale) return;
+				const i = new Image();
+				i.onload = () => {
+					URL.revokeObjectURL(i.src);
+					if (!stale) img = i;
+				};
+				i.src = URL.createObjectURL(blob);
+			},
+			(e: Error) => {
+				if (!stale) error = e.message;
+			},
+		);
+		return () => (stale = true);
 	});
 
 	const size = $derived(
@@ -256,7 +267,11 @@
 				{/if}
 			</div>
 		{/if}
-		{#if !img}<p class="empty">{t('common.loading')}</p>{/if}
+		{#if error}
+			<p class="error">{error}</p>
+		{:else if !img}
+			<p class="empty">{t('common.loading')}</p>
+		{/if}
 	</div>
 	{#if mode === 'focal' && editable}
 		<p class="note">{t('assets.focalNote')}</p>

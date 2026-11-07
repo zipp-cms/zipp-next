@@ -61,7 +61,11 @@ export async function downloadZip(
 
 /** Downloads the file as it was uploaded. */
 export async function downloadOriginal(a: Asset): Promise<void> {
-	saveBlob(await originalFile(a.id), a.filename);
+	try {
+		saveBlob(await originalFile(a.id), a.filename);
+	} catch (e) {
+		alert((e as Error).message);
+	}
 }
 
 /** Whether a file is a zip, which can be unpacked into folders. */
