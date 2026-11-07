@@ -10,7 +10,7 @@
 	/**
 	 * The fields of an entry type or block with their labels and errors:
 	 * on the page the label above its field, inside a block or a card on
-	 * its left.
+	 * its left, a field with a width then narrower in its own row.
 	 */
 	let {
 		schema,
@@ -195,10 +195,18 @@
 		}
 	}
 
-	// fields that share a row keep their label above
+	// with the labels on the left every field keeps its own row, so the
+	// label column lines up; a width is the share of the value column
+	// it takes, enough for a date at least and for choices in one line
+	// where they fit
+	.nested .field {
+		grid-column: 1 / -1;
+	}
+
 	@include container-min(36rem) {
-		.nested .part {
-			@include label-above;
+		.nested .part > .value {
+			width: max(calc(var(--span) * 25%), min(100%, 14rem));
+			min-width: fit-content;
 		}
 	}
 

@@ -210,7 +210,7 @@ pub fn schema() -> Schema {
 			"event",
 			"Event",
 			[
-				// a day, sorted and filtered as 2026-11-14; in a row with
+				// a day, sorted and filtered as 2026-11-14; narrow like
 				// doors and city
 				Field::date("date")
 					.required()
