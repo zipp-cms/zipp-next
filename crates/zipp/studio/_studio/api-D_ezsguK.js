@@ -1,1 +1,0 @@
-import{r as t}from"./index-CB5beVK9.js";function a(r){return t("POST","/auth/forgot",{email:r})}function u(r){return t("GET",`/auth/links/${r}`)}function e(r,s,o){return t("POST",`/auth/links/${r}/password`,{password:s,name:o})}export{a as f,u as g,e as s};
