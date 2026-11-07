@@ -50,7 +50,9 @@ pub(crate) use save::write;
 pub(crate) use structure::move_entry;
 pub(crate) use structure::refresh_uris;
 use structure::*;
-pub(crate) use structure::{fits_below, free_uri, levels_of, next_position};
+pub(crate) use structure::{
+	SUBTREE, fits_below, free_uri, levels_of, next_position,
+};
 
 /// The tables that are built from an entry's fields, per entry and site:
 /// whatever is removed or rewritten has to clear them all.

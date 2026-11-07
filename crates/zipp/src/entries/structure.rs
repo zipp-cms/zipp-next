@@ -77,6 +77,15 @@ pub(crate) fn fits_below(
 	Ok(level + levels <= max)
 }
 
+/// `tree`: the entry `?1` and the entries below it whose `deleted_at` is
+/// `?2`, with their depth below it, 0 the entry.
+pub(crate) const SUBTREE: &str = "WITH RECURSIVE tree(id, depth) AS (
+	SELECT ?1, 0
+	UNION ALL
+	SELECT e.id, t.depth + 1 FROM entries e JOIN tree t
+	ON e.parent_id = t.id WHERE e.deleted_at IS ?2
+)";
+
 /// How many levels an entry and its children take, 1 without children.
 /// The children that are in the same state: live ones (`None`) or the
 /// ones trashed with it.
@@ -86,13 +95,7 @@ pub(crate) fn levels_of(
 	deleted_at: Option<i64>,
 ) -> Result<u32> {
 	Ok(conn.query_row(
-		"WITH RECURSIVE tree(id, depth) AS (
-			SELECT ?1, 1
-			UNION ALL
-			SELECT e.id, t.depth + 1 FROM entries e JOIN tree t
-			ON e.parent_id = t.id WHERE e.deleted_at IS ?2
-		)
-		SELECT MAX(depth) FROM tree",
+		&format!("{SUBTREE} SELECT MAX(depth) + 1 FROM tree"),
 		params![id, deleted_at],
 		|r| r.get(0),
 	)?)
