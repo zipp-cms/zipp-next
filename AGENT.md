@@ -147,7 +147,7 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   what shows on hover is always there without a pointer.
 - Lookups by handle: `core/schema.ts` (`sectionOf`, `siteOf`, ...); paths of
   pages: `core/paths.ts`; lists of a field: `core/list.ts`;
-  links: `fields/link.ts`; dates and sizes: `core/format.ts`.
+  links: `fields/link/link.ts`; dates and sizes: `core/format.ts`.
 - A field never writes its value when it mounts (opening an entry must
   not make a draft); new fields go into `fields/registry.ts`.
 
