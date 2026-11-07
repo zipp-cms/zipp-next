@@ -292,9 +292,7 @@ async fn resolve_value<'a>(
 		FieldKind::Blocks { .. } => {
 			let blocks = value.as_array().into_iter().flatten();
 			// a switched off block isn't on the website
-			let blocks = blocks
-				.filter(|b| b["enabled"] != false)
-				.map(|b| block_of(b, &site));
+			let blocks = blocks.filter_map(|b| ext::block(b, &site));
 			Ok(Some(FieldValue::list(blocks)))
 		}
 		FieldKind::Group { component } => {
