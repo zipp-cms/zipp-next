@@ -20,6 +20,7 @@
 		componentOf,
 		entryUrl,
 		siteName,
+		uriOf,
 		type Schema,
 	} from '../../core/schema';
 	import { go } from '../../core/router.svelte';
@@ -105,7 +106,8 @@
 		!onclose &&
 			id === null &&
 			!!schema.siteUrls[ed.site] &&
-			!!(ed.secDef?.uri || ed.secDef?.type_uris?.[ed.ty]),
+			!!ed.secDef &&
+			!!uriOf(ed.secDef, ed.ty, ed.site),
 	);
 	const live = $derived(
 		canLive && liveSetting.on

@@ -418,6 +418,18 @@ export function sectionName(schema: Schema, handle: string): string {
 	return sectionOf(schema, handle)?.name ?? handle;
 }
 
+/** The uri of an entry type in a section: its own, the site's or the section's. */
+export function uriOf(
+	section: Section,
+	type: string,
+	site?: string,
+): string | null {
+	const own = section.type_uris?.[type];
+	if (own !== undefined) return own;
+	const inSite = site ? section.site_uris?.[site] : undefined;
+	return inSite ?? section.uri ?? null;
+}
+
 /** Whether the entries of a section have pages: a uri, or one of a type. */
 export function hasPages(s: Section): boolean {
 	return s.uri !== null || Object.keys(s.type_uris ?? {}).length > 0;

@@ -81,18 +81,6 @@ export function usedIn(
 	return out;
 }
 
-/** The uri of an entry type in a section: its own, the site's or the section's. */
-export function uriOf(
-	section: Section,
-	type: string,
-	site?: string,
-): string | null {
-	const own = section.type_uris?.[type];
-	if (own !== undefined) return own;
-	const inSite = site ? section.site_uris?.[site] : undefined;
-	return inSite ?? section.uri ?? null;
-}
-
 /** The number of entries of each section the role sees, in the primary site. */
 export async function entryCounts(
 	schema: Schema,
