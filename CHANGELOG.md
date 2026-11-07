@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- GraphQL's `related` and the relation field arguments (`offerCategory:
+  5`, `":notempty:"`, `":empty:"`) only count the entries the viewer
+  may see, like `relatedTo`: a token learned through them that an entry
+  points to an unpublished one or to one outside its sections or sites.
 - A zip upload checks its folder before it is unpacked, and a server
   unpacks one zip at a time: another one meanwhile is a conflict (409),
   the studio sends its zips one after another.

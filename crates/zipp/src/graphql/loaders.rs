@@ -191,6 +191,12 @@ pub(super) fn viewer_query(
 				*r = Related::Entries(Box::new(of));
 			}
 		}
+		// `related` and `r.` filters too, the entries it sees
+		if q.related.is_some() || !q.relations.is_empty() {
+			let mut of = Query::new(schema);
+			of.site = q.site.clone();
+			q.targets = Some(Box::new(of));
+		}
 		q.published_only = viewer.published_only;
 		match &viewer.preview {
 			Some(Preview::Entry(id, _)) => q.preview_id = Some(*id),

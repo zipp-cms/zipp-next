@@ -294,6 +294,78 @@ async fn tokens_read_their_scope() {
 	assert_eq!(body["data"]["sites"], json!([{ "handle": "de", "id": 1 }]));
 }
 
+#[tokio::test]
+async fn relation_filters_only_of_entries_it_sees() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	let create = async |input| admin.call(&CreateReq(input)).await.unwrap();
+	let mut hidden = input("pages", "page", "Hidden", json!({}));
+	hidden.published = false;
+	let hidden = create(hidden).await.id;
+	let team = create(input("pages", "page", "Team", json!({}))).await.id;
+	let event = |title, page| {
+		input("events", "event", title, json!({ "page": [page] }))
+	};
+	create(event("Jazz", hidden)).await;
+	create(event("Rock", team)).await;
+
+	let anon = ts.anonymous();
+	let query = |args: &str| {
+		let q =
+			format!("{{ entries(section: \"events\", {args}) {{ title }} }}");
+		json!({ "query": q }).to_string()
+	};
+	let titles_of = async |args: &str, token: Option<&str>| {
+		let (_, body) =
+			graphql(&anon, "/api/graphql", &query(args), token).await;
+		titles(&body)
+			.into_iter()
+			.map(String::from)
+			.collect::<Vec<_>>()
+	};
+
+	// a frontend doesn't learn of the unpublished page
+	let live = new_token(&admin, "live", None).await;
+	let live = Some(live.as_str());
+	assert!(
+		titles_of(&format!("related: {hidden}"), live)
+			.await
+			.is_empty()
+	);
+	assert!(
+		titles_of(&format!("page: [{hidden}]"), live)
+			.await
+			.is_empty()
+	);
+	assert_eq!(titles_of("page: \":notempty:\"", live).await, ["Rock"]);
+	assert_eq!(titles_of("page: \":empty:\"", live).await, ["Jazz"]);
+	assert_eq!(titles_of(&format!("related: {team}"), live).await, ["Rock"]);
+
+	// nor of a section its token doesn't read
+	let events = new_token(&admin, "events", None).await;
+	let events = Some(events.as_str());
+	assert!(
+		titles_of(&format!("related: {team}"), events)
+			.await
+			.is_empty()
+	);
+	assert!(
+		titles_of(&format!("page: [{team}]"), events)
+			.await
+			.is_empty()
+	);
+
+	// the studio sees them all
+	let (_, body) = graphql(
+		&admin,
+		"/api/graphql",
+		&query(&format!("related: {hidden}")),
+		None,
+	)
+	.await;
+	assert_eq!(titles(&body), ["Jazz"]);
+}
+
 /// GraphiQL's query with a GraphQL schema picked.
 async fn as_schema(
 	client: &Client,

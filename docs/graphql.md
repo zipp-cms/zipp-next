@@ -137,7 +137,10 @@ field, `["and", 1, 2]` to both; `relatedToEntries: [{ section: "wiki"
 }]` the same with the entries of criteria (the arguments of `entries`
 without site, order and page, in the site of the query and only what
 the viewer may see, without another `relatedToEntries`), each criteria
-of the list must hold, like Craft's.
+of the list must hold, like Craft's. These filters, and `related: 5`
+(the entries pointing to 5), only count what the viewer may see: an
+entry that points to an unpublished one or to one of a section or site
+its token doesn't read is as if it pointed to nothing.
 `children` takes the arguments of `entries` that are about the
 children (`type`, `id`, `slug`, `relatedTo`, `relatedToEntries`,
 relation fields, `where`, `orderBy`, `limit` and `offset` per parent):

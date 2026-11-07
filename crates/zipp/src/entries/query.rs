@@ -89,6 +89,10 @@ pub struct Query {
 	pub(crate) related_to: Vec<Related>,
 	/// by a relation field of the entries, `r.offerCategory=5`
 	pub(crate) relations: Vec<RelationFilter>,
+	/// what `related` and `relations` look at, `None`: all entries; a
+	/// viewer's are the ones it sees, a relation to another one tells
+	/// nothing of it
+	pub(crate) targets: Option<Box<Query>>,
 	pub(crate) filters: Vec<Filter>,
 	pub(crate) order: Order,
 	pub(crate) desc: bool,
@@ -219,6 +223,7 @@ impl Query {
 			related: None,
 			related_to: vec![],
 			relations: vec![],
+			targets: None,
 			filters: vec![],
 			order: Order::Column("updated_at"),
 			desc: true,
@@ -428,14 +433,17 @@ impl Query {
 		Ok(q)
 	}
 
-	/// Calls `f` with the query and the queries of its `relatedToEntries`,
-	/// so what a viewer may see holds for them too.
+	/// Calls `f` with the query and the queries of its `relatedToEntries`
+	/// and `targets`, so what a viewer may see holds for them too.
 	pub(crate) fn each_mut(&mut self, f: &mut impl FnMut(&mut Query)) {
 		f(self);
 		for r in &mut self.related_to {
 			if let Related::Entries(of) = r {
 				of.each_mut(f);
 			}
+		}
+		if let Some(of) = &mut self.targets {
+			of.each_mut(f);
 		}
 	}
 
@@ -651,10 +659,22 @@ impl Query {
 				}
 			}
 		}
+		// the relations to `targets` only
+		let (targets, target_values) = match &self.targets {
+			Some(q) => {
+				let (from, values) = q.sql_from();
+				(format!(" AND target_id IN (SELECT e.id {from})"), values)
+			}
+			None => (String::new(), vec![]),
+		};
 		if let Some(id) = self.related {
-			let sql = "e.id IN (SELECT entry_id FROM entry_relations \
-				WHERE target_id = ? AND site = s.site)";
-			cond(sql.into(), vec![Value::Integer(id)]);
+			let sql = format!(
+				"e.id IN (SELECT entry_id FROM entry_relations \
+				WHERE target_id = ? AND site = s.site{targets})"
+			);
+			let mut values = vec![Value::Integer(id)];
+			values.extend(target_values.clone());
+			cond(sql, values);
 		}
 		for r in &self.related_to {
 			let (of, values) = match r {
@@ -679,16 +699,18 @@ impl Query {
 			cond(sql, both);
 		}
 		for r in &self.relations {
-			let of = "SELECT entry_id FROM entry_relations \
-				WHERE path = ? AND site = s.site";
-			let field = Value::Text(r.field.clone());
+			let of = format!(
+				"SELECT entry_id FROM entry_relations \
+				WHERE path = ? AND site = s.site{targets}"
+			);
+			let mut values = vec![Value::Text(r.field.clone())];
+			values.extend(target_values.clone());
 			if r.none {
-				cond(format!("e.id NOT IN ({of})"), vec![field]);
+				cond(format!("e.id NOT IN ({of})"), values);
 			} else if r.any || r.ids.is_empty() {
-				cond(format!("e.id IN ({of})"), vec![field]);
+				cond(format!("e.id IN ({of})"), values);
 			} else {
 				let marks = marks(r.ids.len());
-				let mut values = vec![field];
 				values.extend(r.ids.iter().map(|i| Value::Integer(*i)));
 				cond(
 					format!("e.id IN ({of} AND target_id IN ({marks}))"),
