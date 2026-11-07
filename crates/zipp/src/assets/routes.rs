@@ -2,7 +2,6 @@ use std::io::Seek;
 
 use axum::Json;
 use axum::Router;
-use axum::extract::multipart::Field;
 use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
@@ -20,40 +19,6 @@ use crate::schema::Access;
 pub(super) struct UploadParams {
 	/// the folder the files go into, the top without
 	folder: Option<i64>,
-}
-
-/// A file of a multipart request into a temporary file, a chunk at a
-/// time: uploads of 200 MB don't wait in memory.
-async fn spool(
-	files: &FsPath,
-	mut field: Field<'_>,
-) -> Result<tempfile::NamedTempFile> {
-	use tokio::io::AsyncWriteExt;
-	let tmp = temp_file(files)?;
-	let mut out = tokio::fs::File::from_std(tmp.reopen()?);
-	while let Some(chunk) = field
-		.chunk()
-		.await
-		.map_err(|e| Error::Request(e.to_string()))?
-	{
-		out.write_all(&chunk).await?;
-	}
-	out.flush().await?;
-	Ok(tmp)
-}
-
-/// The first file of a multipart request.
-async fn first_file(
-	files: &FsPath,
-	multipart: &mut Multipart,
-) -> Result<(String, tempfile::NamedTempFile)> {
-	let field = multipart
-		.next_field()
-		.await
-		.map_err(|e| Error::Request(e.to_string()))?
-		.ok_or_else(|| Error::Request("no file".into()))?;
-	let name = field.file_name().unwrap_or("file").to_string();
-	Ok((name, spool(files, field).await?))
 }
 
 /// `POST /assets?folder=<id>`, multipart: the files of the upload.
@@ -235,7 +200,10 @@ pub(super) async fn usage_route(
 	Ok(Json(
 		found
 			.into_iter()
-			.filter(|u| auth.can(&state.schema, &u.section, Access::View))
+			.filter(|u| {
+				let (section, author) = (&u.section, u.author_id);
+				auth.can_entry(&state.schema, section, author, Access::View)
+			})
 			.collect(),
 	))
 }

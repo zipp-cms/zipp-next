@@ -46,6 +46,8 @@ fn query_args(schema: &Schema) -> Vec<(String, TypeRef)> {
 		// Craft's: an id, a list of them, or `["not", 1, 2]`
 		("id", q()),
 		("ids", TypeRef::named_nn_list(TypeRef::INT)),
+		// Craft's: one or several users
+		("authorId", q()),
 		("parent", i()),
 		("level", i()),
 		("related", i()),
@@ -81,6 +83,7 @@ pub(super) const TAKEN: &[&str] = &[
 	"slug",
 	"id",
 	"ids",
+	"authorId",
 	"parent",
 	"level",
 	"related",
@@ -144,6 +147,18 @@ pub(super) fn sites_field(name: &str) -> GqlField {
 			Ok(Some(FieldValue::list(sites)))
 		})
 	})
+}
+
+/// The author of an entry, the public part of a user.
+pub(super) fn user_object() -> Object {
+	let field = |name: &'static str, ty: &'static str| {
+		GqlField::new(name, TypeRef::named_nn(ty), move |ctx| {
+			value_field(ctx, name)
+		})
+	};
+	Object::new("User")
+		.field(field("id", TypeRef::ID))
+		.field(field("name", TypeRef::STRING))
 }
 
 pub(super) fn site_object() -> Object {
@@ -224,6 +239,9 @@ fn params_of<'a>(
 					}
 					_ => params.push((name.into(), items.join(","))),
 				}
+			}
+			"authorId" => {
+				params.push(("author".into(), all(&value)?.join(",")))
 			}
 			"relatedToEntries" => {
 				for criteria in value.list()?.iter() {

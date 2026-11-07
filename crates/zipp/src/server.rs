@@ -137,6 +137,7 @@ pub(crate) fn app(state: AppState, routes: Router<AppState>) -> Router {
 		.merge(graphql::routes());
 	let mut app = Router::new()
 		.merge(assets::file_routes())
+		.merge(auth::site_routes())
 		.merge(routes)
 		.merge(studio::routes());
 	// the plugins': under /api for the studio, others for the website

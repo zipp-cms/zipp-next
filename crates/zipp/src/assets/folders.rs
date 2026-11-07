@@ -148,6 +148,16 @@ pub(crate) fn folder_named(
 	}
 }
 
+/// The folder of a path like `Members/4`, its folders made when they
+/// are missing.
+pub(crate) fn folder_at(conn: &Connection, path: &str) -> Result<i64> {
+	let mut parent = None;
+	for name in path.split('/').filter(|n| !n.trim().is_empty()) {
+		parent = Some(folder_named(conn, parent, name)?);
+	}
+	parent.ok_or_else(|| Error::Request("a folder without a name".into()))
+}
+
 /// A new name or place; not into itself or a folder in it.
 pub(crate) fn update_folder(
 	conn: &Connection,

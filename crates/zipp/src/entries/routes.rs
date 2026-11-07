@@ -1,7 +1,8 @@
 use super::api::*;
 use super::*;
 use crate::api::{ApiResult, ApiRouter, Req};
-use crate::auth::{Delete, EntryAccess, Publish, View};
+use crate::auth::{Admin, EntryAccess, Publish, View};
+use crate::trash::check_tree;
 
 /// Only the related entries the role sees: the chips of the others would
 /// show their titles and pages.
@@ -10,7 +11,9 @@ pub(crate) fn viewable_refs(
 	schema: &Schema,
 	refs: &mut BTreeMap<i64, EntryRef>,
 ) {
-	refs.retain(|_, r| auth.can(schema, &r.section, Access::View));
+	refs.retain(|_, r| {
+		auth.can_entry(schema, &r.section, r.author_id, Access::View)
+	});
 }
 
 async fn list_route(
@@ -18,23 +21,9 @@ async fn list_route(
 	auth: Authed,
 	Req(ListReq(params)): Req<ListReq>,
 ) -> ApiResult<ListReq> {
-	let conn = state.db.conn();
 	let mut q = Query::parse(&state.schema, &params).map_err(Error::Request)?;
-	for section in q.section.iter().chain(&q.any_sections) {
-		auth.check(&state.schema, section, Access::View)?;
-	}
-	// a search over all sections only finds what the role sees, also in
-	// the total, or a search would tell whether a hidden entry matches;
-	// the entries of `relatedToEntries` too
-	if !auth.admin() {
-		let sections = state.schema.sections.iter();
-		let sections: Vec<String> = sections
-			.filter(|s| auth.can(&state.schema, &s.handle, Access::View))
-			.map(|s| s.handle.clone())
-			.collect();
-		q.each_mut(&mut |q| q.sections = Some(sections.clone()));
-	}
-
+	restrict(&auth, &state.schema, &mut q)?;
+	let conn = state.db.conn();
 	let (entries, total) = list(&conn, &q)?;
 	let ids: Vec<i64> = entries.iter().map(|e| e.id).collect();
 	let mut relations = refs(&conn, &ids, &q.site, q.published_only)?;
@@ -79,17 +68,18 @@ async fn choices_route(
 		.iter()
 		.filter(|s| s.types.iter().any(|t| types.contains(&t.as_str())))
 		.filter(|s| only.is_empty() || only.contains(&s.handle.as_str()))
-		.filter(|s| auth.can(schema, &s.handle, Access::View))
+		.filter(|s| auth.can_list(schema, &s.handle))
 		.map(|s| s.handle.as_str())
 		.collect();
+	let own = auth.own_only(schema);
 	let conn = state.db.conn();
 	let search = req.search.as_deref().map(str::trim).unwrap_or_default();
 	Ok(Json(match search {
 		"" => {
 			let offset = req.offset.unwrap_or(0).max(0);
-			choices(&conn, schema, &types, &sections, &site, offset)?
+			choices(&conn, schema, &types, &sections, &site, offset, own)?
 		}
-		q => search_choices(&conn, schema, &types, &sections, &site, q)?,
+		q => search_choices(&conn, schema, &types, &sections, &site, q, own)?,
 	}))
 }
 
@@ -104,24 +94,22 @@ async fn get_route(
 	let entry = get_entry(&conn, req.id, &site)?;
 	let mut relations = refs(&conn, &[req.id], &site, false)?;
 	viewable_refs(&access.auth, &state.schema, &mut relations);
+	let ids: Vec<i64> = entry.author_id.into_iter().collect();
+	let author = authors(&conn, &ids)?.into_values().next();
 
-	Ok(Json(EntryResp { entry, relations }))
+	Ok(Json(EntryResp {
+		entry,
+		relations,
+		author,
+	}))
 }
 
 async fn create_route(
 	State(state): State<AppState>,
 	auth: Authed,
-	Req(CreateReq(mut input)): Req<CreateReq>,
+	Req(CreateReq(input)): Req<CreateReq>,
 ) -> ApiResult<CreateReq> {
-	auth.check(&state.schema, &input.section, Access::Edit)?;
-	// published only by who may publish
-	input.published &= auth.can(&state.schema, &input.section, Access::Publish);
-	let entry = {
-		let conn = state.db.conn();
-		save(&conn, &state.schema, None, input, Some(auth.user_id))?
-	};
-	state.changed(entry.id, &entry.section, ChangeKind::Saved);
-	Ok(Json(entry))
+	Ok(Json(create_as(&state, &auth, input)?))
 }
 
 /// Live at once, like publishing.
@@ -144,21 +132,37 @@ async fn move_route(
 	access: EntryAccess<Publish>,
 	Req(req): Req<MoveReq>,
 ) -> ApiResult<MoveReq> {
-	let conn = state.db.conn();
-	move_entry(&conn, &state.schema, req.id, req.parent_id, req.index)?;
+	let (conn, schema, auth) = (state.db.conn(), &state.schema, &access.auth);
+	// its children move along
+	let (id, section) = (req.id, &access.section);
+	check_tree(&conn, schema, auth, id, section, Access::Publish, None)?;
+	move_entry(&conn, schema, id, req.parent_id, req.index, Some(auth))?;
 	drop(conn);
 	state.changed(req.id, &access.section, ChangeKind::Moved);
 	Ok(Json(()))
 }
 
+async fn author_route(
+	State(state): State<AppState>,
+	_admin: Admin,
+	Req(req): Req<AuthorReq>,
+) -> ApiResult<AuthorReq> {
+	let section = {
+		let conn = state.db.conn();
+		set_author(&conn, req.id, req.author_id)?;
+		section_of(&conn, req.id)?
+	};
+	// GraphQL shows the author, frontends refresh
+	state.changed(req.id, &section, ChangeKind::Saved);
+	Ok(Json(()))
+}
+
 async fn delete_route(
 	State(state): State<AppState>,
-	access: EntryAccess<Delete>,
+	auth: Authed,
 	Req(req): Req<DeleteReq>,
 ) -> ApiResult<DeleteReq> {
-	let user = Some(access.auth.user_id);
-	crate::trash::trash_entry(&state.db.conn(), &state.schema, req.id, user)?;
-	state.changed(req.id, &access.section, ChangeKind::Deleted);
+	delete_as(&state, &auth, req.id)?;
 	Ok(Json(()))
 }
 
@@ -170,5 +174,6 @@ pub(crate) fn routes() -> Router<AppState> {
 		.api::<CreateReq, _>(create_route)
 		.api::<UpdateReq, _>(update_route)
 		.api::<MoveReq, _>(move_route)
+		.api::<AuthorReq, _>(author_route)
 		.api::<DeleteReq, _>(delete_route)
 }

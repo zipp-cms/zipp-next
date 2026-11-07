@@ -387,8 +387,26 @@ structure) < Delete per section and for assets, and `.ai()` for the
 chat. Which user has which role is in the database (`user <email>
 --role author`, or the Users page of an admin); a user without a role
 is an admin. The server checks every request, the AI can only do what
-its user can, the studio hides the rest. A relation or link to an
+its user can, the studio hides the rest.
+
+Entries have an author, like Craft's: the user who created them (in the
+studio, the api or the AI chat), none for the command line, imports and
+a deleted user. Drafts and revisions keep it; admins change it in the
+entry's sidebar, others see it there. `.own("recipes",
+Access::Delete)` gives a role access to the entries its user made, on
+top of `.section`: with only `.own` the user sees and edits their own
+recipes and no others (new ones are theirs, so `Edit` creates), with
+`.section("recipes", Access::View)` too they read the others, like
+Craft's "view other authors' entries". Every request about an entry
+checks it (drafts, publishing, moving, the trash, revisions, the AI's
+tools), lists, pickers and the search show only what the user may see,
+and the author can't be changed by such a role. In a structure
+such a user doesn't put entries below pages they can't see, and
+deletes, restores or moves an entry only when the children that go
+with it are theirs too. `/api/entries?author=4`
+lists what user 4 made. A relation or link to an
 entry of a section the role can't view (or to an asset without asset
 access) is left out on save like one to a deleted entry, unless the
 entry linked to it before. Only admins see drafts in GraphQL with their
-session.
+session. `.no_studio()` makes a role of members who only log in on the
+website, see [Website users](members.md).

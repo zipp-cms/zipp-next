@@ -350,10 +350,14 @@ export type Role = {
 	handle: string;
 	name: string;
 	sections: Record<string, Access>;
+	/** to the entries the user made, on top of `sections` */
+	own: Record<string, Access>;
 	assets: Access | null;
 	ai: boolean;
 	/** the content model read only under Setup */
 	setup: boolean;
+	/** logs into the studio; without, members log in on the website */
+	studio: boolean;
 };
 
 /** Lookups in the schema by handle. */

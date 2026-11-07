@@ -72,3 +72,26 @@ async fn assets_go_to_the_trash() {
 	let trash = editor.call(&TrashReq {}).await.unwrap();
 	assert!(trash.assets.is_empty());
 }
+
+#[tokio::test]
+async fn own_access_restores_only_own_entries() {
+	let schema = site_with_roles().role(
+		crate::schema::Role::new("member", "Member")
+			.own("events", crate::schema::Access::Delete),
+	);
+	let ts = TestServer::new(schema);
+	let (admin, member) = (ts.admin(), ts.user(Some("member")));
+	let theirs = input("events", "event", "Jazz", json!({}));
+	let theirs = admin.call(&CreateReq(theirs)).await.unwrap().id;
+	let mine = input("events", "event", "Rock", json!({}));
+	let mine = member.call(&CreateReq(mine)).await.unwrap().id;
+	admin.call(&DeleteReq { id: theirs }).await.unwrap();
+	member.call(&DeleteReq { id: mine }).await.unwrap();
+
+	let trash = member.call(&TrashReq {}).await.unwrap();
+	let ids: Vec<i64> = trash.entries.iter().map(|e| e.id).collect();
+	assert_eq!(ids, [mine]);
+	let restore = RestoreEntryReq { id: theirs };
+	assert_eq!(member.call(&restore).await.unwrap_err(), Error::Forbidden);
+	member.call(&RestoreEntryReq { id: mine }).await.unwrap();
+}

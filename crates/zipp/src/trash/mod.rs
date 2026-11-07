@@ -9,12 +9,12 @@
 
 use std::path::Path;
 
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::auth::Authed;
-use crate::db::{DAY_MS, now};
+use crate::db::{DAY_MS, marks, now};
 use crate::entries::{
 	INDEX_TABLES, fits_below, free_uri, levels_of, next_position, reindex,
 };
@@ -48,6 +48,8 @@ pub struct TrashedEntry {
 	pub deleted_at: i64,
 	/// the email of who deleted it
 	pub deleted_by: Option<String>,
+	/// who made it
+	pub author_id: Option<i64>,
 }
 
 /// An asset in the trash.
@@ -93,16 +95,52 @@ fn with_children(
 	Ok(ids)
 }
 
-/// The section of an entry in the trash.
-pub fn trashed_section(conn: &Connection, id: i64) -> Result<String> {
+/// The section of an entry in the trash, who made it and when it went.
+pub fn trashed_owner(
+	conn: &Connection,
+	id: i64,
+) -> Result<(String, Option<i64>, i64)> {
 	conn.query_row(
-		"SELECT section FROM entries WHERE id = ?1
+		"SELECT section, author_id, deleted_at FROM entries WHERE id = ?1
 		AND deleted_at IS NOT NULL",
 		[id],
-		|r| r.get(0),
+		|r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
 	)
 	.optional()?
 	.ok_or(Error::NotFound)
+}
+
+/// Whether the user may do `need` with an entry they may do it with
+/// and the children that go with it (in the trash those of
+/// `deleted_at`): with only own access to the section (see
+/// [`Role::own`](crate::Role::own)) when they all are theirs.
+pub(crate) fn check_tree(
+	conn: &Connection,
+	schema: &Schema,
+	auth: &Authed,
+	id: i64,
+	section: &str,
+	need: Access,
+	deleted_at: Option<i64>,
+) -> Result<()> {
+	if auth.can(schema, section, need) {
+		return Ok(());
+	}
+	let ids = with_children(conn, id, deleted_at)?;
+	let sql = format!(
+		"SELECT EXISTS (SELECT 1 FROM entries
+		WHERE id IN ({}) AND author_id IS NOT ?)",
+		marks(ids.len())
+	);
+	let mut values: Vec<rusqlite::types::Value> =
+		ids.into_iter().map(Into::into).collect();
+	values.push(auth.user_id.into());
+	let others: bool =
+		conn.query_row(&sql, params_from_iter(values), |r| r.get(0))?;
+	match others {
+		true => Err(Error::Forbidden),
+		false => Ok(()),
+	}
 }
 
 /// Moves an entry to the trash, in a structure with its children.
@@ -303,8 +341,8 @@ pub fn purge_asset(conn: &Connection, files: &Path, id: i64) -> Result<()> {
 	crate::assets::delete(conn, files, id)
 }
 
-/// What a user sees of the trash: entries of the sections they may
-/// delete in, assets if they may delete those. An entry that went with
+/// What a user sees of the trash: entries they may delete (of their
+/// sections, their own with own access), assets if they may delete those. An entry that went with
 /// its parent shows as one of its children.
 pub fn list(
 	conn: &Connection,
@@ -320,7 +358,7 @@ pub fn list(
 				UNION ALL
 				SELECT c.id FROM entries c JOIN tree t ON c.parent_id = t.id
 				WHERE c.deleted_at = e.deleted_at
-			) SELECT COUNT(*) - 1 FROM tree)
+			) SELECT COUNT(*) - 1 FROM tree), e.author_id
 		FROM entries e
 		JOIN entry_sites s ON s.entry_id = e.id AND s.site = ?1
 		LEFT JOIN entries p ON p.id = e.parent_id
@@ -338,11 +376,14 @@ pub fn list(
 				deleted_at: r.get(4)?,
 				deleted_by: r.get(5)?,
 				children: r.get(6)?,
+				author_id: r.get(7)?,
 			})
 		})?
 		.collect::<rusqlite::Result<Vec<_>>>()?
 		.into_iter()
-		.filter(|e| auth.can(schema, &e.section, Access::Delete))
+		.filter(|e| {
+			auth.can_entry(schema, &e.section, e.author_id, Access::Delete)
+		})
 		.collect();
 	let assets = match auth.can_assets(schema, Access::Delete) {
 		true => crate::assets::trashed(conn)?,

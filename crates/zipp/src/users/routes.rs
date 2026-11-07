@@ -8,9 +8,10 @@ use super::{
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
 use crate::auth::links::{self, end_password_links, link_mail, new_link};
+use crate::auth::site::{new_site_link, site_link_mail, site_url};
 use crate::auth::{
 	Admin, Authed, end_sessions, hash_password, password_matches,
-	set_password_hash,
+	set_password_hash, studio_role,
 };
 use crate::content::FieldError;
 use crate::error::Error;
@@ -156,26 +157,38 @@ async fn password_link_route(
 	Admin(auth): Admin,
 	Req(req): Req<PasswordLinkReq>,
 ) -> ApiResult<PasswordLinkReq> {
-	let (kind, url, expires_at, to, by) = {
+	let (kind, url, expires_at, mail) = {
 		let conn = state.db.conn();
 		let account = get(&conn, req.id)?;
 		let kind = match account.invited {
 			true => links::Kind::Invite,
 			false => links::Kind::Reset,
 		};
-		let by = Some(auth.user_id);
-		let (url, expires_at) =
-			new_link(&conn, &state.public_url, req.id, kind, by)?;
 		let by = get(&conn, auth.user_id)?.user;
-		let by = if by.name.is_empty() {
+		let by_name = if by.name.is_empty() {
 			by.email
 		} else {
 			by.name
 		};
-		(kind, url, expires_at, account.user.email, by)
+		let to = &account.user.email;
+		let by = Some(auth.user_id);
+		// a member without the studio sets it on the website
+		let role = account.user.role.as_deref();
+		if studio_role(&state.schema, role) {
+			let (url, expires_at) =
+				new_link(&conn, &state.public_url, req.id, kind, by)?;
+			let mail =
+				link_mail(&state.public_url, kind, to, &url, Some(&by_name));
+			(kind, url, expires_at, mail)
+		} else {
+			let site = site_url(&state.schema, &state.site_urls, None)?;
+			let (url, expires_at) =
+				new_site_link(&conn, &site, req.id, kind, by)?;
+			let mail = site_link_mail(&site, kind, to, &url, Some(&by_name));
+			(kind, url, expires_at, mail)
+		}
 	};
 	if req.send {
-		let mail = link_mail(&state.public_url, kind, &to, &url, Some(&by));
 		state.mail.send(mail).await?;
 	}
 	Ok(Json(LinkResp {
@@ -193,8 +206,14 @@ async fn login_as_route(
 ) -> ApiResult<LoginAsLinkReq> {
 	let conn = state.db.conn();
 	// an admin sees everything already
-	if get(&conn, req.id)?.user.role.is_none() {
+	let role = get(&conn, req.id)?.user.role;
+	if role.is_none() {
 		return Err(Error::Request("you can't log in as an admin".into()));
+	}
+	if !studio_role(&state.schema, role.as_deref()) {
+		return Err(Error::Request(
+			"this user has no access to the studio".into(),
+		));
 	}
 	let kind = links::Kind::LoginAs;
 	let by = Some(auth.user_id);

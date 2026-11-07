@@ -34,6 +34,10 @@ export default {
 	'users.end': 'Überall abmelden',
 	'users.access': 'Zugang',
 	'users.invitedNote': 'Eingeladen, noch kein Passwort.',
+	'users.websiteNote':
+		'Meldet sich nur auf der Website an: Einladungen und neue Passwörter laufen dort.',
+	'users.studio': 'Studio',
+	'users.websiteOnly': 'Nein, nur Website',
 	'users.sendInviteAgain': 'Einladung nochmals senden',
 	'users.sendReset': 'Passwort-Link senden',
 	'users.copyInvite': 'Einladungslink kopieren',

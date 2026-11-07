@@ -1,8 +1,10 @@
 //! Logins, sessions and what a user may do. A handler says who may call
 //! it with its extractor: [`Authed`] any user, [`Admin`], [`EntryAccess`]
 //! and [`AssetAccess`] a level of a role, [`AiAccess`] the AI chat.
+//! Website routes have [`SiteUser`], a login on the website.
 
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use axum::extract::{FromRef, FromRequestParts, RawPathParams};
 use axum::http::HeaderMap;
@@ -11,6 +13,7 @@ use rusqlite::Connection;
 
 use crate::AppState;
 use crate::db::{Db, now};
+use crate::entries::query::OwnOnly;
 use crate::error::{Error, Result};
 use crate::schema::{Access, Role, Schema};
 
@@ -22,16 +25,22 @@ pub(crate) mod links;
 mod links_tests;
 mod routes;
 mod sessions;
+pub(crate) mod site;
+#[cfg(test)]
+mod site_tests;
 #[cfg(test)]
 mod tests;
 mod throttle;
 
-pub(crate) use routes::routes;
+pub(crate) use routes::{routes, site_routes};
+#[cfg(any(test, feature = "testing"))]
+pub(crate) use sessions::new_site_session;
 pub use sessions::{Session, end_session, short_session};
 pub(crate) use sessions::{
 	add_user, end_sessions, hash_password, login, new_session,
 	password_matches, renew_session, set_password_hash,
 };
+pub use site::SiteUser;
 pub(crate) use throttle::Throttle;
 
 /// Extractor that only succeeds with a valid `session-token` header.
@@ -45,6 +54,17 @@ pub struct Authed {
 }
 
 impl Authed {
+	/// A user logged in on the website, for the routes of plugins that
+	/// act as them (see [`entries::create_as`](crate::entries::create_as)):
+	/// the same checks as in the studio, also for a role without it.
+	pub fn of_site_user(user: &SiteUser) -> Self {
+		Self {
+			user_id: user.id,
+			role: user.role.clone(),
+			token: String::new(),
+		}
+	}
+
 	pub fn admin(&self) -> bool {
 		self.role.is_none()
 	}
@@ -65,6 +85,45 @@ impl Authed {
 				.role(schema)
 				.and_then(|r| r.sections.get(section))
 				.is_some_and(|a| *a >= need)
+	}
+
+	/// Whether the user may do `need` with an entry of a section that
+	/// `author` made: the section's access, for their own entries also
+	/// the role's own access ([`Role::own`]). A new entry is theirs.
+	pub fn can_entry(
+		&self,
+		schema: &Schema,
+		section: &str,
+		author: Option<i64>,
+		need: Access,
+	) -> bool {
+		self.can(schema, section, need)
+			|| (author == Some(self.user_id)
+				&& self
+					.role(schema)
+					.and_then(|r| r.own.get(section))
+					.is_some_and(|a| *a >= need))
+	}
+
+	/// Whether the user sees entries of a section, all or their own.
+	pub fn can_list(&self, schema: &Schema, section: &str) -> bool {
+		self.can_entry(schema, section, Some(self.user_id), Access::View)
+	}
+
+	/// The sections of which the user sees only their own entries, for
+	/// the queries of lists.
+	pub(crate) fn own_only(&self, schema: &Schema) -> Option<OwnOnly> {
+		let sections: Vec<String> = self
+			.role(schema)?
+			.own
+			.keys()
+			.filter(|s| !self.can(schema, s, Access::View))
+			.cloned()
+			.collect();
+		(!sections.is_empty()).then_some(OwnOnly {
+			author: self.user_id,
+			sections,
+		})
 	}
 
 	pub fn can_assets(&self, schema: &Schema, need: Access) -> bool {
@@ -94,6 +153,17 @@ impl Authed {
 		allowed(self.can(schema, section, need))
 	}
 
+	/// [`Authed::can_entry`] as an error, where no extractor checks it.
+	pub fn check_entry(
+		&self,
+		schema: &Schema,
+		section: &str,
+		author: Option<i64>,
+		need: Access,
+	) -> Result<()> {
+		allowed(self.can_entry(schema, section, author, need))
+	}
+
 	/// [`Authed::can_assets`] as an error, where no extractor checks it.
 	pub fn check_assets(&self, schema: &Schema, need: Access) -> Result<()> {
 		allowed(self.can_assets(schema, need))
@@ -111,6 +181,7 @@ impl<S> FromRequestParts<S> for Authed
 where
 	S: Send + Sync,
 	Db: FromRef<S>,
+	Arc<Schema>: FromRef<S>,
 {
 	type Rejection = Error;
 
@@ -123,6 +194,10 @@ where
 			return Err(Error::MissingSessionToken);
 		};
 		let role = role_of(&conn, user_id)?;
+		// a role that lost the studio: its sessions are gone for it
+		if !studio_role(&Arc::<Schema>::from_ref(state), role.as_deref()) {
+			return Err(Error::InvalidSessionToken);
+		}
 		Ok(Self {
 			user_id,
 			role,
@@ -170,10 +245,13 @@ impl FromRequestParts<AppState> for Admin {
 	}
 }
 
-/// A user who may do `L` in the section of the entry `{id}` of the path.
+/// A user who may do `L` with the entry `{id}` of the path: in its
+/// section, or as its author with the role's own access.
 pub struct EntryAccess<L> {
 	pub auth: Authed,
 	pub section: String,
+	/// who made the entry
+	pub author_id: Option<i64>,
 	level: PhantomData<L>,
 }
 
@@ -194,11 +272,13 @@ impl<L: Level> FromRequestParts<AppState> for EntryAccess<L> {
 			.and_then(|(_, v)| v.parse().ok())
 			.ok_or(Error::NotFound)?;
 
-		let section = crate::entries::section_of(&state.db.conn(), id)?;
-		auth.check(&state.schema, &section, L::ACCESS)?;
+		let (section, author_id) =
+			crate::entries::owner_of(&state.db.conn(), id)?;
+		auth.check_entry(&state.schema, &section, author_id, L::ACCESS)?;
 		Ok(Self {
 			auth,
 			section,
+			author_id,
 			level: PhantomData,
 		})
 	}
@@ -268,7 +348,7 @@ pub(crate) fn session(
 		return Ok(None);
 	};
 
-	match sessions::get_session(conn, token)? {
+	match sessions::get_session(conn, token, false)? {
 		Some(s) if s.expires_at > now() => Ok(Some(s.user_id)),
 		_ => Err(Error::InvalidSessionToken),
 	}
@@ -308,4 +388,11 @@ pub(crate) fn role_of(
 		[user_id],
 		|r| r.get(0),
 	)?)
+}
+
+/// Whether users of a role may use the studio, see [`Role::no_studio`];
+/// admins always.
+pub(crate) fn studio_role(schema: &Schema, role: Option<&str>) -> bool {
+	role.and_then(|r| schema.get_role(r))
+		.is_none_or(|r| r.studio)
 }

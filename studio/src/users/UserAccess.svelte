@@ -7,15 +7,23 @@
 
 	/**
 	 * The side of an account: when it was made and used, its sessions,
-	 * and for admins the invite or reset link and logging in as it.
+	 * and for admins the invite or reset link and logging in as it. A
+	 * member without the studio (`studio` false) gets links to the
+	 * website and can't be logged in as.
 	 */
 	let {
 		form,
 		account,
 		admin,
 		title,
-	}: { form: UserForm; account: Account; admin: boolean; title: string } =
-		$props();
+		studio,
+	}: {
+		form: UserForm;
+		account: Account;
+		admin: boolean;
+		title: string;
+		studio: boolean;
+	} = $props();
 
 	function endSessions() {
 		const what = form.own
@@ -51,6 +59,9 @@
 		{#if account.invited}
 			<p class="note">{t('users.invitedNote')}</p>
 		{/if}
+		{#if !studio}
+			<p class="note">{t('users.websiteNote')}</p>
+		{/if}
 		<div class="buttons">
 			<button onclick={() => form.link(true)} disabled={form.busy}>
 				<Icon name="mail" />
@@ -66,7 +77,7 @@
 				<Icon name="copy-url" />
 				{account.invited ? t('users.copyInvite') : t('users.copyReset')}
 			</button>
-			{#if account.role !== null}
+			{#if account.role !== null && studio}
 				<button
 					onclick={() => form.loginAs(false)}
 					disabled={form.busy}

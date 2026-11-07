@@ -37,6 +37,7 @@ mod sort_tests;
 #[cfg(test)]
 pub(crate) mod tests;
 mod transform;
+mod upload;
 
 pub(crate) use archive::{
 	Limits, Unzipped, ZipOf, read_zip, unzip, write_zip, zip_files,
@@ -46,8 +47,8 @@ pub(crate) use edits::Edits;
 use edits::{Canvas, Crop, Resize};
 use folders::folder;
 pub(crate) use folders::{
-	Folder, check_folder, create_folder, delete_folder, folder_named,
-	folder_paths, folders, folders_under, move_assets, top_count,
+	Folder, check_folder, create_folder, delete_folder, folder_at,
+	folder_named, folder_paths, folders, folders_under, move_assets, top_count,
 	update_folder,
 };
 #[cfg(feature = "craft")]
@@ -64,6 +65,8 @@ pub(crate) use routes::api_routes;
 pub(crate) use sort::sort_assets;
 pub use transform::transform_size;
 use transform::*;
+pub use upload::{UploadRules, upload_as};
+use upload::{first_file, spool};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

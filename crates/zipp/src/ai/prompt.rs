@@ -91,7 +91,9 @@ pub(super) fn describe_view(
 	let entry = by_uri(&conn, &site, &uri).ok().flatten();
 	let Some(Entry {
 		id, section, title, ..
-	}) = entry.filter(|e| auth.can(&state.schema, &e.section, Access::View))
+	}) = entry.filter(|e| {
+		auth.can_entry(&state.schema, &e.section, e.author_id, Access::View)
+	})
 	else {
 		return format!("The editor sees the page {url} in site {site}.");
 	};

@@ -11,6 +11,7 @@ use async_graphql::dataloader::{DataLoader, HashMapCache, Loader};
 
 use super::*;
 use crate::content::link_kind;
+use crate::entries::Author;
 use crate::entries::query::MAX_IDS;
 use crate::schema::LinkKind;
 
@@ -19,6 +20,7 @@ pub(super) struct Loaders {
 	entries: DataLoader<Entries, HashMapCache>,
 	children: DataLoader<Children, HashMapCache>,
 	assets: DataLoader<Assets, HashMapCache>,
+	authors: DataLoader<Authors, HashMapCache>,
 }
 
 /// What the loaders read with: the database, the schema and who asks.
@@ -40,6 +42,9 @@ type ChildrenKey = (String, Vec<(String, String)>, i64);
 
 struct Assets(Db);
 
+/// The authors of entries by user id.
+struct Authors(Db);
+
 impl Loaders {
 	fn of<'a>(ctx: &ResolverContext<'a>) -> async_graphql::Result<&'a Self> {
 		let viewer = ctx.data::<Viewer>()?;
@@ -55,6 +60,7 @@ impl Loaders {
 				entries: batched(Entries(source.clone())),
 				children: batched(Children(source)),
 				assets: batched(Assets(db.clone())),
+				authors: batched(Authors(db.clone())),
 			}
 		}))
 	}
@@ -302,6 +308,26 @@ pub(super) async fn children_of(
 	let children = children.unwrap_or_default();
 	spend(ctx, children.len())?;
 	Ok(children)
+}
+
+impl Loader<i64> for Authors {
+	type Value = Author;
+	type Error = GqlError;
+
+	async fn load(
+		&self,
+		ids: &[i64],
+	) -> async_graphql::Result<HashMap<i64, Author>> {
+		Ok(crate::entries::authors(&self.0.conn(), ids)?)
+	}
+}
+
+/// The author of an entry, `None` if the user is gone.
+pub(super) async fn author_by_id(
+	ctx: &ResolverContext<'_>,
+	id: i64,
+) -> async_graphql::Result<Option<Author>> {
+	Loaders::of(ctx)?.authors.load_one(id).await
 }
 
 /// Assets in the order of the ids, the trashed ones left out.

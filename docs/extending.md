@@ -217,7 +217,9 @@ A plugin is a crate that adds a whole feature, turned on with one line:
   rights of who asks, so previews show drafts.
 - `api_routes` under `/api` for the studio, made like zipp's own (see
   [The rest api](#the-rest-api)), `routes` for the website, like sitemaps
-  the frontend proxies; both get the finished schema.
+  the frontend proxies; both get the finished schema. A website route of
+  a logged in user changes content as them with `entries::create_as`
+  and the others, see [Website users](members.md).
 - `studio`: an ES module served as `/_plugins/<name>.js` with data for it;
   `sectionSetup(target, { schema, section, data, host })` adds a card to
   the setup page of a section. `PluginStudio::default().data(..)` gives
@@ -314,7 +316,9 @@ assert_eq!(err, Error::Forbidden);
 `ts.routes(...)` adds the site's routes, `ts.dev()` development mode,
 `ts.site_urls(...)` the urls of the sites, `ts.indexing(false)` like
 `serve --noindex`,
-`ts.login(email, password)` logs in like the studio, `ts.graphql(query,
+`ts.login(email, password)` logs in like the studio, `ts.visitor(token)`
+sends to the website's routes like a frontend and `ts.site_user(role)`
+is logged in there (members.md), `ts.graphql(query,
 variables)` asks like a frontend with its token; `client.get(path)`
 fetches a page or a file, `client.send(...)` any request and
 `client.upload(...)` files; `testing::input(section, type, title,

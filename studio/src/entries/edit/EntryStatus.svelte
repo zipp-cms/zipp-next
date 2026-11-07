@@ -3,7 +3,8 @@
 	import Switch from 'zipp-ui/Switch.svelte';
 	import { dateState } from '../api';
 	import { shortTime } from '../../core/format';
-	import { canSetup } from '../../core/access';
+	import { canSetup, isAdmin } from '../../core/access';
+	import { displayName } from '../../users/api';
 	import { setupPath } from '../../core/paths';
 	import SiteBadges from '../SiteBadges.svelte';
 	import { componentName, siteName } from '../../core/schema';
@@ -35,6 +36,12 @@
 	const may = $derived(ed.may);
 	const isNew = $derived(ed.id === null);
 	const multiSite = $derived(schema.sites.length > 1);
+	// like Craft's: admins choose it, the others see it
+	const authored = $derived(!isNew && !ed.single);
+	const admin = $derived(isAdmin(schema));
+	$effect(() => {
+		if (authored && admin) ed.loadUsers();
+	});
 
 	/** a published entry its dates keep off the website, and why */
 	const waiting = $derived(dateState(ed.dates));
@@ -190,6 +197,31 @@ discarding or restoring: what is typed then would be lost -->
 						<option value={p.id}>{p.title}</option>
 					{/each}
 				</select>
+			</label>
+		{/if}
+		{#if authored}
+			<label>
+				<span>{t('entries.author')}</span>
+				{#if admin}
+					<select
+						value={ed.authorId}
+						onchange={e => {
+							const v = e.currentTarget.value;
+							ed.changeAuthor(v ? Number(v) : null);
+						}}
+					>
+						<option value="">{t('entries.noAuthor')}</option>
+						{#each ed.users as u (u.id)}
+							<option value={u.id}>{displayName(u)}</option>
+						{/each}
+					</select>
+				{:else}
+					<span class="value">
+						{ed.author
+							? ed.author.name || t('entries.unnamed')
+							: t('entries.noAuthor')}
+					</span>
+				{/if}
 			</label>
 		{/if}
 		<!-- the url is under View and in the live preview -->

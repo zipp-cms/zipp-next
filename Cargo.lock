@@ -3678,6 +3678,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "zipp-members"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+ "zipp-cms",
+]
+
+[[package]]
 name = "zipp-seo"
 version = "0.1.0"
 dependencies = [

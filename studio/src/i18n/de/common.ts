@@ -15,6 +15,7 @@ export default {
 	'common.discard': 'Verwerfen',
 	'common.download': 'Herunterladen',
 	'common.draft': 'Entwurf',
+	'common.ownAccess': 'eigene Einträge: {access}',
 	'common.edit': 'Bearbeiten',
 	'common.email': 'E-Mail',
 	'common.loading': 'Lädt…',

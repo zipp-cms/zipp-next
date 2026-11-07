@@ -31,6 +31,11 @@ pub struct Role {
 	pub name: String,
 	/// section handle to access, sections without one are hidden
 	pub sections: BTreeMap<String, Access>,
+	/// section handle to access to the entries the user made (their
+	/// author), on top of `sections`; the entries of others show only
+	/// as far as `sections` says
+	#[serde(default)]
+	pub own: BTreeMap<String, Access>,
 	/// the images and files, `None` hides them
 	pub assets: Option<Access>,
 	/// the AI chat; it can do what the role can
@@ -39,6 +44,10 @@ pub struct Role {
 	/// admins for changes
 	#[serde(default = "yes")]
 	pub setup: bool,
+	/// whether its users may log into the studio; without, they only log
+	/// in on the website (members), see `auth::SiteUser`
+	#[serde(default = "yes")]
+	pub studio: bool,
 }
 
 fn yes() -> bool {
@@ -51,9 +60,11 @@ impl Role {
 			handle: handle.into(),
 			name: name.into(),
 			sections: BTreeMap::new(),
+			own: BTreeMap::new(),
 			assets: None,
 			ai: false,
 			setup: true,
+			studio: true,
 		}
 	}
 
@@ -73,6 +84,16 @@ impl Role {
 		self
 	}
 
+	/// Access to the entries of a section the user made, like Craft's
+	/// permissions without "other authors' entries": a member edits their
+	/// own recipes with `.own("recipes", Access::Delete)` and doesn't see
+	/// the others in the studio; `.section("recipes", Access::View)`
+	/// shows those too. New entries are theirs, so `Edit` may create.
+	pub fn own(mut self, handle: &str, access: Access) -> Self {
+		self.own.insert(handle.into(), access);
+		self
+	}
+
 	pub fn assets(mut self, access: Access) -> Self {
 		self.assets = Some(access);
 		self
@@ -85,6 +106,16 @@ impl Role {
 
 	/// Hides Setup, like Craft's settings for an editor who only writes.
 	pub fn without_setup(mut self) -> Self {
+		self.setup = false;
+		self
+	}
+
+	/// Users of the role can't log into the studio, only on the website,
+	/// like Craft's "Access the control panel" unchecked: members who
+	/// edit their own content in the frontend. Admins still manage them
+	/// on the Users page.
+	pub fn no_studio(mut self) -> Self {
+		self.studio = false;
 		self.setup = false;
 		self
 	}

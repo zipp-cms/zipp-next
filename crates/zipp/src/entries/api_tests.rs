@@ -621,3 +621,210 @@ async fn choices_skip_empty_parts_of_a_list() {
 	let none = admin.call(&choices_req("", None)).await.unwrap();
 	assert!(none.entries.is_empty());
 }
+
+/// [`site_with_roles`] with a member who deletes their own events and
+/// sees no others.
+fn site_with_members() -> crate::schema::Schema {
+	site_with_roles()
+		.role(Role::new("member", "Member").own("events", Access::Delete))
+}
+
+#[tokio::test]
+async fn entries_have_their_author() {
+	let ts = TestServer::new(site_with_members());
+	let admin = ts.admin();
+	let member = ts.user(Some("member"));
+	let jazz = input("events", "event", "Jazz", json!({}));
+	let jazz = admin.call(&CreateReq(jazz)).await.unwrap();
+	let rock = input("events", "event", "Rock", json!({}));
+	let rock = member.call(&CreateReq(rock)).await.unwrap();
+	let (admin_id, member_id) =
+		(jazz.author_id.unwrap(), rock.author_id.unwrap());
+	assert_ne!(admin_id, member_id);
+	ts.state
+		.db
+		.conn()
+		.execute("UPDATE users SET name = 'Mia' WHERE id = ?1", [member_id])
+		.unwrap();
+
+	// the studio shows the name
+	let get = GetReq {
+		id: rock.id,
+		site: None,
+	};
+	let got = admin.call(&get).await.unwrap();
+	assert_eq!(got.author.unwrap().name, "Mia");
+
+	// only an admin gives an entry another author, of the users there are
+	let to_member = AuthorReq {
+		id: jazz.id,
+		author_id: Some(member_id),
+	};
+	let err = member.call(&to_member).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	let unknown = AuthorReq {
+		id: jazz.id,
+		author_id: Some(999),
+	};
+	let err = admin.call(&unknown).await.unwrap_err();
+	assert!(matches!(err, Error::Request(_)), "{err:?}");
+	admin.call(&to_member).await.unwrap();
+	let mine = params(&[("author", &member_id.to_string())]);
+	let list = admin.call(&mine).await.unwrap();
+	assert_eq!(list.total, 2);
+
+	// a save keeps it, a deleted user leaves none
+	let update = UpdateReq {
+		id: jazz.id,
+		input: input("events", "event", "Jazz!", json!({})),
+	};
+	let saved = admin.call(&update).await.unwrap();
+	assert_eq!(saved.author_id, Some(member_id));
+	let delete = crate::users::api::DeleteReq { id: member_id };
+	admin.call(&delete).await.unwrap();
+	let got = admin.call(&get).await.unwrap();
+	assert_eq!((got.entry.author_id, got.author), (None, None));
+}
+
+#[tokio::test]
+async fn own_access_reaches_only_own_entries() {
+	let ts = TestServer::new(site_with_members());
+	let admin = ts.admin();
+	let member = ts.user(Some("member"));
+	let theirs = input("events", "event", "Jazz", json!({}));
+	let theirs = admin.call(&CreateReq(theirs)).await.unwrap();
+
+	// own Delete: creates published, the entry is theirs; nothing else
+	let mut mine = input("events", "event", "Rock", json!({}));
+	mine.published = true;
+	let mine = member.call(&CreateReq(mine)).await.unwrap();
+	assert!(mine.published);
+	let page = input("pages", "page", "About", json!({}));
+	let err = member.call(&CreateReq(page)).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+
+	// only theirs in lists, also without a section and in pickers
+	for p in [vec![("section", "events")], vec![]] {
+		let list = member.call(&params(&p)).await.unwrap();
+		let ids: Vec<i64> = list.entries.iter().map(|e| e.id).collect();
+		assert_eq!((ids, list.total), (vec![mine.id], 1), "{p:?}");
+	}
+	let err = member
+		.call(&params(&[("section", "pages")]))
+		.await
+		.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	let found = member.call(&choices_req("event", None)).await.unwrap();
+	let ids: Vec<i64> = found.entries.iter().map(|e| e.id).collect();
+	assert_eq!(ids, [mine.id]);
+	assert_eq!(found.totals["events"].entries, 1);
+
+	// theirs is forbidden, mine works
+	let get = |id| GetReq { id, site: None };
+	let err = member.call(&get(theirs.id)).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	member.call(&get(mine.id)).await.unwrap();
+	let update = |id| UpdateReq {
+		id,
+		input: input("events", "event", "Changed", json!({})),
+	};
+	let err = member.call(&update(theirs.id)).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	let saved = member.call(&update(mine.id)).await.unwrap();
+	assert_eq!(saved.title, "Changed");
+	let err = member
+		.call(&AuthorReq {
+			id: mine.id,
+			author_id: None,
+		})
+		.await
+		.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	let err = member.call(&DeleteReq { id: theirs.id }).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	member.call(&DeleteReq { id: mine.id }).await.unwrap();
+
+	// with View on the section the others show too, read only
+	let schema = site_with_roles().role(
+		Role::new("member", "Member")
+			.section("events", Access::View)
+			.own("events", Access::Edit),
+	);
+	let ts = TestServer::new(schema);
+	let admin = ts.admin();
+	let member = ts.user(Some("member"));
+	let theirs = input("events", "event", "Jazz", json!({}));
+	let theirs = admin.call(&CreateReq(theirs)).await.unwrap();
+	let mine = input("events", "event", "Rock", json!({}));
+	let mine = member.call(&CreateReq(mine)).await.unwrap();
+	let list = member
+		.call(&params(&[("section", "events")]))
+		.await
+		.unwrap();
+	assert_eq!(list.total, 2);
+	member.call(&get(theirs.id)).await.unwrap();
+	let err = member.call(&update(theirs.id)).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	// own Edit doesn't publish
+	let err = member.call(&update(mine.id)).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+}
+
+#[tokio::test]
+async fn own_access_stops_at_the_entries_of_others_in_a_tree() {
+	let schema = site_with_roles()
+		.role(Role::new("member", "Member").own("pages", Access::Delete));
+	let ts = TestServer::new(schema);
+	let admin = ts.admin();
+	let member = ts.user(Some("member"));
+	let about = input("pages", "page", "About", json!({}));
+	let about = admin.call(&CreateReq(about)).await.unwrap();
+
+	// not below a page they don't see
+	let mut under = input("pages", "page", "Under", json!({}));
+	under.parent_id = Some(about.id);
+	let err = member.call(&CreateReq(under)).await.unwrap_err();
+	assert!(matches!(err, Error::Request(_)), "{err:?}");
+	let mine = input("pages", "page", "Mine", json!({}));
+	let mine = member.call(&CreateReq(mine)).await.unwrap();
+	let to_about = MoveReq {
+		id: mine.id,
+		parent_id: Some(about.id),
+		index: 0,
+	};
+	let err = member.call(&to_about).await.unwrap_err();
+	assert!(matches!(err, Error::Request(_)), "{err:?}");
+
+	// a page of someone else below theirs: it doesn't go with it
+	let mut sub = input("pages", "page", "Sub", json!({}));
+	sub.parent_id = Some(mine.id);
+	admin.call(&CreateReq(sub)).await.unwrap();
+	let to_top = MoveReq {
+		id: mine.id,
+		parent_id: None,
+		index: 1,
+	};
+	let err = member.call(&to_top).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	let delete = DeleteReq { id: mine.id };
+	let err = member.call(&delete).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+
+	// nor out of the trash
+	admin.call(&delete).await.unwrap();
+	let restore = crate::trash::api::RestoreEntryReq { id: mine.id };
+	let err = member.call(&restore).await.unwrap_err();
+	assert_eq!(err, Error::Forbidden);
+	admin.call(&restore).await.unwrap();
+
+	// their own tree is theirs
+	let mut own_sub = input("pages", "page", "Own sub", json!({}));
+	own_sub.parent_id = Some(mine.id);
+	let own_sub = member.call(&CreateReq(own_sub)).await.unwrap();
+	let child = MoveReq {
+		id: own_sub.id,
+		parent_id: None,
+		index: 0,
+	};
+	member.call(&child).await.unwrap();
+}

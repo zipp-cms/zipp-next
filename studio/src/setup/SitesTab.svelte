@@ -1,6 +1,11 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
-	import { accessText, isAdmin, roleName } from '../core/access';
+	import {
+		accessText,
+		isAdmin,
+		roleAccessText,
+		roleName,
+	} from '../core/access';
 	import { visibleRoles, visibleSections } from './setup';
 	import Table from 'zipp-ui/Table.svelte';
 	import MailCard from './MailCard.svelte';
@@ -72,6 +77,7 @@
 				t('setup.assets'),
 				t('setup.ai'),
 				t('setup.setup'),
+				t('setup.studio'),
 			]}
 		>
 			{#snippet row(r)}
@@ -80,11 +86,12 @@
 					<code>{r.handle}</code>
 				</td>
 				{#each sections as s (s.handle)}
-					<td>{accessText(r.sections[s.handle])}</td>
+					<td>{roleAccessText(r, s.handle)}</td>
 				{/each}
 				<td>{accessText(r.assets)}</td>
 				<td>{r.ai ? t('common.yes') : '–'}</td>
 				<td>{r.setup ? t('common.yes') : '–'}</td>
+				<td>{r.studio ? t('common.yes') : t('setup.websiteOnly')}</td>
 			{/snippet}
 		</Table>
 	</div>

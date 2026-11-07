@@ -253,6 +253,18 @@ pub(crate) const MIGRATIONS: &[&str] = &[
 	UPDATE assets SET kind = 'video'
 	WHERE kind = 'file' AND mime LIKE 'video/%';
 "#,
+	// sessions of the website, see auth/site.rs: a frontend logs users in
+	// for it, they never open the studio's api
+	r#"
+	ALTER TABLE sessions ADD COLUMN site INTEGER NOT NULL DEFAULT 0;
+"#,
+	// who made an entry, like Craft's author; NULL: the system (the
+	// command line, an import) or a deleted user
+	r#"
+	ALTER TABLE entries
+	ADD COLUMN author_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+	CREATE INDEX entries_author ON entries(author_id);
+"#,
 ];
 
 /// `?, ?, ?` for an `IN` of `n` values.

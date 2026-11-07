@@ -519,3 +519,54 @@ async fn frontends_list_the_assets() {
 	let (_, data) = graphql(&anon, "/api/graphql", body, Some(&token)).await;
 	assert_eq!(data["data"], json!({ "assets": [], "de": 0 }));
 }
+
+#[tokio::test]
+async fn entries_have_their_author() {
+	let schema = site_with_roles()
+		.role(Role::new("member", "Member").own("events", Access::Delete))
+		.section(crate::schema::Section::channel("notes", ["note"]))
+		.entry("note", "Note", [crate::schema::Field::text("author")]);
+	let ts = TestServer::new(schema);
+	let member = ts.user(Some("member"));
+	let mut jazz = input("events", "event", "Jazz", json!({}));
+	jazz.published = true;
+	ts.admin().call(&CreateReq(jazz)).await.unwrap();
+	let mut rock = input("events", "event", "Rock", json!({}));
+	rock.published = true;
+	let id = member
+		.call(&CreateReq(rock))
+		.await
+		.unwrap()
+		.author_id
+		.unwrap();
+	let name = "UPDATE users SET name = 'Mia' WHERE id = ?1";
+	ts.state.db.conn().execute(name, [id]).unwrap();
+
+	let query = "query($a: [QueryArgument]) {
+		entries(section: \"events\", authorId: $a) {
+			title authorId ... on event_Entry { author { id name } } } }";
+	let body = ts.graphql(query, json!({ "a": [id] })).await;
+	let mia = json!({ "id": id.to_string(), "name": "Mia" });
+	assert_eq!(
+		body["data"]["entries"],
+		json!([{ "title": "Rock", "authorId": id.to_string(), "author": mia }]),
+		"{body}"
+	);
+	// no users, no entries
+	let body = ts.graphql(query, json!({ "a": [] })).await;
+	assert_eq!(body["data"]["entries"], json!([]), "{body}");
+	// the public part only
+	let query = "{ entries { ... on event_Entry { author { email } } } }";
+	let body = ts.graphql(query, json!({})).await;
+	assert!(body["errors"][0]["message"].as_str().is_some(), "{body}");
+
+	// a field of the name stays the type's, the other types have the
+	// author but `Entry` doesn't
+	let mut note = input("notes", "note", "A", json!({ "author": "Sue" }));
+	note.published = true;
+	ts.admin().call(&CreateReq(note)).await.unwrap();
+	let query =
+		"{ entries(section: \"notes\") { ... on note_Entry { author } } }";
+	let body = ts.graphql(query, json!({})).await;
+	assert_eq!(body["data"]["entries"], json!([{ "author": "Sue" }]));
+}

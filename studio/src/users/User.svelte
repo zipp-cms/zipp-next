@@ -27,7 +27,7 @@
 	import { go } from '../core/router.svelte';
 	import { userPath } from '../core/paths';
 	import { guardLeave } from '../core/leave';
-	import { isAdmin, roleNameOf } from '../core/access';
+	import { isAdmin, roleNameOf, studioRole } from '../core/access';
 	import { browserLang, LANGUAGES, t, type Lang } from '../i18n/index.svelte';
 
 	/**
@@ -243,7 +243,13 @@
 			</div>
 		</div>
 		{#if form.account}
-			<UserAccess {form} account={form.account} {admin} {title} />
+			<UserAccess
+				{form}
+				account={form.account}
+				{admin}
+				{title}
+				studio={studioRole(schema, form.account.role)}
+			/>
 		{/if}
 	</aside>
 </div>

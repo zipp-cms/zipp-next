@@ -140,7 +140,7 @@ fn an_entry_too_deep_for_its_parent_comes_back_on_the_top() {
 
 	// team goes with anna, about moves a level down meanwhile
 	trash_entry(&conn, &s, team, None).unwrap();
-	move_entry(&conn, &s, about, Some(home), 0).unwrap();
+	move_entry(&conn, &s, about, Some(home), 0, None).unwrap();
 
 	restore_entry(&conn, &s, team).unwrap();
 	let back = get_entry(&conn, team, "de").unwrap();

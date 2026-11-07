@@ -31,6 +31,9 @@ pub(super) fn entry_common() -> Vec<(&'static str, TypeRef)> {
 		("language", s()),
 		// the entry in the other sites, for a language switch
 		("localized", TypeRef::named_nn_list_nn("Entry")),
+		// who made it, Craft's; none: the system or a deleted user
+		("authorId", TypeRef::named(TypeRef::ID)),
+		("author", TypeRef::named("User")),
 	]
 }
 
@@ -72,6 +75,21 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 				},
 				"dateCreated" => date(e.created_at)?,
 				"dateUpdated" => date(e.updated_at)?,
+				"authorId" => match e.author_id {
+					Some(a) => GqlValue::from(a.to_string()),
+					None => GqlValue::Null,
+				},
+				"author" => {
+					let Some(a) = e.author_id else {
+						return Ok(None);
+					};
+					let Some(a) = author_by_id(&ctx, a).await? else {
+						return Ok(None);
+					};
+					// the public part, never the email
+					let a = serde_json::json!({ "id": a.id.to_string(), "name": a.name });
+					GqlValue::from_json(a)?
+				}
 				"language" => {
 					let schema = ctx.data::<Arc<Schema>>()?;
 					let site =
@@ -458,6 +476,10 @@ pub(super) fn content_objects(
 			let mut obj = Object::new(format!("{}_Entry", comp.handle))
 				.implement("Entry");
 			for (name, _) in entry_common() {
+				let own = comp.fields.iter().any(|f| f.handle == name);
+				if OPTIONAL_ENTRY_FIELDS.contains(&name) && own {
+					continue;
+				}
 				let mut field = entry_common_field(name);
 				if name == "children" {
 					for (arg, ty) in children_args(schema) {

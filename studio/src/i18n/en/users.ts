@@ -30,6 +30,10 @@ export default {
 	'users.end': 'Log out everywhere',
 	'users.access': 'Access',
 	'users.invitedNote': 'Invited, no password yet.',
+	'users.websiteNote':
+		'Logs in on the website only: invite and reset links lead there.',
+	'users.studio': 'Studio',
+	'users.websiteOnly': 'No, website only',
 	'users.sendInviteAgain': 'Send the invite again',
 	'users.sendReset': 'Send a password reset',
 	'users.copyInvite': 'Copy the invite link',

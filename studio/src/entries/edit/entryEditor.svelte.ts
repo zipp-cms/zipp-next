@@ -13,6 +13,8 @@ import {
 	getEntry,
 	listEntries,
 	createEntry,
+	setAuthor,
+	type Author,
 	type Dates,
 	type Entry,
 	type Refs,
@@ -33,7 +35,9 @@ import {
 import { site } from '../../core/router.svelte';
 import { DraftSaver, savesDone } from './autosave.svelte';
 import { docChanges } from './diff';
-import { can } from '../../core/access';
+import { canEntry } from '../../core/access';
+import { session } from '../../core/session.svelte';
+import { listUsers, type Account } from '../../users/api';
 import { clean } from '../../core/values';
 import { slugify } from '../../core/format';
 import { depths } from '../../core/tree';
@@ -82,6 +86,11 @@ export class EntryEditor {
 	/** the same in every site */
 	dates = $state<Dates>({ postDate: null, expiryDate: null });
 	parentId = $state<number | null>(null);
+	/** who made it, a new one is the user's */
+	authorId = $state<number | null>(session.user?.id ?? null);
+	author = $state<Author | null>(null);
+	/** whom an admin may make the author */
+	users = $state<Account[]>([]);
 	fields = $state<Values>({});
 	refs = $state<Refs>({});
 	loaded = $state(false);
@@ -146,12 +155,12 @@ export class EntryEditor {
 	);
 	/** what the role may do here, the server checks it too */
 	may: May = $derived.by(() => ({
-		edit: can(this.schema, this.sec, 'edit'),
-		publish: can(this.schema, this.sec, 'publish'),
+		edit: canEntry(this.schema, this.sec, this.authorId, 'edit'),
+		publish: canEntry(this.schema, this.sec, this.authorId, 'publish'),
 		delete:
 			this.id !== null &&
 			!this.single &&
-			can(this.schema, this.sec, 'delete'),
+			canEntry(this.schema, this.sec, this.authorId, 'delete'),
 	}));
 
 	/**
@@ -212,7 +221,7 @@ export class EntryEditor {
 	async load() {
 		const id = this.id;
 		if (id === null) return;
-		const [{ entry, relations }, { draft: d, relations: drafted }] =
+		const [{ entry, relations, author }, { draft: d, relations: drafted }] =
 			await Promise.all([
 				getEntry(id, this.site),
 				getDraftWithRefs(id, this.site),
@@ -220,6 +229,8 @@ export class EntryEditor {
 		this.sec = entry.section;
 		this.uri = entry.uri;
 		this.parentId = entry.parentId;
+		this.authorId = entry.authorId;
+		this.author = author;
 		this.refs = { ...relations, ...drafted };
 		this.draft = d;
 		this.live = {
@@ -370,6 +381,22 @@ export class EntryEditor {
 			// the slug stays, see above
 			this.#title = theirs.title;
 			this.fields = theirs.fields;
+		});
+	}
+
+	/** The users an admin may make the author, loaded once. */
+	async loadUsers() {
+		if (this.users.length) return;
+		this.users = await listUsers();
+	}
+
+	/** Another author, at once: it is no change of the content. */
+	changeAuthor(id: number | null) {
+		return this.action.run(async () => {
+			await setAuthor(this.id!, id);
+			this.authorId = id;
+			const user = this.users.find(u => u.id === id);
+			this.author = user ? { id: user.id, name: user.name } : null;
 		});
 	}
 

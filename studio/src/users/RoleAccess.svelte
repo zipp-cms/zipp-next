@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Schema } from '../core/schema';
-	import { accessText } from '../core/access';
+	import { accessText, roleAccessText } from '../core/access';
 	import { sitesPath } from '../core/paths';
 	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
@@ -10,7 +10,9 @@
 
 	const def = $derived(schema.roles.find(r => r.handle === role));
 	const sections = $derived(
-		schema.sections.filter(s => def?.sections[s.handle]),
+		schema.sections.filter(
+			s => def?.sections[s.handle] || def?.own[s.handle],
+		),
 	);
 </script>
 
@@ -18,9 +20,11 @@
 	<p class="muted">{t('users.adminMay')}</p>
 {:else}
 	<dl>
+		<dt>{t('users.studio')}</dt>
+		<dd>{def.studio ? t('common.yes') : t('users.websiteOnly')}</dd>
 		{#each sections as s (s.handle)}
 			<dt>{s.name}</dt>
-			<dd>{accessText(def.sections[s.handle])}</dd>
+			<dd>{roleAccessText(def, s.handle)}</dd>
 		{/each}
 		<dt>{t('users.assets')}</dt>
 		<dd>{accessText(def.assets)}</dd>

@@ -76,6 +76,8 @@ export default {
 	'setup.anAdmin': 'Admin und können alles',
 	'setup.assets': 'Dateien',
 	'setup.ai': 'KI',
+	'setup.studio': 'Studio',
+	'setup.websiteOnly': 'Nur Website',
 	'setup.notInNav': 'Nicht in der Navigation',
 	'setup.typesAndBlocks': 'Typen und Blöcke',
 	'setup.fieldTypes': 'Feldtypen',

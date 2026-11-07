@@ -231,8 +231,11 @@ impl Schema {
 			return Err(format!("role {} exists twice", r.handle));
 		}
 		for r in &self.roles {
-			if let Some(s) =
-				r.sections.keys().find(|s| self.get_section(s).is_none())
+			if let Some(s) = r
+				.sections
+				.keys()
+				.chain(r.own.keys())
+				.find(|s| self.get_section(s).is_none())
 			{
 				return Err(format!("role {}: unknown section {s}", r.handle));
 			}

@@ -445,6 +445,8 @@ pub(crate) struct Usage {
 	pub title: String,
 	/// the sites it is used in
 	pub sites: Vec<String>,
+	/// who made the entry
+	pub author_id: Option<i64>,
 }
 
 /// The entries that use an asset, as published, the title of the
@@ -457,7 +459,7 @@ pub(crate) fn usage(
 	let mut stmt = conn.prepare(
 		"SELECT e.id, e.section, e.type, group_concat(DISTINCT r.site),
 		(SELECT title FROM entry_sites s WHERE s.entry_id = e.id
-			ORDER BY s.site = ?2 DESC LIMIT 1)
+			ORDER BY s.site = ?2 DESC LIMIT 1), e.author_id
 		FROM asset_relations r JOIN entries e ON e.id = r.entry_id
 		WHERE r.asset_id = ?1 AND e.deleted_at IS NULL
 		GROUP BY e.id ORDER BY e.id",
@@ -471,6 +473,7 @@ pub(crate) fn usage(
 				ty: r.get(2)?,
 				sites: sites.split(',').map(String::from).collect(),
 				title: r.get(4)?,
+				author_id: r.get(5)?,
 			})
 		})?
 		.collect::<rusqlite::Result<_>>()?;

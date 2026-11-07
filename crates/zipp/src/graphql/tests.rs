@@ -611,7 +611,8 @@ async fn children_of_a_list_load_together_in_their_order() {
 		let team = page("Team", Some(about));
 		page("Board", Some(about));
 		page("Open", Some(jobs));
-		crate::entries::move_entry(&conn, &s, team, Some(about), 1).unwrap();
+		crate::entries::move_entry(&conn, &s, team, Some(about), 1, None)
+			.unwrap();
 	}
 
 	let data = run(
@@ -665,7 +666,8 @@ async fn the_name_lists_match_the_types() {
 	};
 	let set = |l: &[&str]| l.iter().map(|s| s.to_string()).collect();
 
-	assert_eq!(names(&v["entry"]["fields"]), set(ENTRY_FIELDS));
+	let all = [ENTRY_FIELDS, OPTIONAL_ENTRY_FIELDS].concat();
+	assert_eq!(names(&v["entry"]["fields"]), set(&all));
 	assert_eq!(names(&v["asset"]["fields"]), set(ASSET_FIELDS));
 
 	// the arguments of entries, and the relation field of the test site
