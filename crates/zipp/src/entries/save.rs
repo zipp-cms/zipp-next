@@ -73,10 +73,7 @@ pub(crate) fn check(
 	if title.is_empty() {
 		errors.push(FieldError::new("title", "is required"));
 	}
-	let slug = match input.slug.trim() {
-		"" => slugify(&title),
-		s => slugify(s),
-	};
+	let slug = slug_of(&input.slug, &title);
 	// a title of only signs makes none, the uri would be the parent's (or
 	// the home page's)
 	if slug.is_empty() && !title.is_empty() {

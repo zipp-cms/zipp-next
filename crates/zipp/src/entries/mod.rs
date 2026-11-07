@@ -748,6 +748,14 @@ pub(crate) fn section_of(conn: &Connection, id: i64) -> Result<String> {
 	)?)
 }
 
+/// The slug an entry is saved with: its own, else one of its title.
+pub(crate) fn slug_of(slug: &str, title: &str) -> String {
+	match slug.trim() {
+		"" => slugify(title),
+		s => slugify(s),
+	}
+}
+
 /// `Über uns!` becomes `über-uns`.
 pub(crate) fn slugify(s: &str) -> String {
 	let mut out = String::new();
