@@ -6,8 +6,8 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { t } from '../i18n/index.svelte';
-	import { type Asset } from './api';
-	import { folderByPath } from './folders';
+	import { type Asset, type Folder } from './api';
+	import { folderByPath, missingFolders } from './folders';
 	import FolderTree from './FolderTree.svelte';
 	import AssetGrid from './AssetGrid.svelte';
 	import Flyout from 'zipp-ui/Flyout.svelte';
@@ -48,31 +48,80 @@
 
 	const lib = untrack(() => new Library({ images, extensions }));
 
+	// the field's folder before it exists (a new topic's `{slug}`): shown
+	// in the tree, empty, and made with the first upload into it
+	const NEW = -1;
+	let ready = $state(false);
+	let inNew = $state(false);
+	const missing = $derived(
+		ready ? missingFolders(lib.folders, folderPath) : null,
+	);
+	const folders = $derived<Folder[]>(
+		missing
+			? [
+					...lib.folders,
+					{
+						id: NEW,
+						parentId: missing.parent,
+						name: missing.names.join(' / '),
+						assets: 0,
+					},
+				]
+			: lib.folders,
+	);
+	const showNew = $derived(inNew && !!missing && !lib.search);
+
 	// the field's folder first, else where the picker was
 	lib.loadFolders().then(() => {
+		ready = true;
+		if (missing) {
+			inNew = true;
+			return;
+		}
 		const own = folderByPath(lib.folders, folderPath);
 		const last = lib.folders.some(f => f.id === lastFolder);
 		lib.select(own ? own.id : last ? lastFolder : null);
 	});
 
 	function select(id: number | null) {
+		inNew = id === NEW;
+		if (inNew) {
+			lib.search = '';
+			return;
+		}
 		lastFolder = id;
 		lib.select(id);
 	}
 
 	/**
-	 * Into the open folder, and picked; on the top with a folder of the
-	 * field, into that (made when missing).
+	 * Into the open folder, and picked; into the field's new folder, made
+	 * now; on the top with a folder of the field, into that (made when
+	 * missing).
 	 */
 	async function upload(items: Upload[]) {
-		const dir = lib.folder === null ? pathDirs(folderPath) : [];
+		const intoNew = showNew ? missing : null;
+		const dir = intoNew
+			? intoNew.names
+			: lib.folder === null
+				? pathDirs(folderPath)
+				: [];
 		const room = multiple ? items.length : 1;
 		items = prepare(items, { images, extensions }, room, dir);
-		const added = await uploads.run(items, lib.folder, () =>
-			lib.loadFolders(),
+		const added = await uploads.run(
+			items,
+			intoNew ? intoNew.parent : lib.folder,
+			() => lib.loadFolders(),
 		);
-		lib.assets = [...added, ...lib.assets];
 		for (const a of added) onpick(a);
+
+		// the new folder is there now, it opens with its files
+		if (intoNew) {
+			await lib.loadFolders();
+			const own = folderByPath(lib.folders, folderPath);
+			if (inNew && own) select(own.id);
+			return;
+		}
+		lib.assets = [...added, ...lib.assets];
 	}
 
 	const drag = new FileDrag(upload, () => true);
@@ -110,7 +159,7 @@
 	{#if lib.error}<p class="error">{lib.error}</p>{/if}
 	<div
 		class="library"
-		class:flat={!lib.folders.length}
+		class:flat={!folders.length}
 		role="region"
 		aria-label={t('assets.files')}
 		ondragenter={drag.dragenter}
@@ -118,11 +167,11 @@
 		ondragover={drag.dragover}
 		ondrop={drag.drop}
 	>
-		{#if lib.folders.length}
+		{#if folders.length}
 			<FolderTree
-				folders={lib.folders}
+				{folders}
 				top={lib.top}
-				current={lib.folder}
+				current={showNew ? NEW : lib.folder}
 				searching={!!lib.search}
 				onselect={select}
 			/>
@@ -132,10 +181,10 @@
 				<DropOverlay label={t('assets.dropToUpload')} />
 			{/if}
 			<AssetGrid
-				assets={lib.assets}
+				assets={showNew ? [] : lib.assets}
 				{selected}
-				loading={!lib.loaded}
-				empty={lib.empty}
+				loading={!showNew && !lib.loaded}
+				empty={showNew ? t('assets.newFolderEmpty') : lib.empty}
 				{onpick}
 			/>
 		</div>

@@ -1,6 +1,7 @@
 import { t } from '../i18n/index.svelte';
 import type { Folder } from './api';
 import type { Editing } from '../core/editing';
+import { pathDirs } from './files';
 
 /** The folders of the asset library as a tree, found by name or path. */
 
@@ -39,14 +40,35 @@ export function folderByPath(
 	folders: Folder[],
 	path: string | undefined,
 ): Folder | undefined {
-	let parent: number | null = null;
+	const { found, rest } = deepest(folders, path);
+	return rest.length ? undefined : found;
+}
+
+/**
+ * The part of a path that has no folders yet: the deepest one that is
+ * there (null: the top) and the names below it; none when all are.
+ */
+export function missingFolders(
+	folders: Folder[],
+	path: string | undefined,
+): { parent: number | null; names: string[] } | null {
+	const { found, rest } = deepest(folders, path);
+	return rest.length ? { parent: found?.id ?? null, names: rest } : null;
+}
+
+/** The deepest folder of a path that exists, and the names below it. */
+function deepest(
+	folders: Folder[],
+	path: string | undefined,
+): { found: Folder | undefined; rest: string[] } {
+	const names = pathDirs(path);
 	let found: Folder | undefined;
-	for (const name of (path ?? '').split('/').filter(n => n.trim())) {
-		found = childFolder(folders, parent, name);
-		if (!found) return undefined;
-		parent = found.id;
+	for (const [i, name] of names.entries()) {
+		const child = childFolder(folders, found?.id ?? null, name);
+		if (!child) return { found, rest: names.slice(i) };
+		found = child;
 	}
-	return found;
+	return { found, rest: [] };
 }
 
 /**

@@ -14,6 +14,8 @@ export default {
 	'assets.documents': 'Dokumente',
 	'assets.noAssets': 'Noch keine Dateien',
 	'assets.noFilesInFolder': 'Keine Dateien in diesem Ordner',
+	'assets.newFolderEmpty':
+		'Ein neuer Ordner dieses Felds, er entsteht mit dem ersten Upload',
 	'assets.inAllFolders': 'In allen Ordnern',
 	'assets.searchFiles': 'Dateien suchen',
 	'assets.type': 'Typ',
