@@ -7,7 +7,6 @@
 		canAssets,
 		canSetup,
 		canTrash,
-		hasAgent,
 		isAdmin,
 		visibleNav,
 	} from '../core/access';
@@ -101,7 +100,7 @@
 				{t('shell.assets')}
 			</a>
 		{/if}
-		{#if (schema.aiModels.length || hasAgent(schema)) && canAi(schema)}
+		{#if canAi(schema)}
 			<a
 				class="item nav-item"
 				href="/admin/ai"

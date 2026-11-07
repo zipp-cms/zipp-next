@@ -3,6 +3,7 @@ import type en from '../en/ai';
 
 export default {
 	'ai.title': 'KI',
+	'ai.notForRole': 'Ihre Rolle hat keine KI',
 	'ai.width': 'Breite des Chats',
 	'ai.startOver': 'Neu beginnen, dieser Chat bleibt nur in diesem Tab',
 	'ai.newChat': 'Neuer Chat',

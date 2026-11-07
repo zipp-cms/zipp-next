@@ -108,8 +108,12 @@ export function canTrash(schema: Schema): boolean {
 	);
 }
 
+/** The AI page: a model or the coding agent, and a role that may. */
 export function canAi(schema: Schema): boolean {
-	return isAdmin(schema) || !!role(schema)?.ai;
+	return (
+		(schema.aiModels.length > 0 || hasAgent(schema)) &&
+		(isAdmin(schema) || !!role(schema)?.ai)
+	);
 }
 
 export function canSetup(schema: Schema): boolean {

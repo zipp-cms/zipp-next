@@ -1,3 +1,14 @@
+<script module lang="ts">
+	import { canAi } from '../core/access';
+	import type { Schema as SchemaT } from '../core/schema';
+	import { t } from '../i18n/index.svelte';
+
+	export async function loadProps(props: { schema: SchemaT }) {
+		if (!canAi(props.schema)) throw new Error(t('ai.notForRole'));
+		return {};
+	}
+</script>
+
 <script lang="ts">
 	import { onDestroy, untrack } from 'svelte';
 	import type { Schema } from '../core/schema';
@@ -12,7 +23,6 @@
 	import { entryPath } from '../core/paths';
 	import { sitePreviewToken } from '../entries/drafts';
 	import Preview from '../entries/Preview.svelte';
-	import { t } from '../i18n/index.svelte';
 
 	/**
 	 * The AI chat on the left, the website on the right with every draft.
@@ -28,14 +38,11 @@
 	// development: the coding agent does everything, content and code;
 	// else the first model, the choice is hidden for now (operator
 	// 2026-10-28)
-	const chat = untrack(
-		() =>
-			new Chat(
-				hasAgent(schema) ? null : (schema.aiModels[0]?.id ?? ''),
-				scroll,
-			),
-	);
 	const agent = untrack(() => hasAgent(schema));
+	const chat = new Chat(
+		agent ? null : untrack(() => schema.aiModels[0]?.id ?? ''),
+		scroll,
+	);
 	const preview = untrack(
 		() =>
 			new SitePreview(
