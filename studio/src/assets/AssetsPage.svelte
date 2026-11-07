@@ -25,15 +25,7 @@
 	import { untrack } from 'svelte';
 	import { t } from '../i18n/index.svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
-	import {
-		kinds,
-		assetUsage,
-		deleteAsset,
-		moveAssets,
-		renameAsset,
-		type Asset,
-		type Folder,
-	} from './api';
+	import { kinds, type Asset, type Folder } from './api';
 	import { root } from './folders';
 	import FolderTree from './FolderTree.svelte';
 	import { type Schema } from '../core/schema';
@@ -42,20 +34,13 @@
 	import AssetDetail from './AssetDetail.svelte';
 	import SearchInput from 'zipp-ui/SearchInput.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
-	import { Busy } from '../core/busy.svelte';
 	import DropOverlay from './DropOverlay.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
 	import type { MenuItem } from 'zipp-ui/Menu.svelte';
-	import { Library } from './library.svelte';
-	import {
-		confirmDelete,
-		confirmUnzip,
-		downloadZip,
-		isZip,
-		linkItems,
-	} from './actions';
+	import { AssetsPageState } from './assetsPage.svelte';
+	import { linkItems } from './actions';
 	import { FileDrag, uploads } from './uploads.svelte';
-	import { fromInput, type Upload } from './files';
+	import { fromInput } from './files';
 
 	let {
 		schema,
@@ -73,83 +58,24 @@
 	const canEdit = $derived(canAssets(schema, 'edit'));
 	const canDelete = $derived(canAssets(schema, 'delete'));
 
-	// what came with the page
-	const lib = new Library();
-	untrack(() => {
-		Object.assign(lib, { folders, top, folder, assets: first });
-		lib.loaded = true;
-	});
-	const action = new Busy();
-	let current = $state<Asset | null>(null);
-
-	/** All again: what the list shows and the counts of the folders. */
-	function reload() {
-		lib.load();
-		lib.loadFolders();
-	}
-
-	/** Another folder, in the url too, without loading the page again. */
-	function select(id: number | null) {
-		if (id === lib.folder && !lib.search) return;
-		lib.select(id);
-		const url = id === null ? location.pathname : `?folder=${id}`;
-		history.replaceState(history.state, '', url);
-	}
-
-	async function move(ids: number[], to: number | null) {
-		await action.run(() => moveAssets(ids, to));
-		reload();
-	}
-
-	/**
-	 * Files, or folders with theirs, into a folder of the tree; zips are
-	 * unpacked into folders when the editor wants.
-	 */
-	async function upload(items: Upload[], into = lib.folder) {
-		const zips = items.filter(i => isZip(i.file)).map(i => i.file);
-		if (zips.length && confirmUnzip(zips))
-			items = items.map(i => (isZip(i.file) ? { ...i, unzip: true } : i));
-		// the new folders show while the files go up
-		await uploads.run(items, into, () => lib.loadFolders());
-		reload();
-	}
+	const page = untrack(
+		() => new AssetsPageState({ folders, top, folder, assets: first }),
+	);
+	const { lib, action } = page;
 
 	// files dropped anywhere on the page but on a folder go into the open one
 	const drag = new FileDrag(
-		items => upload(items),
+		items => page.upload(items),
 		() => canEdit,
 	);
 
-	/** The folder whose zip is being made. */
-	let zipping = $state('');
-
-	async function download(f: Folder) {
-		zipping = f.name;
-		await action.run(() => downloadZip({ folder: f.id }, f.name));
-		zipping = '';
-	}
-
-	function open(a: Asset) {
-		current = a;
-	}
-
-	async function rename(a: Asset, filename: string): Promise<boolean> {
-		const saved = await action.run(() => renameAsset(a, filename));
-		if (saved)
-			lib.assets = lib.assets.map(x => (x.id === a.id ? saved : x));
-		return !!saved;
-	}
-
-	async function remove(a: Asset) {
-		const n = (await assetUsage(a.id).catch(() => [])).length;
-		if (!confirmDelete(a, n)) return;
-		await action.run(() => deleteAsset(a.id));
-		reload();
-	}
-
 	function menu(a: Asset, startRename: () => void): MenuItem[] {
 		const items: MenuItem[] = [
-			{ label: t('common.open'), icon: 'view', onclick: () => open(a) },
+			{
+				label: t('common.open'),
+				icon: 'view',
+				onclick: () => (page.current = a),
+			},
 		];
 		if (canEdit)
 			items.push({
@@ -162,14 +88,14 @@
 			items.push({
 				label: t('assets.moveTo', { folder: root() }),
 				icon: 'file',
-				onclick: () => move([a.id], null),
+				onclick: () => page.move([a.id], null),
 			});
 		if (canDelete)
 			items.push({
 				label: t('common.delete'),
 				icon: 'delete',
 				danger: true,
-				onclick: () => remove(a),
+				onclick: () => page.remove(a),
 			});
 		return items;
 	}
@@ -186,19 +112,21 @@
 >
 	<PageTop
 		title={t('assets.title')}
-		note={zipping ? t('assets.zipping', { name: zipping }) : undefined}
+		note={page.zipping
+			? t('assets.zipping', { name: page.zipping })
+			: undefined}
 	>
 		{#snippet actions()}
 			{#if canEdit}
 				<UploadButton
-					onfiles={f => upload(fromInput(f))}
+					onfiles={f => page.upload(fromInput(f))}
 					directory
 					icon="folder-plus"
 				>
 					{t('assets.uploadFolder')}
 				</UploadButton>
 				<UploadButton
-					onfiles={f => upload(fromInput(f))}
+					onfiles={f => page.upload(fromInput(f))}
 					multiple
 					primary
 				>
@@ -221,13 +149,13 @@
 				top={lib.top}
 				current={lib.folder}
 				searching={!!lib.search}
-				onselect={select}
+				onselect={id => page.select(id)}
 				editable={canEdit}
 				deletable={canDelete}
 				onchange={() => lib.loadFolders()}
-				onmove={move}
-				onupload={upload}
-				ondownload={download}
+				onmove={(ids, to) => page.move(ids, to)}
+				onupload={(items, into) => page.upload(items, into)}
+				ondownload={f => page.download(f)}
 			/>
 		</aside>
 
@@ -252,37 +180,25 @@
 			</div>
 			<AssetGrid
 				assets={lib.assets}
-				onpick={open}
+				onpick={a => (page.current = a)}
 				draggable={canEdit}
 				{menu}
-				onrename={rename}
+				onrename={(a, name) => page.rename(a, name)}
 				empty={lib.empty}
 			/>
 		</div>
 	</div>
 </div>
 
-{#if current}
-	{#key current.id}
+{#if page.current}
+	{#key page.current.id}
 		<AssetDetail
 			{schema}
 			folders={lib.folders}
-			asset={current}
-			onsaved={a => {
-				const moved = a.folderId !== current?.folderId;
-				lib.assets = lib.assets.map(x => (x.id === a.id ? a : x));
-				current = null;
-				if (moved) reload();
-			}}
-			ondeleted={() => {
-				current = null;
-				reload();
-			}}
-			onclose={() => {
-				// a replaced file has a new thumbnail
-				current = null;
-				lib.load();
-			}}
+			asset={page.current}
+			onsaved={a => page.saved(a)}
+			ondeleted={() => page.deleted()}
+			onclose={() => page.closed()}
 		/>
 	{/key}
 {/if}
