@@ -143,9 +143,23 @@ pub(super) fn entry_common_field(name: &'static str) -> GqlField {
 	}
 }
 
+/// The fields of a component on its object, see [`content_field`].
+pub(super) fn content_fields(
+	mut obj: Object,
+	schema: &Schema,
+	comp: &Component,
+) -> Object {
+	for field in &comp.fields {
+		if let Some(f) = content_field(schema, &comp.handle, field) {
+			obj = obj.field(f);
+		}
+	}
+	obj
+}
+
 /// A field of the content model, read from the JSON of its entry or block;
 /// none for a note, it has no value.
-pub(super) fn content_field(
+fn content_field(
 	schema: &Schema,
 	comp: &str,
 	field: &crate::schema::Field,
@@ -464,13 +478,8 @@ pub(super) fn content_objects(
 		.collect();
 	for handle in grouped {
 		let comp = schema.get(handle).unwrap();
-		let mut obj = Object::new(format!("{handle}_Fields"));
-		for field in &comp.fields {
-			if let Some(f) = content_field(schema, &comp.handle, field) {
-				obj = obj.field(f);
-			}
-		}
-		objects.push(obj);
+		let obj = Object::new(format!("{handle}_Fields"));
+		objects.push(content_fields(obj, schema, comp));
 	}
 
 	// a type of the rows of each table field, its columns as fields
@@ -531,12 +540,7 @@ pub(super) fn content_objects(
 		if !comp.entry && !comp.fields.iter().any(|f| f.handle == "slug") {
 			obj = obj.field(block_slug(comp.title_field.clone()));
 		}
-		for field in &comp.fields {
-			if let Some(f) = content_field(schema, &comp.handle, field) {
-				obj = obj.field(f);
-			}
-		}
-		objects.push(obj);
+		objects.push(content_fields(obj, schema, comp));
 	}
 	objects
 }

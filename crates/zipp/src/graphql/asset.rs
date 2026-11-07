@@ -68,11 +68,7 @@ pub(super) fn asset_object(schema: &Schema) -> Object {
 
 	let mut obj = Object::new("Asset");
 	if let Some(comp) = schema.get(ASSET) {
-		for field in &comp.fields {
-			if let Some(f) = content_field(schema, ASSET, field) {
-				obj = obj.field(f);
-			}
-		}
+		obj = content_fields(obj, schema, comp);
 	}
 	obj.field(plain("id", TypeRef::named_nn(TypeRef::ID)))
 		.field(plain("filename", s()))

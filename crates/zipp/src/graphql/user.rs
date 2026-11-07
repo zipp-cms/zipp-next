@@ -105,11 +105,7 @@ pub(super) fn user_object(schema: &Schema) -> Object {
 		.field(field("uri", TypeRef::named(TypeRef::STRING)))
 		.field(field("url", TypeRef::named(TypeRef::STRING)));
 	if let Some(comp) = schema.get(USER) {
-		for field in &comp.fields {
-			if let Some(f) = content_field(schema, USER, field) {
-				obj = obj.field(f);
-			}
-		}
+		obj = content_fields(obj, schema, comp);
 	}
 	obj
 }
