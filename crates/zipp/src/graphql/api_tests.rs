@@ -312,6 +312,64 @@ async fn tokens_read_their_scope() {
 	assert_eq!(body["data"]["sites"], json!([{ "handle": "de", "id": 1 }]));
 }
 
+/// GraphiQL's query with the schema of token `id` picked.
+async fn as_token(
+	client: &Client,
+	body: &str,
+	id: &str,
+) -> (StatusCode, Value) {
+	let req = Request::post("/api/graphql")
+		.header(header::CONTENT_TYPE, "application/json")
+		.header("x-zipp-schema", id)
+		.body(Body::from(body.to_string()))
+		.unwrap();
+	let resp = client.send(req).await;
+	let status = resp.status();
+	let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+	(status, serde_json::from_slice(&body).unwrap())
+}
+
+#[tokio::test]
+async fn graphiql_reads_as_a_token() {
+	let ts = TestServer::new(site_with_roles());
+	let admin = ts.admin();
+	let mut draft = input("events", "event", "Hidden", json!({}));
+	draft.published = false;
+	admin.call(&CreateReq(draft)).await.unwrap();
+	admin
+		.call(&CreateReq(input("events", "event", "Jazz", json!({}))))
+		.await
+		.unwrap();
+	admin
+		.call(&CreateReq(input("pages", "page", "Team", json!({}))))
+		.await
+		.unwrap();
+	let events = Scope {
+		sections: Some(vec!["events".into()]),
+		sites: None,
+		previews: false,
+	};
+	new_token(&admin, events, None).await;
+	let id = admin.call(&TokensReq {}).await.unwrap().tokens[0].id;
+
+	let all = r#"{"query": "{ entries { title } }"}"#;
+
+	// what its frontend sees: its sections, nothing unpublished
+	let (_, body) = as_token(&admin, all, &id.to_string()).await;
+	assert_eq!(titles(&body), ["Jazz"]);
+	let (_, body) = graphql(&admin, "/api/graphql", all, None).await;
+	assert_eq!(titles(&body).len(), 4);
+
+	// an unknown token, and only for admins
+	let (status, _) = as_token(&admin, all, "999").await;
+	assert_eq!(status, StatusCode::NOT_FOUND);
+	let author = ts.user(Some("author"));
+	let (status, _) = as_token(&author, all, &id.to_string()).await;
+	assert_eq!(status, StatusCode::UNAUTHORIZED);
+	let (status, _) = as_token(&ts.anonymous(), all, &id.to_string()).await;
+	assert_eq!(status, StatusCode::UNAUTHORIZED);
+}
+
 #[tokio::test]
 async fn unknown_and_expired_tokens_are_out() {
 	let ts = TestServer::new(site_with_roles());

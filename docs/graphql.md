@@ -85,7 +85,10 @@ lists the library for a site it reads.
 A GET on `/api/graphql` opens GraphiQL. Its queries send the
 session of the studio, so an admin sees drafts and unpublished entries
 like in the studio (Try it on the GraphQL page opens it); without a
-session it goes to the login. In development (`serve --dev`,
+session it goes to the login. Like Craft's schema picker, a menu at the
+top right reads as the frontend of a token instead: its sections and
+sites, nothing unpublished (the request header `x-zipp-schema: <token
+id>`, only for admins). In development (`serve --dev`,
 `ZIPP_DEV=1`) GraphQL is open without a token, unless `serve` has one;
 a wrong token gets 401 there too and a token reads only its scope.
 GraphiQL is bundled with the studio (`studio/graphiql.html`, its own

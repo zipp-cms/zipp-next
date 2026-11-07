@@ -72,8 +72,13 @@ async fn graphql(
 		// private like Craft's: frontends send a token, the studio its
 		// session; development without the token of serve is open
 		let open = state.dev && state.graphql_token.is_none();
+		// GraphiQL's schema picker: an admin reads as a token's frontend
+		let as_token = if editor { schema_param(&headers) } else { None };
 		let scope = match (editor, bearer(&headers)) {
-			(true, _) => Scope::ALL,
+			(true, _) => match as_token {
+				Some(id) => tokens::get(&conn, id)?.scope,
+				None => Scope::ALL,
+			},
 			// a wrong token fails in development too, like on the server
 			(false, Some(t)) => token_scope(&state, &conn, t)?
 				.ok_or(Error::MissingEndpointToken)?,
@@ -84,7 +89,7 @@ async fn graphql(
 			Some(t) if scope.previews => preview(&conn, &state.schema, t)?,
 			_ => None,
 		};
-		(!editor, preview, scope)
+		(!editor || as_token.is_some(), preview, scope)
 	};
 	let token = preview.as_ref().and(p.token);
 	let req = req.into_inner().data(Viewer {
@@ -104,6 +109,14 @@ fn bearer(headers: &HeaderMap) -> Option<&str> {
 		.get(axum::http::header::AUTHORIZATION)
 		.and_then(|v| v.to_str().ok())
 		.and_then(|v| v.strip_prefix("Bearer "))
+}
+
+/// The token whose scope GraphiQL picked, `x-zipp-schema: <token id>`.
+fn schema_param(headers: &HeaderMap) -> Option<i64> {
+	headers
+		.get("x-zipp-schema")
+		.and_then(|v| v.to_str().ok())
+		.and_then(|v| v.parse().ok())
 }
 
 /// What a token may read: the one of `serve` everything, the ones of the

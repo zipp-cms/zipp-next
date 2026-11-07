@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- GraphiQL has a schema picker like Craft's: an admin reads as the
+  frontend of a token (its sections and sites, nothing unpublished)
+  instead of the full schema.
 - Content without a revision (imported, or from before revisions were
   kept) is kept as a revision of no one before the first save or
   publish over it, so the original can be restored; before, the first
