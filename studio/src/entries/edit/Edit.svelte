@@ -108,7 +108,7 @@
 			id === null &&
 			!!schema.siteUrls[ed.site] &&
 			!!ed.secDef &&
-			!!uriOf(ed.secDef, ed.ty, ed.site),
+			uriOf(ed.secDef, ed.ty, ed.site) !== null,
 	);
 	const live = $derived(
 		canLive && liveSetting.on
