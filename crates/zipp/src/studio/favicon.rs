@@ -106,10 +106,8 @@ async fn fetch(client: &Client, url: &str) -> Option<Favicon> {
 	if !resp.status().is_success() {
 		return None;
 	}
-	let mime = resp.headers().get(header::CONTENT_TYPE)?.clone();
-	if !mime.to_str().ok()?.starts_with("image/") {
-		return None;
-	}
+	let mime = resp.headers().get(header::CONTENT_TYPE)?.to_str().ok()?;
+	let mime = image_type(mime)?;
 	if resp.content_length().is_some_and(|l| l > ICON_MAX as u64) {
 		return None;
 	}
@@ -118,7 +116,7 @@ async fn fetch(client: &Client, url: &str) -> Option<Favicon> {
 		return None;
 	}
 	Some(Favicon {
-		mime,
+		mime: HeaderValue::from_static(mime),
 		data: data.into(),
 	})
 }
@@ -136,17 +134,42 @@ async fn read(mut resp: Response, max: usize) -> Option<Vec<u8>> {
 	Some(data)
 }
 
+/// The image type of a `Content-Type`, one the studio shows; never the
+/// header as it came, a list like `image/png, text/html` is html.
+pub(crate) fn image_type(header: &str) -> Option<&'static str> {
+	let mime = header.split(';').next()?.trim().to_ascii_lowercase();
+	[
+		"image/png",
+		"image/x-icon",
+		"image/vnd.microsoft.icon",
+		"image/gif",
+		"image/jpeg",
+		"image/webp",
+		"image/avif",
+		"image/svg+xml",
+	]
+	.into_iter()
+	.find(|t| *t == mime)
+}
+
 fn web(url: &Url) -> bool {
 	matches!(url.scheme(), "http" | "https")
 }
 
+/// Whether `a` is on the site of `b`: the same host and port, https
+/// when `b` is.
 pub(crate) fn same_host(a: &Url, b: &Url) -> bool {
 	// x.ch and www.x.ch are one site, a redirect between them is common
 	let bare = |u: &Url| {
 		u.host_str()
 			.map(|h| h.strip_prefix("www.").unwrap_or(h).to_owned())
 	};
-	bare(a).is_some() && bare(a) == bare(b)
+	// http to https is common too, never back
+	let scheme = a.scheme() == b.scheme() || a.scheme() == "https";
+	// a port of its own only when both have it, the default one follows
+	// the scheme
+	let port = a.port() == b.port();
+	bare(a).is_some() && bare(a) == bare(b) && scheme && port
 }
 
 /// An icon a page links to.

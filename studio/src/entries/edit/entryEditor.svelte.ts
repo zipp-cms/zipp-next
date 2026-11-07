@@ -129,6 +129,12 @@ export class EntryEditor {
 	/** the site it edits, the one of the start: the site may switch */
 	readonly site: string;
 
+	/** the other sites a saved entry can copy its content from */
+	get copySites() {
+		if (this.id === null || !this.may.edit) return [];
+		return this.schema.sites.filter(s => s.handle !== this.site);
+	}
+
 	get busy() {
 		return this.action.busy;
 	}
@@ -228,6 +234,8 @@ export class EntryEditor {
 			expiryDate: d.expiryDate ?? null,
 		};
 		this.fields = d.fields;
+		// another content: the values of other types are not its own
+		this.#byType = {};
 	}
 
 	async load() {

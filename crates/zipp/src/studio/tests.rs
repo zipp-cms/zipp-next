@@ -1,6 +1,6 @@
 use reqwest::Url;
 
-use super::favicon::{Link, best, links, same_host};
+use super::favicon::{Link, best, image_type, links, same_host};
 
 fn link(href: &str, svg: bool, size: Option<u32>) -> Link {
 	Link {
@@ -68,4 +68,23 @@ fn www_is_the_same_site() {
 	assert!(same_host(&url("https://www.x.ch/"), &url("https://x.ch/")));
 	assert!(!same_host(&url("https://x.ch/"), &url("https://y.ch/")));
 	assert!(!same_host(&url("https://x.ch/"), &url("https://cdn.x.ch/")));
+	// http to https, not back, and no other port
+	assert!(same_host(&url("https://x.ch/"), &url("http://x.ch/")));
+	assert!(!same_host(&url("http://x.ch/"), &url("https://x.ch/")));
+	assert!(!same_host(
+		&url("https://x.ch:8080/"),
+		&url("https://x.ch/")
+	));
+	assert!(same_host(&url("https://x.ch:443/"), &url("https://x.ch/")));
+}
+
+#[test]
+fn only_images_by_their_type() {
+	assert_eq!(image_type("image/png"), Some("image/png"));
+	assert_eq!(
+		image_type("Image/SVG+xml; charset=utf-8"),
+		Some("image/svg+xml")
+	);
+	assert_eq!(image_type("image/png, text/html"), None);
+	assert_eq!(image_type("text/html"), None);
 }

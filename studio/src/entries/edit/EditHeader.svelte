@@ -44,7 +44,6 @@
 	const isNew = $derived(ed.id === null);
 	const published = $derived(ed.live?.published ?? false);
 	const hasDraft = $derived(!!ed.draft);
-	// who changed the draft last, and when
 	// narrow: copying from another site and the trash under ⋯, the
 	// sidebar with the copy is at the end of the page there
 	const more: MenuItem[] = $derived([
@@ -65,6 +64,7 @@
 			: []),
 	]);
 
+	// who changed the draft last, and when
 	const draftBy = $derived(
 		ed.draft?.user
 			? t('entries.draftBy', {

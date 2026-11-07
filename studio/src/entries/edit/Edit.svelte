@@ -220,9 +220,7 @@
 		onremove={remove}
 		onsave={save}
 		{narrow}
-		copySites={ed.id !== null && ed.may.edit
-			? schema.sites.filter(s => s.handle !== ed.site)
-			: []}
+		copySites={ed.copySites}
 		oncopy={copyFrom}
 	/>
 

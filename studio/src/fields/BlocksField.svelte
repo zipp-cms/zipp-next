@@ -139,6 +139,7 @@
 
 	{#each blocks as block, i (key(block))}
 		{@const comp = componentOf(schema, block.type)}
+		{@const line = blockSummary(comp, block.fields, refs)}
 		{#if i > 0 && !full}
 			<BlockMenu {types} inline onpick={type => add(type, i)} />
 		{/if}
@@ -148,8 +149,7 @@
 					size={12}
 				/>{/snippet}
 			<ItemCard
-				kind={types.length === 1 &&
-				blockSummary(comp, block.fields, refs)
+				kind={types.length === 1 && line
 					? undefined
 					: (comp?.name ?? block.type)}
 				kindIcon={comp?.icon ? kindIcon : undefined}
@@ -164,7 +164,7 @@
 					{#if missing}
 						<span class="missing">{missing}</span>
 					{:else}
-						{blockSummary(comp, block.fields, refs)}
+						{line}
 					{/if}
 				{/snippet}
 				{#snippet handle()}

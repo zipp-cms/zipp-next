@@ -217,7 +217,7 @@ async fn favicon_route(
 			(header::X_CONTENT_TYPE_OPTIONS, "nosniff".parse().unwrap()),
 			(
 				header::CONTENT_SECURITY_POLICY,
-				"default-src 'none'; style-src 'unsafe-inline'"
+				"default-src 'none'; style-src 'unsafe-inline'; sandbox"
 					.parse()
 					.unwrap(),
 			),

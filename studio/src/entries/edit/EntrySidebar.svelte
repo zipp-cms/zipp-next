@@ -35,7 +35,6 @@
 	} = $props();
 
 	const comp = $derived(ed.comp!);
-	const isNew = $derived(ed.id === null);
 	const multiSite = $derived(schema.sites.length > 1);
 
 	// the blocks fields on screen, each with its blocks
@@ -66,7 +65,7 @@
 	{/each}
 
 	<!-- narrow: in the ⋯ menu of the bar instead -->
-	{#if !isNew && multiSite && ed.may.edit && !narrow}
+	{#if ed.copySites.length && !narrow}
 		<div class="card">
 			<label>
 				<span>{t('entries.copyContent')}</span>
@@ -81,7 +80,7 @@
 					<option value="" disabled>
 						{t('entries.fromOtherSite')}
 					</option>
-					{#each schema.sites.filter(s => s.handle !== ed.site) as s (s.handle)}
+					{#each ed.copySites as s (s.handle)}
 						<option value={s.handle}>{s.name}</option>
 					{/each}
 				</select>
