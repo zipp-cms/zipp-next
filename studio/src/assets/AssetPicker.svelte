@@ -1,28 +1,16 @@
-<script lang="ts" module>
-	/** The folder the picker showed last, it opens there again. */
-	let lastFolder: number | null = null;
-</script>
-
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { t } from '../i18n/index.svelte';
-	import { type Asset, type Folder } from './api';
-	import { folderByPath, missingFolders } from './folders';
+	import type { Asset } from './api';
+	import { AssetPickerState } from './assetPicker.svelte';
 	import FolderTree from './FolderTree.svelte';
 	import AssetGrid from './AssetGrid.svelte';
 	import Flyout from 'zipp-ui/Flyout.svelte';
 	import SearchInput from 'zipp-ui/SearchInput.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
 	import DropOverlay from './DropOverlay.svelte';
-	import { Library } from './library.svelte';
 	import { FileDrag, uploads } from './uploads.svelte';
-	import {
-		acceptOf,
-		pathDirs,
-		prepare,
-		fromInput,
-		type Upload,
-	} from './files';
+	import { acceptOf, fromInput, type Upload } from './files';
 
 	/** The asset library in a flyout, to pick assets or upload new ones. */
 	let {
@@ -46,83 +34,18 @@
 		onclose: () => void;
 	} = $props();
 
-	const lib = untrack(() => new Library({ images, extensions }));
-
-	// the field's folder before it exists (a new topic's `{slug}`): shown
-	// in the tree, empty, and made with the first upload into it
-	const NEW = -1;
-	let ready = $state(false);
-	let inNew = $state(false);
-	const missing = $derived(
-		ready ? missingFolders(lib.folders, folderPath) : null,
+	const picker = untrack(
+		() =>
+			new AssetPickerState({
+				images,
+				extensions,
+				folderPath,
+				multiple,
+				onpick: a => onpick(a),
+			}),
 	);
-	const folders = $derived<Folder[]>(
-		missing
-			? [
-					...lib.folders,
-					{
-						id: NEW,
-						parentId: missing.parent,
-						name: missing.names.join(' / '),
-						assets: 0,
-					},
-				]
-			: lib.folders,
-	);
-	const showNew = $derived(inNew && !!missing && !lib.search);
-
-	// the field's folder first, else where the picker was
-	lib.loadFolders().then(() => {
-		ready = true;
-		if (missing) {
-			inNew = true;
-			return;
-		}
-		const own = folderByPath(lib.folders, folderPath);
-		const last = lib.folders.some(f => f.id === lastFolder);
-		lib.select(own ? own.id : last ? lastFolder : null);
-	});
-
-	function select(id: number | null) {
-		inNew = id === NEW;
-		if (inNew) {
-			lib.search = '';
-			return;
-		}
-		lastFolder = id;
-		lib.select(id);
-	}
-
-	/**
-	 * Into the open folder, and picked; into the field's new folder, made
-	 * now; on the top with a folder of the field, into that (made when
-	 * missing).
-	 */
-	async function upload(items: Upload[]) {
-		const intoNew = showNew ? missing : null;
-		const dir = intoNew
-			? intoNew.names
-			: lib.folder === null
-				? pathDirs(folderPath)
-				: [];
-		const room = multiple ? items.length : 1;
-		items = prepare(items, { images, extensions }, room, dir);
-		const added = await uploads.run(
-			items,
-			intoNew ? intoNew.parent : lib.folder,
-			() => lib.loadFolders(),
-		);
-		for (const a of added) onpick(a);
-
-		// the new folder is there now, it opens with its files
-		if (intoNew) {
-			await lib.loadFolders();
-			const own = folderByPath(lib.folders, folderPath);
-			if (inNew && own) select(own.id);
-			return;
-		}
-		lib.assets = [...added, ...lib.assets];
-	}
+	const { lib } = picker;
+	const upload = (items: Upload[]) => picker.upload(items);
 
 	const drag = new FileDrag(upload, () => true);
 
@@ -159,7 +82,7 @@
 	{#if lib.error}<p class="error">{lib.error}</p>{/if}
 	<div
 		class="library"
-		class:flat={!folders.length}
+		class:flat={!picker.folders.length}
 		role="region"
 		aria-label={t('assets.files')}
 		ondragenter={drag.dragenter}
@@ -167,13 +90,13 @@
 		ondragover={drag.dragover}
 		ondrop={drag.drop}
 	>
-		{#if folders.length}
+		{#if picker.folders.length}
 			<FolderTree
-				{folders}
+				folders={picker.folders}
 				top={lib.top}
-				current={showNew ? NEW : lib.folder}
+				current={picker.current}
 				searching={!!lib.search}
-				onselect={select}
+				onselect={id => picker.select(id)}
 			/>
 		{/if}
 		<div class="card files">
@@ -181,10 +104,10 @@
 				<DropOverlay label={t('assets.dropToUpload')} />
 			{/if}
 			<AssetGrid
-				assets={showNew ? [] : lib.assets}
+				assets={picker.showNew ? [] : lib.assets}
 				{selected}
-				loading={!showNew && !lib.loaded}
-				empty={showNew ? t('assets.newFolderEmpty') : lib.empty}
+				loading={!picker.showNew && !lib.loaded}
+				empty={picker.showNew ? t('assets.newFolderEmpty') : lib.empty}
 				{onpick}
 			/>
 		</div>
