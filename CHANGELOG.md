@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- zipp-seo's root `seo` and `seoJson` are null for a site the token's
+  GraphQL schema doesn't read; plugins check it with
+  `graphql::ext::reads_site`.
 - A switched off block in rich text (`"enabled": false`) is left out of
   GraphQL's `chunks` like a switched off block of a blocks field.
 - GraphQL's `related` and the relation field arguments (`offerCategory:

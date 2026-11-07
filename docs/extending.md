@@ -245,7 +245,9 @@ A plugin is a crate that adds a whole feature, turned on with one line:
 - `graphql`: its types, fields of every entry type (an entry type with a
   field of the same handle keeps its own) and of the root. Resolvers use
   `zipp::graphql::ext` for the request's data and entries loaded with the
-  rights of who asks, so previews show drafts.
+  rights of who asks, so previews show drafts; a root field of a site
+  answers nothing for a site the token doesn't read
+  (`ext::reads_site`).
 - `api_routes` under `/api` for the studio, made like zipp's own (see
   [The rest api](#the-rest-api)), `routes` for the website, like sitemaps
   the frontend proxies; both get the finished schema. A website route of

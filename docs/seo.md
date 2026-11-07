@@ -20,7 +20,8 @@ entry's SEO field, its entry type (settings, then code), its section
 (settings, then code) or the global settings. Which fields the description
 and image come from stays code, it depends on the content model; such a
 field's text comes before the descriptions of the settings. GraphQL has `seoJson` on every entry
-and the root `seoJson(siteId:)` in the plugin's shape (title, meta, links,
+and the root `seoJson(siteId:)` (null for a site the token doesn't
+read) in the plugin's shape (title, meta, links,
 JSON-LD with Organization, WebSite, WebPage and breadcrumbs, hreflang
 alternates, a 1200×630 social image), so the npm package `meierlabs-seo`
 (`<Seo>`, `seoRoutes`) works unchanged: zipp answers its sitemap and
