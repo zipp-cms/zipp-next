@@ -278,8 +278,6 @@ pub(crate) fn get_many(conn: &Connection, ids: &[i64]) -> Result<Vec<Asset>> {
 	Ok(ids.iter().filter_map(|id| found.get(id).cloned()).collect())
 }
 
-/// Only letters, digits, dots, dashes and underscores, so the name is a
-/// safe path and url.
 /// The folder of an asset: its file and [`TRANSFORMS`].
 pub(crate) fn asset_dir(files: &FsPath, id: i64) -> std::path::PathBuf {
 	files.join(id.to_string())
@@ -290,6 +288,8 @@ pub(crate) fn asset_dir(files: &FsPath, id: i64) -> std::path::PathBuf {
 /// can take its name.
 pub(crate) const TRANSFORMS: &str = ".t";
 
+/// Only letters, digits, dots, dashes and underscores, so the name is a
+/// safe path and url.
 pub(crate) fn clean_filename(name: &str) -> String {
 	let name: String = name
 		.rsplit(['/', '\\'])
