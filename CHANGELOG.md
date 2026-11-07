@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A new block (also a copy, a block in a rich text) gets its id in the
+  studio: it stays open after saving instead of closing when the
+  content loads again.
 - A rich text with buttons has a button icon in its toolbar, next to
   the link, that inserts a button; the Insert menu keeps it too.
 - An old revision shows the entry type's tabs like the editor, opens

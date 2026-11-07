@@ -17,27 +17,37 @@ export function showBlock(path: string, index: number) {
 }
 
 /**
- * A copy of a block is new, also the blocks in it: its fields' blocks,
- * the blocks embedded in a rich text and those in groups lose their ids,
- * saving gives them new ones. Changes `block`, a snapshot.
+ * The id of a new block, made like the server's: it has one from the
+ * start, so its state in this browser (open, its tab) stays when saving
+ * loads the content again.
  */
-export function withoutIds(schema: Schema, block: Block) {
-	delete block.id;
-	fieldsWithoutIds(schema, block.type, block.fields);
+export function newBlockId(): string {
+	const n = crypto.getRandomValues(new Uint32Array(2));
+	return [...n].map(x => x.toString(16).padStart(8, '0')).join('');
 }
 
-function fieldsWithoutIds(schema: Schema, type: string, values: Values) {
+/**
+ * A copy of a block is new, also the blocks in it: its fields' blocks,
+ * the blocks embedded in a rich text and those in groups get new ids.
+ * Changes `block`, a snapshot.
+ */
+export function withNewIds(schema: Schema, block: Block) {
+	block.id = newBlockId();
+	fieldsWithNewIds(schema, block.type, block.fields);
+}
+
+function fieldsWithNewIds(schema: Schema, type: string, values: Values) {
 	for (const f of componentOf(schema, type)?.fields ?? []) {
 		const v = values?.[f.handle] as any;
 		if (!v) continue;
 		if (f.kind === 'blocks' && Array.isArray(v))
-			for (const b of v) withoutIds(schema, b);
-		else if (f.kind === 'group') fieldsWithoutIds(schema, f.component, v);
+			for (const b of v) withNewIds(schema, b);
+		else if (f.kind === 'group') fieldsWithNewIds(schema, f.component, v);
 		else if (f.kind === 'richText')
 			for (const n of v.content ?? []) {
 				if (n.type !== 'embed' || !n.attrs) continue;
-				n.attrs.id = null;
-				fieldsWithoutIds(schema, n.attrs.type, n.attrs.fields);
+				n.attrs.id = newBlockId();
+				fieldsWithNewIds(schema, n.attrs.type, n.attrs.fields);
 			}
 	}
 }

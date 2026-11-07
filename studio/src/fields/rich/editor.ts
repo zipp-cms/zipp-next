@@ -9,6 +9,7 @@ import {
 	type Style,
 } from '../../core/schema';
 import type { Refs } from '../../entries/api';
+import { newBlockId } from '../blocks.svelte';
 import {
 	Block,
 	BlockStyles,
@@ -169,7 +170,10 @@ export function insertButton(editor: Editor) {
 export function insertBlock(editor: Editor, schema: Schema, type: string) {
 	const fields = defaults(schema, type);
 	chain(editor)
-		.insertContent({ type: 'embed', attrs: { id: null, type, fields } })
+		.insertContent({
+			type: 'embed',
+			attrs: { id: newBlockId(), type, fields },
+		})
 		.run();
 }
 

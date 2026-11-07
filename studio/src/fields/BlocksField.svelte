@@ -14,7 +14,8 @@
 		blockMissing,
 		blockSummary,
 		focus,
-		withoutIds,
+		newBlockId,
+		withNewIds,
 	} from './blocks.svelte';
 	import { rememberOpen, wasOpen } from './opened';
 	import { inserted, isFull, removed, rowKeys } from '../core/list';
@@ -52,7 +53,7 @@
 	const full = $derived(isFull(blocks.length, max));
 	const set = (next: Block[]) => (values[field.handle] = next);
 
-	// blocks without an id are new, they get one on save
+	// a block in this list, also one of an old draft without an id
 	const { key } = rowKeys<Block>();
 
 	// as it was in this browser, else a long list starts closed; a new
@@ -72,15 +73,15 @@
 	/** Inserts a block and opens it: the one in the state, a proxy. */
 	function insert(block: Block, at: number) {
 		set(inserted(blocks, block, at));
-		open[key(blocks[at])] = true;
+		setOpen(blocks[at], true);
 	}
 
 	const add = (type: string, at = blocks.length) =>
-		insert({ type, fields: defaults(schema, type) }, at);
+		insert({ id: newBlockId(), type, fields: defaults(schema, type) }, at);
 
 	function duplicate(i: number) {
 		const copy: Block = $state.snapshot(blocks[i]);
-		withoutIds(schema, copy);
+		withNewIds(schema, copy);
 		insert(copy, i + 1);
 	}
 

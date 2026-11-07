@@ -1,7 +1,8 @@
 /**
  * Whether a block was open or collapsed and the tab it showed, by its id,
  * in this browser like Craft: it stays when the page loads again and
- * isn't content. Blocks without an id yet (new ones) aren't kept.
+ * isn't content. A new block gets its id in the studio, so its state
+ * also stays when saving loads the content again.
  */
 
 const OPEN = 'zipp-blocks-open';

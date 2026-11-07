@@ -30,7 +30,7 @@ function changedPaths(
 		if (!isBlocks(b)) continue;
 		const before = isBlocks(a) ? a : [];
 		b.forEach((block, i) => {
-			// the same block by its id, new blocks have none yet
+			// the same block by its id, blocks of an old draft may have none
 			const was = block.id
 				? before.find(x => x.id === block.id)
 				: before[i];
