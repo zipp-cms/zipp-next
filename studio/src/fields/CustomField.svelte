@@ -25,6 +25,7 @@
 	import { itemBlocks } from './itemBlocks';
 	import { getEditing, editedSite } from '../core/editing';
 	import { Last } from '../core/synced.svelte';
+	import { isReadonly, watchReadonly } from './readonly';
 
 	/**
 	 * A field of a type of another crate: zipp serves its module, which
@@ -82,6 +83,13 @@
 	let target: HTMLElement;
 	let mounted = $state.raw<Mounted | null>(null);
 	let error = $state('');
+	// a revision, or the role may not edit; a fieldset can change after
+	// the start (a conflict, publishing)
+	let readonly = $state(false);
+	$effect(() => {
+		readonly = isReadonly(target);
+		return watchReadonly(target, r => (readonly = r));
+	});
 
 	function current(): FieldProps {
 		return {
@@ -93,8 +101,7 @@
 			},
 			entryId: editing?.entryId ?? null,
 			site,
-			// a revision, or the role may not edit
-			readonly: !!target?.closest('fieldset[disabled]'),
+			readonly,
 			error: errors[path] ?? null,
 			host,
 			blocks,
