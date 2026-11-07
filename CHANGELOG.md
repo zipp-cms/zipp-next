@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The file url of an edited image is always the edited image, `?original`
+  is gone: anyone with the url got the uploaded file and the crop of an
+  editor back. The studio's image editor and Download get the uploaded
+  file with the session from `GET /api/assets/{id}/original`, for roles
+  that see assets.
 - GraphQL schemas are code, like Craft's in its project config:
   `Schema::graphql_schema(GraphqlSchema::new("website", "Website")
   .sections(["pages", "news"]).assets().previews())` says which

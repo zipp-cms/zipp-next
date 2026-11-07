@@ -106,7 +106,7 @@
 			{#key current.filename + current.size}
 				{#if current.kind === 'image'}
 					<ImageEditor
-						src={assetUrl(current, false, true)}
+						id={current.id}
 						bind:edits={form.edits}
 						bind:focal={form.focal}
 						editable={canEdit}

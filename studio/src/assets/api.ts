@@ -76,16 +76,22 @@ export type Edits = {
 };
 
 /**
- * The image with its edits, its thumbnail, or the file as uploaded; with
- * the version, a replaced file gets a new url.
+ * The image with its edits or its thumbnail; with the version, a
+ * replaced file gets a new url.
  */
-export function assetUrl(a: Asset, thumb = false, original = false): string {
+export function assetUrl(a: Asset, thumb = false): string {
 	const path = thumb
 		? `/assets/${a.id}/_thumb/${a.filename}`
 		: `/assets/${a.id}/${a.filename}`;
-	const params = [original ? 'original' : '', a.version && `v=${a.version}`];
-	const query = params.filter(Boolean).join('&');
-	return query ? `${path}?${query}` : path;
+	return a.version ? `${path}?v=${a.version}` : path;
+}
+
+/**
+ * The file as it was uploaded, without the edits: only with the
+ * session, the public url is the edited image.
+ */
+export function originalFile(id: number): Promise<Blob> {
+	return download(`/assets/${id}/original`);
 }
 
 /** The alt text of a site, else of another one, to show in a list. */

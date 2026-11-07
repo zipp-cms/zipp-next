@@ -3,8 +3,8 @@
 //! they are generated on the first request. Changing the focal point or
 //! the edits (see `Edits`) deletes them.
 //!
-//! - `/assets/<id>/<filename>`: the image with its edits, `?original`
-//!   the file as it was uploaded
+//! - `/assets/<id>/<filename>`: the image with its edits; the file as
+//!   it was uploaded is `/api/assets/<id>/original`, for the studio
 //! - `/assets/<id>/<transform>/<filename>`: a named transform of the
 //!   schema, `_thumb` is the one of the studio
 

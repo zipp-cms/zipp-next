@@ -8,6 +8,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 
 use super::api::*;
+use super::files::serve_uploaded;
 use super::*;
 use crate::AppState;
 use crate::api::{ApiResult, ApiRouter, Req};
@@ -80,6 +81,18 @@ pub(super) async fn unzip_route(
 	})
 	.await??;
 	Ok(Json(unzipped))
+}
+
+/// `GET /assets/{id}/original`: the file as it was uploaded, for the
+/// image editor; the public url serves an image with its edits.
+pub(super) async fn original_route(
+	State(state): State<AppState>,
+	_access: AssetAccess<View>,
+	Path(id): Path<i64>,
+	req: axum::extract::Request,
+) -> Result<Response> {
+	let asset = get_asset(&state.db.conn(), id)?;
+	serve_uploaded(&state, &asset, req).await
 }
 
 #[derive(Deserialize)]
@@ -279,6 +292,7 @@ pub(crate) fn api_routes() -> Router<AppState> {
 		.route("/assets/unzip", post(unzip_route).layer(big()))
 		.route("/assets/zip", get(zip_route))
 		.route("/assets/{id}/file", post(replace_route).layer(big()))
+		.route("/assets/{id}/original", get(original_route))
 		.api::<ListReq, _>(list_route)
 		.api::<UpdateReq, _>(update_route)
 		.api::<DeleteReq, _>(delete_route)

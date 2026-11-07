@@ -1,6 +1,6 @@
 import type { MenuItem } from 'zipp-ui/Menu.svelte';
 import { t } from '../i18n/index.svelte';
-import { assetUrl, zipAssets, type Asset } from './api';
+import { assetUrl, originalFile, zipAssets, type Asset } from './api';
 
 /**
  * Asks before moving it to the trash, saying where it is used (`n`
@@ -26,8 +26,7 @@ export function linkItems(a: Asset): MenuItem[] {
 		{
 			label: t('common.download'),
 			icon: 'download',
-			href: assetUrl(a, false, true),
-			download: a.filename,
+			onclick: () => downloadOriginal(a),
 		},
 		{
 			label: t('assets.copyUrl'),
@@ -38,20 +37,31 @@ export function linkItems(a: Asset): MenuItem[] {
 }
 
 /**
- * Downloads the zip as `name`: it comes as a blob, the session is a
- * header no link sends, and is saved through a link to it.
+ * Saves a file of the api as `name`: it comes as a blob, the session is
+ * a header no link sends, and is saved through a link to it.
  */
+function saveBlob(blob: Blob, name: string) {
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = name;
+	a.click();
+	// a moment later, the browser may still read it after the click
+	setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** Downloads the zip as `name`. */
 export async function downloadZip(
 	of: { ids: number[] } | { folder: number },
 	name: string,
 ): Promise<void> {
-	const url = URL.createObjectURL(await zipAssets(of));
-	const a = document.createElement('a');
-	a.href = url;
-	a.download = name.endsWith('.zip') ? name : name + '.zip';
-	a.click();
-	// a moment later, the browser may still read it after the click
-	setTimeout(() => URL.revokeObjectURL(url), 60_000);
+	const blob = await zipAssets(of);
+	saveBlob(blob, name.endsWith('.zip') ? name : name + '.zip');
+}
+
+/** Downloads the file as it was uploaded. */
+export async function downloadOriginal(a: Asset): Promise<void> {
+	saveBlob(await originalFile(a.id), a.filename);
 }
 
 /** Whether a file is a zip, which can be unpacked into folders. */

@@ -2,7 +2,7 @@
 //! [`super`]. A transform is generated on its first request and kept.
 
 use axum::Router;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::http::{StatusCode, header};
 use axum::response::Response;
 use axum::routing::get;
@@ -22,16 +22,11 @@ pub(super) fn transform_by_name(
 	}
 }
 
-#[derive(Debug, Deserialize)]
-pub(super) struct OriginalParam {
-	/// the file as it was uploaded, without the edits
-	original: Option<String>,
-}
-
-pub(super) async fn serve_original(
+/// The file of an asset, an edited image with its edits: the uploaded
+/// one is only for the studio (`original_route`), a crop stays a crop.
+pub(super) async fn serve_asset(
 	State(state): State<AppState>,
 	Path((id, filename)): Path<(i64, String)>,
-	Query(p): Query<OriginalParam>,
 	req: axum::extract::Request,
 ) -> Result<Response> {
 	let asset = get_asset(&state.db.conn(), id)?;
@@ -39,11 +34,20 @@ pub(super) async fn serve_original(
 		return Err(Error::NotFound);
 	}
 	// the edited image is a transform of its own size
-	if asset.edits.is_some() && asset.kind == "image" && p.original.is_none() {
+	if asset.edits.is_some() && asset.kind == "image" {
 		let t = Transform::new("_edited");
 		return transformed(&state, asset, "_edited", t, None, req).await;
 	}
-	let path = asset_dir(&state.files, id).join(&asset.filename);
+	serve_uploaded(&state, &asset, req).await
+}
+
+/// The file as it was uploaded, without the edits.
+pub(super) async fn serve_uploaded(
+	state: &AppState,
+	asset: &Asset,
+	req: axum::extract::Request,
+) -> Result<Response> {
+	let path = asset_dir(&state.files, asset.id).join(&asset.filename);
 	serve_file(path, &asset.mime, req).await
 }
 
@@ -182,6 +186,6 @@ pub(super) static GENERATING: tokio::sync::Semaphore =
 /// The files, under `/assets`.
 pub(crate) fn file_routes() -> Router<AppState> {
 	Router::new()
-		.route("/assets/{id}/{filename}", get(serve_original))
+		.route("/assets/{id}/{filename}", get(serve_asset))
 		.route("/assets/{id}/{transform}/{filename}", get(serve_transform))
 }

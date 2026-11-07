@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { assetUrl, type Asset } from './api';
+	import { type Asset } from './api';
 	import { transparentEdges } from './image/edits';
 	import { fileSize, time } from '../core/format';
-	import { copyUrl } from './actions';
+	import { copyUrl, downloadOriginal } from './actions';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
 	import { t } from '../i18n/index.svelte';
@@ -70,14 +70,10 @@
 		</dd>
 	</dl>
 	<div class="actions">
-		<a
-			class="light"
-			href={assetUrl(asset, false, true)}
-			download={asset.filename}
-		>
+		<button type="button" onclick={() => downloadOriginal(asset)}>
 			<Icon name="download" size={14} />
 			{t('common.download')}
-		</a>
+		</button>
 		<button type="button" onclick={copy}>
 			<Icon name="copy-url" size={14} />
 			{copied ? t('common.copied') : t('assets.copyUrl')}

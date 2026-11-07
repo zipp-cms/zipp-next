@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { type Edits } from '../api';
+	import { originalFile, type Edits } from '../api';
 	import { NO_EDITS, cropsOutside, noEdits, transparentEdges } from './edits';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import Checkbox from 'zipp-ui/Checkbox.svelte';
@@ -27,13 +27,13 @@
 	 * focal point. It draws the result the way the server makes it.
 	 */
 	let {
-		src,
+		id,
 		edits = $bindable(),
 		focal = $bindable(),
 		editable,
 	}: {
-		/** the uploaded file */
-		src: string;
+		/** the asset, its uploaded file is drawn */
+		id: number;
 		edits: Edits;
 		focal: { x: number; y: number };
 		editable: boolean;
@@ -48,10 +48,17 @@
 	]);
 
 	let img = $state<HTMLImageElement | null>(null);
+	// with the session, the public url has the edits; once loaded the
+	// image draws without its url
 	$effect(() => {
-		const i = new Image();
-		i.onload = () => (img = i);
-		i.src = src;
+		originalFile(id).then(blob => {
+			const i = new Image();
+			i.onload = () => {
+				img = i;
+				URL.revokeObjectURL(i.src);
+			};
+			i.src = URL.createObjectURL(blob);
+		});
 	});
 
 	const size = $derived(
