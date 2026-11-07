@@ -130,7 +130,7 @@ pub(super) fn collect_relations(
 				}
 			}
 			// a field type of another crate says what it relates to
-			FieldKind::Custom { ty, options } => {
+			FieldKind::Custom { ty, options, .. } => {
 				let ty = schema.field_types.get(ty);
 				for r in ty.map_or(vec![], |t| t.relations(options, value)) {
 					out.push(RelationRef {

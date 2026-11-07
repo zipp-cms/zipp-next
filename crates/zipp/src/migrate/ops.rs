@@ -324,9 +324,30 @@ fn block_lists(
 				}
 			}
 			Holds::RichText => embedded_blocks(v, f),
+			Holds::Items => item_blocks(v, f),
 			Holds::Group(_) | Holds::Nothing => {}
 		}
 	}
+}
+
+/// The blocks of the items of a custom type as one list for `f`, an item
+/// whose block went away goes too.
+fn item_blocks(items: &mut Value, f: &mut impl FnMut(&mut Vec<Value>)) {
+	let Value::Array(items) = items else { return };
+	let mut blocks: Vec<Value> =
+		items.iter().map(|i| i["block"].clone()).collect();
+	f(&mut blocks);
+
+	items.retain_mut(|item| {
+		let id = &item["block"]["id"];
+		match blocks.iter().find(|b| &b["id"] == id) {
+			Some(b) => {
+				item["block"] = b.clone();
+				true
+			}
+			None => false,
+		}
+	});
 }
 
 /// The blocks of a rich text document as one list for `f`.

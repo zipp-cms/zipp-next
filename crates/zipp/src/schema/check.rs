@@ -587,12 +587,17 @@ impl Schema {
 			{
 				Err("a navigation needs link kinds and a depth".into())
 			}
-			FieldKind::Custom { ty, options } => {
+			FieldKind::Custom {
+				ty,
+				options,
+				blocks,
+			} => {
 				let Some(t) = self.field_types.get(ty) else {
 					return Err(format!(
 						"unknown field type {ty}, register it"
 					));
 				};
+				self.check_types(blocks, false)?;
 				t.check(options)
 			}
 			FieldKind::Group { component } => {

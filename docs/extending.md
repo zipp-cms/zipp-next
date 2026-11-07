@@ -76,6 +76,33 @@ A field of it is `Field::custom("rating", "rating", Value::Null)`, the
 site registers `.field_type(Rating)`; a crate usually has a builder
 that calls `Field::custom` with its options.
 
+### Blocks in the items of a field type
+
+A field type can hold blocks with more around each one, like a place in
+a grid: `Field::custom("grid", "grid", options).item_blocks(["image",
+"text"])`. Its value is then a list of items, each with a block of
+those types in `block`:
+
+```json
+[{ "span": 6, "block": { "id": "…", "type": "image", "fields": { … } } }]
+```
+
+zipp treats these blocks like the ones of a blocks field: it checks
+their fields (an error's path is `grid.0.block.image`), keeps the assets
+and entries they use, migrates them (renamed fields and types, a removed
+type takes its item along), fills `{slug}` folders and searches their
+text. `validate` of the type gets the items with their blocks checked and
+checks the rest. In GraphQL the type is a `GraphqlType::List` of a type
+its plugin registers; `resolve` takes the site with
+`graphql::ext::site(ctx)`, and the item's `block` field gives
+`graphql::ext::block(&block, &site)`, the block as its `<type>_Block`
+of the `Block` interface. In the studio the editor gets `blocks`
+(`ItemBlocks` of `zipp-ui/field`): the block types with their names and
+icons, `create(type)` for a new block with its defaults, and
+`mount(target, id)`, the studio's own editor of a block (its fields,
+tabs, errors, the image picker, rich text), whose changes come back in
+the value.
+
 ## The studio's components
 
 The editors of field types and the modules of plugins look like the
@@ -170,6 +197,8 @@ fn studio(&self) -> StudioModule {
 The studio loads it from `/_fields/<type>.js` and calls `mount` with
 `FieldProps` (`zipp-ui/field`). What the editor needs to know:
 
+- `blocks` is set for a field with item blocks, see above; null for
+  others.
 - `onchange(value)` sends a value, `null` for none. The studio sends a
   value back with `update` only when it changed elsewhere (a restore,
   another site); `fieldModule` does that.

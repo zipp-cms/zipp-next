@@ -24,6 +24,40 @@ export type FieldProps<V = unknown> = {
 	/** what the server says is wrong with the value, if anything */
 	error: string | null;
 	host: Host;
+	/**
+	 * For a field whose items hold blocks (`Field::item_blocks`), null
+	 * for others: new blocks and the studio's editor of one.
+	 */
+	blocks: ItemBlocks | null;
+};
+
+/** A block in an item of the value, `{ "block": … }`. */
+export type ItemBlock = {
+	id: string;
+	type: string;
+	fields: Record<string, unknown>;
+	/** switched off, the website doesn't show it */
+	enabled?: false;
+};
+
+/** What the studio lends the editor of a field whose items hold blocks. */
+export type ItemBlocks = {
+	/** the types of blocks the field takes, in its order */
+	types: {
+		handle: string;
+		name: string;
+		/** a Lucide icon by its name, or an svg of its own */
+		icon: { lucide: string } | { svg: string } | null;
+	}[];
+	/** a new block of one of the types, with its defaults */
+	create(type: string): ItemBlock;
+	/**
+	 * The studio's editor of the block with this id in the value: its
+	 * fields (with their errors and tabs), the image picker and editor,
+	 * rich text. Its changes are in the value the module gets with
+	 * `update`; a block that left the value shows nothing.
+	 */
+	mount(target: HTMLElement, id: string): { destroy(): void };
 };
 
 /** What the studio lends a module: its api and some of its fields. */

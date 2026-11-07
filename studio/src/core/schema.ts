@@ -121,7 +121,13 @@ type FieldKind =
 	/** text for editors from the code, markdown; it has no value */
 	| { kind: 'note'; text: string }
 	/** a field type of another crate, its editor is a module */
-	| { kind: 'custom'; type: string; options: unknown };
+	| {
+			kind: 'custom';
+			type: string;
+			options: unknown;
+			/** its value is a list of items with a block of these in `block` */
+			blocks?: string[];
+	  };
 
 export type Field = FieldKind & {
 	handle: string;

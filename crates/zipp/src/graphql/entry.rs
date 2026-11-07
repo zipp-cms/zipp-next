@@ -152,7 +152,7 @@ pub(super) fn content_field(
 ) -> Option<GqlField> {
 	// a custom type turns the stored value into its output
 	let custom = match &field.kind {
-		FieldKind::Custom { ty, options } => schema
+		FieldKind::Custom { ty, options, .. } => schema
 			.field_types
 			.get(ty)
 			.map(|t| (t.clone(), options.clone())),
@@ -171,18 +171,7 @@ pub(super) fn content_field(
 		let kind = kind.clone();
 		let custom = custom.clone();
 		FieldFuture::new(async move {
-			let parent = &ctx.parent_value;
-			let (fields, site) = if let Some(e) = parent.downcast_ref::<Entry>()
-			{
-				(&e.fields, e.site.clone())
-			} else if let Some(a) = parent.downcast_ref::<SiteAsset>() {
-				(&a.asset.fields, a.site.clone())
-			} else if let Some(u) = parent.downcast_ref::<GqlUser>() {
-				(&u.profile.fields, u.site.clone())
-			} else {
-				let b = parent.try_downcast_ref::<Block>()?;
-				(&b.fields, b.site.clone())
-			};
+			let (fields, site) = parent_fields(&ctx)?;
 			let value = fields.get(&handle).cloned().unwrap_or(Value::Null);
 			resolve_value(&ctx, kind, custom, value, site).await
 		})
@@ -195,6 +184,24 @@ pub(super) fn content_field(
 			.chain(date_args)
 			.fold(f, GqlField::argument),
 	)
+}
+
+/// The fields and the site of what a field is on: an entry, an asset, a
+/// user or a block.
+pub(super) fn parent_fields<'a>(
+	ctx: &ResolverContext<'a>,
+) -> async_graphql::Result<(&'a Value, String)> {
+	let parent = ctx.parent_value;
+	Ok(if let Some(e) = parent.downcast_ref::<Entry>() {
+		(&e.fields, e.site.clone())
+	} else if let Some(a) = parent.downcast_ref::<SiteAsset>() {
+		(&a.asset.fields, a.site.clone())
+	} else if let Some(u) = parent.downcast_ref::<GqlUser>() {
+		(&u.profile.fields, u.site.clone())
+	} else {
+		let b = parent.try_downcast_ref::<Block>()?;
+		(&b.fields, b.site.clone())
+	})
 }
 
 /// The GraphQL type of a field; none for a note.
@@ -210,6 +217,7 @@ fn type_of(
 			Some(GraphqlType::Object { name, .. }) => TypeRef::named(name),
 			Some(GraphqlType::Scalar(s)) => TypeRef::named(scalar_name(s)),
 			Some(GraphqlType::Named(name)) => TypeRef::named(name),
+			Some(GraphqlType::List(name)) => TypeRef::named_nn_list_nn(name),
 			None => TypeRef::named(TypeRef::STRING),
 		},
 		FieldKind::Text { .. } | FieldKind::Email => {

@@ -72,5 +72,11 @@ export function pathShown(
 		const bc = b && componentOf(schema, b.type);
 		return !bc || pathShown(schema, bc, b.fields, rest.slice(1).join('.'));
 	}
+	// `grid.0.block.image`: the block of an item
+	if (field?.kind === 'custom' && field.blocks && rest.length > 2) {
+		const b = (v as { block?: Block }[] | undefined)?.[+rest[0]]?.block;
+		const bc = b && componentOf(schema, b.type);
+		return !bc || pathShown(schema, bc, b.fields, rest.slice(2).join('.'));
+	}
 	return true;
 }

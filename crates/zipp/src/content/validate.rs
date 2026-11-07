@@ -282,9 +282,28 @@ pub(super) fn validate_value(
 		(FieldKind::Note { .. }, _) => {
 			error(errors, path, "a note holds no value")
 		}
-		(FieldKind::Custom { ty, options }, value) => {
+		(
+			FieldKind::Custom {
+				ty,
+				options,
+				blocks,
+			},
+			value,
+		) => {
 			let t = schema.field_types.get(ty).unwrap();
-			match t.validate(options, value) {
+			// zipp checks the blocks of the items, the type the rest
+			let value = match blocks.is_empty() {
+				true => value.clone(),
+				false => {
+					let Some(items) = item_blocks(
+						schema, blocks, value, path, hidden, errors,
+					) else {
+						return Some(value.clone());
+					};
+					items
+				}
+			};
+			match t.validate(options, &value) {
 				// null: nothing left, like an empty text
 				Ok(v) => return (!v.is_null()).then_some(v),
 				Err(e) => error(errors, path, &e),
@@ -381,6 +400,44 @@ fn validate_texts(
 		}
 	}
 	out
+}
+
+/// The items of a custom type with their blocks checked, `{ "block" }`
+/// each; none when it isn't a list of objects.
+fn item_blocks(
+	schema: &Schema,
+	types: &[String],
+	value: &Value,
+	path: &str,
+	hidden: bool,
+	errors: &mut Vec<FieldError>,
+) -> Option<Value> {
+	let Some(items) = value.as_array() else {
+		error(errors, path, "must be a list");
+		return None;
+	};
+	if items.iter().any(|i| !i.is_object()) {
+		error(errors, path, "must be a list of objects");
+		return None;
+	}
+
+	let items = items
+		.iter()
+		.enumerate()
+		.map(|(i, item)| {
+			let mut item = item.clone();
+			item["block"] = validate_block(
+				schema,
+				types,
+				&item["block"],
+				&format!("{path}.{i}.block"),
+				hidden,
+				errors,
+			);
+			item
+		})
+		.collect();
+	Some(Value::Array(items))
 }
 
 pub(super) fn validate_block(

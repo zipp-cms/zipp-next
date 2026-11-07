@@ -112,6 +112,7 @@ export function heldBy(f: Field): string[] {
 	if (f.kind === 'blocks') return f.types;
 	if (f.kind === 'richText') return f.blocks;
 	if (f.kind === 'group') return [f.component];
+	if (f.kind === 'custom') return f.blocks ?? [];
 	return [];
 }
 
