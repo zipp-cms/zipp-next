@@ -21,4 +21,11 @@
 		gap: 0.625rem;
 		padding: 0.875rem;
 	}
+
+	// narrow, e.g. inside another card: the fields get the room
+	@include container-max(30rem) {
+		.field-group {
+			padding: 0.625rem;
+		}
+	}
 </style>

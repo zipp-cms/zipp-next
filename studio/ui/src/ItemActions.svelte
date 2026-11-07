@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { ui } from './texts.svelte';
 	import Icon from './Icon.svelte';
+	import Menu, { type MenuItem } from './Menu.svelte';
 
 	/**
 	 * What can be done with an item of a list besides moving it (that's
 	 * the DragHandle): switch it off and on, duplicate it, remove it.
-	 * Every list of a field has these, in this order.
+	 * Every list of a field has these, in this order; in a narrow place
+	 * more than one go into a ⋯ menu.
 	 */
 	let {
 		onswitch,
@@ -21,9 +23,36 @@
 		onremove: () => void;
 		removeLabel?: string;
 	} = $props();
+
+	const items: MenuItem[] = $derived([
+		...(onswitch
+			? [
+					{
+						label: off ? ui.texts.show : ui.texts.hide,
+						icon: off ? 'view' : 'hide',
+						onclick: onswitch,
+					},
+				]
+			: []),
+		...(onduplicate
+			? [
+					{
+						label: ui.texts.duplicate,
+						icon: 'copy',
+						onclick: onduplicate,
+					},
+				]
+			: []),
+		{
+			label: removeLabel ?? ui.texts.remove,
+			icon: 'delete',
+			onclick: onremove,
+			danger: true,
+		},
+	]);
 </script>
 
-<span class="item-actions">
+<span class="item-actions" class:many={items.length > 1}>
 	{#if onswitch}
 		<button
 			type="button"
@@ -56,6 +85,7 @@
 	>
 		<Icon name="delete" size={15} />
 	</button>
+	{#if items.length > 1}<span class="menu"><Menu {items} /></span>{/if}
 </span>
 
 <style lang="scss">
@@ -64,6 +94,20 @@
 	.item-actions {
 		display: flex;
 		flex-shrink: 0;
+	}
+
+	.menu {
+		display: none;
+	}
+
+	@include container-max(30rem) {
+		.many > :not(.menu) {
+			display: none;
+		}
+
+		.many > .menu {
+			display: contents;
+		}
 	}
 
 	@include hover {

@@ -2,8 +2,8 @@
 //! blocks, plugins and roles.
 
 use zipp::{
-	Access, Column, Condition, Field, Format, LinkKind, Role, Schema, Section,
-	Style, Transform,
+	Access, ButtonOption, Column, Condition, Field, Format, LinkKind, Role,
+	Schema, Section, Style, Transform,
 };
 use zipp_forms::{Form, FormField, Forms};
 use zipp_seo::{Seo, SeoDefaults, seo_field};
@@ -225,13 +225,20 @@ pub fn schema() -> Schema {
 					.width(50)
 					.when(Condition::is("genre", "concert")),
 				Field::text("city").required().indexed().width(25),
-				// buttons in colors, GraphQL gives the label and color
+				// buttons in colors with icons, GraphQL gives the label,
+				// color and icon
 				Field::button_group(
 					"genre",
 					[
-						("concert", "Konzert", "#2b6cb0"),
-						("reading", "Lesung", "#2f855a"),
-						("theatre", "Theater", "#c05621"),
+						ButtonOption::new("concert", "Konzert")
+							.color("#2b6cb0")
+							.icon("music"),
+						ButtonOption::new("reading", "Lesung")
+							.color("#2f855a")
+							.icon("book-open"),
+						ButtonOption::new("theatre", "Theater")
+							.color("#c05621")
+							.icon("drama"),
 					],
 				)
 				.required(),
@@ -354,6 +361,22 @@ pub fn schema() -> Schema {
 				.styles([
 					Style::block("lead", "Lead"),
 					Style::inline("highlight", "Highlight"),
+				])
+				// the bar's tools in order, | a line; images get an icon
+				// of their own, the Insert menu goes away
+				.toolbar([
+					"format",
+					"styles",
+					"|",
+					"bold",
+					"italic",
+					"|",
+					"bulletList",
+					"orderedList",
+					"|",
+					"link",
+					"button",
+					"block:images",
 				])],
 		)
 		// what it shows and how wide, in tabs inside the block

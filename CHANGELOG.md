@@ -5,6 +5,40 @@
 - GraphiQL has a schema picker like Craft's: an admin reads as the
   frontend of a token (its sections and sites, nothing unpublished)
   instead of the full schema.
+- The live preview's website gets as wide as the window allows: the
+  editor keeps 20rem, before it kept 40% of the window. A narrower
+  window shrinks the website, it gets its width back when there is
+  room (also the AI page's chat).
+- The editor in a narrow pane (a phone, next to the live preview):
+  the top bar stays one line (only the crumb one up and the title,
+  shortened, a page's note under them), the rich text toolbar is one
+  line that scrolls sideways, cards in cards have less padding, the
+  field layout link is an icon, and a block's hide, duplicate and
+  remove go into a ⋯ menu.
+- Every label on the left of its field (in a group, a block or a card)
+  sits at the top of its row, level with the field's first line, with
+  the handle on the name's line (under it only when the column is too
+  narrow) and the instructions below, for every kind: lists, groups and
+  other fields without one input had it centred with the handle beside.
+- A button group field looks like the studio's other choices (the
+  segmented control of Alle / Bilder / Videos): one grey track, the
+  picked option raised in white. Colored options keep their dot in
+  their color, picked or not, and their icon. The arrow keys move the
+  pick, Tab stops once, on the first option while none is picked.
+- The entries of a relation field are compact chips side by side that
+  wrap, like Craft's: the handle, the title (an ellipsis when it is
+  long), the type and remove; the Choose button follows the last one.
+  They move by dragging or with the arrow keys, left and right too.
+- A field's handle sits on the line of its name whenever the label is
+  above the field (half width fields in a group, narrow boxes), for
+  every kind: text and number fields had it on a line of their own.
+- A change undone deletes the draft: when the draft is the live content
+  again, the Draft badge, Discard and Publish go away as if there never
+  was one. `PUT /entries/{id}/draft` (and `drafts::put_draft`) answers
+  `null` then.
+- An old revision opens like the editor, read only, without the white
+  box around it: title, tabs and fields as when editing, under a
+  banner with its date, Restore and Back to editing.
 - Content without a revision (imported, or from before revisions were
   kept) is kept as a revision of no one before the first save or
   publish over it, so the original can be restored; before, the first
@@ -13,8 +47,13 @@
 - A new block (also a copy, a block in a rich text) gets its id in the
   studio: it stays open after saving instead of closing when the
   content loads again.
-- A rich text with buttons has a button icon in its toolbar, next to
-  the link, that inserts a button; the Insert menu keeps it too.
+- A rich text with buttons has a button icon in its toolbar, after the
+  link and a line, that inserts a button; the Insert menu has only the blocks.
+- `Field::rich_text(..).toolbar([..])` sets the studio's bar of a rich
+  text: which tools, in which order, `|` for a line between them;
+  `block:<type>` gives an embedded block an icon of its own. Buttons
+  and blocks without a tool go into the Insert menu. The schema check
+  refuses unknown tools and tools the field doesn't allow.
 - An old revision shows the entry type's tabs like the editor, opens
   on the editor's tab and has a dot on the tabs it changed.
 - Live preview also for a new entry of a section with pages: the button
@@ -50,9 +89,12 @@
   blocks), without a slug yet the path ends before it. The example's
   event program goes into `Events/{slug}`.
 - The field kind button group, `Field::button_group`: one of some
-  options like a dropdown, as buttons in a color per option like
-  Craft's; GraphQL gives `ButtonGroupOption { value label color }`. It
-  was the example crate `zipp-button-group`, which is gone.
+  options like a dropdown, as buttons like Craft's; GraphQL gives
+  `ButtonGroupOption { value label color icon }`. It was the example
+  crate `zipp-button-group`, which is gone. An option can have a color,
+  an icon, both or neither: `("pdf", "PDF")`, `("concert", "Konzert",
+  "#2b6cb0")` or `ButtonOption::new("pdf", "PDF").icon("file-text")`;
+  the studio shows a dot in the color and the icon on the button.
 - `import-craft` imports meierlabs-seo's SEO field into zipp-seo's,
   TableMaker tables into table fields (by the order of the columns) and
   the fields of assets into the asset fields; each volume is a folder

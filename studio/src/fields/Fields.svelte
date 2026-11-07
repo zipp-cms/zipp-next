@@ -151,22 +151,19 @@
 			display: grid;
 			grid-template-columns: $label-col minmax(0, 1fr);
 			gap: $label-gap;
-			align-items: center;
+			align-items: start;
 
-			// at the top of tall fields like blocks or rich text, the first
-			// line of a field is 2.125rem high
-			> :global(label) {
-				align-self: start;
-				flex-direction: column;
-				flex-wrap: nowrap;
-				align-items: flex-start;
-				gap: 1px;
+			// every kind's label (a <label> or the <span> naming a group) at
+			// the top of its row, level with the first line of the value,
+			// which is 2.125rem high: the handle on the name's line, under it
+			// only when the column is too narrow, the instructions below
+			> :global(.label) {
+				column-gap: 0.375rem;
+				row-gap: 1px;
 				padding-top: 0.4375rem;
 			}
 
-			// in a column its own line is just the next one
-			> :global(label .instructions) {
-				flex-basis: auto;
+			> :global(.label .instructions) {
 				margin-top: 0.25rem;
 			}
 
@@ -177,28 +174,37 @@
 		}
 	}
 
+	// the label above its value again, like on the page: the handle on
+	// the name's line, the instructions under it
+	@mixin label-above {
+		display: flex;
+		align-items: stretch;
+		gap: 0.375rem;
+
+		> :global(.label) {
+			gap: 0.375rem;
+			padding-top: 0;
+		}
+
+		> :global(.label .instructions) {
+			margin-top: 0;
+		}
+
+		> .value:only-child {
+			grid-column: auto;
+		}
+	}
+
 	// fields that share a row keep their label above
 	@include container-min(36rem) {
 		.nested .part {
-			display: flex;
-			align-items: stretch;
-			gap: 0.375rem;
-
-			> .value:only-child {
-				grid-column: auto;
-			}
+			@include label-above;
 		}
 	}
 
 	@include fields-narrow {
 		.nested .field {
-			display: flex;
-			align-items: stretch;
-			gap: 0.375rem;
-
-			> .value:only-child {
-				grid-column: auto;
-			}
+			@include label-above;
 		}
 	}
 </style>

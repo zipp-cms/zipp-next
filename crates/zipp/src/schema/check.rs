@@ -449,7 +449,8 @@ impl Schema {
 				{
 					return Err(format!("style {} exists twice", s.class));
 				}
-				self.check_types(blocks, false)
+				self.check_types(blocks, false)?;
+				check_toolbar(kind)
 			}
 			// more places than an f64 keeps exactly
 			FieldKind::Number {
@@ -489,7 +490,10 @@ impl Schema {
 					return Err(format!("option {} exists twice", o.value));
 				}
 				// the studio and websites put it into CSS
-				match options.iter().find(|o| !is_color(&o.color)) {
+				let bad = options
+					.iter()
+					.find(|o| o.color.as_ref().is_some_and(|c| !is_color(c)));
+				match bad {
 					Some(o) => {
 						Err(format!("option {}: the color is #rrggbb", o.value))
 					}
@@ -716,6 +720,67 @@ fn first_twice<T>(items: &[T], same: impl Fn(&T, &T) -> bool) -> Option<&T> {
 		.enumerate()
 		.find(|(i, x)| items[..*i].iter().any(|y| same(x, y)))
 		.map(|(_, x)| x)
+}
+
+/// The tools of a rich text's bar exist, are allowed by the field and
+/// are there once; the lines are between tools. Only for a rich text.
+fn check_toolbar(kind: &FieldKind) -> Result<(), String> {
+	let FieldKind::RichText {
+		headings,
+		lists,
+		links,
+		buttons,
+		blocks,
+		styles,
+		toolbar,
+		..
+	} = kind
+	else {
+		unreachable!("a toolbar is a rich text's");
+	};
+
+	for (i, tool) in toolbar.iter().enumerate() {
+		let allowed = match tool.as_str() {
+			"|" => {
+				if i == 0 || i == toolbar.len() - 1 || toolbar[i - 1] == "|" {
+					return Err("a | of the toolbar goes between tools".into());
+				}
+				continue;
+			}
+			"format" => !headings.is_empty(),
+			"styles" => !styles.is_empty(),
+			"bold" | "italic" => true,
+			"bulletList" | "orderedList" => *lists,
+			"link" => *links,
+			"button" => *buttons,
+			"insert" => true,
+			t => match t.strip_prefix("block:") {
+				Some(b) => blocks.iter().any(|x| x == b),
+				None => {
+					return Err(format!("the toolbar has no tool {t}"));
+				}
+			},
+		};
+		if !allowed {
+			return Err(format!("the toolbar's {tool} isn't allowed here"));
+		}
+	}
+
+	let tools: Vec<_> = toolbar.iter().filter(|t| *t != "|").collect();
+	if let Some(t) = first_twice(&tools, |a, b| a == b) {
+		return Err(format!("the toolbar has {t} twice"));
+	}
+
+	// the Insert menu takes the buttons and blocks that have no tool
+	let left = (*buttons && !toolbar.iter().any(|t| t == "button"))
+		|| blocks
+			.iter()
+			.any(|b| !toolbar.iter().any(|t| *t == format!("block:{b}")));
+	if toolbar.iter().any(|t| t == "insert") && !left {
+		return Err("the toolbar's insert has nothing left to insert".into());
+	}
+
+	Ok(())
 }
 
 /// A uri has no other placeholders than `{slug}` and `{parent.uri}`.

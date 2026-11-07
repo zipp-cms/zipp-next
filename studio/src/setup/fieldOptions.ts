@@ -205,7 +205,16 @@ export function fieldOptions(
 			add(
 				t('fields.optOptions'),
 				f.options
-					.map(o => `${o.label} (${o.value}, ${o.color})`)
+					.map(o => {
+						// the color and icon the option has
+						const icon = !o.icon
+							? ''
+							: 'lucide' in o.icon
+								? o.icon.lucide
+								: t('fields.ownIcon');
+						const about = [o.value, o.color, icon].filter(Boolean);
+						return `${o.label} (${about.join(', ')})`;
+					})
 					.join(', '),
 			);
 			break;

@@ -49,6 +49,7 @@ fn conflicts_with_others() {
 		None,
 		Some(1),
 	)
+	.unwrap()
 	.unwrap();
 	let b = put_draft(
 		&conn,
@@ -73,6 +74,7 @@ fn conflicts_with_others() {
 		Some(a.updated_at),
 		Some(1),
 	)
+	.unwrap()
 	.unwrap();
 	put_draft(
 		&conn,
@@ -117,8 +119,9 @@ fn drafts_stay_until_published() {
 	// en changes its title and the shared price
 	let en =
 		site_doc("event", "Concert", json!({ "city": "Bern", "price": 12 }));
-	let d =
-		put_draft(&conn, &s, e.id, "en", en, base(&conn, e.id), None).unwrap();
+	let d = put_draft(&conn, &s, e.id, "en", en, base(&conn, e.id), None)
+		.unwrap()
+		.unwrap();
 	assert_eq!(d.doc["de"].fields["price"], 12);
 	assert_eq!(get_entry(&conn, e.id, "en").unwrap().title, "Konzert");
 
@@ -228,8 +231,17 @@ fn restores_a_revision_into_the_draft() {
 	publish(&conn, &s, e.id, None).unwrap();
 
 	let first = revisions(&conn, e.id).unwrap().pop().unwrap();
-	let d = restore(&conn, e.id, first.id, None, None).unwrap();
-	assert_eq!(d.doc["de"].title, "One");
+	let d = restore(&conn, &s, e.id, first.id, None, None).unwrap();
+	assert_eq!(d.unwrap().doc["de"].title, "One");
+
+	// the live revision changes nothing: no draft
+	let last = revisions(&conn, e.id).unwrap()[0].id;
+	assert!(
+		restore(&conn, &s, e.id, last, None, None)
+			.unwrap()
+			.is_none()
+	);
+	assert!(get_draft(&conn, e.id).unwrap().is_none());
 }
 
 #[test]
@@ -394,7 +406,9 @@ fn a_draft_changes_the_type() {
 	// the editor sends de converted, en follows: the city stays, the
 	// price was a number
 	let de = site_doc("concert", "Jazz", json!({ "city": "Bern" }));
-	let d = put_draft(&conn, &s, e.id, "de", de, None, None).unwrap();
+	let d = put_draft(&conn, &s, e.id, "de", de, None, None)
+		.unwrap()
+		.unwrap();
 	assert_eq!(d.doc["en"].ty, "concert");
 	assert_eq!(d.doc["en"].fields, json!({ "city": "Bern" }));
 	// the website keeps the event until it is published
@@ -418,6 +432,7 @@ fn a_draft_changes_the_type() {
 		None,
 		None,
 	)
+	.unwrap()
 	.unwrap();
 	assert_eq!(d.doc["de"].ty, "concert");
 	discard(&conn, e.id).unwrap();

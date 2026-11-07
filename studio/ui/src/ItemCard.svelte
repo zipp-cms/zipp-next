@@ -82,6 +82,8 @@
 </div>
 
 <style lang="scss">
+	@use '../vars' as *;
+
 	.item-card {
 		scroll-margin-top: 4rem;
 
@@ -142,5 +144,12 @@
 
 	.body {
 		padding: 0.875rem 0.875rem 1rem;
+	}
+
+	// narrow, e.g. a block in a block: the fields get the room
+	@include container-max(30rem) {
+		.body {
+			padding: 0.625rem 0.625rem 0.75rem;
+		}
 	}
 </style>

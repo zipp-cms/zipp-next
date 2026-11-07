@@ -15,6 +15,7 @@
 
 <script lang="ts">
 	import { onDestroy, untrack } from 'svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
 	import {
 		componentOf,
 		entryUrl,
@@ -232,25 +233,23 @@
 				{#if ed.error}<p class="error">{ed.error}</p>{/if}
 
 				{#if ed.viewing}
-					<div class="card">
-						<RevisionView
-							{schema}
-							comp={componentOf(
-								schema,
-								ed.viewing.doc?.type ?? '',
-							) ?? comp}
-							refs={ed.refs}
-							single={ed.single}
-							rev={ed.viewing.rev}
-							doc={ed.viewing.doc}
-							changed={ed.viewing.changed}
-							tab={tabs.current}
-							onrestore={ed.may.edit
-								? () => ed.restore(ed.viewing!.rev)
-								: null}
-							onback={() => (ed.viewing = null)}
-						/>
-					</div>
+					<!-- laid out like the editor, read only -->
+					<RevisionView
+						{schema}
+						comp={componentOf(schema, ed.viewing.doc?.type ?? '') ??
+							comp}
+						refs={ed.refs}
+						single={ed.single}
+						global={ed.global}
+						rev={ed.viewing.rev}
+						doc={ed.viewing.doc}
+						changed={ed.viewing.changed}
+						tab={tabs.current}
+						onrestore={ed.may.edit
+							? () => ed.restore(ed.viewing!.rev)
+							: null}
+						onback={() => (ed.viewing = null)}
+					/>
 				{:else}
 					<!-- read only for a role that may only look, and while
 					publishing, discarding or restoring (see focused) -->
@@ -283,13 +282,16 @@
 								/>
 							{/if}
 							{#if isAdmin(schema)}
+								{@const layout = t('entries.fieldLayout', {
+									name: comp.name,
+								})}
 								<a
 									class="layout-link"
 									href={setupPath('types', comp.handle)}
+									title={layout}
 								>
-									{t('entries.fieldLayout', {
-										name: comp.name,
-									})}
+									<Icon name="settings" size={14} />
+									<span class="text">{layout}</span>
 								</a>
 							{/if}
 						</div>
@@ -352,6 +354,10 @@
 	}
 
 	.layout-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		flex-shrink: 0;
 		margin-left: auto;
 		color: var(--muted);
 		font-size: var(--fs-sm);
@@ -361,6 +367,13 @@
 			&:hover {
 				color: var(--accent);
 			}
+		}
+	}
+
+	// narrow: only its icon, the tabs keep the row
+	@include container-max(36rem) {
+		.layout-link .text {
+			display: none;
 		}
 	}
 </style>

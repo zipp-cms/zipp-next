@@ -6,9 +6,17 @@ What editors get in the studio (`/admin`).
 
 The studio saves every change into
 a draft of the entry (one per entry, all sites), the website keeps the
-live content until it is published. Publishing checks every site and
+live content until it is published. A change undone (the draft is the
+live content again) deletes the draft, as if there never was one: the
+same type, title, slug, switch and dates, and fields that are the same
+once cleaned like a save (an empty text, list, group or rich text is no
+value, key order doesn't count, blocks with the same ids). A draft
+with a value a save refuses stays, so publishing shows the error;
+restoring the live revision leaves no draft either. Publishing checks every site and
 writes them in one transaction and keeps a revision; an old revision
-can be restored into the draft. A preview token shows the draft on the
+opens read only in the editor's layout (title, tabs, fields, dots on
+what it changed) under a banner with its date, and can be restored
+into the draft. A preview token shows the draft on the
 website: crelte passes `?token=` on to GraphQL. The database keeps only
 the hash of a token (and of a session), a token ends after a day or
 with the user who made it.

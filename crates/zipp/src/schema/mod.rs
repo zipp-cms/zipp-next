@@ -45,7 +45,7 @@ pub use field::FieldKind;
 pub(crate) use field::Holds;
 pub use field::LinkKind;
 pub use field::humanize;
-pub use field::{Choice, ColorChoice};
+pub use field::{ButtonOption, Choice};
 
 /// The single of the texts of the frontend, see [`Schema::translations`].
 pub(crate) const TRANSLATIONS: &str = "translations";
@@ -116,7 +116,7 @@ pub struct NavGroup {
 /// An icon in the studio: a Lucide icon by its name (`calendar`, see
 /// lucide.dev/icons), or an svg of its own, drawn with `currentColor` to
 /// take the color of the text.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub enum Icon {

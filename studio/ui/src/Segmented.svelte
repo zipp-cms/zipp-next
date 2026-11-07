@@ -23,9 +23,12 @@
 		item?: Snippet<[{ value: T; label: string }]>;
 	} = $props();
 
+	const chosen = $derived(options.some(o => o.value === value));
+
 	/**
 	 * One stop for Tab, the chosen one; the arrow keys choose the one next
-	 * to it, like radios and tabs do.
+	 * to it, like radios and tabs do. With none chosen (a field without a
+	 * value) the first one is the stop.
 	 */
 	function onkeydown(e: KeyboardEvent) {
 		const by = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[
@@ -34,7 +37,10 @@
 		if (!by) return;
 		e.preventDefault();
 		const i = options.findIndex(o => o.value === value);
-		const next = options[(i + by + options.length) % options.length];
+		const next =
+			i < 0
+				? options[by > 0 ? 0 : options.length - 1]
+				: options[(i + by + options.length) % options.length];
 		onchange(next.value);
 		const group = (e.currentTarget as HTMLElement).parentElement;
 		tick().then(() =>
@@ -48,14 +54,14 @@
 	role={tabs ? 'tablist' : 'radiogroup'}
 	aria-label={label}
 >
-	{#each options as o (o.value)}
+	{#each options as o, i (o.value)}
 		<button
 			type="button"
 			role={tabs ? 'tab' : 'radio'}
 			aria-selected={tabs ? o.value === value : undefined}
 			aria-checked={tabs ? undefined : o.value === value}
 			class:on={o.value === value}
-			tabindex={o.value === value ? 0 : -1}
+			tabindex={o.value === value || (i === 0 && !chosen) ? 0 : -1}
 			onclick={() => onchange(o.value)}
 			{onkeydown}
 		>

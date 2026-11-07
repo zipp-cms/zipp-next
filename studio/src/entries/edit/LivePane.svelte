@@ -23,7 +23,9 @@
 	/**
 	 * The editor, `children`, with the website on the right while the
 	 * live preview is on; it shows the draft after every save. The
-	 * website starts as wide as a phone, the editor keeps the room.
+	 * website starts as wide as a phone, the editor keeps the room; it
+	 * gets as wide as there is room for, the editor keeps 20rem (narrow,
+	 * see editor-narrow).
 	 */
 	let {
 		ed,
@@ -44,6 +46,16 @@
 
 	let frameWidth = $state(0);
 	let resizing = $state(false);
+
+	// the website's most: the pane's width without the editor's least
+	// and the gap between them (`.live`'s gap), in rem
+	const EDITOR_MIN = 20;
+	const GAP = 1.25;
+	const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+	let paneWidth = $state(0);
+	const maxFrame = $derived(
+		paneWidth ? paneWidth - (EDITOR_MIN + GAP) * rem : undefined,
+	);
 
 	// the editor gets the sidebar's room while the website is next to it
 	$effect(() => {
@@ -66,7 +78,11 @@
 	});
 </script>
 
-<div class:live={!!preview} style:--frame="{frameWidth}px">
+<div
+	class:live={!!preview}
+	style:--frame="{frameWidth}px"
+	bind:clientWidth={paneWidth}
+>
 	<div class="editor" bind:clientWidth={width}>
 		{@render children()}
 	</div>
@@ -79,6 +95,7 @@
 				key="zipp-live-preview-width"
 				initial={400}
 				min={280}
+				max={maxFrame}
 				side="end"
 				label={t('entries.websiteWidth')}
 			/>

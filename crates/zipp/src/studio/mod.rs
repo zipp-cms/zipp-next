@@ -11,13 +11,14 @@ pub use routes::{api_routes, routes};
 
 use std::collections::BTreeMap;
 
-use crate::schema::{Icon, Schema};
+use crate::schema::{FieldKind, Icon, Schema};
 
 #[derive(rust_embed::Embed)]
 #[folder = "studio/"]
 struct Files;
 
-/// The Lucide icons the schema names (entry types, blocks, nav groups),
+/// The Lucide icons the schema names (entry types, blocks, nav groups,
+/// options of button groups),
 /// by name: from the build of the studio, which has all of them in
 /// `_studio/lucide-<version>/`. Gathered once at the start, they come with
 /// the schema; the studio fetches only names that aren't here.
@@ -27,6 +28,18 @@ pub fn schema_icons(schema: &Schema) -> BTreeMap<String, String> {
 		.iter()
 		.filter_map(|c| c.icon.as_ref())
 		.chain(schema.nav.iter().filter_map(|g| g.icon.as_ref()))
+		.chain(
+			schema
+				.components
+				.iter()
+				.flat_map(|c| &c.fields)
+				.filter_map(|f| match &f.kind {
+					FieldKind::ButtonGroup { options } => Some(options),
+					_ => None,
+				})
+				.flatten()
+				.filter_map(|o| o.icon.as_ref()),
+		)
 		.filter_map(|i| match i {
 			Icon::Lucide(name) => Some(name),
 			Icon::Svg(_) => None,

@@ -21,9 +21,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::AppState;
-use crate::content::{FieldError, follow};
+use crate::content::{FieldError, follow, validate_fields};
 use crate::db::{DAY_MS, marks, now};
-use crate::entries::{Dates, Entry, EntryInput, check, get_entry, write};
+use crate::entries::{
+	Dates, Entry, EntryInput, check, get_entry, slugify, write,
+};
 use crate::error::{Error, Result};
 use crate::schema::Schema;
 
@@ -278,6 +280,9 @@ pub(super) fn check_base(
 /// `updated_at`, `None` without a draft). If someone else changed the
 /// draft since, or published or discarded it, nothing is saved: the
 /// editor sees their changes first instead of overwriting them.
+///
+/// A draft that is the live content again (a change undone) is deleted:
+/// `None`, as if there never was one (see [`same_as_live`]).
 pub fn put_draft(
 	conn: &Connection,
 	schema: &Schema,
@@ -286,7 +291,7 @@ pub fn put_draft(
 	mut content: SiteDoc,
 	base: Option<i64>,
 	user_id: Option<i64>,
-) -> Result<Draft> {
+) -> Result<Option<Draft>> {
 	if schema.get_site(site).is_none() {
 		return Err(Error::Request(format!("unknown site {site}")));
 	}
@@ -300,10 +305,8 @@ pub fn put_draft(
 
 	check_base(current.as_ref(), base, user_id)?;
 
-	let mut doc = match current {
-		Some(d) => d.doc,
-		None => live_doc(conn, id)?,
-	};
+	let live = live_doc(conn, id)?;
+	let mut doc = current.map_or_else(|| live.clone(), |d| d.doc);
 	for (_, sd) in doc.iter_mut().filter(|(s, _)| s.as_str() != site) {
 		sd.fields = follow(schema, &sd.ty, comp, &content.fields, &sd.fields);
 		sd.ty = content.ty.clone();
@@ -311,8 +314,61 @@ pub fn put_draft(
 	}
 	doc.insert(site.into(), content);
 
-	store_draft(conn, id, &doc, user_id)?;
-	Ok(get_draft(conn, id)?.unwrap())
+	store_or_discard(conn, schema, id, &doc, &live, user_id)
+}
+
+/// Stores the draft, or deletes it when it is the live content again
+/// (see [`same_as_live`]): `None`, as if there never was one.
+pub(super) fn store_or_discard(
+	conn: &Connection,
+	schema: &Schema,
+	id: i64,
+	doc: &Doc,
+	live: &Doc,
+	user_id: Option<i64>,
+) -> Result<Option<Draft>> {
+	if same_as_live(schema, doc, live) {
+		discard(conn, id)?;
+		return Ok(None);
+	}
+	store_draft(conn, id, doc, user_id)?;
+	get_draft(conn, id)
+}
+
+/// Whether a draft changes nothing a publish would: in every site the
+/// same type, dates (no post date keeps the live one), switch, title and
+/// slug (as a save trims and slugifies them) and the same fields once
+/// cleaned like a save does. Empty values count as none (an empty text,
+/// list, group or rich text, a null), key order doesn't matter, blocks
+/// are the same with the same ids. A draft with a value a save refuses
+/// stays, so the editor sees the error on publish.
+fn same_as_live(schema: &Schema, doc: &Doc, live: &Doc) -> bool {
+	let slug = |sd: &SiteDoc| match sd.slug.trim() {
+		"" => slugify(sd.title.trim()),
+		s => slugify(s),
+	};
+	// as hidden: a half done draft needn't be filled, but cleaning drops
+	// invalid values, so only a draft without errors can be the same
+	let fields = |sd: &SiteDoc| {
+		let comp = schema.entry_type(&sd.ty)?;
+		let mut errors = vec![];
+		let v =
+			validate_fields(schema, comp, &sd.fields, "", true, &mut errors);
+		errors.is_empty().then_some(v)
+	};
+	let same = |a: &SiteDoc, b: &SiteDoc| {
+		a.ty == b.ty
+			&& a.dates.post_date.or(b.dates.post_date) == b.dates.post_date
+			&& a.dates.expiry_date == b.dates.expiry_date
+			&& a.published == b.published
+			&& a.title.trim() == b.title.trim()
+			&& slug(a) == slug(b)
+			&& fields(a).is_some_and(|f| Some(f) == fields(b))
+	};
+	doc.len() == live.len()
+		&& doc
+			.iter()
+			.all(|(site, sd)| live.get(site).is_some_and(|l| same(sd, l)))
 }
 
 /// Applies the draft to the live entry in every site and keeps a

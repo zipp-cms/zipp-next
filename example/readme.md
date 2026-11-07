@@ -28,7 +28,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Revisions | Options → Revisions | what each one changed; click to look, **Restore** to go back |
 | Two editors at once | log in twice | the second one is told instead of overwriting the first |
 | Blocks | Pages → Über uns → Content | text, images, video, button, upcoming events |
-| Rich text | the Intro tab · the Text block | the intro only with links; the block also with headings, lists, **buttons** (next to each other one row), **images** inside the text and **Styles** (*Lead* for a paragraph, *Highlight* for words; the website styles their classes) |
+| Rich text | the Intro tab · the Text block | the intro only with links; the block also with headings, lists, **buttons** (next to each other one row), **images** inside the text and **Styles** (*Lead* for a paragraph, *Highlight* for words; the website styles their classes); its toolbar is set in the code (`.toolbar([...])`): images have an icon of their own instead of the Insert menu |
 | Links | a Button block | entry, URL, email, phone or file; external ones open in a new tab |
 | Group, inline group | a page → SEO, Events → Tickets | fields of another component under one name in a box; the event's tickets are an inline group, its fields written right in the field (`Field::group_of`) |
 | Tabs in a block | Pages → Über uns → Content → an Images block | **Content** (the images, the caption) and **Layout** (the width) as tabs inside the block (`block_tabs`); the block keeps its tab |
@@ -41,7 +41,7 @@ This page is itself a feature: a markdown file of the repository ([`example/read
 | Conditions | Events → Genre, Tickets → Sold out | *Doors open* only for a concert, *Warteliste* only while the event is sold out; the fields come and go as you click |
 | Default values | Images block → Width, Events → Sprache | a new block starts *Wide*, a new event *Deutsch* |
 | Email | Settings → Footer → Contact email | the server takes only an address, the website links it with `mailto:` |
-| Button group | Events → Genre | `Field::button_group`: Craft's button group with a color per option; the website shows the genre's label in its color |
+| Button group | Events → Genre | `Field::button_group`: Craft's button group, options with a color and a Lucide icon (`ButtonOption`); the website shows the genre's label in its color |
 | Boolean, number, indexed fields | Events | *sold out*, price (CHF, two decimals) in the tickets; the website sorts by date and filters by city |
 | Date, date and time | Events → Date, Doors open | the date picker; a day or a day and time, the website sorts events by the date |
 | Relations | News → Categories, Events → More info, Header → navigation | the website gets the linked entries with their fields, and filters by them; the picker is a flyout with the sections on the left and the pages as their tree, search "team" for a match with its path; an article takes up to 3 categories (`.max(3)`); the header's navigation links only to pages (`.sections(["pages"])`), its picker has no News or Events |

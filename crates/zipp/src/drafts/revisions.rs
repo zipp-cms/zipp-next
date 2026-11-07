@@ -176,14 +176,16 @@ pub(crate) fn get_revision(
 
 /// Puts an old revision into the draft. Sites that the revision doesn't
 /// know yet keep their live content. `base` like [`put_draft`]'s: the
-/// draft of someone else isn't replaced unseen.
+/// draft of someone else isn't replaced unseen; `None` back like its
+/// too, the revision is the live content.
 pub(crate) fn restore(
 	conn: &Connection,
+	schema: &Schema,
 	id: i64,
 	revision: i64,
 	base: Option<i64>,
 	user_id: Option<i64>,
-) -> Result<Draft> {
+) -> Result<Option<Draft>> {
 	check_base(get_draft(conn, id)?.as_ref(), base, user_id)?;
 	let doc: String = conn.query_row(
 		"SELECT doc FROM revisions WHERE id = ?1 AND entry_id = ?2",
@@ -191,13 +193,13 @@ pub(crate) fn restore(
 		|r| r.get(0),
 	)?;
 	let old: Doc = serde_json::from_str(&doc).unwrap_or_default();
-	let mut doc = live_doc(conn, id)?;
+	let live = live_doc(conn, id)?;
+	let mut doc = live.clone();
 	for (site, sd) in old {
 		if doc.contains_key(&site) {
 			doc.insert(site, sd);
 		}
 	}
 
-	store_draft(conn, id, &doc, user_id)?;
-	Ok(get_draft(conn, id)?.unwrap())
+	store_or_discard(conn, schema, id, &doc, &live, user_id)
 }

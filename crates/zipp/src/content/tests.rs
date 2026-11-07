@@ -2,7 +2,7 @@ use serde_json::json;
 
 use super::*;
 use crate::fixtures::site;
-use crate::schema::{Condition, Section};
+use crate::schema::{ButtonOption, Condition, Section};
 
 fn page_fields() -> Value {
 	json!({
@@ -194,6 +194,27 @@ fn button_groups_take_one_of_their_options() {
 	assert_eq!(
 		err(&[("a", "A", "#000000"), ("a", "B", "#ffffff")]),
 		"talk.genre: option a exists twice"
+	);
+
+	// a color, an icon, both or neither
+	let plain = Field::button_group("format", [("pdf", "PDF"), ("w", "Word")]);
+	talk(plain).check().unwrap();
+	let mixed = Field::button_group(
+		"format",
+		[
+			ButtonOption::new("pdf", "PDF").icon("file-text"),
+			ButtonOption::new("w", "Word").color("#2b6cb0").icon("file"),
+			ButtonOption::new("x", "None"),
+		],
+	);
+	talk(mixed).check().unwrap();
+	let bad = Field::button_group(
+		"format",
+		[ButtonOption::new("pdf", "PDF").icon("file").color("blue")],
+	);
+	assert_eq!(
+		talk(bad).check().unwrap_err(),
+		"talk.format: option pdf: the color is #rrggbb"
 	);
 }
 

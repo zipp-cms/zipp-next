@@ -51,14 +51,15 @@ export function getDraftWithRefs(
 
 /**
  * `base` is the version of the draft the editor knows, a 409 means someone
- * else changed it meanwhile.
+ * else changed it meanwhile. `null` back: the draft was the live content
+ * again (a change undone), the server deleted it.
  */
 export function putDraft(
 	id: number,
 	site: string,
 	content: SiteDoc,
 	base: number | null,
-): Promise<Draft> {
+): Promise<Draft | null> {
 	return request('PUT', `/entries/${id}/draft`, { site, base, ...content });
 }
 
@@ -74,12 +75,15 @@ export function getRevisions(id: number): Promise<Revision[]> {
 	return request('GET', `/entries/${id}/revisions`);
 }
 
-/** `base` like `putDraft`'s: the draft this editor has, its `updatedAt`. */
+/**
+ * `base` like `putDraft`'s: the draft this editor has, its `updatedAt`.
+ * null back: the revision is the live content, there is no draft.
+ */
 export function restoreRevision(
 	id: number,
 	rev: number,
 	base: number | null,
-): Promise<Draft> {
+): Promise<Draft | null> {
 	return request('POST', `/entries/${id}/revisions/${rev}/restore`, {
 		base,
 	});

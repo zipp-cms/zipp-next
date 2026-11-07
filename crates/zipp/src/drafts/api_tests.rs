@@ -44,7 +44,11 @@ async fn drafts_until_published() {
 	let editor = ts.user(Some("editor"));
 	let id = create(&editor, "pages", "page").await;
 
-	let draft = editor.call(&put(id, "page", "Draft", None)).await.unwrap();
+	let draft = editor
+		.call(&put(id, "page", "Draft", None))
+		.await
+		.unwrap()
+		.unwrap();
 	assert_eq!(draft.doc["de"].title, "Draft");
 	assert!(draft.user.unwrap().starts_with("editor"));
 	let got = editor.call(&GetReq { id, site: None }).await.unwrap();
@@ -73,13 +77,13 @@ async fn drafts_until_published() {
 		rev: first,
 		base,
 	};
-	let restored = editor.call(&restore(None)).await.unwrap();
+	let restored = editor.call(&restore(None)).await.unwrap().unwrap();
 	assert_eq!(restored.doc["de"].title, "Start");
 
 	// not over someone else's draft they haven't seen
 	let other = ts.user(Some("editor"));
 	let theirs = put(id, "page", "Theirs", Some(restored.updated_at));
-	let theirs = other.call(&theirs).await.unwrap();
+	let theirs = other.call(&theirs).await.unwrap().unwrap();
 	let err = editor.call(&restore(None)).await;
 	assert!(matches!(err.unwrap_err(), Error::Conflict(_)));
 	editor
@@ -125,7 +129,7 @@ async fn content_from_before_revisions_stays_restorable() {
 		rev: first.id,
 		base: None,
 	};
-	let restored = editor.call(&restore).await.unwrap();
+	let restored = editor.call(&restore).await.unwrap().unwrap();
 	assert_eq!(restored.doc["de"].title, "Start");
 
 	// the next publish has its revision already
@@ -140,7 +144,7 @@ async fn two_editors_conflict() {
 	let (a, b) = (ts.admin(), ts.admin());
 	let id = create(&a, "pages", "page").await;
 
-	let first = a.call(&put(id, "page", "A", None)).await.unwrap();
+	let first = a.call(&put(id, "page", "A", None)).await.unwrap().unwrap();
 	let err = b.call(&put(id, "page", "B", None)).await.unwrap_err();
 	assert!(
 		matches!(err, Error::Conflict(m) if m.ends_with("changed this entry"))
@@ -361,4 +365,72 @@ async fn publishing_leaves_out_hidden_entries() {
 		})
 		.await;
 	assert_eq!(got.unwrap().entry.fields["page"], json!([page]));
+}
+
+#[tokio::test]
+async fn a_change_undone_leaves_no_draft() {
+	let ts = TestServer::new(site_with_roles());
+	let (a, b) = (ts.admin(), ts.admin());
+	let block = json!({ "id": "b1", "type": "text", "fields": {
+		"content": "Hallo"
+	} });
+	let fields = json!({ "intro": "Hi", "body": [block] });
+	let entry = input("pages", "page", "Start", fields);
+	let id = a.call(&CreateReq(entry)).await.unwrap().id;
+	let draft = |site: &str, title: &str, fields, base| PutReq {
+		id,
+		site: site.into(),
+		base,
+		content: content("page", title, fields),
+	};
+
+	// changed and back: the studio sends what it shows, also empty
+	// values, the block in another key order
+	let changed = json!({ "intro": "Hi there", "body": [block] });
+	let d = a.call(&draft("de", "Start", changed, None)).await.unwrap();
+	let base = Some(d.unwrap().updated_at);
+	let back = json!({
+		"story": { "type": "doc", "content": [{ "type": "paragraph" }] },
+		"seo": { "title": "", "description": null },
+		"body": [{ "fields": { "content": "Hallo" }, "type": "text",
+			"id": "b1" }],
+		"intro": "Hi",
+	});
+	let d = a.call(&draft("de", " Start ", back.clone(), base)).await;
+	assert_eq!(d.unwrap(), None);
+	let got = a.call(&GetReq { id, site: None }).await.unwrap();
+	assert!(got.draft.is_none());
+
+	// the next change starts a new draft, in another site too
+	let en = draft("en", "Begin", back.clone(), None);
+	let d = a.call(&en).await.unwrap().unwrap();
+	assert_eq!(d.doc["de"].title, "Start");
+	let undo = draft("en", "Start", back.clone(), Some(d.updated_at));
+	assert_eq!(a.call(&undo).await.unwrap(), None);
+
+	// a real change stays: another block, a seo title, the switch; and
+	// a value a save refuses, so publishing shows the error
+	let other = json!({ "intro": "Hi", "body": [{ "id": "b2", "type": "text",
+		"fields": { "content": "Hallo" } }] });
+	let seo = json!({ "intro": "Hi", "body": [block], "seo": {
+		"title": "T"
+	} });
+	let invalid = json!({ "intro": "Hi", "body": [block], "price": 1 });
+	for fields in [other, seo, invalid] {
+		let d = a.call(&draft("de", "Start", fields, None)).await.unwrap();
+		a.call(&DiscardReq { id }).await.unwrap();
+		assert!(d.is_some());
+	}
+	let mut off = draft("de", "Start", back.clone(), None);
+	off.content.published = false;
+	let d = a.call(&off).await.unwrap().unwrap();
+
+	// whoever still has the deleted draft open sees the conflict
+	let undo = draft("de", "Start", back, Some(d.updated_at));
+	assert_eq!(a.call(&undo).await.unwrap(), None);
+	let late = draft("de", "Late", json!({}), Some(d.updated_at));
+	assert_eq!(
+		b.call(&late).await.unwrap_err(),
+		Error::Conflict("the draft was published or discarded".into())
+	);
 }

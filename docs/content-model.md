@@ -180,6 +180,22 @@ shows every style alike (a line on the left, a tint). Unknown classes
 are refused; a removed style stays in the content until it is saved
 again, which refuses it, like a removed heading level.
 
+The studio's bar over the text shows what the field allows: Format
+(the headings), Styles, bold, italic, the lists, link, a line and a button
+icon, then an Insert menu with the embedded blocks. `.toolbar(["format",
+"|", "bold", "italic", "|", "link", "button", "block:image",
+"insert"])` sets it instead: the tools in order, `|` a line between
+them. The tools are `format`, `styles`, `bold`, `italic`,
+`bulletList`, `orderedList`, `link`, `button`, `block:<type>` (an icon
+that inserts a block of an embedded type, the block's icon) and
+`insert` (the Insert menu). Buttons and blocks without a tool of their
+own go into the Insert menu, at the end of the bar unless `insert`
+places it; with nothing left there is none. The check refuses unknown
+tools, tools the field doesn't allow (`button` without `.buttons()`,
+a block it doesn't embed), a tool twice, a line at an end or next to
+another and an `insert` with nothing left. Shortcuts like Ctrl+B work
+without the tool in the bar.
+
 ## Groups and markdown
 
 `Field::group("seo", "seo")` keeps the fields
@@ -203,12 +219,18 @@ The studio shows up to three options as buttons, more as a select.
 Dropdowns can be indexed.
 
 `Field::button_group("genre", [("concert", "Konzert", "#2b6cb0"),
-...])` is a dropdown with a color per option (`#rrggbb`), like Craft's
-button group: the studio shows every option as a button in its color,
-the content stores the value, GraphQL gives the option as
-`ButtonGroupOption { value label color }` (none for an option removed
-since), so the website shows the label in its color. It takes a
-default, conditions and `.indexed()` like a dropdown.
+...])` is a dropdown as buttons, like Craft's button group. An option
+can have a color (`#rrggbb`), an icon, both or neither: `("pdf",
+"PDF")` has none, `ButtonOption::new("pdf", "PDF").icon("file-text")`
+an icon (a Lucide name or `Icon::svg`), `.color("#2b6cb0")` a color.
+The studio shows the options as a segmented control (the picked one
+raised in white), each with a dot in its color and its icon, the
+content stores the value, GraphQL gives the option as
+`ButtonGroupOption { value label color icon }` (none for an option
+removed since; `color` and `icon` null if it has none, `icon` is the
+Lucide name, an own svg is only the studio's), so the website shows the
+label in its color or with its icon. It takes a default, conditions and
+`.indexed()` like a dropdown.
 
 ## Checkboxes, tables and navigations
 

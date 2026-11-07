@@ -312,8 +312,8 @@ impl FieldType for Rating {
 
 #[tokio::test]
 async fn button_groups_and_field_types() {
-	use crate::schema::{Field, Section};
-	let show = |options: &[(&str, &str, &str)]| {
+	use crate::schema::{ButtonOption, Field, Section};
+	let show = |options: &[ButtonOption]| {
 		site()
 			.field_type(Rating)
 			.section(Section::channel("shows", ["show"]).uri("{slug}"))
@@ -321,27 +321,32 @@ async fn button_groups_and_field_types() {
 				"show",
 				"Show",
 				[
-					Field::button_group("genre", options.iter().copied()),
+					Field::button_group("genre", options.iter().cloned()),
 					Field::custom("rating", "rating", Value::Null),
 				],
 			)
 	};
+	let concert = ButtonOption::from(("concert", "Konzert", "#2b6cb0"));
+	let reading = ButtonOption::new("reading", "Lesung").icon("book");
 	let s = Arc::new(show(&[
-		("concert", "Konzert", "#2b6cb0"),
-		("talk", "Talk", "#2f855a"),
+		concert.clone(),
+		ButtonOption::from(("talk", "Talk", "#2f855a")),
+		reading.clone(),
 	]));
 	s.check().unwrap();
 	let db = Db::memory().unwrap();
 	{
 		let conn = db.conn();
-		for (title, genre) in [("a", "concert"), ("b", "talk")] {
+		for (title, genre) in
+			[("a", "concert"), ("b", "talk"), ("c", "reading")]
+		{
 			let fields = json!({ "genre": genre, "rating": 4 });
 			save(&conn, &s, None, input("shows", "show", title, fields), None)
 				.unwrap();
 		}
 		let bad = json!({ "rating": 6 });
 		let Err(crate::error::Error::Invalid(errs)) =
-			save(&conn, &s, None, input("shows", "show", "c", bad), None)
+			save(&conn, &s, None, input("shows", "show", "d", bad), None)
 		else {
 			panic!("should fail");
 		};
@@ -349,12 +354,12 @@ async fn button_groups_and_field_types() {
 	}
 
 	// talk was removed since, it is none
-	let s = Arc::new(show(&[("concert", "Konzert", "#2b6cb0")]));
+	let s = Arc::new(show(&[concert, reading]));
 	let gql = build(s, db, String::new(), SiteUrls::new()).unwrap();
 	let data = run(
 		&gql,
 		r#"{ entries(section: "shows", order: "title") { ... on show_Entry {
-			genre { value label color } rating { stars of }
+			genre { value label color icon } rating { stars of }
 		} } }"#,
 		true,
 	)
@@ -363,8 +368,13 @@ async fn button_groups_and_field_types() {
 		data["entries"],
 		json!([
 			{ "genre": { "value": "concert", "label": "Konzert",
-				"color": "#2b6cb0" }, "rating": { "stars": 4, "of": 5 } },
+				"color": "#2b6cb0", "icon": null },
+				"rating": { "stars": 4, "of": 5 } },
 			{ "genre": null, "rating": { "stars": 4, "of": 5 } },
+			// no color, the icon's Lucide name
+			{ "genre": { "value": "reading", "label": "Lesung",
+				"color": null, "icon": "book" },
+				"rating": { "stars": 4, "of": 5 } },
 		])
 	);
 }
