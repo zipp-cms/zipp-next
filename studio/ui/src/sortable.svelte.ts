@@ -195,6 +195,13 @@ export class Sortable {
 			(this.o.maxDepth?.() ?? 0) - below,
 		);
 		const min = k < others.length ? odepths[k] : 0;
+		// the row after it would end up below it: a row with children
+		// that would go deeper than allowed has no place here
+		if (min > max) {
+			this.drop = null;
+			this.line = null;
+			return;
+		}
 		const depth = Math.max(min, Math.min(want, max));
 		this.drop = { index: k, depth };
 
