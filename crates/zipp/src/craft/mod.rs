@@ -544,9 +544,10 @@ impl Importer<'_> {
 			if fields.as_object().is_none_or(Map::is_empty) {
 				continue;
 			}
-			let checked = assets::check_fields(
+			let checked = entries::check_fields(
 				conn,
 				self.schema,
+				ASSET,
 				&fields,
 				&json!({}),
 				None,

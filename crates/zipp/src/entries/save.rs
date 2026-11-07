@@ -285,7 +285,7 @@ pub(crate) fn write(
 /// them. What the user `user_id` may not view counts as deleted, so a
 /// save tells nothing about hidden sections or assets; what it linked to
 /// `before` stays, someone who sees it chose it.
-pub(crate) fn check_relations(
+fn check_relations(
 	conn: &Connection,
 	schema: &Schema,
 	ty: &str,
@@ -406,8 +406,32 @@ fn linked(conn: &Connection, id: i64) -> Result<Vec<(LinkKind, i64)>> {
 	Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
+/// The values of the fields of a component (the asset or user fields)
+/// cleaned up, or what is wrong with them; nothing to keep without the
+/// component. `old` are the values before, see [`check_relations`].
+pub(crate) fn check_fields(
+	conn: &Connection,
+	schema: &Schema,
+	handle: &str,
+	fields: &Value,
+	old: &Value,
+	user_id: Option<i64>,
+) -> Result<Value> {
+	let Some(comp) = schema.get(handle) else {
+		return Ok(Value::Object(Default::default()));
+	};
+	let mut fields = validate(schema, comp, fields).map_err(Error::Invalid)?;
+	let before = links_of(schema, comp, old);
+	let errors =
+		check_relations(conn, schema, handle, &mut fields, user_id, &before)?;
+	if !errors.is_empty() {
+		return Err(Error::Invalid(errors));
+	}
+	Ok(fields)
+}
+
 /// The links of field values, the `before` of [`check_relations`].
-pub(crate) fn links_of(
+fn links_of(
 	schema: &Schema,
 	comp: &Component,
 	fields: &Value,

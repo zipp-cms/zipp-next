@@ -46,7 +46,7 @@ pub(crate) use save::reindex;
 pub(crate) use save::reindex_all;
 pub use save::save;
 pub(crate) use save::write;
-pub(crate) use save::{check_relations, links_of};
+pub(crate) use save::check_fields;
 pub(crate) use structure::move_entry;
 pub(crate) use structure::refresh_uris;
 use structure::*;

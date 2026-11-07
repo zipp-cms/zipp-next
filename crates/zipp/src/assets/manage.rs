@@ -6,9 +6,8 @@ use std::collections::BTreeMap;
 use serde_json::Value;
 
 use super::*;
-use crate::content::validate;
 use crate::db::escape_like;
-use crate::entries::{check_relations, links_of};
+use crate::entries::check_fields;
 use crate::schema::{ASSET, Schema};
 
 /// Where to look for assets: all folders, or one (`None` the top).
@@ -295,7 +294,8 @@ pub(crate) fn update(
 	let old = get_asset(conn, id)?;
 	let fields = match &change.fields {
 		Some(v) => {
-			let fields = check_fields(conn, schema, v, &old.fields, user_id)?;
+			let fields =
+				check_fields(conn, schema, ASSET, v, &old.fields, user_id)?;
 			Some(fields.to_string())
 		}
 		None => None,
@@ -363,28 +363,6 @@ pub(crate) fn update(
 		let _ = fs::remove_dir_all(dir.join(TRANSFORMS));
 	}
 	get_asset(conn, id)
-}
-
-/// The values of the asset fields cleaned up, or what is wrong with
-/// them; nothing to check without asset fields.
-pub(crate) fn check_fields(
-	conn: &Connection,
-	schema: &Schema,
-	fields: &Value,
-	old: &Value,
-	user_id: Option<i64>,
-) -> Result<Value> {
-	let Some(comp) = schema.get(ASSET) else {
-		return Ok(Value::Object(Default::default()));
-	};
-	let mut fields = validate(schema, comp, fields).map_err(Error::Invalid)?;
-	let before = links_of(schema, comp, old);
-	let errors =
-		check_relations(conn, schema, ASSET, &mut fields, user_id, &before)?;
-	if !errors.is_empty() {
-		return Err(Error::Invalid(errors));
-	}
-	Ok(fields)
 }
 
 /// Edits only of images, and not bigger than [`MAX_PIXELS`].
