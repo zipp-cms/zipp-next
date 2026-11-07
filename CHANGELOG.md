@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- An old revision shows the entry type's tabs like the editor, opens
+  on the editor's tab and has a dot on the tabs it changed.
 - Live preview also for a new entry of a section with pages: the button
   saves it unpublished first (like a new entry in Craft is a draft) and
   opens it with the website. Thumbnails of images keep the focal point

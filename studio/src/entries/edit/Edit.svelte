@@ -244,6 +244,7 @@
 							rev={ed.viewing.rev}
 							doc={ed.viewing.doc}
 							changed={ed.viewing.changed}
+							tab={tabs.current}
 							onrestore={ed.may.edit
 								? () => ed.restore(ed.viewing!.rev)
 								: null}
