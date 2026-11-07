@@ -46,34 +46,10 @@
 
 	// its items hold blocks: their editor is the studio's, with the
 	// context here (the entry, the site)
-	const blocks = untrack(() => props.field.blocks?.length)
-		? itemBlocks(
-				{
-					get schema() {
-						return props.schema;
-					},
-					get field() {
-						return props.field;
-					},
-					get values() {
-						return props.values;
-					},
-					get errors() {
-						return props.errors;
-					},
-					get refs() {
-						return props.refs;
-					},
-					get path() {
-						return props.path;
-					},
-					get changed() {
-						return props.changed ?? new Set<string>();
-					},
-				},
-				getAllContexts(),
-			)
-		: null;
+	const context = getAllContexts();
+	const blocks = untrack(() =>
+		props.field.blocks?.length ? itemBlocks(props, context) : null,
+	);
 
 	const editing = getEditing();
 	const site = editedSite();

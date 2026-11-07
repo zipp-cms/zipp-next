@@ -1,0 +1,1 @@
+import{U as t,az as e,k as u,aA as c,y as a}from"./index-CSi6EVLI.js";function l(n){t===null&&e(),c&&t.l!==null?s(t).m.push(n):u(()=>{const o=a(n);if(typeof o=="function")return o})}function i(n){t===null&&e(),l(()=>()=>a(n))}function s(n){var o=n.l;return o.u??(o.u={a:[],b:[],m:[]})}export{l as a,i as o};
