@@ -101,6 +101,46 @@ async fn levels_of_a_structure() {
 }
 
 #[tokio::test]
+async fn related_to_only_of_entries_it_sees() {
+	let (gql, db) = tree();
+	let id = |title: &str| -> i64 {
+		db.conn()
+			.query_row(
+				"SELECT entry_id FROM entry_sites WHERE title = ?1",
+				[title],
+				|r| r.get(0),
+			)
+			.unwrap()
+	};
+	let (jazz, rock) = (id("Jazz"), id("Rock"));
+	let query = format!(
+		r#"{{
+		rock: entries(relatedTo: [{rock}]) {{ title }}
+		jazz: entries(relatedTo: [{jazz}]) {{ title }}
+	}}"#
+	);
+
+	// Rock isn't published: what it points to doesn't show
+	let data = run(&gql, &query, true).await;
+	assert_eq!(titles(&data["rock"]), Vec::<&str>::new());
+	assert_eq!(titles(&data["jazz"]), ["Team"]);
+	let data = run(&gql, &query, false).await;
+	assert_eq!(titles(&data["rock"]), ["Jobs"]);
+
+	// nor of a section the token doesn't read
+	let pages = Scope {
+		sections: Some(vec!["pages".into()]),
+		..Scope::ALL
+	};
+	let req = async_graphql::Request::new(&query).data(Viewer {
+		scope: pages,
+		..viewer(true)
+	});
+	let data = gql.execute(req).await.data.into_json().unwrap();
+	assert_eq!(titles(&data["jazz"]), Vec::<&str>::new());
+}
+
+#[tokio::test]
 async fn related_to_in_both_directions() {
 	let (gql, db) = tree();
 	let id = |title: &str| -> i64 {

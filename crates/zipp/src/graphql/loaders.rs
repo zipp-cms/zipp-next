@@ -12,7 +12,7 @@ use async_graphql::dataloader::{DataLoader, HashMapCache, Loader};
 use super::*;
 use crate::content::link_kind;
 use crate::entries::Author;
-use crate::entries::query::MAX_IDS;
+use crate::entries::query::{MAX_IDS, Related};
 use crate::schema::LinkKind;
 use crate::users::profile::Profile;
 
@@ -181,6 +181,16 @@ pub(super) fn viewer_query(
 	let mut q = Query::parse(schema, params).map_err(GqlError::new)?;
 	// the same for the entries of `relatedToEntries`
 	q.each_mut(&mut |q| {
+		// `relatedTo` only of entries it sees too, else the relations of
+		// a draft or of a section it doesn't read show
+		for r in &mut q.related_to {
+			if let Related::Ids(ids) = r {
+				let mut of = Query::new(schema);
+				of.site = q.site.clone();
+				of.ids = Some(std::mem::take(ids));
+				*r = Related::Entries(Box::new(of));
+			}
+		}
 		q.published_only = viewer.published_only;
 		match &viewer.preview {
 			Some(Preview::Entry(id, _)) => q.preview_id = Some(*id),
