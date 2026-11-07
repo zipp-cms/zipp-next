@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A group without a value yet (a new entry) checks the fields it
+  requires: a new Mappe of textrem could be saved without its price.
 - A group is always an object in GraphQL, also for an entry saved
   before it had a value (a new entry, a draft), like Craft's content
   block: a frontend no longer breaks on `sale.format` of a new entry.

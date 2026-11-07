@@ -426,6 +426,12 @@ fn fields_in_a_hidden_group_needn_t_be_filled() {
 	let err = validate(&s, x, &fields).unwrap_err();
 	assert_eq!(err[0].path, "box.title");
 	assert_eq!(err[0].message, "is required");
+
+	// a shown group without a value yet needs them too, a hidden one not
+	let err = validate(&s, x, &json!({ "hasBox": true })).unwrap_err();
+	assert_eq!(err[0].path, "box.title");
+	assert_eq!(err[0].message, "is required");
+	assert!(validate(&s, x, &json!({})).is_ok());
 }
 
 #[test]

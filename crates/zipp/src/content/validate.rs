@@ -134,6 +134,14 @@ pub(super) fn validate_value(
 	// hidden by its condition it needn't be filled, its value is checked
 	let required = field.required && !hidden;
 	if is_blank(field, value) {
+		// a group without a value yet (a new entry) still needs the
+		// fields it requires
+		if let FieldKind::Group { component } = &field.kind {
+			let comp = schema.get(component).unwrap();
+			let none = Value::Object(Default::default());
+			let prefix = format!("{path}.");
+			validate_fields(schema, comp, &none, &prefix, hidden, errors);
+		}
 		return filled(Value::Null, true, required, path, errors);
 	}
 
