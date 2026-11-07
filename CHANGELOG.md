@@ -12,7 +12,10 @@
   pages; logged in website users edit their own profile with `PUT
   /site-auth/me`. The studio's user page edits the profile, a token can
   read users.
-
+- A field that takes only one type leaves the type out: relation chips
+  show only the title, block rows only their summary (the type stays
+  when a block has no summary). Moving a chip of a relation, which wrap
+  side by side, says Move earlier / Move later.
 - GraphiQL has a schema picker like Craft's: an admin reads as the
   frontend of a token (its sections and sites, nothing unpublished)
   instead of the full schema.

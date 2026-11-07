@@ -9,18 +9,21 @@
 	/**
 	 * A chosen entry, like Craft's element chips: compact, side by side
 	 * with others. Its handle, its title opens it in the flyout, its type
-	 * next to it, the actions on the right.
+	 * next to it (not when the field takes only one), the actions on the
+	 * right.
 	 */
 	let {
 		schema,
 		refs,
 		id,
+		showType = true,
 		handle,
 		actions,
 	}: {
 		schema: Schema;
 		refs: Refs;
 		id: number;
+		showType?: boolean;
 		handle?: Snippet;
 		actions: Snippet;
 	} = $props();
@@ -37,7 +40,7 @@
 		onclick={() => openEntry(id)}
 	>
 		<span class="truncate">{entry?.title ?? `#${id}`}</span>
-		{#if entry}
+		{#if entry && showType}
 			<span class="note">{componentName(schema, entry.type)}</span>
 		{/if}
 	</button>

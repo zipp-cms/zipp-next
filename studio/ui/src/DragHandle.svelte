@@ -26,16 +26,24 @@
 
 	let open = $state(false);
 
-	const STEPS: [
-		Step,
-		'moveUp' | 'moveDown' | 'moveOut' | 'moveIn',
-		string,
-	][] = [
+	type Text =
+		| 'moveUp'
+		| 'moveDown'
+		| 'moveEarlier'
+		| 'moveLater'
+		| 'moveOut'
+		| 'moveIn';
+	const STEPS: [Step, Text, string][] = [
 		['up', 'moveUp', 'arrow-up'],
 		['down', 'moveDown', 'arrow-down'],
 		['out', 'moveOut', 'outdent'],
 		['in', 'moveIn', 'indent'],
 	];
+	// side by side, wrapping: up is earlier, down later
+	const GRID_STEPS: Partial<Record<Step, [Text, string]>> = {
+		up: ['moveEarlier', 'arrow-left'],
+		down: ['moveLater', 'arrow-right'],
+	};
 	const KEYS: Record<string, Step> = {
 		ArrowUp: 'up',
 		ArrowDown: 'down',
@@ -44,7 +52,14 @@
 	};
 	// the moves there are, `in` and `out` only in a tree
 	const steps = $derived(
-		open ? STEPS.filter(([s]) => sortable.stepDrop(at(), s)) : [],
+		open
+			? STEPS.filter(([s]) => sortable.stepDrop(at(), s)).map(
+					([s, text, icon]): [Step, Text, string] =>
+						sortable.grid() && GRID_STEPS[s]
+							? [s, ...GRID_STEPS[s]!]
+							: [s, text, icon],
+				)
+			: [],
 	);
 
 	// side by side, left and right move it too

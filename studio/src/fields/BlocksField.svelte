@@ -148,7 +148,10 @@
 					size={12}
 				/>{/snippet}
 			<ItemCard
-				kind={comp?.name ?? block.type}
+				kind={types.length === 1 &&
+				blockSummary(comp, block.fields, refs)
+					? undefined
+					: (comp?.name ?? block.type)}
 				kindIcon={comp?.icon ? kindIcon : undefined}
 				bind:open={() => isOpen(block), v => setOpen(block, v)}
 				invalid={hasError(i)}
