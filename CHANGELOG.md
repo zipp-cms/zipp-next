@@ -25,11 +25,10 @@
   unique slug of every user (admins change it), and
   `.user_pages(UserPages::new("cooks/{slug}").with_entries_in("recipes"))`
   for pages of the users with a live entry. GraphQL has `users(hasEntries:)`,
-  `userCount` and `user(slug:)` for tokens with the new users scope,
+  `userCount` and `user(slug:)` for schemas with `.users()`,
   `author` is a `User` with the profile; the SEO sitemap lists the user
   pages; logged in website users edit their own profile with `PUT
-  /site-auth/me`. The studio's user page edits the profile, a token can
-  read users.
+  /site-auth/me`. The studio's user page edits the profile.
 - Changing an entry's type asks nothing anymore: fields of the same
   handle and kind stay, the type's defaults fill what is empty, and
   while the editor is open each type keeps its values, so switching
@@ -53,9 +52,9 @@
   show only the title, block rows only their summary (the type stays
   when a block has no summary). Moving a chip of a relation, which wrap
   side by side, says Move earlier / Move later.
-- GraphiQL has a schema picker like Craft's: an admin reads as the
-  frontend of a token (its sections and sites, nothing unpublished)
-  instead of the full schema.
+- GraphiQL has a schema picker like Craft's: an admin reads as a
+  frontend with one of the GraphQL schemas (its sections and sites,
+  nothing unpublished) instead of everything.
 - The live preview's website gets as wide as the window allows: the
   editor keeps 20rem, before it kept 40% of the window. A narrower
   window shrinks the website, it gets its width back when there is

@@ -42,7 +42,8 @@ url, `excerpt` the words around the match (the start of the texts when
 only the title matched), `excerptHtml` the same escaped with the
 matched words in `<mark>`; `searchCount` with the same arguments counts
 the hits for the pages. What a viewer may see counts like everywhere
-(published, the token's sections and sites, a preview's drafts).
+(published, the sections and sites of the token's schema, a
+preview's drafts).
 
 Relations, links, parents, `children`, `localized` and assets load
 together per request: the images of 30 events are one query, not 30,

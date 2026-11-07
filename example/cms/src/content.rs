@@ -157,6 +157,7 @@ pub fn schema() -> Schema {
 					"formSettings",
 				])
 				.assets()
+				.users()
 				.previews(),
 		)
 		// a partner's app that lists the events
