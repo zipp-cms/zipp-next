@@ -156,6 +156,14 @@ function snapped(v: number, d: number): number {
 	return v;
 }
 
+/** Where a span of `size` at `p` lands, its nearer edge snapped. */
+function slid(p: number, size: number, d: number): number {
+	const a = snapped(p, d) - p;
+	const b = snapped(p + size, d) - p - size;
+	if (b === 0 || (a !== 0 && Math.abs(a) <= Math.abs(b))) return p + a;
+	return p + b;
+}
+
 /**
  * The crop after dragging it, a corner or a side by dx, dy (in images),
  * kept in the area and in the ratio if there is one. The moved edges
@@ -177,14 +185,13 @@ export function dragged(
 	const sx = (opts.snap ?? 0) / place.w;
 	const sy = (opts.snap ?? 0) / place.h;
 	if (kind === 'move') {
-		let x = Math.min(Math.max(lx, from.x + dx), hx - from.w);
-		let y = Math.min(Math.max(ly, from.y + dy), hy - from.h);
-		// its left or right edge onto the border
-		if (snapped(x, sx) !== x) x = snapped(x, sx);
-		else x = snapped(x + from.w, sx) - from.w;
-		if (snapped(y, sy) !== y) y = snapped(y, sy);
-		else y = snapped(y + from.h, sy) - from.h;
-		return { ...from, x, y };
+		const x = Math.min(Math.max(lx, from.x + dx), hx - from.w);
+		const y = Math.min(Math.max(ly, from.y + dy), hy - from.h);
+		return {
+			...from,
+			x: slid(x, from.w, sx),
+			y: slid(y, from.h, sy),
+		};
 	}
 
 	const min = 0.03;
@@ -195,45 +202,39 @@ export function dragged(
 	const center = !!opts.center;
 	const cx = from.x + from.w / 2;
 	const cy = from.y + from.h / 2;
-	let x1 = from.x,
-		y1 = from.y,
-		x2 = from.x + from.w,
-		y2 = from.y + from.h;
 
-	// the dragged sides follow the pointer and snap; with Alt the other
-	// side mirrors them around the middle
-	if (left) {
-		x1 = snapped(x1 + dx, sx);
-		if (center) x2 = 2 * cx - x1;
-	}
-	if (right) {
-		x2 = snapped(x2 + dx, sx);
-		if (center) x1 = 2 * cx - x2;
-	}
-	if (top) {
-		y1 = snapped(y1 + dy, sy);
-		if (center) y2 = 2 * cy - y1;
-	}
-	if (bottom) {
-		y2 = snapped(y2 + dy, sy);
-		if (center) y1 = 2 * cy - y2;
-	}
+	// one axis: the moved ends follow `d` and snap; with Alt the other end
+	// mirrors them around the middle; in the area, never shorter than `min`
+	const span = (
+		at: number,
+		size: number,
+		d: number,
+		moveLo: boolean,
+		moveHi: boolean,
+		s: number,
+		[l, h]: [number, number],
+	): [number, number] => {
+		let [lo, hi] = [at, at + size];
+		if (!moveLo && !moveHi) return [lo, hi];
+		if (moveLo) lo = snapped(lo + d, s);
+		if (moveHi) hi = snapped(hi + d, s);
 
-	// in the area, never smaller than `min`
-	x1 = Math.max(lx, x1);
-	x2 = Math.min(hx, x2);
-	y1 = Math.max(ly, y1);
-	y2 = Math.min(hy, y2);
-	if (x2 - x1 < min) {
-		if (center) [x1, x2] = [cx - min / 2, cx + min / 2];
-		else if (left) x1 = x2 - min;
-		else x2 = x1 + min;
-	}
-	if (y2 - y1 < min) {
-		if (center) [y1, y2] = [cy - min / 2, cy + min / 2];
-		else if (top) y1 = y2 - min;
-		else y2 = y1 + min;
-	}
+		if (center) {
+			const c = at + size / 2;
+			const half = moveLo ? c - lo : hi - c;
+			const r = Math.max(min / 2, Math.min(half, c - l, h - c));
+			return [c - r, c + r];
+		}
+		lo = Math.max(l, lo);
+		hi = Math.min(h, hi);
+		if (hi - lo < min) {
+			if (moveLo) lo = hi - min;
+			else hi = lo + min;
+		}
+		return [lo, hi];
+	};
+	let [x1, x2] = span(from.x, from.w, dx, left, right, sx, place.x);
+	let [y1, y2] = span(from.y, from.h, dy, top, bottom, sy, place.y);
 
 	// a ratio: the height follows the width, within the area (a ratio
 	// has no side handles, a corner moves both)
