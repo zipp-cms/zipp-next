@@ -6,6 +6,14 @@ A site's cms is a small Rust crate (a binary) next to its frontend.
 cargo new cms
 ```
 
+Give it zipp's formatting, so `cargo fmt` keeps the code like zipp's and
+its examples (hard tabs, 80 columns), in `cms/rustfmt.toml`:
+
+```toml
+hard_tabs = true
+max_width = 80
+```
+
 zipp is on crates.io as `zipp-cms`, the crate is called `zipp`. Keep the
 dependency's name `zipp`: `zipp::migrations!()` refers to it.
 
