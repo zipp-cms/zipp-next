@@ -95,3 +95,30 @@ async fn own_access_restores_only_own_entries() {
 	assert_eq!(member.call(&restore).await.unwrap_err(), Error::Forbidden);
 	member.call(&RestoreEntryReq { id: mine }).await.unwrap();
 }
+
+#[tokio::test]
+async fn emptying_keeps_the_children_of_others() {
+	use crate::schema::{Access, Role};
+	let schema = site_with_roles()
+		.role(Role::new("member", "Member").own("pages", Access::Delete));
+	let ts = TestServer::new(schema);
+	let (admin, member) = (ts.admin(), ts.user(Some("member")));
+	let mine = input("pages", "page", "Mine", json!({}));
+	let mine = member.call(&CreateReq(mine)).await.unwrap().id;
+	let mut sub = input("pages", "page", "Sub", json!({}));
+	sub.parent_id = Some(mine);
+	let sub = admin.call(&CreateReq(sub)).await.unwrap().id;
+	admin.call(&DeleteReq { id: mine }).await.unwrap();
+
+	// the page of the admin went with theirs: it stays in the trash
+	member.call(&EmptyReq {}).await.unwrap();
+	let trash = admin.call(&TrashReq {}).await.unwrap();
+	assert_eq!(trash.entries[0].id, mine);
+	assert_eq!(trash.entries[0].children, 1);
+	admin.call(&RestoreEntryReq { id: mine }).await.unwrap();
+	let get = GetReq {
+		id: sub,
+		site: None,
+	};
+	assert_eq!(admin.call(&get).await.unwrap().entry.title, "Sub");
+}
