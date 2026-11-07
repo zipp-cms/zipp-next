@@ -2,27 +2,22 @@ import { Busy } from '../core/busy.svelte';
 import { createToken } from './api';
 
 /**
- * A new token: its name, what it reads and until when. Saving shows the
+ * A new token: its name, its schema and until when. Saving shows the
  * token once, see `created`.
  */
 export class TokenForm extends Busy {
 	name = $state('');
-	/** all sections or sites, else the chosen ones */
-	allSections = $state(true);
-	sections = $state<string[]>([]);
-	allSites = $state(true);
-	sites = $state<string[]>([]);
-	previews = $state(false);
-	users = $state(false);
+	/** the handle of a schema of the code */
+	schema = $state('');
 	/** `2026-12-31`, empty for never */
 	expires = $state('');
 	/** the token itself after saving, it doesn't show again */
 	created = $state('');
 	copied = $state(false);
 
-	toggle(list: 'sections' | 'sites', value: string, on: boolean) {
-		const rest = this[list].filter(v => v !== value);
-		this[list] = on ? [...rest, value] : rest;
+	constructor(schema: string) {
+		super();
+		this.schema = schema;
 	}
 
 	async save() {
@@ -33,10 +28,7 @@ export class TokenForm extends Busy {
 		const created = await this.run(() =>
 			createToken({
 				name: this.name,
-				sections: this.allSections ? null : this.sections,
-				sites: this.allSites ? null : this.sites,
-				previews: this.previews,
-				users: this.users,
+				schema: this.schema,
 				expiresAt,
 			}),
 		);

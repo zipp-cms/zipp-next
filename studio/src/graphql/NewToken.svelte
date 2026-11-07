@@ -1,24 +1,36 @@
+<script module lang="ts">
+	import { listTokens } from './api';
+
+	export async function loadProps() {
+		const { schemas } = await listTokens();
+		return { schemas };
+	}
+</script>
+
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import PageTop from 'zipp-ui/PageTop.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
-	import Switch from 'zipp-ui/Switch.svelte';
-	import CheckGroup from 'zipp-ui/CheckGroup.svelte';
 	import DatePicker from 'zipp-ui/DatePicker.svelte';
 	import { formatDay } from 'zipp-ui/date';
 	import type { Schema } from '../core/schema';
 	import { go } from '../core/router.svelte';
+	import type { GraphqlSchema } from './api';
+	import { reads } from './schemas';
 	import { TokenForm } from './tokenForm.svelte';
 	import Sentence from '../i18n/Sentence.svelte';
 	import { t } from '../i18n/index.svelte';
 
 	/**
-	 * A new token for a frontend: a name, the sections and sites it reads,
-	 * whether preview tokens show drafts, until when. The token shows once
-	 * after creating, only its hash is kept.
+	 * A new token for a frontend: a name, the GraphQL schema of the code
+	 * it reads, until when. The token shows once after creating, only its
+	 * hash is kept.
 	 */
-	let { schema }: { schema: Schema } = $props();
+	let { schema, schemas }: { schema: Schema; schemas: GraphqlSchema[] } =
+		$props();
 
-	const form = new TokenForm();
+	const form = new TokenForm(untrack(() => schemas[0]?.handle ?? ''));
+	const picked = $derived(schemas.find(s => s.handle === form.schema));
 	// the editor's day, not UTC's: after midnight here it is tomorrow
 	const today = formatDay(new Date());
 
@@ -101,65 +113,20 @@
 		</div>
 
 		<div class="card">
-			<h2>{t('graphql.sections')}</h2>
-			<Switch bind:checked={form.allSections}>
-				{t('graphql.allSections')}
-			</Switch>
-			{#if !form.allSections}
-				<CheckGroup
-					label={t('graphql.sections')}
-					options={schema.sections.map(s => ({
-						value: s.handle,
-						label: s.name,
-					}))}
-					picked={form.sections}
-					ontoggle={(v, on) => form.toggle('sections', v, on)}
-				/>
+			<label class="stacked">
+				{t('graphql.schema')}
+				<select bind:value={form.schema} required>
+					{#each schemas as s (s.handle)}
+						<option value={s.handle}>{s.name}</option>
+					{/each}
+				</select>
+				{#if form.fields.schema}
+					<span class="error">{form.fields.schema}</span>
+				{/if}
+			</label>
+			{#if picked}
+				<p class="note">{reads(picked, schema)}</p>
 			{/if}
-			{#if form.fields.sections}
-				<span class="error">{form.fields.sections}</span>
-			{/if}
-		</div>
-
-		<div class="card">
-			<h2>{t('graphql.sites')}</h2>
-			<Switch bind:checked={form.allSites}>
-				{t('graphql.allSites')}
-			</Switch>
-			{#if !form.allSites}
-				<CheckGroup
-					label={t('graphql.sites')}
-					options={schema.sites.map(s => ({
-						value: s.handle,
-						label: s.name,
-					}))}
-					picked={form.sites}
-					ontoggle={(v, on) => form.toggle('sites', v, on)}
-				/>
-			{/if}
-			{#if form.fields.sites}
-				<span class="error">{form.fields.sites}</span>
-			{/if}
-		</div>
-
-		<div class="card">
-			<h2>{t('graphql.drafts')}</h2>
-			<Switch bind:checked={form.previews}>
-				{t('graphql.previewsShowDrafts')}
-			</Switch>
-			<p class="note">
-				{t('graphql.previewsNote')}
-			</p>
-		</div>
-
-		<div class="card">
-			<h2>{t('graphql.users')}</h2>
-			<Switch bind:checked={form.users}>
-				{t('graphql.usersPublic')}
-			</Switch>
-			<p class="note">
-				{t('graphql.usersNote')}
-			</p>
 		</div>
 	</form>
 {/if}

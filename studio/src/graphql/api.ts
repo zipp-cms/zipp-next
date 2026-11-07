@@ -1,19 +1,26 @@
 import { request } from '../core/client';
 
-/** What a token reads; `null` is all sections or sites. */
-type Scope = {
-	sections: string[] | null;
+/** What a token reads, a GraphQL schema of the code. */
+export type GraphqlSchema = {
+	handle: string;
+	name: string;
+	sections: string[];
+	/** `null` all */
 	sites: string[] | null;
-	/** whether preview tokens show drafts */
-	previews: boolean;
+	/** whether it lists the assets */
+	assets: boolean;
 	/** whether it reads the public profiles of users */
 	users: boolean;
+	/** whether preview tokens show drafts */
+	previews: boolean;
 };
 
 /** A token of a frontend, without the token itself. */
-export type GraphqlToken = Scope & {
+export type GraphqlToken = {
 	id: number;
 	name: string;
+	/** the handle of its schema, one the code may not have anymore */
+	schema: string;
 	createdAt: number;
 	expiresAt: number | null;
 	lastUsedAt: number | null;
@@ -21,6 +28,7 @@ export type GraphqlToken = Scope & {
 
 export function listTokens(): Promise<{
 	tokens: GraphqlToken[];
+	schemas: GraphqlSchema[];
 	/** whether `serve --graphql-token` set one, it reads everything */
 	envToken: boolean;
 }> {
@@ -28,9 +36,11 @@ export function listTokens(): Promise<{
 }
 
 /** A new token: `token` is the token itself, it shows only now. */
-export function createToken(
-	token: Scope & { name: string; expiresAt: number | null },
-): Promise<GraphqlToken & { token: string }> {
+export function createToken(token: {
+	name: string;
+	schema: string;
+	expiresAt: number | null;
+}): Promise<GraphqlToken & { token: string }> {
 	return request('POST', '/graphql/tokens', token);
 }
 

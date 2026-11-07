@@ -22,6 +22,7 @@ async fn tokens_route(
 ) -> ApiResult<TokensReq> {
 	Ok(Json(TokensResp {
 		tokens: list(&state.db.conn())?,
+		schemas: state.schema.graphql_schemas.clone(),
 		env_token: state.graphql_token.is_some(),
 	}))
 }
@@ -31,12 +32,12 @@ async fn create_token_route(
 	_admin: Admin,
 	Req(req): Req<CreateTokenReq>,
 ) -> ApiResult<CreateTokenReq> {
-	let errors = check(&state.schema, &req.name, &req.scope);
+	let errors = check(&state.schema, &req.name, &req.schema);
 	if !errors.is_empty() {
 		return Err(Error::Invalid(errors));
 	}
 	let conn = state.db.conn();
-	let (info, token) = create(&conn, &req.name, &req.scope, req.expires_at)?;
+	let (info, token) = create(&conn, &req.name, &req.schema, req.expires_at)?;
 	Ok(Json(CreatedToken { info, token }))
 }
 
@@ -72,15 +73,18 @@ async fn graphql(
 		// private like Craft's: frontends send a token, the studio its
 		// session; development without the token of serve is open
 		let open = state.dev && state.graphql_token.is_none();
-		// GraphiQL's schema picker: an admin reads as a token's frontend
-		let as_token = if editor {
+		// GraphiQL's schema picker: an admin reads as a frontend
+		let picked = if editor {
 			schema_header(&headers)
 		} else {
 			None
 		};
 		let scope = match (editor, bearer(&headers)) {
-			(true, _) => match as_token {
-				Some(id) => tokens::picked_scope(&conn, id)?
+			(true, _) => match picked {
+				Some(h) => state
+					.schema
+					.get_graphql_schema(h)
+					.map(Scope::of)
 					.ok_or(Error::MissingEndpointToken)?,
 				None => Scope::ALL,
 			},
@@ -94,7 +98,7 @@ async fn graphql(
 			Some(t) if scope.previews => preview(&conn, &state.schema, t)?,
 			_ => None,
 		};
-		(!editor || as_token.is_some(), preview, scope)
+		(!editor || picked.is_some(), preview, scope)
 	};
 	let token = preview.as_ref().and(p.token);
 	let req = req.into_inner().data(Viewer {
@@ -116,16 +120,13 @@ fn bearer(headers: &HeaderMap) -> Option<&str> {
 		.and_then(|v| v.strip_prefix("Bearer "))
 }
 
-/// The token whose scope GraphiQL picked, `x-zipp-schema: <token id>`.
-fn schema_header(headers: &HeaderMap) -> Option<i64> {
-	headers
-		.get("x-zipp-schema")
-		.and_then(|v| v.to_str().ok())
-		.and_then(|v| v.parse().ok())
+/// The GraphQL schema GraphiQL picked, `x-zipp-schema: <handle>`.
+fn schema_header(headers: &HeaderMap) -> Option<&str> {
+	headers.get("x-zipp-schema").and_then(|v| v.to_str().ok())
 }
 
 /// What a token may read: the one of `serve` everything, the ones of the
-/// studio their scope; `None` for an unknown or expired one.
+/// studio their schema's; `None` for an unknown or expired one.
 fn token_scope(
 	state: &AppState,
 	conn: &rusqlite::Connection,
@@ -143,7 +144,7 @@ fn token_scope(
 			return Ok(Some(Scope::ALL));
 		}
 	}
-	tokens::scope_of(conn, sent)
+	tokens::scope_of(conn, &state.schema, sent)
 }
 
 /// The playground, for admins and in development: a page of the studio's

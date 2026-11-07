@@ -274,6 +274,15 @@ pub(crate) const MIGRATIONS: &[&str] = &[
 	CREATE UNIQUE INDEX users_slug ON users(slug) WHERE slug <> '';
 	ALTER TABLE graphql_tokens ADD COLUMN users INTEGER NOT NULL DEFAULT 0;
 "#,
+	// a token reads what its GraphQL schema of the code says (graphql/
+	// tokens.rs), not what it was made with: tokens of before read nothing
+	r#"
+	ALTER TABLE graphql_tokens ADD COLUMN schema TEXT NOT NULL DEFAULT '';
+	ALTER TABLE graphql_tokens DROP COLUMN sections;
+	ALTER TABLE graphql_tokens DROP COLUMN sites;
+	ALTER TABLE graphql_tokens DROP COLUMN previews;
+	ALTER TABLE graphql_tokens DROP COLUMN users;
+"#,
 ];
 
 /// `?, ?, ?` for an `IN` of `n` values.

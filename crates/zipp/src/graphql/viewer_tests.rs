@@ -6,7 +6,7 @@ use serde_json::json;
 use super::tests::{run, viewer};
 use super::*;
 use crate::entries::save;
-use crate::fixtures::site;
+use crate::fixtures::{site, site_with_roles};
 use crate::testing::input;
 
 #[tokio::test]
@@ -240,14 +240,9 @@ async fn offline_sites_only_for_previews() {
 fn tokens_are_kept_hashed() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();
-	let scope = Scope {
-		sections: Some(vec!["events".into()]),
-		sites: None,
-		previews: false,
-		users: false,
-	};
+	let schema = site_with_roles();
 	let (info, token) =
-		tokens::create(&conn, " Website ", &scope, None).unwrap();
+		tokens::create(&conn, " Website ", "events", None).unwrap();
 	assert_eq!(info.name, "Website");
 
 	// the database has no copy of it
@@ -257,19 +252,17 @@ fn tokens_are_kept_hashed() {
 	assert_ne!(hash, token);
 	assert_eq!(hash.len(), 64);
 
-	let found = tokens::scope_of(&conn, &token).unwrap().unwrap();
+	let found = tokens::scope_of(&conn, &schema, &token).unwrap().unwrap();
 	assert!(found.section("events") && !found.section("pages"));
 	assert!(found.site("en"));
-	assert_eq!(tokens::scope_of(&conn, &hash).unwrap(), None);
+	assert!(!found.assets && !found.users && !found.previews);
+	assert_eq!(tokens::scope_of(&conn, &schema, &hash).unwrap(), None);
 	assert!(tokens::get(&conn, info.id).unwrap().last_used_at.is_some());
 
-	// an empty list reads nothing
-	let none = Scope {
-		sections: Some(vec![]),
-		..Scope::ALL
-	};
-	assert!(!none.section("events"));
-	assert!(tokens::check(&site(), "x", &none).is_empty());
+	// a schema the code doesn't have anymore reads nothing
+	assert_eq!(tokens::scope_of(&conn, &site(), &token).unwrap(), None);
+	assert!(tokens::check(&schema, "x", "events").is_empty());
+	assert_eq!(tokens::check(&site(), "x", "events").len(), 1);
 }
 
 #[tokio::test]

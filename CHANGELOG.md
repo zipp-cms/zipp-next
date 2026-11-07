@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- GraphQL schemas are code, like Craft's in its project config:
+  `Schema::graphql_schema(GraphqlSchema::new("website", "Website")
+  .sections(["pages", "news"]).assets().previews())` says which
+  sections and sites a frontend reads, whether it lists the assets
+  (`assets`, `assetCount`: only with `.assets()` now), reads users and
+  shows drafts in previews. A token of the studio gets one of them
+  instead of its own sections and sites; tokens made before have none
+  and read nothing, make them again. The GraphQL page shows the schemas
+  and the token of `serve` (`ZIPP_GRAPHQL_TOKEN`) as its first row,
+  GraphiQL's picker reads as a schema (`x-zipp-schema: <handle>`).
 - A field type can hold blocks with more around each one, like a place
   in a grid: `Field::custom(..).item_blocks(["image", "text"])` makes its
   value a list of items with a block in `block`. zipp checks, migrates

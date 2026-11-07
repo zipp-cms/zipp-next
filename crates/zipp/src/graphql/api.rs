@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use super::tokens::{GraphqlToken, Scope};
+use super::tokens::GraphqlToken;
 use crate::request;
+use crate::schema::GraphqlSchema;
 
 /// The tokens of frontends, for admins.
 #[derive(Debug, Serialize, Deserialize)]
@@ -11,6 +12,8 @@ pub(crate) struct TokensReq {}
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TokensResp {
 	pub tokens: Vec<GraphqlToken>,
+	/// the GraphQL schemas of the code, a token gets one
+	pub schemas: Vec<GraphqlSchema>,
 	/// whether `serve --graphql-token` set one, it reads everything
 	pub env_token: bool,
 }
@@ -22,8 +25,8 @@ request!(TokensReq, GET "/graphql/tokens" => TokensResp);
 #[serde(rename_all = "camelCase")]
 pub(crate) struct CreateTokenReq {
 	pub name: String,
-	#[serde(flatten)]
-	pub scope: Scope,
+	/// the handle of a [`GraphqlSchema`]
+	pub schema: String,
 	/// in milliseconds, `None` never
 	pub expires_at: Option<i64>,
 }
