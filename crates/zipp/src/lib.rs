@@ -182,6 +182,9 @@ pub struct AppState {
 	/// the sites' favicons for the studio, see `studio::Favicons`
 	#[from_ref(skip)]
 	pub(crate) favicons: Arc<studio::Favicons>,
+	/// held while a zip is unpacked, one at a time
+	#[from_ref(skip)]
+	pub(crate) unzipping: Arc<tokio::sync::Mutex<()>>,
 	hooks: Arc<Vec<Hook>>,
 }
 
@@ -235,6 +238,7 @@ impl AppState {
 			mail: Default::default(),
 			public_url: Default::default(),
 			logins: Default::default(),
+			unzipping: Default::default(),
 			favicons: Default::default(),
 			hooks: Default::default(),
 		}

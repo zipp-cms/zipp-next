@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A zip upload checks its folder before it is unpacked, and a server
+  unpacks one zip at a time: another one meanwhile is a conflict (409),
+  the studio sends its zips one after another.
 - The file url of an edited image is always the edited image, `?original`
   is gone: anyone with the url got the uploaded file and the crop of an
   editor back. The studio's image editor and Download get the uploaded
