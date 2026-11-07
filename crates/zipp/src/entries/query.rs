@@ -400,6 +400,25 @@ impl Query {
 		}
 	}
 
+	/// `relatedTo` ids, `related` and `r.` filters as queries of entries:
+	/// [`each_mut`](Self::each_mut) restricts them like the query, a
+	/// relation to an entry the user doesn't see tells nothing of it.
+	pub(crate) fn relations_as_queries(&mut self, schema: &Schema) {
+		for r in &mut self.related_to {
+			if let Related::Ids(ids) = r {
+				let mut of = Query::new(schema);
+				of.site = self.site.clone();
+				of.ids = Some(std::mem::take(ids));
+				*r = Related::Entries(Box::new(of));
+			}
+		}
+		if self.related.is_some() || !self.relations.is_empty() {
+			let mut of = Query::new(schema);
+			of.site = self.site.clone();
+			self.targets = Some(Box::new(of));
+		}
+	}
+
 	/// Calls `f` with the query and the queries of its `relatedToEntries`
 	/// and `targets`, so what a viewer may see holds for them too.
 	pub(crate) fn each_mut(&mut self, f: &mut impl FnMut(&mut Query)) {
