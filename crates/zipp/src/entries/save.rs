@@ -448,9 +448,8 @@ fn links_of(
 }
 
 /// Whether a filename ends with one of the extensions (lowercase).
-pub(crate) fn has_extension(filename: &str, extensions: &[String]) -> bool {
-	let ext = filename.rsplit_once('.').map(|(_, e)| e.to_lowercase());
-	ext.is_some_and(|e| extensions.contains(&e))
+fn has_extension(filename: &str, extensions: &[String]) -> bool {
+	crate::assets::extension(filename).is_some_and(|e| extensions.contains(&e))
 }
 
 /// Rewrites the index rows of every entry that isn't in the trash, in

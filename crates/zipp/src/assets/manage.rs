@@ -119,11 +119,7 @@ impl Kind {
 	}
 
 	pub(crate) fn of(self, a: &Asset) -> bool {
-		let ext = a
-			.filename
-			.rsplit_once('.')
-			.map(|(_, e)| e.to_ascii_lowercase())
-			.unwrap_or_default();
+		let ext = extension(&a.filename).unwrap_or_default();
 		match self {
 			Kind::Image => a.kind == "image",
 			Kind::Video => a.kind == "video",

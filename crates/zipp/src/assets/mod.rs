@@ -307,13 +307,15 @@ pub(crate) fn clean_filename(name: &str) -> String {
 	}
 }
 
+/// The extension of a filename in lower case, `pdf` of `a.PDF`.
+pub(crate) fn extension(filename: &str) -> Option<String> {
+	filename.rsplit_once('.').map(|(_, e)| e.to_lowercase())
+}
+
 /// The type of a file that is no image, by its name: never what the
 /// upload claims.
 fn file_mime(filename: &str) -> &'static str {
-	let ext = filename
-		.rsplit_once('.')
-		.map(|(_, e)| e.to_ascii_lowercase());
-	match ext.as_deref() {
+	match extension(filename).as_deref() {
 		Some("pdf") => "application/pdf",
 		Some("mp4") => "video/mp4",
 		Some("webm") => "video/webm",
