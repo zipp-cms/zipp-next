@@ -9,7 +9,8 @@
 	 * long it plays, or an icon with its name (without `named` only the
 	 * icon, the name is next to it). `small` is for a row's few pixels:
 	 * an icon and a name don't fit there, a file shows only its type and
-	 * an image only itself.
+	 * an image only itself. A cropped image keeps its focal point in
+	 * view, like the transforms of the website.
 	 */
 	let {
 		asset,
@@ -28,6 +29,7 @@
 			src={assetUrl(asset, true)}
 			alt={altOf(asset, site.current)}
 			loading="lazy"
+			style:object-position="{asset.focalX * 100}% {asset.focalY * 100}%"
 		/>
 	{:else if isVideo(asset) && !small}
 		<!-- a frame just after the start, the server makes no posters;

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Live preview also for a new entry of a section with pages: the button
+  saves it unpublished first (like a new entry in Craft is a draft) and
+  opens it with the website. Thumbnails of images keep the focal point
+  in view.
 - A field that changes its kind keeps plain values the new kind takes
   as they are (text to a dropdown or button group whose options have
   them, a dropdown to a button group); the others start over with the

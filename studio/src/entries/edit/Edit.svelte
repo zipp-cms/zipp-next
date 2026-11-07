@@ -97,6 +97,15 @@
 	// the website next to the editor; an entry in the flyout or without
 	// a page (or an id) has none
 	const canLive = $derived(!onclose && id !== null && !!url);
+	// a new entry of a section with pages gets it once it is saved: the
+	// button saves it unpublished first, like Craft's new entries are
+	// drafts, and opens it with the website
+	const canLiveNew = $derived(
+		!onclose &&
+			id === null &&
+			!!schema.siteUrls[ed.site] &&
+			!!(ed.secDef?.uri || ed.secDef?.type_uris?.[ed.ty]),
+	);
 	const live = $derived(
 		canLive && liveSetting.on
 			? untrack(
@@ -125,6 +134,13 @@
 	async function save() {
 		const created = await ed.save();
 		if (created !== null) go(entryPath(ed.sec, created), true);
+	}
+
+	async function liveNew() {
+		const created = await ed.save(true);
+		if (created === null) return;
+		if (!liveSetting.on) toggleLive();
+		go(entryPath(ed.sec, created), true);
 	}
 
 	function discard() {
@@ -196,8 +212,8 @@
 			: sectionCrumbs(schema, ed.sec)}
 		title={ed.global ? ed.secDef.name : ed.title}
 		{url}
-		live={canLive ? !!live : null}
-		onlive={toggleLive}
+		live={canLive ? !!live : canLiveNew ? false : null}
+		onlive={canLive ? toggleLive : liveNew}
 		onpreview={() => url && ed.preview(url)}
 		ondiscard={discard}
 		onremove={remove}

@@ -307,10 +307,11 @@ export class EntryEditor {
 	}
 
 	/**
-	 * A new entry is created directly, its id comes back; a draft is
-	 * published, the last keys first.
+	 * A new entry is created directly, its id comes back (`unpublished`:
+	 * not live yet whatever its switch says, for the live preview); a
+	 * draft is published, the last keys first.
 	 */
-	async save(): Promise<number | null> {
+	async save(unpublished = false): Promise<number | null> {
 		// Cmd+S while saving: once is enough, a new entry only once
 		if (this.busy) return null;
 		const created = await this.action.run(async () => {
@@ -320,6 +321,7 @@ export class EntryEditor {
 					site: this.site,
 					parentId: this.parentId,
 					...this.doc,
+					...(unpublished ? { published: false } : {}),
 				});
 				// saved, the page of the entry may open
 				this.saver.saved();
