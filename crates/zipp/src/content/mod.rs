@@ -322,10 +322,7 @@ pub(crate) fn convert(
 	fields: &Value,
 ) -> Value {
 	fn kind<'a>(c: &'a Component, handle: &str) -> Option<&'a FieldKind> {
-		c.fields
-			.iter()
-			.find(|f| f.handle == handle)
-			.map(|f| &f.kind)
+		c.field(handle).map(|f| &f.kind)
 	}
 	let same = |h: &str| kind(from, h).is_some_and(|k| kind(to, h) == Some(k));
 	let out = fields.as_object().cloned().unwrap_or_default();

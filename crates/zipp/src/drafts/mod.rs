@@ -335,7 +335,7 @@ fn back_to_live(
 ) -> Value {
 	let from = schema.entry_type(from);
 	let kept = |f: &Field| {
-		from.and_then(|c| c.fields.iter().find(|g| g.handle == f.handle))
+		from.and_then(|c| c.field(&f.handle))
 			.is_some_and(|g| g.translatable && g.kind == f.kind)
 	};
 	let mut out = fields.as_object().cloned().unwrap_or_default();

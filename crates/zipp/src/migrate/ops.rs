@@ -228,9 +228,7 @@ fn change_field(
 	component: &str,
 	field: &Field,
 ) {
-	let old = schema
-		.get(component)
-		.and_then(|c| c.fields.iter().find(|f| f.handle == field.handle));
+	let old = schema.get(component).and_then(|c| c.field(&field.handle));
 
 	// another kind starts over like a new field, with its default; a plain
 	// value the new kind takes as it is stays (text "pdf" for a button

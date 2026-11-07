@@ -184,9 +184,7 @@ fn apply_op(conn: &Connection, schema: &Schema, op: &Op) -> Result<()> {
 			if let Op::ChangeField { component, field } = op {
 				let was = schema
 					.get(component)
-					.and_then(|c| {
-						c.fields.iter().find(|f| f.handle == field.handle)
-					})
+					.and_then(|c| c.field(&field.handle))
 					.is_some_and(|f| f.translatable);
 				if was && !field.translatable {
 					share_primary(conn, schema, component, &field.handle)?;

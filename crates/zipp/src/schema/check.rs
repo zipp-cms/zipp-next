@@ -365,9 +365,7 @@ impl Schema {
 		}
 		if let Some(f) = &section.uri_if {
 			for t in &section.types {
-				let field = self
-					.entry_type(t)
-					.and_then(|c| c.fields.iter().find(|x| &x.handle == f));
+				let field = self.entry_type(t).and_then(|c| c.field(f));
 				if !field.is_some_and(|x| x.kind == FieldKind::Boolean) {
 					return Err(format!("uri if {f}: {t} has no boolean {f}"));
 				}
@@ -688,7 +686,7 @@ impl Schema {
 /// The title field of a block is one of its fields that holds a short
 /// text, the studio shows it in the block's head.
 fn check_title_field(comp: &Component, handle: &str) -> Result<(), String> {
-	let Some(field) = comp.fields.iter().find(|f| f.handle == handle) else {
+	let Some(field) = comp.field(handle) else {
 		return Err("the block has no such field".into());
 	};
 	match field.kind {

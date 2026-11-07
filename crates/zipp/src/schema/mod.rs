@@ -346,6 +346,13 @@ pub struct Component {
 	pub part_of: Option<String>,
 }
 
+impl Component {
+	/// The field of a handle.
+	pub(crate) fn field(&self, handle: &str) -> Option<&Field> {
+		self.fields.iter().find(|f| f.handle == handle)
+	}
+}
+
 /// How an indexed field is compared and sorted, see
 /// [`Schema::index_kind`].
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -520,7 +527,7 @@ impl Schema {
 			Some((f, r)) => (f, Some(r)),
 			None => (path, None),
 		};
-		let field = comp.fields.iter().find(|f| f.handle == first)?;
+		let field = comp.field(first)?;
 		match (rest, &field.kind) {
 			(None, _) => Some(field),
 			(Some(rest), FieldKind::Group { component }) => {

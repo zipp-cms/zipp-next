@@ -87,8 +87,7 @@ pub(crate) fn diff(
 		}
 
 		for f in &comp.fields {
-			let op = match old_comp.fields.iter().find(|o| o.handle == f.handle)
-			{
+			let op = match old_comp.field(&f.handle) {
 				None => Op::AddField {
 					component: component.clone(),
 					field: f.clone(),
