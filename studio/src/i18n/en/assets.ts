@@ -11,6 +11,8 @@ export default {
 	'assets.documents': 'Documents',
 	'assets.noAssets': 'No assets yet',
 	'assets.noFilesInFolder': 'No files in this folder',
+	'assets.newFolderEmpty':
+		'A new folder of this field, made with the first upload',
 	'assets.inAllFolders': 'In all folders',
 	'assets.searchFiles': 'Search files',
 	'assets.type': 'Type',

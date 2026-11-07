@@ -50,6 +50,24 @@ export function folderByPath(
 }
 
 /**
+ * The part of a path that has no folders yet: the deepest one that is
+ * there (null: the top) and the names below it; none when all are.
+ */
+export function missingFolders(
+	folders: Folder[],
+	path: string | undefined,
+): { parent: number | null; names: string[] } | null {
+	const names = (path ?? '').split('/').filter(n => n.trim());
+	let parent: number | null = null;
+	for (const [i, name] of names.entries()) {
+		const found = childFolder(folders, parent, name);
+		if (!found) return { parent, names: names.slice(i) };
+		parent = found.id;
+	}
+	return null;
+}
+
+/**
  * The folder of a name in `parent` (null: the top); the server trims
  * names and compares them without case.
  */
