@@ -31,13 +31,9 @@ fn assets_args(field: GqlField) -> GqlField {
 fn list_of(
 	ctx: &ResolverContext,
 ) -> async_graphql::Result<Option<(AssetList, String)>> {
-	let schema = ctx.data::<Arc<Schema>>()?;
 	let arg = |k: &str| ctx.args.get(k).filter(|v| !v.is_null());
 
 	let site = site_arg(ctx)?;
-	if schema.get_site(&site).is_none() {
-		return Err(GqlError::new(format!("unknown site {site}")));
-	}
 	// like entries, nothing of a site the token doesn't read; the list
 	// only for a schema with assets
 	let scope = &ctx.data::<Viewer>()?.scope;

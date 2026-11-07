@@ -130,9 +130,6 @@ fn query_of(
 	let schema = ctx.data::<Arc<Schema>>()?;
 	let viewer = ctx.data::<Viewer>()?;
 	let site = site_arg(ctx)?;
-	if schema.get_site(&site).is_none() {
-		return Err(GqlError::new(format!("unknown site {site}")));
-	}
 	let Some(mut q) = public_query(schema, viewer, &site) else {
 		return Ok(None);
 	};
