@@ -32,6 +32,21 @@ export function hasTarget(link: Link): boolean {
 	return link.value !== null && link.value !== '';
 }
 
+/** The id of a link to an entry or a file, null for any other link. */
+export function linkedId(link: Link, type: 'entry' | 'asset'): number | null {
+	return link.type === type && typeof link.value === 'number'
+		? link.value
+		: null;
+}
+
+/** The href of a typed in link: a url with its anchor, mail, phone. */
+export function linkHref(link: Link): string {
+	const v = String(link.value ?? '');
+	if (link.type === 'email') return `mailto:${v}`;
+	if (link.type === 'phone') return `tel:${v}`;
+	return v + (link.anchor ? `#${link.anchor}` : '');
+}
+
 /** Whether the link opens in a new tab: set, else external ones do. */
 export function opensInNewTab(
 	schema: Schema,
@@ -127,8 +142,8 @@ export function linkInput(type: LinkKind): {
 
 /** Where a link goes, short: the entry's title, a url's host. */
 export function linkTarget(link: Link, refs: Refs): string {
-	if (link.type === 'entry' && typeof link.value === 'number')
-		return refs[link.value]?.title ?? `#${link.value}`;
+	const entry = linkedId(link, 'entry');
+	if (entry !== null) return refs[entry]?.title ?? `#${entry}`;
 	if (link.type === 'url') {
 		try {
 			return new URL(String(link.value)).host || String(link.value);

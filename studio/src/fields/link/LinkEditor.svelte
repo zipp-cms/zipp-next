@@ -19,6 +19,7 @@
 		hasAnchor,
 		linkInput,
 		linkableTypes,
+		linkedId,
 	} from './link';
 	import { t } from '../../i18n/index.svelte';
 
@@ -54,16 +55,10 @@
 	} = $props();
 
 	const input = $derived(linkInput(link.type));
-	const entry = $derived(
-		link.type === 'entry' && typeof link.value === 'number'
-			? refs[link.value]
-			: null,
-	);
-	const asset = chosenAssets(() =>
-		link.type === 'asset' && typeof link.value === 'number'
-			? [link.value]
-			: [],
-	);
+	const entryId = $derived(linkedId(link, 'entry'));
+	const entry = $derived(entryId === null ? null : refs[entryId]);
+	const assetId = $derived(linkedId(link, 'asset'));
+	const asset = chosenAssets(() => (assetId === null ? [] : [assetId]));
 	let picking = $state(false);
 	let pickingEntry = $state(false);
 
@@ -150,8 +145,7 @@
 				</AddButton>
 			{/if}
 		{:else if link.type === 'asset'}
-			{@const chosen =
-				typeof link.value === 'number' ? asset.get(link.value) : null}
+			{@const chosen = assetId === null ? null : asset.get(assetId)}
 			{#if chosen}
 				<AssetChip asset={chosen}>
 					{#snippet actions()}
