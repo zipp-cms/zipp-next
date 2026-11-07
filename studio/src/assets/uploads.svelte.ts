@@ -129,6 +129,17 @@ class Uploads {
 
 export const uploads = new Uploads();
 
+/** The files of a drop for `then`, a drop that can't be read is reported. */
+export function readDrop(data: DataTransfer, then: (items: Upload[]) => void) {
+	fromDrop(data)
+		.then(then)
+		.catch(err =>
+			uploads.report(
+				t('assets.dropFailed', { error: err.message ?? err }),
+			),
+		);
+}
+
 /**
  * The folders of the files' `dir`s below `folder`, the missing ones
  * made: their ids by the path, `''` is `folder` itself.
@@ -211,13 +222,7 @@ export class FileDrag {
 		this.stop();
 		if (took || !this.files(e)) return;
 		e.preventDefault();
-		fromDrop(e.dataTransfer!)
-			.then(this.ondrop)
-			.catch(err =>
-				uploads.report(
-					t('assets.dropFailed', { error: err.message ?? err }),
-				),
-			);
+		readDrop(e.dataTransfer!, this.ondrop);
 	};
 
 	private stop() {
