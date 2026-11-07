@@ -187,12 +187,7 @@ pub(crate) fn restore(
 	user_id: Option<i64>,
 ) -> Result<Option<Draft>> {
 	check_base(get_draft(conn, id)?.as_ref(), base, user_id)?;
-	let doc: String = conn.query_row(
-		"SELECT doc FROM revisions WHERE id = ?1 AND entry_id = ?2",
-		params![revision, id],
-		|r| r.get(0),
-	)?;
-	let old: Doc = serde_json::from_str(&doc).unwrap_or_default();
+	let old = get_revision(conn, id, revision)?;
 	let live = live_doc(conn, id)?;
 	let mut doc = live.clone();
 	for (site, sd) in old {

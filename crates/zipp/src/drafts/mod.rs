@@ -456,7 +456,7 @@ pub(crate) fn publish(
 	for c in &checked {
 		write(&tx, schema, c)?;
 	}
-	tx.execute("DELETE FROM drafts WHERE entry_id = ?1", [id])?;
+	discard(&tx, id)?;
 	record_revision(&tx, id, user_id)?;
 	tx.commit()?;
 	Ok(())
