@@ -430,18 +430,21 @@ pub(crate) fn store(
 ) -> Result<Asset> {
 	let mut tmp = temp_file(files)?;
 	std::io::Write::write_all(&mut tmp, data)?;
-	store_file(conn, files, filename, tmp, user)
+	store_file(conn, files, filename, tmp, None, user)
 }
 
-/// Stores an upload that came in as `tmp`: the row first for the id, then
-/// the file moves in. `user` is who uploads, none for imports.
+/// Stores an upload that came in as `tmp` in `folder`, `None` on the
+/// top: the row first for the id, then the file moves in. `user` is who
+/// uploads, none for imports.
 pub(crate) fn store_file(
 	conn: &Connection,
 	files: &FsPath,
 	filename: &str,
 	tmp: tempfile::NamedTempFile,
+	folder: Option<i64>,
 	user: Option<i64>,
 ) -> Result<Asset> {
+	check_folder(conn, folder)?;
 	let Upload {
 		filename,
 		kind,
@@ -452,8 +455,19 @@ pub(crate) fn store_file(
 	let size = tmp.as_file().metadata()?.len();
 	conn.execute(
 		"INSERT INTO assets (filename, kind, mime, size, width, height,
-		created_at, uploaded_by) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-		params![filename, kind, mime, size, width, height, now(), user],
+		created_at, uploaded_by, folder_id)
+		VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+		params![
+			filename,
+			kind,
+			mime,
+			size,
+			width,
+			height,
+			now(),
+			user,
+			folder
+		],
 	)?;
 	let id = conn.last_insert_rowid();
 

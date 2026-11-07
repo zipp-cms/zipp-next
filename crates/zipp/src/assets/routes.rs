@@ -43,9 +43,10 @@ pub(super) async fn upload(
 		let tmp = spool(&state.files, field).await?;
 		let conn = state.db.conn();
 		let user = Some(auth.user_id);
-		let asset = store_file(&conn, &state.files, &filename, tmp, user)?;
-		move_assets(&conn, &[asset.id], params.folder)?;
-		assets.push(get_asset(&conn, asset.id)?);
+		let folder = params.folder;
+		let asset =
+			store_file(&conn, &state.files, &filename, tmp, folder, user)?;
+		assets.push(asset);
 	}
 	Ok(Json(assets))
 }
