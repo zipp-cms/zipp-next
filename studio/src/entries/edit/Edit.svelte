@@ -44,7 +44,8 @@
 	import EntryHead from './EntryHead.svelte';
 	import EntrySidebar from './EntrySidebar.svelte';
 	import EntryStatus from './EntryStatus.svelte';
-	import LivePane, { liveSetting, toggleLive } from './LivePane.svelte';
+	import LivePane from './LivePane.svelte';
+	import { liveSetting, toggleLive } from './live.svelte';
 	import RevisionView from './RevisionView.svelte';
 	import TabBar from '../../fields/TabBar.svelte';
 	import { SitePreview } from '../preview.svelte';
