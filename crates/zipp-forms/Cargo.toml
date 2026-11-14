@@ -7,16 +7,15 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
-description = "Forms of the website for zipp, like Craft's Contact Form: declared in code, sent by mail"
+description = "Forms of the website for zipp, like Formie: built in the studio, submissions stored"
 readme = "README.md"
-keywords = ["cms", "forms", "contact-form", "zipp"]
+keywords = ["cms", "forms", "form-builder", "zipp"]
 categories = ["web-programming"]
-exclude = ["studio/"]
+exclude = ["studio/", "crelte/"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }
-tracing = "0.1"
 zipp = { package = "zipp-cms", path = "../zipp", version = "0.3.0" }
 
 [dev-dependencies]

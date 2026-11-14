@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Upgrading
+
+- `zipp-forms`: forms in code (`Form`, `FormField`) and the single
+  `formSettings` are gone, build the forms in the studio and pick them
+  with `form_field`; the website posts to `/forms/{id}` instead of
+  `/forms/<handle>` (the npm package `zipp-forms` does it).
+
+### Forms
+
+- `zipp-forms` is a form builder like Formie instead of Craft's Contact
+  Form: editors build forms as entries of the section `forms` (single
+  line text, multi-line text, email and phone fields as blocks, per
+  site), the website loads one by its id (`GET /forms/{id}`) and sends
+  to it, the submissions are stored and listed in the studio's new
+  page Submissions. The builder shows a form's pages (steps, each
+  checked before the next) as tabs and its fields as a grid of their
+  widths (¼ to full, like Formie's columns), a flyout edits a field, a
+  ⋯ menu has the rest. The fields are the same in all sites, their
+  texts per site. Nothing is mailed for now. The npm package
+  `zipp-forms` is its crelte frontend (`loadForm`, `formRoutes`,
+  `Form`, `Fields`, `Back`, `Submit`). See docs/forms.md.
+
 ## 0.3.0 (2026-11-14)
 
 New entries that save themselves and required fields only to publish,

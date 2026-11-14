@@ -4,35 +4,63 @@
     {
       "op": "addComponent",
       "component": {
-        "handle": "formSettings",
-        "name": "Forms",
+        "handle": "form",
+        "name": "Form",
         "entry": true,
         "fields": [
           {
-            "handle": "contactTo",
-            "label": "Contact: send to",
+            "handle": "fields",
+            "label": "Fields",
             "required": false,
             "indexed": false,
             "translatable": false,
-            "instructions": "One or more addresses, separated by commas. Without one the form can't send.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formFields",
+            "options": null,
+            "blocks": [
+              "formText",
+              "formTextarea",
+              "formEmail",
+              "formPhone",
+              "formPage"
+            ]
           },
           {
-            "handle": "contactSubject",
-            "label": "Contact: subject",
+            "handle": "submitLabel",
+            "label": "Send button",
             "required": false,
             "indexed": false,
             "translatable": true,
-            "instructions": "Empty: *New message: Contact*",
+            "instructions": "Empty: *Send*",
             "kind": "text",
             "max": null,
             "multiline": false
           },
           {
-            "handle": "contactSuccess",
-            "label": "Contact: message after sending",
+            "handle": "nextLabel",
+            "label": "Next page button",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "For forms with pages. Empty: *Next*",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "backLabel",
+            "label": "Page before button",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "For forms with pages. Empty: *Back*",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "successMessage",
+            "label": "Message after sending",
             "required": false,
             "indexed": false,
             "translatable": true,
@@ -41,7 +69,303 @@
             "max": null,
             "multiline": true
           }
-        ]
+        ],
+        "tabs": [
+          {
+            "name": "Fields",
+            "fields": [
+              "fields"
+            ]
+          },
+          {
+            "name": "Settings",
+            "fields": [
+              "submitLabel",
+              "nextLabel",
+              "backLabel",
+              "successMessage"
+            ],
+            "card": true
+          }
+        ],
+        "icon": {
+          "lucide": "clipboard-list"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "formText",
+        "name": "Single line text",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "handle",
+            "label": "Handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "The name of the value for the website and in the submissions, like `email`. Empty: from the label.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "required",
+            "label": "Required",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "boolean"
+          },
+          {
+            "handle": "placeholder",
+            "label": "Placeholder",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "instructions",
+            "label": "Instructions",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown under the label.",
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          }
+        ],
+        "icon": {
+          "lucide": "type"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "formTextarea",
+        "name": "Multi-line text",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "handle",
+            "label": "Handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "The name of the value for the website and in the submissions, like `email`. Empty: from the label.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "required",
+            "label": "Required",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "boolean"
+          },
+          {
+            "handle": "placeholder",
+            "label": "Placeholder",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "instructions",
+            "label": "Instructions",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown under the label.",
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          }
+        ],
+        "icon": {
+          "lucide": "align-left"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "formEmail",
+        "name": "Email",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "handle",
+            "label": "Handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "The name of the value for the website and in the submissions, like `email`. Empty: from the label.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "required",
+            "label": "Required",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "boolean"
+          },
+          {
+            "handle": "placeholder",
+            "label": "Placeholder",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "instructions",
+            "label": "Instructions",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown under the label.",
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          }
+        ],
+        "icon": {
+          "lucide": "mail"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "formPhone",
+        "name": "Phone",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "handle",
+            "label": "Handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "The name of the value for the website and in the submissions, like `email`. Empty: from the label.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "required",
+            "label": "Required",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "boolean"
+          },
+          {
+            "handle": "placeholder",
+            "label": "Placeholder",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "instructions",
+            "label": "Instructions",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown under the label.",
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          }
+        ],
+        "icon": {
+          "lucide": "phone"
+        }
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "formPage",
+        "name": "Page",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          }
+        ],
+        "icon": {
+          "lucide": "panel-top"
+        }
       }
     },
     {
@@ -719,28 +1043,20 @@
                 "Noch keine Neuigkeiten"
               ],
               [
-                "contact.name",
-                "Name"
+                "contact.failed",
+                "Das hat nicht geklappt, bitte später nochmals."
+              ],
+              [
+                "contact.required",
+                "Bitte ausfüllen"
               ],
               [
                 "contact.email",
-                "E-Mail"
+                "Bitte eine E-Mail-Adresse"
               ],
               [
                 "contact.phone",
-                "Telefon"
-              ],
-              [
-                "contact.message",
-                "Nachricht"
-              ],
-              [
-                "contact.send",
-                "Senden"
-              ],
-              [
-                "contact.failed",
-                "Das hat nicht geklappt, bitte später nochmals."
+                "Bitte eine Telefonnummer"
               ]
             ]
           }
@@ -1753,7 +2069,7 @@
       "op": "addComponent",
       "component": {
         "handle": "contact",
-        "name": "Contact form",
+        "name": "Form",
         "entry": false,
         "fields": [
           {
@@ -1766,6 +2082,21 @@
             "kind": "text",
             "max": null,
             "multiline": false
+          },
+          {
+            "handle": "form",
+            "label": "Form",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "form"
+            ],
+            "max": 1,
+            "sections": [
+              "forms"
+            ]
           }
         ],
         "icon": {
@@ -1870,11 +2201,11 @@
     {
       "op": "addSection",
       "section": {
-        "handle": "formSettings",
+        "handle": "forms",
         "name": "Forms",
-        "kind": "single",
+        "kind": "channel",
         "types": [
-          "formSettings"
+          "form"
         ],
         "uri": null
       }
@@ -1979,11 +2310,11 @@
         "uri": null
       },
       {
-        "handle": "formSettings",
+        "handle": "forms",
         "name": "Forms",
-        "kind": "single",
+        "kind": "channel",
         "types": [
-          "formSettings"
+          "form"
         ],
         "uri": null
       },
@@ -2008,35 +2339,63 @@
     ],
     "components": [
       {
-        "handle": "formSettings",
-        "name": "Forms",
+        "handle": "form",
+        "name": "Form",
         "entry": true,
         "fields": [
           {
-            "handle": "contactTo",
-            "label": "Contact: send to",
+            "handle": "fields",
+            "label": "Fields",
             "required": false,
             "indexed": false,
             "translatable": false,
-            "instructions": "One or more addresses, separated by commas. Without one the form can't send.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formFields",
+            "options": null,
+            "blocks": [
+              "formText",
+              "formTextarea",
+              "formEmail",
+              "formPhone",
+              "formPage"
+            ]
           },
           {
-            "handle": "contactSubject",
-            "label": "Contact: subject",
+            "handle": "submitLabel",
+            "label": "Send button",
             "required": false,
             "indexed": false,
             "translatable": true,
-            "instructions": "Empty: *New message: Contact*",
+            "instructions": "Empty: *Send*",
             "kind": "text",
             "max": null,
             "multiline": false
           },
           {
-            "handle": "contactSuccess",
-            "label": "Contact: message after sending",
+            "handle": "nextLabel",
+            "label": "Next page button",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "For forms with pages. Empty: *Next*",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "backLabel",
+            "label": "Page before button",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "For forms with pages. Empty: *Back*",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "successMessage",
+            "label": "Message after sending",
             "required": false,
             "indexed": false,
             "translatable": true,
@@ -2045,7 +2404,288 @@
             "max": null,
             "multiline": true
           }
-        ]
+        ],
+        "tabs": [
+          {
+            "name": "Fields",
+            "fields": [
+              "fields"
+            ]
+          },
+          {
+            "name": "Settings",
+            "fields": [
+              "submitLabel",
+              "nextLabel",
+              "backLabel",
+              "successMessage"
+            ],
+            "card": true
+          }
+        ],
+        "icon": {
+          "lucide": "clipboard-list"
+        }
+      },
+      {
+        "handle": "formText",
+        "name": "Single line text",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "handle",
+            "label": "Handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "The name of the value for the website and in the submissions, like `email`. Empty: from the label.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "required",
+            "label": "Required",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "boolean"
+          },
+          {
+            "handle": "placeholder",
+            "label": "Placeholder",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "instructions",
+            "label": "Instructions",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown under the label.",
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          }
+        ],
+        "icon": {
+          "lucide": "type"
+        }
+      },
+      {
+        "handle": "formTextarea",
+        "name": "Multi-line text",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "handle",
+            "label": "Handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "The name of the value for the website and in the submissions, like `email`. Empty: from the label.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "required",
+            "label": "Required",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "boolean"
+          },
+          {
+            "handle": "placeholder",
+            "label": "Placeholder",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "instructions",
+            "label": "Instructions",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown under the label.",
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          }
+        ],
+        "icon": {
+          "lucide": "align-left"
+        }
+      },
+      {
+        "handle": "formEmail",
+        "name": "Email",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "handle",
+            "label": "Handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "The name of the value for the website and in the submissions, like `email`. Empty: from the label.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "required",
+            "label": "Required",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "boolean"
+          },
+          {
+            "handle": "placeholder",
+            "label": "Placeholder",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "instructions",
+            "label": "Instructions",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown under the label.",
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          }
+        ],
+        "icon": {
+          "lucide": "mail"
+        }
+      },
+      {
+        "handle": "formPhone",
+        "name": "Phone",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "handle",
+            "label": "Handle",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "The name of the value for the website and in the submissions, like `email`. Empty: from the label.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "required",
+            "label": "Required",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "boolean"
+          },
+          {
+            "handle": "placeholder",
+            "label": "Placeholder",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          },
+          {
+            "handle": "instructions",
+            "label": "Instructions",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "Shown under the label.",
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          }
+        ],
+        "icon": {
+          "lucide": "phone"
+        }
+      },
+      {
+        "handle": "formPage",
+        "name": "Page",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
+          }
+        ],
+        "icon": {
+          "lucide": "panel-top"
+        }
       },
       {
         "handle": "seoSettings",
@@ -2708,28 +3348,20 @@
                 "Noch keine Neuigkeiten"
               ],
               [
-                "contact.name",
-                "Name"
+                "contact.failed",
+                "Das hat nicht geklappt, bitte später nochmals."
+              ],
+              [
+                "contact.required",
+                "Bitte ausfüllen"
               ],
               [
                 "contact.email",
-                "E-Mail"
+                "Bitte eine E-Mail-Adresse"
               ],
               [
                 "contact.phone",
-                "Telefon"
-              ],
-              [
-                "contact.message",
-                "Nachricht"
-              ],
-              [
-                "contact.send",
-                "Senden"
-              ],
-              [
-                "contact.failed",
-                "Das hat nicht geklappt, bitte später nochmals."
+                "Bitte eine Telefonnummer"
               ]
             ]
           }
@@ -3700,7 +4332,7 @@
       },
       {
         "handle": "contact",
-        "name": "Contact form",
+        "name": "Form",
         "entry": false,
         "fields": [
           {
@@ -3713,6 +4345,21 @@
             "kind": "text",
             "max": null,
             "multiline": false
+          },
+          {
+            "handle": "form",
+            "label": "Form",
+            "required": true,
+            "indexed": false,
+            "translatable": false,
+            "kind": "relation",
+            "types": [
+              "form"
+            ],
+            "max": 1,
+            "sections": [
+              "forms"
+            ]
           }
         ],
         "icon": {
@@ -3778,7 +4425,7 @@
           "footer",
           "translations",
           "seoSettings",
-          "formSettings"
+          "forms"
         ],
         "icon": {
           "lucide": "sliders-horizontal"
