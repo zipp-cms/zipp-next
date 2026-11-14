@@ -147,9 +147,11 @@
 	// them for Cancel
 	let editing = $state(null);
 	let before = null;
+	// the value when it opened, to see whether something was entered
+	let opened = null;
 
 	function edit(id) {
-		before = value;
+		before = opened = $state.snapshot(value);
 		editing = id;
 	}
 
@@ -157,7 +159,11 @@
 		editing = null;
 	}
 
+	/** Back to before, after asking when something was entered. */
 	function cancel() {
+		const changed =
+			JSON.stringify($state.snapshot(value)) !== JSON.stringify(opened);
+		if (changed && !confirm(tx.confirmDiscard)) return;
 		editing = null;
 		onchange(before);
 	}
@@ -177,7 +183,7 @@
 
 	function add(type) {
 		const block = blocks.create(type);
-		const prev = value;
+		const prev = $state.snapshot(value);
 		fields(fs => [...fs, { width: 100, block }]);
 		fresh = block.id;
 		edit(block.id);

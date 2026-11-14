@@ -33,7 +33,8 @@ editor is the builder:
   preview of their inputs: drag one to move it (a line across between
   the rows, a line beside a field that isn't full width when the
   pointer is in its middle), a click opens its settings and width in a
-  flyout (Apply keeps them, Cancel puts the field back), its ⋯ menu (or
+  flyout (Apply keeps them, Cancel puts the field back after asking if
+  something was entered), its ⋯ menu (or
   a right click) has Edit, Duplicate, To another page, Switch off and
   Delete;
 - *Add field* at the end of the grid picks the type and opens the new
