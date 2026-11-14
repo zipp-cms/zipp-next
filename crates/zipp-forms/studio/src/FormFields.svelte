@@ -7,7 +7,7 @@
 	import Popover from 'zipp-ui/Popover.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
-	import { Sortable } from 'zipp-ui/sortable';
+	import { Sortable, listSortable, moved } from 'zipp-ui/sortable';
 	import FieldCard from './FieldCard.svelte';
 	import {
 		PAGE,
@@ -16,7 +16,6 @@
 		groupsOf,
 		labelOf,
 		textIn,
-		moved,
 		renamed,
 		span,
 		toPage,
@@ -58,9 +57,10 @@
 
 	function addPage() {
 		const page = newPage();
-		page.block.fields.label = { [site]: `${tx.page} ${groups.length + 1}` };
+		const n = groups.length;
+		page.block.fields.label = { [site]: `${tx.page} ${n + 1}` };
 		set([...groups, { page, fields: [] }]);
-		active = groups.length;
+		active = n;
 	}
 
 	function rename(i, label) {
@@ -92,7 +92,7 @@
 	}
 
 	function movePage(from, to) {
-		set(moved(groups, from, to));
+		set(moved(groups, from, { index: to, depth: 0 }));
 		active = to;
 	}
 
@@ -231,7 +231,7 @@
 		{
 			label: tx.edit,
 			icon: 'edit',
-			onclick: () => (editing = item.block.id),
+			onclick: () => edit(item.block.id),
 		},
 		{ label: tx.duplicate, icon: 'copy', onclick: () => duplicate(fi) },
 		...groups
@@ -281,12 +281,12 @@
 		return y > 0.25 && y < 0.75;
 	}
 
-	const fieldSort = new Sortable({
-		container: () => grid,
-		depths: () => group.fields.map(() => 0),
-		grid: besides,
-		onmove: (from, drop) => fields(fs => moved(fs, from, drop.index)),
-	});
+	const fieldSort = listSortable(
+		() => grid,
+		() => group.fields,
+		fs => fields(() => fs),
+		{ grid: besides },
+	);
 
 	/** The studio's editor of a block. */
 	function editor(target, id) {

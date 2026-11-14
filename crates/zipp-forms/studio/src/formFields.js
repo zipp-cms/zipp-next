@@ -83,19 +83,6 @@ export function renamed(groups, i, label, site, newPage) {
 }
 
 /**
- * @template T
- * @param {T[]} list
- * @param {number} from
- * @param {number} to
- */
-export function moved(list, from, to) {
-	const next = [...list];
-	const [x] = next.splice(from, 1);
-	next.splice(to, 0, x);
-	return next;
-}
-
-/**
  * Changes the fields of one page.
  * @param {Group[]} groups
  * @param {number} i

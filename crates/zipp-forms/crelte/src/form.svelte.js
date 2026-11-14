@@ -58,7 +58,7 @@ export class ZippForm {
 	}
 
 	/**
-	 * An id for a field's input, unique when a page shows the form twice.
+	 * An id for a field's input, unique in a page that shows the form once.
 	 * @param {FieldData} field
 	 */
 	inputId(field) {

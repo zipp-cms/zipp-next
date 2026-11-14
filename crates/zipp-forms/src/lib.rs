@@ -331,7 +331,8 @@ impl FieldType for SiteText {
 		value: &Value,
 	) -> async_graphql::Result<Option<FieldValue<'a>>> {
 		let site = zipp::graphql::ext::site(ctx)?;
-		let text = site_text_in(value, &site, "");
+		let primary = &zipp::graphql::ext::schema(ctx)?.primary_site().handle;
+		let text = site_text_in(value, &site, primary);
 		Ok(Some(FieldValue::value(text)))
 	}
 

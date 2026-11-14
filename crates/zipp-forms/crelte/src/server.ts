@@ -43,6 +43,15 @@ export function formRoutes(router: ServerRouter) {
 async function send(csr: CrelteServerRequest): Promise<Response | null> {
 	const url = new URL(csr.req.url);
 	if (!/^\/forms\/\d+$/.test(url.pathname)) return null;
+	// JSON only: a browser asks first before sending it from another
+	// site, so other sites' pages can't send forms with their visitors
+	const type = csr.req.headers.get('content-type') ?? '';
+	if (!type.startsWith('application/json')) {
+		return Response.json(
+			{ success: false, message: 'a JSON object of the fields' },
+			{ status: 415 },
+		);
+	}
 
 	const to = csr.backendUrl(url.pathname);
 	to.search = url.search;

@@ -9,6 +9,7 @@ use zipp::entries::Entry;
 /// What the website needs to show a form, `GET /forms/{id}`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct Form {
 	pub id: i64,
 	pub title: String,
@@ -25,6 +26,7 @@ pub struct Form {
 
 /// A step of a form: the fields after its page item.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct FormPage {
 	/// its title, empty for a form without pages
 	pub label: String,
@@ -33,6 +35,7 @@ pub struct FormPage {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct FormField {
 	#[serde(rename = "type")]
 	pub kind: FieldKind,
@@ -49,6 +52,7 @@ pub struct FormField {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub enum FieldKind {
 	Text,
 	Textarea,
@@ -94,6 +98,7 @@ impl FieldKind {
 
 /// A value of a submission, with the label its field had then.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Answer {
 	pub handle: String,
 	pub label: String,
@@ -104,6 +109,7 @@ pub struct Answer {
 /// (`required`, `oneLine`, `tooLong`, `email`, `phone`, `text`), the
 /// message in English.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct FieldError {
 	pub path: String,
 	pub code: String,

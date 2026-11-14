@@ -11,6 +11,8 @@ export class SubmissionsList {
 	total = $state(0);
 	loading = $state(false);
 	error = $state('');
+	// the newest load: an older answer that comes later is dropped
+	seq = 0;
 
 	/** @param {any} host */
 	constructor(host) {
@@ -31,7 +33,9 @@ export class SubmissionsList {
 	/** The first page of the picked form. */
 	async load() {
 		await this.run(async () => {
+			const seq = ++this.seq;
 			const resp = await this.request(0);
+			if (seq !== this.seq) return;
 			this.submissions = resp.submissions;
 			this.total = resp.total;
 		});
@@ -39,7 +43,9 @@ export class SubmissionsList {
 
 	async more() {
 		await this.run(async () => {
+			const seq = ++this.seq;
 			const resp = await this.request(this.submissions.length);
+			if (seq !== this.seq) return;
 			this.submissions = [...this.submissions, ...resp.submissions];
 			this.total = resp.total;
 		});

@@ -78,9 +78,9 @@ fn live_form(
 	id: i64,
 	site: Option<String>,
 ) -> Result<(Form, String)> {
-	let site = site
-		.filter(|s| state.schema.get_site(s).is_some())
-		.unwrap_or_else(|| state.schema.primary_site().handle.clone());
+	let site = state
+		.schema
+		.site_or_primary(site.filter(|s| state.schema.get_site(s).is_some()));
 	let id = id.to_string();
 	let params = [
 		("section", FORMS),

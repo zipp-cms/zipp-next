@@ -1,7 +1,7 @@
 import { tick } from 'svelte';
 import { moved, stepDrop, subtree, type Drop, type Step } from './sortTree';
 
-export { placeIn, type Drop, type Step } from './sortTree';
+export { moved, placeIn, type Drop, type Step } from './sortTree';
 
 /**
  * Moving the items of a list or a tree: dragging a handle with the pointer

@@ -25,6 +25,7 @@ pub(crate) const TABLES: &[&str] = &[r#"
 /// A submission, the newest come first.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct Submission {
 	pub id: i64,
 	pub form_id: i64,
@@ -38,7 +39,7 @@ pub struct Submission {
 /// How many a list has at most.
 pub const PAGE: i64 = 50;
 
-pub fn insert(
+pub(crate) fn insert(
 	conn: &Connection,
 	form: i64,
 	site: &str,
@@ -56,7 +57,7 @@ pub fn insert(
 
 /// A page of the submissions of a form or all, the newest first, and how
 /// many there are; `site` is the one whose titles name the forms.
-pub fn list(
+pub(crate) fn list(
 	conn: &Connection,
 	site: &str,
 	form: Option<i64>,
@@ -84,7 +85,7 @@ pub fn list(
 }
 
 /// Deletes a submission, NOT_FOUND if there is none.
-pub fn delete(conn: &Connection, id: i64) -> Result<()> {
+pub(crate) fn delete(conn: &Connection, id: i64) -> Result<()> {
 	match conn.execute("DELETE FROM forms_submissions WHERE id = ?", [id])? {
 		0 => Err(Error::NotFound),
 		_ => Ok(()),
