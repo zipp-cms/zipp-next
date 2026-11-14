@@ -370,4 +370,11 @@ way.
 ## Types for the rest api
 
 `types` prints TypeScript types of all
-entries and blocks.
+entries and blocks: `Page` is an entry of the type `page`, `PageFields`
+its fields and `TextBlock` a block. Required fields are only certain in
+a published entry, so each also has a draft variant with every field
+optional (`PageDraftFields`, `TextDraftBlock` in it): an entry with
+`published: false` has those, check `published` to get the others.
+A required field with a condition is optional in both (hidden it
+needn't be filled), and one made required later can still be missing
+in entries published before.

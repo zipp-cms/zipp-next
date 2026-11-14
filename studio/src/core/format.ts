@@ -37,10 +37,11 @@ for (const [a, cs] of Object.entries({
 /**
  * A slug of a title like the server's (`entries::slugify`): lowercase,
  * Latin letters as ASCII (ü is ue, é is e, other scripts stay) and
- * digits, anything else one `-`.
+ * digits, anything else one `-`. Text in NFD (macOS: `u` and a
+ * combining `¨`) is composed first.
  */
 export function slugify(s: string): string {
-	return [...s.toLowerCase()]
+	return [...s.normalize('NFC').toLowerCase()]
 		.map(c => ASCII[c] ?? c)
 		.join('')
 		.replace(/[^\p{L}\p{N}]+/gu, '-')

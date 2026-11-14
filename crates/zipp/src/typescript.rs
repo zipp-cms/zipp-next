@@ -13,7 +13,9 @@ export type EntryRef = {
 	uri: string | null;
 };
 
-export type Entry<T extends string, F> = {
+// required fields only have to be there in a published entry, an
+// unpublished one has its draft fields `D`
+export type Entry<T extends string, F, D> = {
 	id: number;
 	section: string;
 	type: T;
@@ -21,13 +23,11 @@ export type Entry<T extends string, F> = {
 	title: string;
 	slug: string;
 	uri: string | null;
-	published: boolean;
 	parentId: number | null;
-	fields: F;
 	createdAt: number;
 	updatedAt: number;
 	authorId: number | null;
-};
+} & ({ published: true; fields: F } | { published: false; fields: D });
 
 export type Block<T extends string, F> = { id: string; type: T; fields: F };
 
@@ -49,21 +49,32 @@ pub fn generate(schema: &Schema) -> String {
 		let name = pascal(&comp.handle);
 		out += &format!(
 			"\nexport type {name}Fields = {};\n",
-			fields(schema, comp)
+			fields(schema, comp, false)
 		);
-		// the asset and user fields are no block, `AssetFields` is enough
+		// the asset and user fields are no block and always required,
+		// `AssetFields` is enough
 		if comp.handle == ASSET || comp.handle == USER {
 			continue;
 		}
+
+		// a draft or an unpublished entry may lack the required fields,
+		// in its blocks and groups too
+		out += &format!(
+			"export type {name}DraftFields = {};\n",
+			fields(schema, comp, true)
+		);
 		out += &if comp.entry {
 			format!(
-				"export type {name} = Entry<'{}', {name}Fields>;\n",
+				"export type {name} = \
+				 Entry<'{}', {name}Fields, {name}DraftFields>;\n",
 				comp.handle
 			)
 		} else {
 			format!(
-				"export type {name}Block = Block<'{}', {name}Fields>;\n",
-				comp.handle
+				"export type {name}Block = Block<'{}', {name}Fields>;\n\
+				 export type {name}DraftBlock = \
+				 Block<'{}', {name}DraftFields>;\n",
+				comp.handle, comp.handle
 			)
 		};
 	}
@@ -86,7 +97,9 @@ const LINK: &str = "{ type: 'entry' | 'url' | 'email' | 'phone' | 'asset'; \
 	value: string | number; label?: string; newTab?: boolean; \
 	download?: boolean; anchor?: string }";
 
-fn fields(schema: &Schema, comp: &Component) -> String {
+/// The fields of a component, with `draft` all optional and its blocks
+/// and groups as drafts.
+fn fields(schema: &Schema, comp: &Component, draft: bool) -> String {
 	// notes have no value
 	let fields: Vec<_> =
 		comp.fields.iter().filter(|f| f.kind.has_value()).collect();
@@ -96,6 +109,10 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 
 	let mut out = "{\n".to_string();
 	for f in fields {
+		// a field hidden by its condition needn't be filled to publish,
+		// nor what is inside it
+		let draft = draft || !comp.conditions_of(&f.handle).is_empty();
+		let suffix = if draft { "Draft" } else { "" };
 		let ty = match &f.kind {
 			FieldKind::Text { .. } | FieldKind::Email => "string".into(),
 			// `2026-11-14`, with a time `2026-11-14T20:00`
@@ -135,7 +152,7 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 				.collect::<Vec<_>>()
 				.join(" | "),
 			FieldKind::Group { component } => {
-				format!("{}Fields", pascal(component))
+				format!("{}{suffix}Fields", pascal(component))
 			}
 			FieldKind::RichText { .. } => {
 				"{ type: 'doc'; content: unknown[] }".into()
@@ -144,7 +161,7 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 			FieldKind::Blocks { types, .. } => {
 				let blocks: Vec<_> = types
 					.iter()
-					.map(|t| format!("{}Block", pascal(t)))
+					.map(|t| format!("{}{suffix}Block", pascal(t)))
 					.collect();
 				format!("({})[]", blocks.join(" | "))
 			}
@@ -155,7 +172,7 @@ fn fields(schema: &Schema, comp: &Component) -> String {
 				.unwrap_or_else(|| "unknown".into()),
 			FieldKind::Note { .. } => unreachable!(),
 		};
-		let opt = if f.required { "" } else { "?" };
+		let opt = if f.required && !draft { "" } else { "?" };
 		out += &format!("\t{}{opt}: {ty};\n", f.handle);
 	}
 	out + "}"
@@ -191,17 +208,53 @@ fn pascal(handle: &str) -> String {
 mod tests {
 	use super::*;
 	use crate::fixtures::site;
-	use crate::schema::Field;
+	use crate::schema::{Condition, Field};
 
 	#[test]
 	fn generates_types() {
 		let ts = generate(&site());
-		assert!(ts.contains("export type Page = Entry<'page', PageFields>;"));
+		assert!(ts.contains(
+			"export type Page = Entry<'page', PageFields, PageDraftFields>;"
+		));
 		assert!(ts.contains("\tbody?: (TextBlock | ButtonBlock)[];"));
 		assert!(ts.contains("\tlabel: string;"));
 		assert!(ts.contains("export type AnyEntry = Page | Event;"));
 		// a note has no value
 		assert!(!ts.contains("howto"));
+	}
+
+	#[test]
+	fn drafts_may_lack_required_fields() {
+		let ts = generate(&site());
+		// only a published entry has its required fields
+		assert!(ts.contains(
+			"({ published: true; fields: F } | \
+			 { published: false; fields: D })"
+		));
+		assert!(ts.contains("export type ButtonFields = {\n\tlabel: string;"));
+		assert!(
+			ts.contains("export type ButtonDraftFields = {\n\tlabel?: string;")
+		);
+		assert!(ts.contains(
+			"export type ButtonDraftBlock = Block<'button', ButtonDraftFields>;"
+		));
+		// blocks of a draft are drafts too
+		assert!(ts.contains("\tbody?: (TextDraftBlock | ButtonDraftBlock)[];"));
+		assert!(ts.contains("\tseo?: SeoDraftFields;"));
+	}
+
+	#[test]
+	fn conditional_fields_are_optional() {
+		// hidden by its condition, a required field needn't be filled
+		let ts = generate(
+			&site().asset_fields([
+				Field::boolean("credited"),
+				Field::text("credit")
+					.required()
+					.when(Condition::on("credited")),
+			]),
+		);
+		assert!(ts.contains("\tcredit?: string;"));
 	}
 
 	#[test]

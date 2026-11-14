@@ -150,8 +150,9 @@ filled to publish (see content-model.md): a member can keep an entry
 unpublished (`published: false`) without them, like a recipe imported
 from a url that waits for its photo, and a save with `published: true`
 answers `INVALID` until they are there; so an unpublished entry these
-routes answer may lack them (optional for the frontend, also where
-`types` makes them required). The frontend forwards these
+routes answer may lack them, and so may an entry they answer with an
+editor's draft (`hasDraft`): type their `fields` with the draft fields
+of `types` (`RecipeDraftFields`, extending.md). The frontend forwards these
 routes with the visitor's site token (401 without one, 403 for an entry
 the role may not touch or a section that isn't the plugin's):
 

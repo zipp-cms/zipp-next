@@ -10,6 +10,7 @@ use axum::{Json, Router};
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use unicode_normalization::UnicodeNormalization;
 
 use crate::auth::Authed;
 use crate::content::{
@@ -776,10 +777,11 @@ pub(crate) fn slugify(s: &str) -> String {
 }
 
 /// A slug given by hand, cleaned up: lowercase letters and digits (any
-/// script), anything else one `-`. `Über uns!` becomes `über-uns`.
+/// script), anything else one `-`. `Über uns!` becomes `über-uns`, also
+/// in NFD.
 pub(crate) fn clean_slug(s: &str) -> String {
 	let mut out = String::new();
-	for c in s.chars().flat_map(char::to_lowercase) {
+	for c in s.nfc().flat_map(char::to_lowercase) {
 		if c.is_alphanumeric() {
 			out.push(c);
 		} else if !out.is_empty() && !out.ends_with('-') {
@@ -790,10 +792,11 @@ pub(crate) fn clean_slug(s: &str) -> String {
 }
 
 /// Latin letters without their accents, German umlauts as two letters
-/// (`ä` is `ae`, `ß` is `ss`); other scripts stay as they are.
+/// (`ä` is `ae`, `ß` is `ss`), also in NFD (`u` and a combining `¨`);
+/// other scripts stay as they are.
 pub(crate) fn ascii(s: &str) -> String {
 	let mut out = String::with_capacity(s.len());
-	for c in s.chars().flat_map(char::to_lowercase) {
+	for c in s.nfc().flat_map(char::to_lowercase) {
 		let a = match c {
 			'ä' | 'æ' => "ae",
 			'ö' | 'œ' => "oe",
