@@ -15,6 +15,7 @@
 		flatten,
 		groupsOf,
 		labelOf,
+		textIn,
 		moved,
 		renamed,
 		span,
@@ -32,7 +33,7 @@
 	 * its ⋯ menu duplicates, moves it to another page, switches it off or
 	 * deletes it.
 	 */
-	let { value, onchange, readonly, blocks } = $props();
+	let { value, onchange, readonly, blocks, site } = $props();
 	const tx = texts();
 
 	const items = $derived(value ?? []);
@@ -43,7 +44,7 @@
 	const fieldTypes = $derived(blocks.types.filter(t => t.handle !== PAGE));
 	const typeName = type =>
 		blocks.types.find(t => t.handle === type)?.name ?? type;
-	const pageName = (g, i) => labelOf(g) || `${tx.page} ${i + 1}`;
+	const pageName = (g, i) => labelOf(g, site) || `${tx.page} ${i + 1}`;
 
 	const newPage = () => ({ block: blocks.create(PAGE) });
 	function set(next) {
@@ -57,7 +58,7 @@
 
 	function addPage() {
 		const page = newPage();
-		page.block.fields.label = `${tx.page} ${groups.length + 1}`;
+		page.block.fields.label = { [site]: `${tx.page} ${groups.length + 1}` };
 		set([...groups, { page, fields: [] }]);
 		active = groups.length;
 	}
@@ -65,7 +66,7 @@
 	function rename(i, label) {
 		if (renaming !== i) return;
 		renaming = null;
-		set(renamed(groups, i, label.trim(), newPage));
+		set(renamed(groups, i, label.trim(), site, newPage));
 	}
 
 	/**
@@ -320,7 +321,7 @@
 					<input
 						class="rename"
 						aria-label={tx.pageName}
-						value={labelOf(g)}
+						value={g.page?.block.fields.label?.[site] ?? ''}
 						placeholder={pageName(g, i)}
 						use:focusName={i}
 						onkeydown={e => {
@@ -371,6 +372,7 @@
 			>
 				<FieldCard
 					{item}
+					{site}
 					typeName={typeName(item.block.type)}
 					selected={editing === item.block.id}
 					{readonly}
@@ -424,7 +426,7 @@
 
 {#if edited}
 	<Flyout
-		title={edited.item.block.fields.label ||
+		title={textIn(edited.item.block.fields.label, site) ||
 			typeName(edited.item.block.type)}
 		onclose={readonly ? apply : cancel}
 		actions={readonly ? undefined : flyoutActions}

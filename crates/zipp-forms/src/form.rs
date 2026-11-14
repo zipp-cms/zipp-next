@@ -115,9 +115,13 @@ impl Form {
 	/// pages (see [`FormFields`](crate::FormFields)); switched off blocks
 	/// are left out, a handle that is empty or already there is made of
 	/// the label.
-	pub fn of_entry(entry: &Entry, honeypot: &str) -> Self {
+	pub fn of_entry(entry: &Entry, honeypot: &str, primary: &str) -> Self {
 		let text = |v: &Value, key: &str| {
 			v[key].as_str().unwrap_or_default().trim().to_string()
+		};
+		// the texts of the fields, in the entry's site
+		let site_text = |v: &Value, key: &str| {
+			crate::site_text_in(&v[key], &entry.site, primary)
 		};
 		// the fields before a page item are on a first page without a name
 		let mut pages = vec![FormPage {
@@ -130,7 +134,7 @@ impl Form {
 			let ty = block["type"].as_str().unwrap_or_default();
 			let f = &block["fields"];
 			if ty == PAGE {
-				let label = text(f, "label");
+				let label = site_text(f, "label");
 				match pages.last_mut() {
 					Some(p) if p.fields.is_empty() => p.label = label,
 					_ => pages.push(FormPage {
@@ -146,7 +150,7 @@ impl Form {
 			let Some(kind) = FieldKind::of_block(ty) else {
 				continue;
 			};
-			let label = text(f, "label");
+			let label = site_text(f, "label");
 			let mut handle = match text(f, "handle") {
 				h if h.is_empty() => handle_of(&label),
 				h => h,
@@ -165,8 +169,8 @@ impl Form {
 				handle,
 				label,
 				required: f["required"] == Value::Bool(true),
-				placeholder: text(f, "placeholder"),
-				instructions: text(f, "instructions"),
+				placeholder: site_text(f, "placeholder"),
+				instructions: site_text(f, "instructions"),
 				width: width_of(item),
 			};
 			pages.last_mut().expect("a page").fields.push(field);

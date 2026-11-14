@@ -13,9 +13,9 @@
 //! A form is an entry of the section `forms`: its fields are blocks
 //! (single line text, multi-line text, email, phone) with a label, a
 //! handle, required, a placeholder and instructions, in each site of
-//! their own (the field is translatable), on pages (steps) the studio
-//! shows as tabs ([`FormFields`]), plus the labels of the buttons and
-//! the message after sending. The website gets a form by its
+//! on pages (steps) the studio shows as tabs ([`FormFields`]); the fields
+//! are the same in all sites, their texts per site ([`SiteText`]), plus
+//! the labels of the buttons and the message after sending. The website gets a form by its
 //! id and sends to it, see [`routes`]; the studio's page Submissions
 //! shows what came in, for who may view `forms`.
 
@@ -23,6 +23,10 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use serde_json::{Value, json};
+use zipp::async_graphql::{
+	self,
+	dynamic::{FieldValue, ResolverContext},
+};
 use zipp::{
 	Field, FieldType, GraphqlType, Plugin, PluginPage, PluginStudio, Scalar,
 	Schema, Section, StudioModule,
@@ -87,17 +91,23 @@ pub fn form_field(handle: &str) -> Field {
 }
 
 /// The fields every field block has.
+/// The texts are per site ([`SiteText`]), the rest is the same in all.
 fn block_fields() -> Vec<Field> {
 	vec![
-		Field::text("label").required(),
+		site_text("label").required(),
 		Field::text("handle").instructions(
 			"The name of the value for the website and in the submissions, \
 			like `email`. Empty: from the label.",
 		),
 		Field::boolean("required"),
-		Field::text("placeholder"),
-		Field::text("instructions").instructions("Shown under the label."),
+		site_text("placeholder"),
+		site_text("instructions").instructions("Shown under the label."),
 	]
+}
+
+/// A text of a field of a form in each site, see [`SiteText`].
+fn site_text(handle: &str) -> Field {
+	Field::custom(handle, SITE_TEXT, Value::Null)
 }
 
 impl Plugin for Forms {
@@ -113,14 +123,14 @@ impl Plugin for Forms {
 				FORM,
 				"Form",
 				[
+					// the same in all sites, the texts in it are per site
 					Field::custom("fields", FORM_FIELDS, Value::Null)
 						.item_blocks(
 							FIELD_BLOCKS
 								.iter()
 								.map(|(h, _)| *h)
 								.chain([form::PAGE]),
-						)
-						.translatable(),
+						),
 					Field::text("submitLabel")
 						.label("Button")
 						.translatable()
@@ -149,14 +159,14 @@ impl Plugin for Forms {
 		for ((handle, name), icon) in FIELD_BLOCKS.iter().zip(icons) {
 			schema = schema
 				.block(handle, name, block_fields())
-				.block_title(handle, "label")
 				.icon(handle, icon);
 		}
-		let page = Field::text("label");
+		let page = site_text("label");
 		schema
 			.block(form::PAGE, "Page", [page])
 			.icon(form::PAGE, "panel-top")
 			.field_type(FormFields)
+			.field_type(SiteText)
 	}
 
 	fn tables(&self) -> &'static [&'static str] {
@@ -253,4 +263,82 @@ impl FieldType for FormFields {
 	fn studio(&self) -> StudioModule {
 		StudioModule::new(STUDIO)
 	}
+}
+
+/// The type of the texts of a field.
+pub const SITE_TEXT: &str = "formSiteText";
+
+/// A text of a form's field in each site, `{ "de": "Name", "en": "Name"
+/// }`: the fields of a form are the same in all sites, their texts are
+/// translated, like Formie 4. The studio edits the text of the site on
+/// screen; a site without one shows the primary site's (see
+/// [`site_text_in`]).
+pub struct SiteText;
+
+impl FieldType for SiteText {
+	fn name(&self) -> &'static str {
+		SITE_TEXT
+	}
+
+	/// Trimmed texts by site, the empty ones left out.
+	fn validate(
+		&self,
+		_options: &Value,
+		value: &Value,
+	) -> Result<Value, String> {
+		let texts = value.as_object().ok_or("texts by site")?;
+		let mut out = serde_json::Map::new();
+		for (site, text) in texts {
+			let text = text.as_str().ok_or("texts by site")?.trim();
+			if text.chars().count() > 500 {
+				return Err("at most 500 characters".into());
+			}
+			if !text.is_empty() {
+				out.insert(site.clone(), text.into());
+			}
+		}
+		Ok(match out.is_empty() {
+			true => Value::Null,
+			false => Value::Object(out),
+		})
+	}
+
+	fn graphql(&self) -> GraphqlType {
+		GraphqlType::Scalar(Scalar::String)
+	}
+
+	/// The text of the request's site.
+	fn resolve<'a>(
+		&self,
+		ctx: &ResolverContext<'a>,
+		_options: &Value,
+		value: &Value,
+	) -> async_graphql::Result<Option<FieldValue<'a>>> {
+		let site = zipp::graphql::ext::site(ctx)?;
+		let text = site_text_in(value, &site, "");
+		Ok(Some(FieldValue::value(text)))
+	}
+
+	fn typescript(&self) -> String {
+		"Record<string, string>".into()
+	}
+
+	fn studio(&self) -> StudioModule {
+		StudioModule::new(STUDIO)
+	}
+}
+
+/// The text of a site, else the primary site's, else any.
+pub fn site_text_in(value: &Value, site: &str, primary: &str) -> String {
+	let of = |s: &str| value[s].as_str().filter(|t| !t.is_empty());
+	of(site)
+		.or_else(|| of(primary))
+		.or_else(|| {
+			value
+				.as_object()?
+				.values()
+				.find_map(|t| t.as_str().filter(|t| !t.is_empty()))
+		})
+		.unwrap_or_default()
+		.to_string()
 }

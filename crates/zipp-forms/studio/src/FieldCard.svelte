@@ -1,6 +1,7 @@
 <script>
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import Menu from 'zipp-ui/Menu.svelte';
+	import { textIn } from './formFields.js';
 	import { texts } from './texts.js';
 
 	/**
@@ -10,6 +11,7 @@
 	 */
 	let {
 		item,
+		site,
 		typeName,
 		selected = false,
 		readonly = false,
@@ -55,7 +57,9 @@
 			</span>
 		{/if}
 		<span class="label truncate">
-			{f.label || typeName}{#if f.required}<span class="star">
+			{textIn(f.label, site) || typeName}{#if f.required}<span
+					class="star"
+				>
 					*
 				</span>{/if}
 		</span>
@@ -66,10 +70,10 @@
 		{/if}
 	</div>
 	<div class="preview" class:textarea>
-		<span class="truncate">{f.placeholder ?? ''}</span>
+		<span class="truncate">{textIn(f.placeholder, site)}</span>
 	</div>
-	{#if f.instructions}
-		<p class="hint truncate">{f.instructions}</p>
+	{#if textIn(f.instructions, site)}
+		<p class="hint truncate">{textIn(f.instructions, site)}</p>
 	{/if}
 </div>
 

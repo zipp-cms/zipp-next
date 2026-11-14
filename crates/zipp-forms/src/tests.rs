@@ -19,12 +19,17 @@ pub(crate) fn schema() -> Schema {
 		.plugin(Forms::new())
 }
 
+/// A field block; its texts (the label, a `placeholder` and
+/// `instructions` in `more`) are German.
 pub(crate) fn block(ty: &str, label: &str, more: Value) -> Value {
-	let mut fields = json!({ "label": label });
-	fields
-		.as_object_mut()
-		.unwrap()
-		.extend(more.as_object().unwrap().clone());
+	let mut fields = json!({ "label": { "de": label } });
+	for (key, value) in more.as_object().unwrap() {
+		let value = match key.as_str() {
+			"placeholder" | "instructions" => json!({ "de": value }),
+			_ => value.clone(),
+		};
+		fields[key] = value;
+	}
 	json!({ "type": ty, "fields": fields })
 }
 
@@ -35,7 +40,7 @@ pub(crate) fn item(block: Value) -> Value {
 
 /// The item that starts a page.
 fn page(label: &str) -> Value {
-	json!({ "block": { "type": "formPage", "fields": { "label": label } } })
+	json!({ "block": { "type": "formPage", "fields": { "label": { "de": label } } } })
 }
 
 /// The items of fields on one page without a name.
@@ -143,12 +148,13 @@ async fn the_website_gets_a_live_form_of_its_site() {
 
 	assert_eq!(get(&ts, "/forms/999").await.0, StatusCode::NOT_FOUND);
 
-	// its own fields in English
-	let en = json!({
-		"fields": [item(block("formText", "Your name", json!({ "handle": "name" })))],
-		"submitLabel": "Go",
-	});
-	let mut en = input(FORMS, FORM, "Contact", en);
+	// the same fields in English, with their English texts; one without
+	// shows the German one
+	let mut fields = contact_fields();
+	fields["fields"][0]["block"]["fields"]["label"]["en"] = json!("Your name");
+	fields["submitLabel"] = json!("Go");
+	fields["successMessage"] = Value::Null;
+	let mut en = input(FORMS, FORM, "Contact", fields);
 	en.site = Some("en".into());
 	let req = UpdateReq {
 		id: form.id,
@@ -159,9 +165,15 @@ async fn the_website_gets_a_live_form_of_its_site() {
 	let (status, body) = get(&ts, &path).await;
 	assert_eq!(status, StatusCode::OK);
 	assert_eq!(body["title"], "Contact");
-	assert_eq!(body["pages"][0]["fields"][0]["label"], "Your name");
+	let fields = &body["pages"][0]["fields"];
+	assert_eq!(fields[0]["label"], "Your name");
+	assert_eq!(fields[1]["label"], "E-Mail");
+	assert_eq!(fields[3]["placeholder"], "Ihre Nachricht");
 	assert_eq!(body["submitLabel"], "Go");
 	assert_eq!(body["successMessage"], "Thank you, your message is sent.");
+	// German stays German
+	let (_, de) = get(&ts, &format!("/forms/{}?site=de", form.id)).await;
+	assert_eq!(de["pages"][0]["fields"][0]["label"], "Name");
 
 	// offline in a site: not there
 	let mut off = input(FORMS, FORM, "Contact", json!({}));
@@ -320,6 +332,7 @@ fn handles_are_unique_and_off_blocks_left_out() {
 			block("formText", "!!", json!({})),
 		])})),
 		"website",
+		"de",
 	);
 	let fields = &form.pages[0].fields;
 	let handles: Vec<&str> = fields.iter().map(|f| f.handle.as_str()).collect();
@@ -352,7 +365,7 @@ fn steps() -> Value {
 
 #[test]
 fn page_items_make_pages() {
-	let form = Form::of_entry(&entry(steps()), "website");
+	let form = Form::of_entry(&entry(steps()), "website", "de");
 	let pages: Vec<(&str, Vec<&str>)> = form
 		.pages
 		.iter()
@@ -369,13 +382,13 @@ fn page_items_make_pages() {
 		]
 	);
 	// no fields: one empty page
-	let form = Form::of_entry(&entry(json!({})), "website");
+	let form = Form::of_entry(&entry(json!({})), "website", "de");
 	assert_eq!(form.pages.len(), 1);
 }
 
 #[test]
 fn widths_come_with_the_fields() {
-	let form = Form::of_entry(&entry(steps()), "website");
+	let form = Form::of_entry(&entry(steps()), "website", "de");
 	let widths: Vec<u8> =
 		form.pages[0].fields.iter().map(|f| f.width).collect();
 	assert_eq!(widths, [100, 50, 50]);

@@ -40,16 +40,21 @@ editor is the builder:
 - *Add field* at the end of the grid picks the type and opens the new
   field.
 
-The field is translatable: each site has its own labels (and could
-have its own fields and pages), *Copy content* takes them from another
-site. A form has the labels of its buttons (*Send*, between pages
-*Next* and *Back*) and the message after sending, per site. Like every
+The fields are the same in all sites, like Formie 4: which fields,
+their handles, required, widths, order and pages. Their texts (label,
+placeholder, instructions and the names of the pages) are per site, the
+type `formSiteText` (`{ "de": "Name", "en": "Name" }`): the studio
+edits the text of the site on screen and shows another site's as the
+placeholder, a site without its own gets the primary site's. A form has
+the labels of its buttons (*Send*, between pages *Next* and *Back*) and
+the message after sending, per site. Like every
 entry it is on the website only where it is published, with drafts and
 revisions.
 
 The value is a list of items (the blocks of `Field::item_blocks`): `{
 "width": 50, "block": { … } }` a field, `{ "block": { "type":
-"formPage", "fields": { "label": "Über Sie" } } }` where a page starts;
+"formPage", "fields": { "label": { "de": "Über Sie" } } } }` where a
+page starts;
 the fields before the first page item are on a page without a name, a
 page without fields isn't a step on the website. GraphQL only counts
 them (`{ pages fields }`), the website gets a form through its routes.

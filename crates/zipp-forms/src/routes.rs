@@ -92,7 +92,8 @@ fn live_form(
 		.map_err(Error::Request)?;
 	let (found, _) = list(&state.db.conn(), &q)?;
 	let entry = found.into_iter().next().ok_or(Error::NotFound)?;
-	Ok((Form::of_entry(&entry, &forms.honeypot), site))
+	let primary = &state.schema.primary_site().handle;
+	Ok((Form::of_entry(&entry, &forms.honeypot, primary), site))
 }
 
 async fn form(

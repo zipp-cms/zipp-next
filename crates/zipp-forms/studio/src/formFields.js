@@ -44,22 +44,39 @@ export function flatten(groups, newPage) {
 	});
 }
 
-/** @param {Group} g */
-export const labelOf = g => g.page?.block.fields.label ?? '';
+/**
+ * A text of a field in a site (`{ de: "Name" }`), else in another one.
+ * @param {Record<string, string> | null | undefined} texts
+ * @param {string} site
+ */
+export function textIn(texts, site) {
+	if (!texts) return '';
+	return texts[site] || Object.values(texts).find(Boolean) || '';
+}
 
 /**
+ * The name of a page in a site.
+ * @param {Group} g
+ * @param {string} site
+ */
+export const labelOf = (g, site) => textIn(g.page?.block.fields.label, site);
+
+/**
+ * Names a page in a site.
  * @param {Group[]} groups
  * @param {number} i
  * @param {string} label
+ * @param {string} site
  * @param {() => Item} newPage
  */
-export function renamed(groups, i, label, newPage) {
+export function renamed(groups, i, label, site, newPage) {
 	return groups.map((g, k) => {
 		if (k !== i) return g;
 		const page = g.page ?? newPage();
+		const texts = { ...page.block.fields.label, [site]: label };
 		const block = {
 			...page.block,
-			fields: { ...page.block.fields, label },
+			fields: { ...page.block.fields, label: texts },
 		};
 		return { ...g, page: { ...page, block } };
 	});

@@ -13,7 +13,7 @@
             "label": "Fields",
             "required": false,
             "indexed": false,
-            "translatable": true,
+            "translatable": false,
             "kind": "custom",
             "type": "formFields",
             "options": null,
@@ -90,9 +90,9 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "handle",
@@ -119,9 +119,9 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "instructions",
@@ -130,15 +130,14 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Shown under the label.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           }
         ],
         "icon": {
           "lucide": "type"
-        },
-        "title_field": "label"
+        }
       }
     },
     {
@@ -154,9 +153,9 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "handle",
@@ -183,9 +182,9 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "instructions",
@@ -194,15 +193,14 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Shown under the label.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           }
         ],
         "icon": {
           "lucide": "align-left"
-        },
-        "title_field": "label"
+        }
       }
     },
     {
@@ -218,9 +216,9 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "handle",
@@ -247,9 +245,9 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "instructions",
@@ -258,15 +256,14 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Shown under the label.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           }
         ],
         "icon": {
           "lucide": "mail"
-        },
-        "title_field": "label"
+        }
       }
     },
     {
@@ -282,9 +279,9 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "handle",
@@ -311,9 +308,9 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "instructions",
@@ -322,15 +319,14 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Shown under the label.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           }
         ],
         "icon": {
           "lucide": "phone"
-        },
-        "title_field": "label"
+        }
       }
     },
     {
@@ -346,9 +342,9 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           }
         ],
         "icon": {
@@ -2336,7 +2332,7 @@
             "label": "Fields",
             "required": false,
             "indexed": false,
-            "translatable": true,
+            "translatable": false,
             "kind": "custom",
             "type": "formFields",
             "options": null,
@@ -2410,9 +2406,9 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "handle",
@@ -2439,9 +2435,9 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "instructions",
@@ -2450,15 +2446,14 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Shown under the label.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           }
         ],
         "icon": {
           "lucide": "type"
-        },
-        "title_field": "label"
+        }
       },
       {
         "handle": "formTextarea",
@@ -2471,9 +2466,9 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "handle",
@@ -2500,9 +2495,9 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "instructions",
@@ -2511,15 +2506,14 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Shown under the label.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           }
         ],
         "icon": {
           "lucide": "align-left"
-        },
-        "title_field": "label"
+        }
       },
       {
         "handle": "formEmail",
@@ -2532,9 +2526,9 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "handle",
@@ -2561,9 +2555,9 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "instructions",
@@ -2572,15 +2566,14 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Shown under the label.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           }
         ],
         "icon": {
           "lucide": "mail"
-        },
-        "title_field": "label"
+        }
       },
       {
         "handle": "formPhone",
@@ -2593,9 +2586,9 @@
             "required": true,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "handle",
@@ -2622,9 +2615,9 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           },
           {
             "handle": "instructions",
@@ -2633,15 +2626,14 @@
             "indexed": false,
             "translatable": false,
             "instructions": "Shown under the label.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           }
         ],
         "icon": {
           "lucide": "phone"
-        },
-        "title_field": "label"
+        }
       },
       {
         "handle": "formPage",
@@ -2654,9 +2646,9 @@
             "required": false,
             "indexed": false,
             "translatable": false,
-            "kind": "text",
-            "max": null,
-            "multiline": false
+            "kind": "custom",
+            "type": "formSiteText",
+            "options": null
           }
         ],
         "icon": {

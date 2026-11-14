@@ -19,7 +19,8 @@
   page Submissions. The builder shows a form's pages (steps, each
   checked before the next) as tabs and its fields as a grid of their
   widths (¼ to full, like Formie's columns), a flyout edits a field, a
-  ⋯ menu has the rest. Nothing is mailed for now. The npm package
+  ⋯ menu has the rest. The fields are the same in all sites, their
+  texts per site. Nothing is mailed for now. The npm package
   `zipp-forms` is its crelte frontend (`loadForm`, `formRoutes`,
   `Form`, `Fields`, `Back`, `Submit`). See docs/forms.md.
 
