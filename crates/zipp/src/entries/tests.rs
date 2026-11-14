@@ -292,7 +292,8 @@ fn slugs_of_titles_get_a_number() {
 	let third = input("events", "event", "Fest", json!({}));
 	assert_eq!(save(&conn, &s, None, third, None).unwrap().slug, "fest-3");
 
-	// saved again, it keeps its slug, also made of the title again
+	// saved again, it keeps its slug; made of the title again, it gets
+	// the first free number, its own
 	let mut again = input("events", "event", "Fest", json!({}));
 	again.slug = second.slug.clone();
 	let again = save(&conn, &s, Some(second.id), again, None).unwrap();

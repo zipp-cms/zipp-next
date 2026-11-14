@@ -35,7 +35,11 @@ fn schema() -> Schema {
 			],
 		)
 		.entry("page", "Page", [Field::text("intro")])
-		.entry("note", "Note", [Field::text("intro")])
+		.entry(
+			"note",
+			"Note",
+			[Field::text("intro"), Field::images("image")],
+		)
 		.role(
 			Role::new("member", "Member")
 				.own("posts", Access::Delete)
@@ -200,8 +204,7 @@ async fn only_own_entries_of_the_sections() {
 	assert_eq!(anna.call(&page).await.unwrap_err(), Error::Forbidden);
 }
 
-/// Admins and editors edit the members' entries on the website too, as
-/// their role allows in the studio.
+/// A title used already, also by an entry that isn't live, gets a number.
 #[tokio::test]
 async fn same_titles_get_a_number() {
 	let ts = TestServer::new(schema());
@@ -219,6 +222,8 @@ async fn same_titles_get_a_number() {
 	assert_eq!(r.entry.slug, "zopf-2");
 }
 
+/// Admins and editors edit the members' entries on the website too, as
+/// their role allows in the studio.
 #[tokio::test]
 async fn editors_edit_all_entries() {
 	let ts = TestServer::new(schema());
@@ -533,6 +538,13 @@ async fn members_link_only_their_own_or_public_assets() {
 	anna.call(&with_image("Kuchen", public.id)).await.unwrap();
 	let e = ben.call(&with_image("Torte", public.id)).await.unwrap();
 	assert_eq!(e.fields["image"], json!([public.id]));
+
+	// a live note isn't public, members see only their own notes
+	let scan = upload(&anna, "scan.png", PNG).await.unwrap();
+	let note = input("notes", "note", "Note", json!({ "image": [scan.id] }));
+	ts.admin().call(&StudioCreate(note)).await.unwrap();
+	let err = ben.call(&with_image("Scan", scan.id)).await.unwrap_err();
+	assert!(matches!(err, Error::Invalid(_)), "{err:?}");
 
 	// what an entry links already stays, also if it couldn't be linked now
 	let own = upload(&ben, "own.png", PNG).await.unwrap();

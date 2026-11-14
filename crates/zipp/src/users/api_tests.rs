@@ -312,6 +312,40 @@ async fn profiles_are_checked_and_saved() {
 }
 
 #[tokio::test]
+async fn own_profiles_link_only_own_or_public_assets() {
+	let schema = site_with_roles().user_fields([Field::images("photo")]);
+	let ts = TestServer::new(schema);
+	let admin = ts.admin();
+	let anna = admin
+		.call(&new_user("anna@x.ch", Some("author")))
+		.await
+		.unwrap();
+	let png = crate::fixtures::png(1, 1);
+	let upload = |name: &str, by: Option<i64>| {
+		let conn = ts.state.db.conn();
+		crate::assets::store(&conn, &ts.state.files, name, &png, by)
+			.unwrap()
+			.id
+	};
+	let theirs = upload("theirs.png", None);
+	let own = upload("own.png", Some(anna.user.id));
+
+	let user = ts.login("anna@x.ch", "password1").await;
+	let mut change = unchanged(&anna);
+	change.fields = Some(json!({ "photo": [theirs] }));
+	let err = user.call(&change).await.unwrap_err();
+	assert_eq!(paths(err), ["fields.photo"]);
+	change.fields = Some(json!({ "photo": [own] }));
+	let saved = user.call(&change).await.unwrap();
+	assert_eq!(saved.user.fields["photo"], json!([own]));
+
+	// an admin links anything
+	change.fields = Some(json!({ "photo": [theirs] }));
+	let saved = admin.call(&change).await.unwrap();
+	assert_eq!(saved.user.fields["photo"], json!([theirs]));
+}
+
+#[tokio::test]
 async fn a_placeholder_slug_follows_a_name_from_the_studio() {
 	let ts = TestServer::new(site_with_roles());
 	let admin = ts.admin();

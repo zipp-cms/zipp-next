@@ -412,16 +412,7 @@ fn check_relations(
 		};
 	}
 
-	let own_only = match (&user, section) {
-		(Some(u), Some(s)) if !u.can(schema, s, Access::Edit) => {
-			Some(u.user_id)
-		}
-		// a profile is public too, only admins edit other users
-		(Some(u), None) if ty == crate::schema::USER && !u.admin() => {
-			Some(u.user_id)
-		}
-		_ => None,
-	};
+	let own_only = links_only_own(user.as_ref(), schema, section, ty);
 	let mut errors = vec![];
 
 	for rel in relations(schema, comp, fields) {
@@ -447,12 +438,16 @@ fn check_relations(
 				(Target::Assets { .. }, Some(_), Some(u))
 					if !before.contains(&(LinkKind::Asset, id)) =>
 				{
-					!linkable_by(conn, id, u)?
+					!linkable_by(conn, schema, u, id)?
 				}
 				_ => false,
 			};
 			let error = match (&rel.target, found) {
 				(_, None) => format!("{what} {id} doesn't exist"),
+				// before its kind, which would tell about it
+				(Target::Assets { .. }, Some(_)) if private => {
+					format!("asset {id} is neither yours nor public")
+				}
 				(Target::Entries { types, sections }, Some((t, s))) => {
 					if !types.contains(&t) {
 						format!("entry {id} is a {t}, not allowed here")
@@ -473,9 +468,6 @@ fn check_relations(
 				{
 					format!("asset {id} is no {}", extensions.join(", "))
 				}
-				(Target::Assets { .. }, Some(_)) if private => {
-					format!("asset {id} is neither yours nor public")
-				}
 				_ => continue,
 			};
 			errors.push(FieldError::new(&rel.path, &error));
@@ -483,6 +475,23 @@ fn check_relations(
 	}
 
 	Ok(errors)
+}
+
+/// The user if they link only the assets they may (see [`linkable_by`]):
+/// they edit only their own entries of the `section`, or their own user
+/// fields of type `ty`.
+pub(crate) fn links_only_own<'a>(
+	user: Option<&'a Authed>,
+	schema: &Schema,
+	section: Option<&str>,
+	ty: &str,
+) -> Option<&'a Authed> {
+	match (user, section) {
+		(Some(u), Some(s)) if !u.can(schema, s, Access::Edit) => Some(u),
+		// a profile is public too, only admins edit other users
+		(Some(u), None) if ty == crate::schema::USER && !u.admin() => Some(u),
+		_ => None,
+	}
 }
 
 /// What an entry links to in any of its sites, see [`check_relations`].
