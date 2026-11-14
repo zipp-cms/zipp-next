@@ -7,9 +7,9 @@
 	 * A box under the button that opens it: menus, pickers, the block
 	 * menu. A click outside or Escape closes it, its first input gets the
 	 * focus. `trigger` renders the button with what toggles it. With `at`
-	 * it opens at that point of the window instead (a right click). A
-	 * `menu` is a list of `role="menuitem"`s: the first has the focus, the
-	 * arrow keys move it.
+	 * it opens at that point of the window instead (a right click), then
+	 * it needs no `trigger`. A `menu` is a list of `role="menuitem"`s: the
+	 * first has the focus, the arrow keys move it.
 	 */
 	let {
 		open = $bindable(false),
@@ -26,7 +26,7 @@
 		align?: 'start' | 'end' | 'center';
 		/** a css width, default as wide as its content */
 		width?: string;
-		trigger: Snippet<[{ toggle: () => void; open: boolean }]>;
+		trigger?: Snippet<[{ toggle: () => void; open: boolean }]>;
 		children: Snippet;
 		label?: string;
 		at?: { x: number; y: number } | null;
@@ -134,7 +134,7 @@
 </script>
 
 <div class="popover" bind:this={root}>
-	{@render trigger({ toggle, open })}
+	{@render trigger?.({ toggle, open })}
 	{#if open}
 		<div
 			class="popup"

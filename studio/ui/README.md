@@ -33,6 +33,41 @@ it, the tick of `CheckGroup`; `label` when there is no text),
 `Switch` (yes or no, its text on the right; `onchange` only when
 clicked), `DatePicker`, `SearchInput`.
 
+Menus: `Menu` is the ⋯ button of a row with its actions (`MenuItem`s);
+a right click in the `data-menu-area` around it opens the same menu at
+the pointer. `ContextMenu` takes the same items without a button:
+`open(e)` of its instance (`bind:this`) in any `oncontextmenu` shows
+them at the pointer, a text field keeps the browser's menu. Its items
+may depend on what was clicked, set them before `open`:
+
+```svelte
+<script lang="ts">
+	import ContextMenu from 'zipp-ui/ContextMenu.svelte';
+	import type { MenuItem } from 'zipp-ui/Menu.svelte';
+
+	let menu: ContextMenu;
+	let items = $state<MenuItem[]>([]);
+
+	function oncontextmenu(e: MouseEvent, i: number) {
+		items = [{ label: 'Remove', icon: 'delete', onclick: () => remove(i) }];
+		menu.open(e);
+	}
+</script>
+
+<ContextMenu bind:this={menu} {items} />
+```
+
+`Popover` is the box of both and of pickers; with `at` (a point of the
+window) it needs no `trigger`.
+
+## TypeScript
+
+The exports are source, `svelte-check` reads their types through
+`exports` with `"moduleResolution": "bundler"` in the module's
+`tsconfig.json` (docs/extending.md has one). Without a tsconfig
+TypeScript falls back to the old resolution, which `typesVersions`
+covers too.
+
 ## Texts
 
 What the components write themselves (Today, Clear, Close, Nothing

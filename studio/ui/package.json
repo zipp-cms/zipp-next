@@ -42,6 +42,7 @@
 		"./AddGroup.svelte": "./src/AddGroup.svelte",
 		"./Checkbox.svelte": "./src/Checkbox.svelte",
 		"./CheckGroup.svelte": "./src/CheckGroup.svelte",
+		"./ContextMenu.svelte": "./src/ContextMenu.svelte",
 		"./DatePicker.svelte": "./src/DatePicker.svelte",
 		"./DragHandle.svelte": "./src/DragHandle.svelte",
 		"./FieldGroup.svelte": "./src/FieldGroup.svelte",
@@ -63,6 +64,14 @@
 		"./Table.svelte": "./src/Table.svelte",
 		"./TreeCaret.svelte": "./src/TreeCaret.svelte",
 		"./UploadButton.svelte": "./src/UploadButton.svelte"
+	},
+	"typesVersions": {
+		"*": {
+			"*": [
+				"src/*",
+				"src/*.svelte.ts"
+			]
+		}
 	},
 	"peerDependencies": {
 		"@sveltejs/vite-plugin-svelte": "^5.0.0 || ^6.0.0 || ^7.0.0",
