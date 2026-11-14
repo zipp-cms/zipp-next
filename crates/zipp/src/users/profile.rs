@@ -241,8 +241,8 @@ pub(crate) fn public_count(conn: &Connection, q: &PublicQuery) -> Result<i64> {
 	Ok(conn.query_row(&sql, params_from_iter(values), |r| r.get(0))?)
 }
 
-/// The slug of a user without a name, `user-<id>` (or none yet, from
-/// before slugs): a name they set later gives them one of it.
+/// The slug of a user without a name, `user-<id>`: a name they set later
+/// gives them one of it.
 pub(crate) fn rename_placeholder(
 	conn: &Connection,
 	id: i64,
@@ -251,9 +251,7 @@ pub(crate) fn rename_placeholder(
 	let slug: Option<String> = conn
 		.query_row("SELECT slug FROM users WHERE id = ?1", [id], |r| r.get(0))
 		.optional()?;
-	if let Some(s) = slug
-		&& (s.is_empty() || s == format!("user-{id}"))
-	{
+	if slug == Some(format!("user-{id}")) {
 		set_slug(conn, id, &free_slug(conn, id, name)?)?;
 	}
 	Ok(())

@@ -53,6 +53,10 @@ fn a_user_gets_a_name() {
 	store_user(&conn, "a@x.ch", "password2", None, Some("Anna")).unwrap();
 	store_user(&conn, "s@x.ch", "password2", None, Some("Sören M.")).unwrap();
 	let users = crate::users::list(&conn).unwrap();
-	let slugs: Vec<_> = users.iter().map(|u| u.user.slug.as_str()).collect();
-	assert!(slugs.contains(&"anna") && slugs.contains(&"soeren-meier"));
+	let users: Vec<_> = users
+		.iter()
+		.map(|u| (u.user.name.as_str(), u.user.slug.as_str()))
+		.collect();
+	assert!(users.contains(&("Anna", "anna")));
+	assert!(users.contains(&("Sören M.", "soeren-meier")));
 }
