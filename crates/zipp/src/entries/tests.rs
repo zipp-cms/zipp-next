@@ -298,6 +298,9 @@ fn slugs() {
 	assert_eq!(slugify("Sören Meier"), "soeren-meier");
 	assert_eq!(slugify("Über uns"), "ueber-uns");
 	assert_eq!(slugify("Crème brûlée"), "creme-brulee");
+	// decomposed, as pasted from macOS
+	assert_eq!(slugify("U\u{308}ber uns"), "ueber-uns");
+	assert_eq!(slugify("Cre\u{300}me"), "creme");
 	assert_eq!(slugify("STRASSE Straße ÄÖÜ"), "strasse-strasse-aeoeue");
 	assert_eq!(
 		slugify("Façade Señor Åland Ørsted"),
@@ -309,6 +312,7 @@ fn slugs() {
 	assert_eq!(slugify("東京"), "東京");
 	// one given is only cleaned up
 	assert_eq!(clean_slug(" Über uns! "), "über-uns");
+	assert_eq!(clean_slug("U\u{308}ber"), "über");
 }
 
 #[test]

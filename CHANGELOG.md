@@ -7,6 +7,8 @@
   `creme-brulee`, other scripts keep their letters. Saved and typed
   slugs stay as they are (`über-uns`), only new entries and users get
   the new ones; the slug of a block (anchors) changes the same way.
+  Text in NFD (macOS: `U` and a combining `¨`) is composed first, so it
+  is `ueber` too and a typed slug keeps its `ü`.
 - `user --name`: the cli sets a user's display name too.
 - Required fields only have to be filled to publish, like Craft's: an
   unpublished entry or a draft saves without them, publishing (the

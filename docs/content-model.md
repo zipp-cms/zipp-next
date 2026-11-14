@@ -16,7 +16,8 @@ digits needs one typed); the other fields are shared by all sites.
 Slugs made of a title (or a user's name, a block's title) are ASCII like
 Craft's `limitAutoSlugsToAscii`: umlauts are two letters, other Latin
 letters lose their accents (`Über uns` is `ueber-uns`, `Crème brûlée`
-`creme-brulee`), other scripts keep their letters. A slug that is typed
+`creme-brulee`, also in NFD as macOS pastes it), other scripts keep
+their letters. A slug that is typed
 or already saved is only cleaned up (`über-uns` stays), so saving an
 entry again never changes its url. Like Craft an entry
 has a post date (set when it is first published) and an expiry date,
