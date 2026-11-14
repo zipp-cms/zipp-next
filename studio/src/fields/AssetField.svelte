@@ -41,6 +41,7 @@
 	const videos = $derived(onlyVideos(field.extensions));
 	const cards = $derived(images || videos);
 	const max = $derived(field.max);
+	const one = $derived(max === 1);
 	const ids = $derived(valueOf(values, field) ?? []);
 	const full = $derived(isFull(ids.length, max));
 	const set = (next: number[]) => (values[field.handle] = next);
@@ -67,7 +68,7 @@
 		if (i >= 0) set(removed(ids, i));
 		else if (!full) set(inserted(ids, a.id));
 		// with a single one there is nothing more to pick
-		if (max === 1) picking = false;
+		if (one) picking = false;
 	}
 
 	/** The file `replacing` swapped for `a`, in its place. */
@@ -96,15 +97,14 @@
 	}
 
 	const drag = new FileDrag(upload, () => !full);
-	const one = $derived(max === 1);
 	const types = $derived(
 		field.extensions?.map(e => e.toUpperCase()).join(', '),
 	);
 	const dragHint = $derived(
-		types
-			? t(one ? 'fields.dragType' : 'fields.dragTypes', { types })
-			: videos
-				? t(one ? 'fields.dragVideo' : 'fields.dragVideos')
+		videos
+			? t(one ? 'fields.dragVideo' : 'fields.dragVideos')
+			: types
+				? t(one ? 'fields.dragType' : 'fields.dragTypes', { types })
 				: images
 					? t(one ? 'fields.dragImage' : 'fields.dragImages')
 					: t(one ? 'fields.dragFile' : 'fields.dragFiles'),
@@ -115,13 +115,24 @@
 	<ItemActions onremove={() => set(removed(ids, i))} />
 {/snippet}
 
+{#snippet uploadButton()}
+	<UploadButton
+		onfiles={f => upload(fromInput(f))}
+		multiple={!one}
+		accept={acceptOf(field)}
+		icon="upload"
+	>
+		{t('common.upload')}
+	</UploadButton>
+{/snippet}
+
 {#snippet handle(i: number)}
 	<DragHandle sortable={sort} index={i} label={t('fields.moveFile')} />
 {/snippet}
 
 <div
 	class="assets"
-	class:images={cards}
+	class:images={cards && ids.length > 0}
 	bind:this={list}
 	role="group"
 	aria-label={field.label}
@@ -202,14 +213,7 @@
 				{#if types}<span class="types">{types}</span>{/if}
 			</button>
 			<span class="bar">
-				<UploadButton
-					onfiles={f => upload(fromInput(f))}
-					multiple={!one}
-					accept={acceptOf(field)}
-					icon="upload"
-				>
-					{t('common.upload')}
-				</UploadButton>
+				{@render uploadButton()}
 			</span>
 		</div>
 	{:else if !full}
@@ -231,14 +235,7 @@
 				<AddButton onclick={() => (picking = true)}>
 					{t('common.choose')}
 				</AddButton>
-				<UploadButton
-					onfiles={f => upload(fromInput(f))}
-					multiple={!one}
-					accept={acceptOf(field)}
-					icon="upload"
-				>
-					{t('common.upload')}
-				</UploadButton>
+				{@render uploadButton()}
 			</span>
 		</div>
 	{/if}
