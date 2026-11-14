@@ -13,7 +13,7 @@
 	import { linkItems } from '../assets/actions';
 	import { chosenAssets } from '../assets/chosen.svelte';
 	import { openAsset } from '../core/flyout.svelte';
-	import { inserted, isFull, removed } from '../core/list';
+	import { inserted, isFull, removed, replaced } from '../core/list';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
 	import { FileDrag, uploads } from '../assets/uploads.svelte';
@@ -50,6 +50,8 @@
 
 	const chosen = chosenAssets(() => ids);
 	let picking = $state(false);
+	// the file another one from the library replaces
+	let replacing = $state<number | null>(null);
 
 	// cards side by side, files one under the other
 	let list = $state<HTMLElement>();
@@ -66,6 +68,17 @@
 		else if (!full) set(inserted(ids, a.id));
 		// with a single one there is nothing more to pick
 		if (max === 1) picking = false;
+	}
+
+	/** The file `replacing` swapped for `a`, in its place. */
+	function replace(a: Asset) {
+		// an upload that ends after the picker closed
+		const i = replacing === null ? -1 : ids.indexOf(replacing);
+		replacing = null;
+		if (i < 0) return;
+
+		const next = replaced(ids, i, a.id);
+		set(next.filter((id, k) => k === i || id !== a.id));
 	}
 
 	/**
@@ -143,6 +156,11 @@
 								icon: 'edit',
 								onclick: () => openAsset(a.id),
 							},
+							{
+								label: t('fields.replace'),
+								icon: 'replace',
+								onclick: () => (replacing = a.id),
+							},
 							...linkItems(a),
 							{
 								label: t('ui.remove'),
@@ -194,7 +212,17 @@
 	{/if}
 </div>
 
-{#if picking}
+{#if replacing !== null}
+	<AssetPicker
+		{images}
+		extensions={field.extensions}
+		folderPath={folder}
+		multiple={false}
+		selected={[replacing]}
+		onpick={replace}
+		onclose={() => (replacing = null)}
+	/>
+{:else if picking}
 	<AssetPicker
 		{images}
 		extensions={field.extensions}

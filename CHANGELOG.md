@@ -24,6 +24,8 @@
   have the members' routes' entries (their drafts too). `Entry` takes
   them as a third parameter. A required field with a condition is
   optional in both.
+- Replace in the ⋯ menu of an image or a video in an asset field picks
+  another one from the library in its place.
 
 ## 0.2.0 (2026-11-07)
 

@@ -21,6 +21,7 @@ export default {
 	'fields.moveFile': 'Datei verschieben',
 	'fields.deletedFile': 'Eine gelöschte Datei',
 	'fields.details': 'Details',
+	'fields.replace': 'Ersetzen',
 	'fields.dropToAdd': 'Loslassen zum Hinzufügen',
 	'fields.dragVideos': 'Videos hierher ziehen',
 	'fields.dragImages': 'Bilder hierher ziehen',
