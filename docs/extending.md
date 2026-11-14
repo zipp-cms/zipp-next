@@ -109,7 +109,8 @@ the value.
 
 The editors of field types and the modules of plugins look like the
 studio with `zipp-ui` (`studio/ui`), the components the studio itself is
-built of: `Table`, `Segmented`, `Popover`, `Flyout`, `ItemCard`,
+built of: `Table`, `Segmented`, `Popover`, `Menu` (the ⋯ of a row),
+`ContextMenu` (a right click menu at the pointer), `Flyout`, `ItemCard`,
 `ItemActions`, `AddGroup`, `SearchInput`, `DatePicker` (a day, with
 `time` its time, like the date field), `FieldGroup` and `FieldRow` (a
 card of values with their labels on the left, like a group field; the
@@ -175,6 +176,26 @@ import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { pluginConfig } from 'zipp-ui/vite';
 
 export default pluginConfig({ svelte, vitePreprocess, file: 'my-field.js' });
+```
+
+In TypeScript (`<script lang="ts">`, `src/index.svelte.ts`), add
+`typescript` and `svelte-check` to the devDependencies, a `"check":
+"svelte-check"` script and this `tsconfig.json`, so svelte-check finds
+the types of zipp-ui through its `exports`:
+
+```json
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"verbatimModuleSyntax": true,
+		"strict": true,
+		"noEmit": true,
+		"types": ["vite/client"]
+	},
+	"include": ["src"]
+}
 ```
 
 `src/index.svelte.js` is the module, `src/MyField.svelte` the editor:

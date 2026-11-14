@@ -12,8 +12,11 @@
 </script>
 
 <script lang="ts">
+	import { on } from 'svelte/events';
 	import { ui } from './texts.svelte';
+	import { pointerOf, takeContextMenu } from './contextMenu';
 	import Icon from './Icon.svelte';
+	import MenuItems from './MenuItems.svelte';
 	import Popover from './Popover.svelte';
 
 	/**
@@ -32,27 +35,13 @@
 	$effect(() => {
 		const area = button?.closest<HTMLElement>('[data-menu-area]');
 		if (!area) return;
-		const oncontextmenu = (e: MouseEvent) => {
-			// another menu of the same area took it, the first one wins
-			if (e.defaultPrevented) return;
-			// a text field keeps the browser's menu (paste, spelling)
-			if (
-				(e.target as Element).closest(
-					'input, textarea, [contenteditable]',
-				)
-			)
-				return;
-			e.preventDefault();
-			e.stopPropagation();
+		// through svelte's `on`, so a `ContextMenu` inside the area comes first
+		return on(area, 'contextmenu', e => {
+			if (!takeContextMenu(e)) return;
 			// the menu key has no pointer, the menu opens under the ⋯
-			at =
-				e.button === 2 || e.clientX
-					? { x: e.clientX, y: e.clientY }
-					: null;
+			at = pointerOf(e);
 			open = true;
-		};
-		area.addEventListener('contextmenu', oncontextmenu);
-		return () => area.removeEventListener('contextmenu', oncontextmenu);
+		});
 	});
 </script>
 
@@ -71,44 +60,6 @@
 				<Icon name="more" />
 			</button>
 		{/snippet}
-		{#each items as item, i (i)}
-			{#if item.href}
-				<a
-					class="popup-item"
-					href={item.href}
-					target={item.href.startsWith('/admin') || item.download
-						? undefined
-						: '_blank'}
-					download={item.download}
-					role="menuitem"
-					onclick={() => (open = false)}
-				>
-					<Icon name={item.icon} size={14} />
-					{item.label}
-				</a>
-			{:else}
-				<button
-					type="button"
-					class="popup-item"
-					class:danger={item.danger}
-					role="menuitem"
-					onclick={() => {
-						open = false;
-						item.onclick?.();
-					}}
-				>
-					<Icon name={item.icon} size={14} />
-					{item.label}
-				</button>
-			{/if}
-		{/each}
+		<MenuItems {items} close={() => (open = false)} />
 	</Popover>
 {/if}
-
-<style lang="scss">
-	// as wide as the longest item, a label stays on one line
-	.popup-item {
-		min-width: 8.625rem;
-		white-space: nowrap;
-	}
-</style>

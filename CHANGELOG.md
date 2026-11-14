@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- zipp-ui: `ContextMenu` opens a menu at the pointer without a ⋯
+  button, for the right clicks of a module (`open(e)` in its
+  `oncontextmenu`, `MenuItem`s like `Menu`); `Popover` needs no
+  `trigger` when it opens at a point.
+- zipp-ui: svelte-check of a TypeScript module finds the types of its
+  imports (`zipp-ui/Icon.svelte`, `zipp-ui/field`) also without a
+  tsconfig (`typesVersions`); docs/extending.md has the tsconfig of a
+  module with `"moduleResolution": "bundler"`.
 - Slugs made of a title or a name are ASCII like Craft's
   `limitAutoSlugsToAscii`: `Über uns` is `ueber-uns`, `Crème brûlée`
   `creme-brulee`, other scripts keep their letters. Saved and typed
