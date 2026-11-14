@@ -9,6 +9,9 @@
   the new ones; the slug of a block (anchors) changes the same way.
   Text in NFD (macOS: `U` and a combining `¨`) is composed first, so it
   is `ueber` too and a typed slug keeps its `ü`.
+  An entry saved before with the unicode slug of its title (`über-uns`)
+  no longer has its slug follow the title in the studio, since it isn't
+  the title's slug anymore: saved slugs never change by themselves.
 - `user --name`: the cli sets a user's display name too.
 - Required fields only have to be filled to publish, like Craft's: an
   unpublished entry or a draft saves without them, publishing (the
