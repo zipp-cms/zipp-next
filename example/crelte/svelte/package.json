@@ -35,6 +35,7 @@
 	"dependencies": {
 		"crelte": "^0.6.0-alpha.2",
 		"meierlabs-seo": "^0.1.0-alpha.2",
-		"svelte": "^5.0"
+		"svelte": "^5.0",
+		"zipp-forms": "file:../../../crates/zipp-forms/crelte"
 	}
 }

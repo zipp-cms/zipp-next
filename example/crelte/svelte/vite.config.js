@@ -12,6 +12,9 @@ export default defineConfig(() => {
 		plugins: [svelte(), crelte()],
 		resolve: {
 			alias: [{ find: '@', replacement: resolve(__dirname, 'src') }],
+			// zipp-forms is linked from the repository, its imports of
+			// svelte and crelte resolve here
+			preserveSymlinks: true,
 		},
 	};
 });

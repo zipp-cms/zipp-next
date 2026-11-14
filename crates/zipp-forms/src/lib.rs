@@ -1,106 +1,66 @@
-//! Forms of the website, like Craft's Contact Form, as a plugin: the
-//! fields are code, a submission is checked and mailed, nothing is
-//! stored.
+//! Forms of the website for zipp, like Craft's Formie: editors build
+//! them in the studio, the website shows them and sends what visitors
+//! fill in, the studio lists the submissions.
 //!
 //! ```ignore
 //! Schema::new()
 //!     // ...
-//!     .plugin(Forms::new().form(
-//!         Form::new("contact", "Contact")
-//!             .field(FormField::text("name").required())
-//!             .field(FormField::email("email").required().reply_to())
-//!             .field(FormField::multiline("message").required()),
-//!     ))
+//!     .plugin(Forms::new())
+//!     // a page picks one of the forms
+//!     .entry("page", "Page", [form_field("form")])
 //! ```
 //!
-//! The website posts JSON to `POST /forms/<handle>?site=<site>` (the
-//! crelte server proxies it): `{ "name": "Anna", ... }`. A filled
-//! honeypot field (`website`, invisible to people) is answered like a
-//! success and dropped; an address may send a few per ten minutes. The
-//! answer is `{ "success": true, "message": "…" }`, with invalid fields
-//! `422 { "success": false, "errors": [{ "path", "message" }] }`.
-//!
-//! Editors set the recipients, the subject and the message after sending
-//! per form in the single `formSettings` ("Forms"): `contactTo` in all
-//! sites, `contactSubject` and `contactSuccess` per site.
+//! A form is an entry of the section `forms`: its fields are blocks
+//! (single line text, multi-line text, email, phone) with a label, a
+//! handle, required, a placeholder and instructions, in each site of
+//! their own (the block list is translatable), plus the label of the
+//! button and the message after sending. The website gets a form by its
+//! id and sends to it, see [`routes`]; the studio's page Submissions
+//! shows what came in, for who may view `forms`.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use serde::{Deserialize, Serialize};
+use zipp::{Field, Plugin, PluginPage, PluginStudio, Schema, Section};
 
-use zipp::schema::humanize;
-use zipp::{Field, Plugin, Schema, Section};
-
+pub mod api;
+#[cfg(test)]
+mod api_tests;
+pub mod form;
 mod routes;
+pub mod submissions;
 #[cfg(test)]
 mod tests;
 
-/// The single with the settings of every form.
-pub const FORM_SETTINGS: &str = "formSettings";
+/// The section of the forms.
+pub const FORMS: &str = "forms";
+/// The entry type of a form.
+pub const FORM: &str = "form";
 
-/// The fields of a form in [`FORM_SETTINGS`]: `contactTo` (all sites),
-/// `contactSubject` and `contactSuccess` (per site).
-fn settings_fields(form: &Form) -> Vec<Field> {
-	let h = &form.handle;
-	vec![
-		Field::text(&format!("{h}To"))
-			.label(&format!("{}: send to", form.label))
-			.instructions(
-				"One or more addresses, separated by commas. Without one the form can't send.",
-			),
-		Field::text(&format!("{h}Subject"))
-			.translatable()
-			.label(&format!("{}: subject", form.label))
-			.instructions(&format!("Empty: *New message: {}*", form.label)),
-		Field::text(&format!("{h}Success"))
-			.multiline()
-			.translatable()
-			.label(&format!("{}: message after sending", form.label))
-			.instructions("Empty: *Thank you, your message is sent.*"),
-	]
-}
+/// The blocks of the fields of a form, with their names.
+pub const FIELD_BLOCKS: &[(&str, &str)] = &[
+	("formText", "Single line text"),
+	("formTextarea", "Multi-line text"),
+	("formEmail", "Email"),
+	("formPhone", "Phone"),
+];
 
 /// The forms of a site, see the crate.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Forms {
-	pub forms: Vec<Form>,
+	/// the field people don't see and bots fill, see [`Forms::honeypot`]
+	pub honeypot: String,
 	/// the times of submissions per address, see [`routes`]
 	limits: Arc<Mutex<HashMap<std::net::IpAddr, Vec<i64>>>>,
 }
 
-/// A form: its fields in the order of the mail.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct Form {
-	pub handle: String,
-	pub label: String,
-	pub fields: Vec<FormField>,
-	/// a field people leave empty, bots fill it
-	pub honeypot: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct FormField {
-	pub handle: String,
-	pub label: String,
-	pub kind: FormFieldKind,
-	pub required: bool,
-	/// answers to the mail go to this address
-	pub reply_to: bool,
-	/// characters
-	pub max: usize,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub enum FormFieldKind {
-	Text,
-	/// several lines, at the end of the mail
-	Multiline,
-	Email,
+impl Default for Forms {
+	fn default() -> Self {
+		Self {
+			honeypot: "website".into(),
+			limits: Default::default(),
+		}
+	}
 }
 
 impl Forms {
@@ -108,83 +68,31 @@ impl Forms {
 		Self::default()
 	}
 
-	pub fn form(mut self, form: Form) -> Self {
-		self.forms.push(form);
-		self
-	}
-
-	pub fn get(&self, handle: &str) -> Option<&Form> {
-		self.forms.iter().find(|f| f.handle == handle)
-	}
-}
-
-impl Form {
-	pub fn new(handle: &str, label: &str) -> Self {
-		Self {
-			handle: handle.into(),
-			label: label.into(),
-			fields: vec![],
-			honeypot: "website".into(),
-		}
-	}
-
-	pub fn field(mut self, field: FormField) -> Self {
-		self.fields.push(field);
-		self
-	}
-
-	/// Another name of the honeypot field than `website`.
+	/// Another name of the honeypot field than `website`; a form with a
+	/// field of the name gets a `_` after it.
 	pub fn honeypot(mut self, handle: &str) -> Self {
 		self.honeypot = handle.into();
 		self
 	}
 }
 
-impl FormField {
-	fn new(handle: &str, kind: FormFieldKind, max: usize) -> Self {
-		Self {
-			handle: handle.into(),
-			label: humanize(handle),
-			kind,
-			required: false,
-			reply_to: false,
-			max,
-		}
-	}
+/// A field that picks one of the forms, for a page or a block.
+pub fn form_field(handle: &str) -> Field {
+	Field::relation(handle, [FORM]).sections([FORMS]).max(1)
+}
 
-	pub fn text(handle: &str) -> Self {
-		Self::new(handle, FormFieldKind::Text, 200)
-	}
-
-	pub fn multiline(handle: &str) -> Self {
-		Self::new(handle, FormFieldKind::Multiline, 5000)
-	}
-
-	pub fn email(handle: &str) -> Self {
-		Self::new(handle, FormFieldKind::Email, 200)
-	}
-
-	/// Its name in the mail, else from the handle.
-	pub fn label(mut self, label: &str) -> Self {
-		self.label = label.into();
-		self
-	}
-
-	pub fn required(mut self) -> Self {
-		self.required = true;
-		self
-	}
-
-	/// Of an email field: answers to the mail go to it.
-	pub fn reply_to(mut self) -> Self {
-		self.reply_to = true;
-		self
-	}
-
-	pub fn max(mut self, chars: usize) -> Self {
-		self.max = chars;
-		self
-	}
+/// The fields every field block has.
+fn block_fields() -> Vec<Field> {
+	vec![
+		Field::text("label").required(),
+		Field::text("handle").instructions(
+			"The name of the value for the website and in the submissions, \
+			like `email`. Empty: from the label.",
+		),
+		Field::boolean("required"),
+		Field::text("placeholder"),
+		Field::text("instructions").instructions("Shown under the label."),
+	]
 }
 
 impl Plugin for Forms {
@@ -192,61 +100,64 @@ impl Plugin for Forms {
 		"forms"
 	}
 
-	/// The single `formSettings`: the mail settings of each form, a tab
-	/// each when there are several.
+	/// The section `forms` with its entry type and the field blocks.
 	fn schema(&self, schema: Schema) -> Schema {
-		let schema = schema.section(
-			Section::single(FORM_SETTINGS, FORM_SETTINGS).name("Forms"),
-		);
-		match self.forms.as_slice() {
-			[form] => {
-				schema.entry(FORM_SETTINGS, "Forms", settings_fields(form))
-			}
-			forms => schema.entry_tabs(
-				FORM_SETTINGS,
-				"Forms",
-				forms
-					.iter()
-					.map(|f| (f.label.as_str(), settings_fields(f)))
-					.collect::<Vec<_>>(),
-			),
+		let mut schema = schema
+			.section(Section::channel(FORMS, [FORM]).name("Forms"))
+			.entry(
+				FORM,
+				"Form",
+				[
+					Field::blocks(
+						"fields",
+						FIELD_BLOCKS.iter().map(|(h, _)| *h),
+					)
+					.translatable()
+					.min(1),
+					Field::text("submitLabel")
+						.label("Button")
+						.translatable()
+						.instructions("Empty: *Send*"),
+					Field::text("successMessage")
+						.label("Message after sending")
+						.multiline()
+						.translatable()
+						.instructions(
+							"Empty: *Thank you, your message is sent.*",
+						),
+				],
+			)
+			.icon(FORM, "clipboard-list");
+		let icons = ["type", "align-left", "mail", "phone"];
+		for ((handle, name), icon) in FIELD_BLOCKS.iter().zip(icons) {
+			schema = schema
+				.block(handle, name, block_fields())
+				.block_title(handle, "label")
+				.icon(handle, icon);
 		}
+		schema
 	}
 
-	fn check(&self, _schema: &Schema) -> Result<(), String> {
-		let mut handles = BTreeSet::new();
-		for form in &self.forms {
-			let h = &form.handle;
-			if !handles.insert(h) {
-				return Err(format!("forms: the form {h} is there twice"));
-			}
-			if form.fields.is_empty() {
-				return Err(format!("forms: the form {h} has no fields"));
-			}
-			let mut fields = BTreeSet::new();
-			for f in &form.fields {
-				if !fields.insert(&f.handle) || f.handle == form.honeypot {
-					return Err(format!(
-						"forms: {h} has the field {} twice (or as the honeypot)",
-						f.handle
-					));
-				}
-				if f.reply_to && f.kind != FormFieldKind::Email {
-					return Err(format!(
-						"forms: {h}.{} replies to an address, it needs to be \
-						an email field",
-						f.handle
-					));
-				}
-			}
-			if form.fields.iter().filter(|f| f.reply_to).count() > 1 {
-				return Err(format!("forms: {h} replies to two fields"));
-			}
-		}
-		Ok(())
+	fn tables(&self) -> &'static [&'static str] {
+		submissions::TABLES
 	}
 
 	fn routes(&self, _schema: &Schema) -> zipp::axum::Router<zipp::AppState> {
-		routes::routes(Arc::new(self.clone()))
+		routes::website(Arc::new(self.clone()))
+	}
+
+	fn api_routes(
+		&self,
+		_schema: &Schema,
+	) -> zipp::axum::Router<zipp::AppState> {
+		routes::studio()
+	}
+
+	fn studio(&self) -> Option<PluginStudio> {
+		let page = PluginPage::new("submissions", "Submissions")
+			.icon("inbox")
+			.section(FORMS);
+		let js = include_str!("../assets/forms.js");
+		Some(PluginStudio::new(js).page(page))
 	}
 }

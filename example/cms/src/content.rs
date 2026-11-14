@@ -5,7 +5,7 @@ use zipp::{
 	Access, ButtonOption, Column, Condition, Field, Format, GraphqlSchema,
 	LinkKind, Role, Schema, Section, Style, Transform,
 };
-use zipp_forms::{Form, FormField, Forms};
+use zipp_forms::{Forms, form_field};
 use zipp_seo::{Seo, SeoDefaults, seo_field};
 
 pub fn schema() -> Schema {
@@ -75,27 +75,14 @@ pub fn schema() -> Schema {
 		)
 		.nav(
 			"Settings",
-			[
-				"header",
-				"footer",
-				"translations",
-				"seoSettings",
-				"formSettings",
-			],
+			["header", "footer", "translations", "seoSettings", "forms"],
 		)
 		// icons of the studio, Lucide's by name or an svg of its own
 		.nav_icon("Content", "folder-open")
 		.nav_icon("Settings", "sliders-horizontal")
-		// a contact form like valgistesshots', mailed to who Forms names
-		.plugin(
-			Forms::new().form(
-				Form::new("contact", "Contact")
-					.field(FormField::text("name").required())
-					.field(FormField::email("email").required().reply_to())
-					.field(FormField::text("phone"))
-					.field(FormField::multiline("message").required()),
-			),
-		)
+		// forms editors build like Formie's: the section forms, the
+		// submissions in the studio's Submissions
+		.plugin(Forms::new())
 		// the SEO plugin, like the Craft plugin meierlabs-seo: the global
 		// settings are the single seoSettings, defaults per section and
 		// entry type here
@@ -116,13 +103,7 @@ pub fn schema() -> Schema {
 		.role(
 			Role::new("editor", "Editor")
 				.sections(
-					[
-						"pages",
-						"header",
-						"footer",
-						"translations",
-						"formSettings",
-					],
+					["pages", "header", "footer", "translations", "forms"],
 					Access::Publish,
 				)
 				.sections(["news", "categories"], Access::Delete)
@@ -154,7 +135,7 @@ pub fn schema() -> Schema {
 					"footer",
 					"translations",
 					"seoSettings",
-					"formSettings",
+					"forms",
 				])
 				.assets()
 				.users()
@@ -178,15 +159,13 @@ pub fn schema() -> Schema {
 				("events.soldOut", "Ausverkauft"),
 				("news.all", "Alle"),
 				("news.none", "Noch keine Neuigkeiten"),
-				("contact.name", "Name"),
-				("contact.email", "E-Mail"),
-				("contact.phone", "Telefon"),
-				("contact.message", "Nachricht"),
-				("contact.send", "Senden"),
 				(
 					"contact.failed",
 					"Das hat nicht geklappt, bitte später nochmals.",
 				),
+				("contact.required", "Bitte ausfüllen"),
+				("contact.email", "Bitte eine E-Mail-Adresse"),
+				("contact.phone", "Bitte eine Telefonnummer"),
 			],
 		)
 		// on every image and file beside title and alt, GraphQL has them
@@ -473,13 +452,14 @@ pub fn schema() -> Schema {
 			"Upcoming events",
 			[Field::text("city").label("Only in city")],
 		)
-		// the contact form of zipp-forms, its texts are the frontend's
+		// a form of zipp-forms on a page
 		.block(
 			"contact",
-			"Contact form",
+			"Form",
 			[
 				Field::text("title")
 					.instructions("Above the form, empty: none."),
+				form_field("form").required(),
 			],
 		)
 		// in the lists, the add menus and the blocks' heads
