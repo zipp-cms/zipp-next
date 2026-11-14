@@ -1,6 +1,6 @@
 {
 	"name": "zipp-forms",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Crelte frontend of the zipp-forms plugin: load a form of the zipp studio, show it and send it. Svelte and TypeScript source, the site's vite builds it.",
 	"license": "MIT OR Apache-2.0",
 	"repository": {

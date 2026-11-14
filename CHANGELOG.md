@@ -4,13 +4,12 @@
 
 ### Upgrading
 
-
 - `zipp-forms`: forms in code (`Form`, `FormField`) and the single
   `formSettings` are gone, build the forms in the studio and pick them
   with `form_field`; the website posts to `/forms/{id}` instead of
   `/forms/<handle>` (the npm package `zipp-forms` does it).
 
-### Plugins and zipp-ui
+### Forms
 
 - `zipp-forms` is a form builder like Formie instead of Craft's Contact
   Form: editors build forms as entries of the section `forms` (single
