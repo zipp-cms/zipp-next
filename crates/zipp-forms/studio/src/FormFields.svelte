@@ -143,8 +143,24 @@
 
 	// fields
 
-	// the id of the block whose settings are open
+	// the id of the block whose settings are open, and the value before
+	// them for Cancel
 	let editing = $state(null);
+	let before = null;
+
+	function edit(id) {
+		before = value;
+		editing = id;
+	}
+
+	function apply() {
+		editing = null;
+	}
+
+	function cancel() {
+		editing = null;
+		onchange(before);
+	}
 	const edited = $derived(
 		editing &&
 			groups
@@ -161,8 +177,12 @@
 
 	function add(type) {
 		const block = blocks.create(type);
+		const prev = value;
 		fields(fs => [...fs, { width: 100, block }]);
-		editing = fresh = block.id;
+		fresh = block.id;
+		edit(block.id);
+		// Cancel takes the new field away again
+		before = prev;
 	}
 
 	function duplicate(fi) {
@@ -229,10 +249,35 @@
 	];
 
 	let grid = $state();
+	// where the pointer is while a field is dragged
+	let pointer = { x: 0, y: 0 };
+	$effect(() => {
+		const track = e => (pointer = { x: e.clientX, y: e.clientY });
+		window.addEventListener('pointermove', track);
+		return () => window.removeEventListener('pointermove', track);
+	});
+
+	/**
+	 * Beside a field (a line next to it) only in the middle of one that
+	 * isn't full width, else between the rows (a line across).
+	 */
+	function besides() {
+		const cell = document
+			.elementFromPoint(pointer.x, pointer.y)
+			?.closest('.cell[data-sort]');
+		if (!cell || cell.classList.contains('sort-dragging')) return false;
+		if (getComputedStyle(cell).getPropertyValue('--span') === '12') {
+			return false;
+		}
+		const r = cell.getBoundingClientRect();
+		const y = (pointer.y - r.top) / r.height;
+		return y > 0.25 && y < 0.75;
+	}
+
 	const fieldSort = new Sortable({
 		container: () => grid,
 		depths: () => group.fields.map(() => 0),
-		grid: () => true,
+		grid: besides,
 		onmove: (from, drop) => fields(fs => moved(fs, from, drop.index)),
 	});
 
@@ -326,7 +371,7 @@
 					sortable={fieldSort}
 					index={fi}
 					menu={fieldMenu(item, fi)}
-					onedit={() => (editing = item.block.id)}
+					onedit={() => edit(item.block.id)}
 				/>
 			</div>
 		{:else}
@@ -363,11 +408,20 @@
 	</div>
 </div>
 
+{#snippet flyoutActions()}
+	<button type="button" onclick={cancel}>{tx.cancel}</button>
+	<button type="button" class="primary" onclick={apply}>
+		<Icon name="check" size={14} />
+		{tx.apply}
+	</button>
+{/snippet}
+
 {#if edited}
 	<Flyout
 		title={edited.item.block.fields.label ||
 			typeName(edited.item.block.type)}
-		onclose={() => (editing = null)}
+		onclose={readonly ? apply : cancel}
+		actions={readonly ? undefined : flyoutActions}
 	>
 		<div class="settings">
 			{#if !readonly}

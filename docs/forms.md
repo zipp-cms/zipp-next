@@ -30,9 +30,12 @@ editor is the builder:
   double click) names one, the step's title on the website, ⋯ Delete
   page removes it with its fields, *Add page* makes a new one;
 - the fields of the page on screen are a grid of their widths with a
-  preview of their inputs: drag one to move it, a click opens its
-  settings and width in a flyout, its ⋯ menu (or a right click) has
-  Edit, Duplicate, To another page, Switch off and Delete;
+  preview of their inputs: drag one to move it (a line across between
+  the rows, a line beside a field that isn't full width when the
+  pointer is in its middle), a click opens its settings and width in a
+  flyout (Apply keeps them, Cancel puts the field back), its ⋯ menu (or
+  a right click) has Edit, Duplicate, To another page, Switch off and
+  Delete;
 - *Add field* at the end of the grid picks the type and opens the new
   field.
 
