@@ -18,6 +18,8 @@ Values are typed like their fields: numbers `Float`, booleans
 `Boolean`, links `Link` (`url label defaultLabel target`), also in the
 cells of a table row; rich text has `html` and `chunks`, its styles as
 `class="…"`.
+Fields are nullable, also required ones: a preview shows drafts and
+unpublished entries, which may lack them (content-model.md).
 
 A query is limited, so one request can't stall the cms: at most 15
 deep, a complexity of 2000, and at most 10000 loaded entries and assets

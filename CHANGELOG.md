@@ -13,6 +13,10 @@
   studio, the api, the members' routes, the AI's new entries) refuses
   as before, per site for translatable fields. The title stays
   required, other checks stay on every save.
+- `types` writes a draft variant of every entry type's and block's
+  fields with all of them optional (`PageDraftFields`,
+  `TextDraftBlock`): an entry with `published: false` has those, the
+  members' routes too. `Entry` takes them as a third parameter.
 
 ## 0.2.0 (2026-11-07)
 
