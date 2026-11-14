@@ -7,9 +7,11 @@
 
 	/**
 	 * A form of zipp-forms: the `<form>` with the honeypot, the
-	 * components inside get the form. After sending it shows the message
-	 * of the form (`sent` to show something else), why it couldn't send
-	 * above the button.
+	 * components inside get the form. Submitting goes to the next page or
+	 * sends on the last; a new page scrolls the form's top into view if it
+	 * is above the screen. After sending it shows the message of the form
+	 * (`sent` to show something else), why it couldn't send above the
+	 * button.
 	 */
 	let {
 		form,
@@ -24,9 +26,18 @@
 
 	setForm(untrack(() => form));
 
-	function onsubmit(e: SubmitEvent) {
+	let element = $state<HTMLFormElement>();
+
+	async function onsubmit(e: SubmitEvent) {
 		e.preventDefault();
-		form.submit();
+		const page = form.page;
+		await form.next();
+		if (form.page !== page) top();
+	}
+
+	function top() {
+		if (element && element.getBoundingClientRect().top < 0)
+			element.scrollIntoView({ block: 'start' });
 	}
 </script>
 
@@ -37,7 +48,7 @@
 		<p class="zipp-form-sent" role="status">{form.sent}</p>
 	{/if}
 {:else}
-	<form {onsubmit} {...rest}>
+	<form bind:this={element} {onsubmit} {...rest}>
 		<!-- people don't see it, bots fill it -->
 		<input
 			class="zipp-form-honeypot"

@@ -23,7 +23,7 @@ export async function routes(router) {
 </script>
 
 <script>
-	import { Form, Fields, Submit } from 'zipp-forms';
+	import { Back, Form, Fields, Submit } from 'zipp-forms';
 
 	let { zippForm } = $props();
 </script>
@@ -31,6 +31,7 @@ export async function routes(router) {
 {#if zippForm}
 	<Form form={zippForm}>
 		<Fields />
+		<Back />
 		<Submit />
 	</Form>
 {/if}

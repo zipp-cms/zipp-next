@@ -16,9 +16,10 @@
   line text, multi-line text, email and phone fields as blocks, per
   site), the website loads one by its id (`GET /forms/{id}`) and sends
   to it, the submissions are stored and listed in the studio's new
-  page Submissions. Nothing is mailed for now. The npm package
+  page Submissions. A page break block makes a form of several pages
+  (steps), each checked before the next. Nothing is mailed for now. The npm package
   `zipp-forms` is its crelte frontend (`loadForm`, `formRoutes`,
-  `Form`, `Fields`). See docs/forms.md.
+  `Form`, `Fields`, `Back`, `Submit`). See docs/forms.md.
 
 ## 0.3.0 (2026-11-14)
 

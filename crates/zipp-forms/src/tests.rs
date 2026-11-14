@@ -99,7 +99,7 @@ async fn the_website_gets_a_live_form_of_its_site() {
 		json!({
 			"id": form.id,
 			"title": "Kontakt",
-			"fields": [
+			"pages": [{ "label": "", "fields": [
 				{
 					"type": "text", "handle": "name", "label": "Name",
 					"required": true, "placeholder": "", "instructions": "",
@@ -117,8 +117,10 @@ async fn the_website_gets_a_live_form_of_its_site() {
 					"label": "Nachricht", "required": true,
 					"placeholder": "Ihre Nachricht", "instructions": "",
 				},
-			],
+			]}],
 			"submitLabel": "Send",
+			"nextLabel": "Next",
+			"backLabel": "Back",
 			"successMessage": "Danke!",
 			"honeypot": "website",
 		})
@@ -142,7 +144,7 @@ async fn the_website_gets_a_live_form_of_its_site() {
 	let (status, body) = get(&ts, &path).await;
 	assert_eq!(status, StatusCode::OK);
 	assert_eq!(body["title"], "Contact");
-	assert_eq!(body["fields"][0]["label"], "Your name");
+	assert_eq!(body["pages"][0]["fields"][0]["label"], "Your name");
 	assert_eq!(body["submitLabel"], "Go");
 	assert_eq!(body["successMessage"], "Thank you, your message is sent.");
 
@@ -304,10 +306,10 @@ fn handles_are_unique_and_off_blocks_left_out() {
 		]})),
 		"website",
 	);
-	let handles: Vec<&str> =
-		form.fields.iter().map(|f| f.handle.as_str()).collect();
+	let fields = &form.pages[0].fields;
+	let handles: Vec<&str> = fields.iter().map(|f| f.handle.as_str()).collect();
 	assert_eq!(handles, ["website", "name", "name2", "2"]);
-	assert!(form.fields.iter().all(|f| f.kind == FieldKind::Text));
+	assert!(fields.iter().all(|f| f.kind == FieldKind::Text));
 	// the honeypot gets out of the way
 	assert_eq!(form.honeypot, "website_");
 }
@@ -317,4 +319,69 @@ fn handles_of_labels() {
 	assert_eq!(handle_of("E-Mail Adresse"), "eMailAdresse");
 	assert_eq!(handle_of("Ihre Straße"), "ihreStraße");
 	assert_eq!(handle_of("  "), "");
+}
+
+/// The contact form in two steps: who, then the message.
+fn steps() -> Value {
+	let mut fields = contact_fields();
+	let blocks = fields["fields"].as_array_mut().unwrap();
+	blocks.insert(0, block("formPage", "Über Sie", json!({})));
+	blocks.insert(4, block("formPage", "Ihre Nachricht", json!({})));
+	// a page break at the end opens no page
+	blocks.push(block("formPage", "Leer", json!({})));
+	fields
+}
+
+#[test]
+fn page_breaks_make_pages() {
+	let form = Form::of_entry(&entry(steps()), "website");
+	let pages: Vec<(&str, Vec<&str>)> = form
+		.pages
+		.iter()
+		.map(|p| {
+			let handles = p.fields.iter().map(|f| f.handle.as_str());
+			(p.label.as_str(), handles.collect())
+		})
+		.collect();
+	assert_eq!(
+		pages,
+		[
+			("Über Sie", vec!["name", "email", "telefon"]),
+			("Ihre Nachricht", vec!["nachricht"]),
+		]
+	);
+}
+
+#[tokio::test]
+async fn a_page_is_checked_alone_and_nothing_stored() {
+	let ts = TestServer::new(schema());
+	let input = input(FORMS, FORM, "Kontakt", steps());
+	let form = ts.admin().call(&CreateReq(input)).await.unwrap();
+	let path = |q: &str| format!("/forms/{}?site=de{q}", form.id);
+
+	// the first page without the message of the second
+	let first = json!({ "name": "Anna", "email": "anna@example.ch" });
+	let (status, body) = post(&ts, &path("&page=0"), first, "1.1.1.1").await;
+	assert_eq!(status, StatusCode::OK);
+	assert_eq!(body, json!({ "success": true }));
+	// its own mistakes only
+	let bad = json!({ "name": "", "email": "anna@example.ch" });
+	let (status, body) = post(&ts, &path("&page=0"), bad, "1.1.1.1").await;
+	assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+	assert_eq!(body["errors"][0]["path"], "name");
+	assert_eq!(body["errors"].as_array().unwrap().len(), 1);
+	let (status, _) = post(&ts, &path("&page=2"), valid(), "1.1.1.1").await;
+	assert_eq!(status, StatusCode::BAD_REQUEST);
+	let stored = submissions::list(&ts.state.db.conn(), "de", None, 0);
+	assert_eq!(stored.unwrap().1, 0);
+
+	// sending checks all pages and stores
+	let first = json!({ "name": "Anna", "email": "anna@example.ch" });
+	let (status, body) = post(&ts, &path(""), first, "1.1.1.1").await;
+	assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+	assert_eq!(body["errors"][0]["path"], "nachricht");
+	let (status, _) = post(&ts, &path(""), valid(), "1.1.1.1").await;
+	assert_eq!(status, StatusCode::OK);
+	let stored = submissions::list(&ts.state.db.conn(), "de", None, 0);
+	assert_eq!(stored.unwrap().1, 1);
 }

@@ -16,5 +16,7 @@ export default defineConfig(() => {
 			// svelte and crelte resolve here
 			preserveSymlinks: true,
 		},
+		// and changes of it show without a stale prebundle
+		optimizeDeps: { exclude: ['zipp-forms'] },
 	};
 });

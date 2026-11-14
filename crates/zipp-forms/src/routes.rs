@@ -8,6 +8,10 @@
 //!   "success": false, "errors": [{ "path", "code", "message" }] }`, too
 //!   many from an address `429`. A filled honeypot looks sent and is
 //!   dropped.
+//! - `POST /forms/{id}?site=de&page=0`: checks only the values of that
+//!   page of a form with several, before the visitor goes on: `{
+//!   "success": true }` or the errors as above, nothing is stored or
+//!   counted.
 //!
 //! And the studio's, see [`api`](crate::api).
 
@@ -44,6 +48,8 @@ const WINDOW_MS: i64 = 10 * MINUTE_MS;
 struct SiteParam {
 	/// default the primary site
 	site: Option<String>,
+	/// only check this page, see the module
+	page: Option<usize>,
 }
 
 pub(crate) fn website(forms: Arc<Forms>) -> Router<AppState> {
@@ -123,23 +129,35 @@ async fn submit(
 		let message = "a JSON object of the fields";
 		return failure(StatusCode::BAD_REQUEST, message);
 	};
+	let invalid = |errors| {
+		answer(
+			StatusCode::UNPROCESSABLE_ENTITY,
+			json!({ "success": false, "errors": errors }),
+		)
+	};
+
+	// a step: only its values, the visitor goes on
+	if let Some(page) = q.page {
+		if page >= form.pages.len() {
+			return failure(StatusCode::BAD_REQUEST, "no such page");
+		}
+		return match form.check(&values, Some(page)) {
+			Ok(_) => answer(StatusCode::OK, json!({ "success": true })),
+			Err(errors) => invalid(errors),
+		};
+	}
+
 	let ok = answer(
 		StatusCode::OK,
 		json!({ "success": true, "message": form.success_message }),
 	);
-
 	// a bot filled what people don't see: it looks sent
 	if form.is_spam(&values) {
 		return ok;
 	}
-	let answers = match form.check(&values) {
+	let answers = match form.check(&values, None) {
 		Ok(a) => a,
-		Err(errors) => {
-			return answer(
-				StatusCode::UNPROCESSABLE_ENTITY,
-				json!({ "success": false, "errors": errors }),
-			);
-		}
+		Err(errors) => return invalid(errors),
 	};
 	if !forms.may_send(client) {
 		let message = "Too many messages, please try again in a few minutes";

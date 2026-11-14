@@ -13,8 +13,9 @@
 //! A form is an entry of the section `forms`: its fields are blocks
 //! (single line text, multi-line text, email, phone) with a label, a
 //! handle, required, a placeholder and instructions, in each site of
-//! their own (the block list is translatable), plus the label of the
-//! button and the message after sending. The website gets a form by its
+//! their own (the block list is translatable), a page break block
+//! starts another page (a step), plus the labels of the buttons and the
+//! message after sending. The website gets a form by its
 //! id and sends to it, see [`routes`]; the studio's page Submissions
 //! shows what came in, for who may view `forms`.
 
@@ -110,7 +111,10 @@ impl Plugin for Forms {
 				[
 					Field::blocks(
 						"fields",
-						FIELD_BLOCKS.iter().map(|(h, _)| *h),
+						FIELD_BLOCKS
+							.iter()
+							.map(|(h, _)| *h)
+							.chain([form::PAGE_BREAK]),
 					)
 					.translatable()
 					.min(1),
@@ -118,6 +122,16 @@ impl Plugin for Forms {
 						.label("Button")
 						.translatable()
 						.instructions("Empty: *Send*"),
+					Field::text("nextLabel")
+						.label("Next page")
+						.translatable()
+						.width(50)
+						.instructions("With pages. Empty: *Next*"),
+					Field::text("backLabel")
+						.label("Page before")
+						.translatable()
+						.width(50)
+						.instructions("With pages. Empty: *Back*"),
 					Field::text("successMessage")
 						.label("Message after sending")
 						.multiline()
@@ -135,7 +149,13 @@ impl Plugin for Forms {
 				.block_title(handle, "label")
 				.icon(handle, icon);
 		}
+		let page = Field::text("label").instructions(
+			"The title of the page that starts here, a step of the form.",
+		);
 		schema
+			.block(form::PAGE_BREAK, "Page break", [page])
+			.block_title(form::PAGE_BREAK, "label")
+			.icon(form::PAGE_BREAK, "separator-horizontal")
 	}
 
 	fn tables(&self) -> &'static [&'static str] {

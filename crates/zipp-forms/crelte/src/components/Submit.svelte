@@ -3,15 +3,17 @@
 	import type { HTMLButtonAttributes } from 'svelte/elements';
 	import { getForm } from '../context';
 
-	/** The button that sends, with the form's label (or `children`). */
-	let {
-		children,
-		...rest
-	}: { children?: Snippet } & HTMLButtonAttributes = $props();
+	/**
+	 * The button that goes to the next page or sends on the last, with the
+	 * form's labels (or `children`).
+	 */
+	let { children, ...rest }: { children?: Snippet } & HTMLButtonAttributes =
+		$props();
 
 	const form = getForm();
 </script>
 
 <button type="submit" disabled={form.sending} {...rest}>
-	{#if children}{@render children()}{:else}{form.data.submitLabel}{/if}
+	{#if children}{@render children()}{:else if form.isLast}{form.data
+			.submitLabel}{:else}{form.data.nextLabel}{/if}
 </button>

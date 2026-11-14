@@ -1,24 +1,31 @@
 /** A form as the cms gives it, `GET /forms/{id}?site=`. */
 export type FormData = {
-  id: number;
-  title: string;
-  fields: FieldData[];
-  submitLabel: string;
-  successMessage: string;
-  /** the field people don't see and bots fill, sent empty */
-  honeypot: string;
+	id: number;
+	title: string;
+	/** one at least, the steps of the form */
+	pages: PageData[];
+	submitLabel: string;
+	/** the buttons between the pages */
+	nextLabel: string;
+	backLabel: string;
+	successMessage: string;
+	/** the field people don't see and bots fill, sent empty */
+	honeypot: string;
 };
 
-export type FieldType = "text" | "textarea" | "email" | "phone";
+/** A step of a form, `label` is empty for a first page without one. */
+export type PageData = { label: string; fields: FieldData[] };
+
+export type FieldType = 'text' | 'textarea' | 'email' | 'phone';
 
 export type FieldData = {
-  type: FieldType;
-  /** the key of its value, unique in the form */
-  handle: string;
-  label: string;
-  required: boolean;
-  placeholder: string;
-  instructions: string;
+	type: FieldType;
+	/** the key of its value, unique in the form */
+	handle: string;
+	label: string;
+	required: boolean;
+	placeholder: string;
+	instructions: string;
 };
 
 /**

@@ -94,7 +94,11 @@
 
 {#if list.submissions.length < list.total}
 	<p class="more">
-		<button class="light" disabled={list.loading} onclick={() => list.more()}>
+		<button
+			class="light"
+			disabled={list.loading}
+			onclick={() => list.more()}
+		>
 			{tx.more}
 		</button>
 	</p>

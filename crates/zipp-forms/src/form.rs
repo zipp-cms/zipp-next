@@ -12,11 +12,23 @@ use zipp::entries::Entry;
 pub struct Form {
 	pub id: i64,
 	pub title: String,
-	pub fields: Vec<FormField>,
+	/// one at least, a form without a page break is one page
+	pub pages: Vec<FormPage>,
 	pub submit_label: String,
+	/// the buttons between the pages
+	pub next_label: String,
+	pub back_label: String,
 	pub success_message: String,
 	/// the field people don't see and bots fill: send it empty
 	pub honeypot: String,
+}
+
+/// A step of a form: the fields up to the next page break.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FormPage {
+	/// its title, empty for a first page without a page break before it
+	pub label: String,
+	pub fields: Vec<FormField>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -40,6 +52,9 @@ pub enum FieldKind {
 	Email,
 	Phone,
 }
+
+/// The block that starts a page.
+pub const PAGE_BREAK: &str = "formPage";
 
 impl FieldKind {
 	fn of_block(ty: &str) -> Option<Self> {
@@ -83,23 +98,37 @@ pub struct FieldError {
 impl Form {
 	/// The form of an entry of `forms` in its site; switched off blocks
 	/// are left out, a handle that is empty or already there is made of
-	/// the label.
+	/// the label. A page break starts a page, before the first field it
+	/// names the first one.
 	pub fn of_entry(entry: &Entry, honeypot: &str) -> Self {
 		let text = |v: &Value, key: &str| {
 			v[key].as_str().unwrap_or_default().trim().to_string()
 		};
-		let mut fields: Vec<FormField> = vec![];
+		let mut pages = vec![FormPage {
+			label: String::new(),
+			fields: vec![],
+		}];
 		let blocks = entry.fields["fields"].as_array();
 		for block in blocks.into_iter().flatten() {
-			let Some(kind) =
-				block["type"].as_str().and_then(FieldKind::of_block)
-			else {
-				continue;
-			};
 			if block["enabled"] == Value::Bool(false) {
 				continue;
 			}
+			let ty = block["type"].as_str().unwrap_or_default();
 			let f = &block["fields"];
+			if ty == PAGE_BREAK {
+				let label = text(f, "label");
+				match pages.last_mut() {
+					Some(p) if p.fields.is_empty() => p.label = label,
+					_ => pages.push(FormPage {
+						label,
+						fields: vec![],
+					}),
+				}
+				continue;
+			}
+			let Some(kind) = FieldKind::of_block(ty) else {
+				continue;
+			};
 			let label = text(f, "label");
 			let mut handle = match text(f, "handle") {
 				h if h.is_empty() => handle_of(&label),
@@ -107,23 +136,32 @@ impl Form {
 			};
 			let base = handle.clone();
 			let mut n = 1;
-			while handle.is_empty() || fields.iter().any(|x| x.handle == handle)
-			{
+			let taken = |h: &str| {
+				pages.iter().flat_map(|p| &p.fields).any(|x| x.handle == h)
+			};
+			while handle.is_empty() || taken(&handle) {
 				n += 1;
 				handle = format!("{base}{n}");
 			}
-			fields.push(FormField {
+			let field = FormField {
 				kind,
 				handle,
 				label,
 				required: f["required"] == Value::Bool(true),
 				placeholder: text(f, "placeholder"),
 				instructions: text(f, "instructions"),
-			});
+			};
+			pages.last_mut().expect("a page").fields.push(field);
+		}
+		// a page break at the end opens no page
+		if pages.len() > 1 && pages.last().is_some_and(|p| p.fields.is_empty())
+		{
+			pages.pop();
 		}
 
 		let mut honeypot = honeypot.to_string();
-		while fields.iter().any(|f| f.handle == honeypot) {
+		let handles = || pages.iter().flat_map(|p| &p.fields);
+		while handles().any(|f| f.handle == honeypot) {
 			honeypot.push('_');
 		}
 		let or = |key: &str, default: &str| match text(&entry.fields, key) {
@@ -133,12 +171,14 @@ impl Form {
 		Self {
 			id: entry.id,
 			title: entry.title.clone(),
-			fields,
 			submit_label: or("submitLabel", "Send"),
+			next_label: or("nextLabel", "Next"),
+			back_label: or("backLabel", "Back"),
 			success_message: or(
 				"successMessage",
 				"Thank you, your message is sent.",
 			),
+			pages,
 			honeypot,
 		}
 	}
@@ -151,15 +191,21 @@ impl Form {
 			.is_some_and(|s| !s.is_empty())
 	}
 
-	/// The values of the form's fields in their order, trimmed, or what
-	/// is wrong with them. Keys the form doesn't have are left out.
+	/// The values of the fields of a page (`Some(i)`) or of the whole
+	/// form in their order, trimmed, or what is wrong with them. Keys the
+	/// form doesn't have are left out.
 	pub fn check(
 		&self,
 		values: &Map<String, Value>,
+		page: Option<usize>,
 	) -> Result<Vec<Answer>, Vec<FieldError>> {
+		let pages = match page {
+			Some(i) => &self.pages[i..=i],
+			None => &self.pages[..],
+		};
 		let mut errors = vec![];
 		let mut out = vec![];
-		for f in &self.fields {
+		for f in pages.iter().flat_map(|p| &p.fields) {
 			let error = |code: &str, message: &str| FieldError {
 				path: f.handle.clone(),
 				code: code.into(),

@@ -19,7 +19,8 @@
               "formText",
               "formTextarea",
               "formEmail",
-              "formPhone"
+              "formPhone",
+              "formPage"
             ],
             "min": 1,
             "max": null
@@ -31,6 +32,30 @@
             "indexed": false,
             "translatable": true,
             "instructions": "Empty: *Send*",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "nextLabel",
+            "label": "Next page",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "With pages. Empty: *Next*",
+            "width": 50,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "backLabel",
+            "label": "Page before",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "With pages. Empty: *Back*",
+            "width": 50,
             "kind": "text",
             "max": null,
             "multiline": false
@@ -304,6 +329,31 @@
         ],
         "icon": {
           "lucide": "phone"
+        },
+        "title_field": "label"
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "formPage",
+        "name": "Page break",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "The title of the page that starts here, a step of the form.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ],
+        "icon": {
+          "lucide": "separator-horizontal"
         },
         "title_field": "label"
       }
@@ -2294,7 +2344,8 @@
               "formText",
               "formTextarea",
               "formEmail",
-              "formPhone"
+              "formPhone",
+              "formPage"
             ],
             "min": 1,
             "max": null
@@ -2306,6 +2357,30 @@
             "indexed": false,
             "translatable": true,
             "instructions": "Empty: *Send*",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "nextLabel",
+            "label": "Next page",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "With pages. Empty: *Next*",
+            "width": 50,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          },
+          {
+            "handle": "backLabel",
+            "label": "Page before",
+            "required": false,
+            "indexed": false,
+            "translatable": true,
+            "instructions": "With pages. Empty: *Back*",
+            "width": 50,
             "kind": "text",
             "max": null,
             "multiline": false
@@ -2567,6 +2642,28 @@
         ],
         "icon": {
           "lucide": "phone"
+        },
+        "title_field": "label"
+      },
+      {
+        "handle": "formPage",
+        "name": "Page break",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "instructions": "The title of the page that starts here, a step of the form.",
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ],
+        "icon": {
+          "lucide": "separator-horizontal"
         },
         "title_field": "label"
       },

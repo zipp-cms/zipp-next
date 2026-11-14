@@ -14,7 +14,7 @@
 
 <script>
 	import { getTranslations } from 'crelte/translations';
-	import { Form, Fields, Submit } from 'zipp-forms';
+	import { Back, Form, Fields, Submit } from 'zipp-forms';
 
 	let { title, zippForm } = $props();
 	const t = getTranslations();
@@ -35,8 +35,20 @@
 	<section class="contact">
 		{#if title}<h2>{title}</h2>{/if}
 		<Form form={zippForm}>
+			<!-- a form with pages: the step and its title -->
+			{#if zippForm.pages.length > 1}
+				<p class="step">
+					{zippForm.page + 1} / {zippForm.pages.length}
+					{#if zippForm.pages[zippForm.page].label}
+						· {zippForm.pages[zippForm.page].label}
+					{/if}
+				</p>
+			{/if}
 			<Fields />
-			<Submit />
+			<div class="buttons">
+				<Back />
+				<Submit />
+			</div>
 		</Form>
 	</section>
 {/if}
@@ -80,8 +92,17 @@
 		color: #b00020;
 	}
 
+	.step {
+		margin: 0;
+		font-weight: bold;
+	}
+
+	.buttons {
+		display: flex;
+		gap: 0.5rem;
+	}
+
 	.contact :global(button) {
-		align-self: flex-start;
 		padding: 0.5rem 1rem;
 		font: inherit;
 	}
