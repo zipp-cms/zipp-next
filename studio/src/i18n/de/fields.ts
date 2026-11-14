@@ -27,11 +27,12 @@ export default {
 	'fields.dragTypes': '{types}-Dateien hierher ziehen',
 	'fields.dragFile': 'Eine Datei hierher ziehen',
 	'fields.dragType': 'Eine {types}-Datei hierher ziehen',
-	'fields.chooseImage': 'Bild auswählen',
+	'fields.dragImage': 'Ein Bild hierher ziehen',
+	'fields.dragImages': 'Bilder hierher ziehen',
+	'fields.dragVideo': 'Ein Video hierher ziehen',
+	'fields.dragVideos': 'Videos hierher ziehen',
 	'fields.addImages': 'Bilder hinzufügen',
-	'fields.chooseVideo': 'Video auswählen',
 	'fields.addVideos': 'Videos hinzufügen',
-	'fields.orDropIt': 'oder hierher ziehen',
 	'fields.orDropThem': 'oder hierher ziehen',
 
 	// blocks

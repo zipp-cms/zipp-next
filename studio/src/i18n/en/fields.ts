@@ -24,11 +24,12 @@ export default {
 	'fields.dragTypes': 'Drag {types} files here',
 	'fields.dragFile': 'Drag a file here',
 	'fields.dragType': 'Drag a {types} file here',
-	'fields.chooseImage': 'Choose an image',
+	'fields.dragImage': 'Drag an image here',
+	'fields.dragImages': 'Drag images here',
+	'fields.dragVideo': 'Drag a video here',
+	'fields.dragVideos': 'Drag videos here',
 	'fields.addImages': 'Add images',
-	'fields.chooseVideo': 'Choose a video',
 	'fields.addVideos': 'Add videos',
-	'fields.orDropIt': 'or drop it here',
 	'fields.orDropThem': 'or drop them here',
 
 	// blocks

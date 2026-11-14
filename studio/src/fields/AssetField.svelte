@@ -103,13 +103,11 @@
 	const dragHint = $derived(
 		types
 			? t(one ? 'fields.dragType' : 'fields.dragTypes', { types })
-			: t(one ? 'fields.dragFile' : 'fields.dragFiles'),
-	);
-	// the tile of images and videos: what a click does
-	const chooseLabel = $derived(
-		videos
-			? t(one ? 'fields.chooseVideo' : 'fields.addVideos')
-			: t(one ? 'fields.chooseImage' : 'fields.addImages'),
+			: videos
+				? t(one ? 'fields.dragVideo' : 'fields.dragVideos')
+				: images
+					? t(one ? 'fields.dragImage' : 'fields.dragImages')
+					: t(one ? 'fields.dragFile' : 'fields.dragFiles'),
 	);
 </script>
 
@@ -183,9 +181,9 @@
 		</div>
 	{/each}
 	<SortLine sortable={sort} />
-	{#if !full && cards}
-		<!-- in the shape of the card it becomes: a click chooses from
-		the library, its bar uploads -->
+	{#if !full && cards && ids.length}
+		<!-- next to the cards in their shape: a click chooses from the
+		library, its bar uploads -->
 		<div class="drop-zone tile" class:over={drag.over}>
 			<button
 				type="button"
@@ -194,10 +192,12 @@
 			>
 				<Icon name={videos ? 'add-video' : 'add-image'} size={22} />
 				<span class="label">
-					{drag.over ? t('fields.dropToAdd') : chooseLabel}
+					{drag.over
+						? t('fields.dropToAdd')
+						: t(videos ? 'fields.addVideos' : 'fields.addImages')}
 				</span>
 				<span class="hint">
-					{t(one ? 'fields.orDropIt' : 'fields.orDropThem')}
+					{t('fields.orDropThem')}
 				</span>
 				{#if types}<span class="types">{types}</span>{/if}
 			</button>
@@ -213,7 +213,8 @@
 			</span>
 		</div>
 	{:else if !full}
-		<!-- a click on the zone chooses from the library -->
+		<!-- a row, also of an empty image field: a click on the zone
+		chooses from the library -->
 		<div
 			class="drop-zone"
 			class:over={drag.over}
