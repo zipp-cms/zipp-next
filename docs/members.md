@@ -175,5 +175,7 @@ size, only images. A user with only own access to the section links
 only assets they uploaded or that a live entry shows already (public),
 else the field is `INVALID`, so a guessed id can't publish another
 member's private photo; links an entry has already stay. Roles with the
-section's access link any asset. A user may change or upload 60 times
+section's access link any asset. The same holds for a user's own
+profile fields (`PUT /site-auth/me`, the studio's own profile), only
+admins link any asset there. A user may change or upload 60 times
 in 10 minutes.

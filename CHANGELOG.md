@@ -24,7 +24,8 @@
   members) link only assets they uploaded or that a live entry shows,
   else the field is invalid: a guessed id no longer publishes another
   member's private photo. Links an entry has stay, roles with the
-  section's access link any asset.
+  section's access link any asset. The same for the user fields of
+  one's own profile, only admins link any asset there.
 - `user --name`: the cli sets a user's display name too.
 - Required fields only have to be filled to publish, like Craft's: an
   unpublished entry or a draft saves without them, publishing (the

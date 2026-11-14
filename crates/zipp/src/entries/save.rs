@@ -352,9 +352,10 @@ pub(crate) fn write(
 /// save tells nothing about hidden sections or assets; what it linked to
 /// `before` stays, someone who sees it chose it. `live` says which
 /// required fields that are left empty must be filled. Someone who
-/// edits only their own entries of the `section` links only assets
-/// they may (see [`linkable_by`]), else a published entry would show
-/// another member's private photo.
+/// edits only their own entries of the `section`, or their own user
+/// fields, links only assets they may (see [`linkable_by`]), else a
+/// published entry or a profile would show another member's private
+/// photo.
 #[allow(clippy::too_many_arguments)]
 fn check_relations(
 	conn: &Connection,
@@ -413,6 +414,10 @@ fn check_relations(
 
 	let own_only = match (&user, section) {
 		(Some(u), Some(s)) if !u.can(schema, s, Access::Edit) => {
+			Some(u.user_id)
+		}
+		// a profile is public too, only admins edit other users
+		(Some(u), None) if ty == crate::schema::USER && !u.admin() => {
 			Some(u.user_id)
 		}
 		_ => None,
