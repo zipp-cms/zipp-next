@@ -1,33 +1,27 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (2026-11-14)
 
-- zipp-ui: `ContextMenu` opens a menu at the pointer without a ⋯
-  button, for the right clicks of a module (`open(e)` in its
-  `oncontextmenu`, `MenuItem`s like `Menu`); `Popover` needs no
-  `trigger` when it opens at a point.
-- zipp-ui: svelte-check of a TypeScript module finds the types of its
-  imports (`zipp-ui/Icon.svelte`, `zipp-ui/field`) also without a
-  tsconfig (`typesVersions`); docs/extending.md has the tsconfig of a
-  module with `"moduleResolution": "bundler"`.
-- Slugs made of a title or a name are ASCII like Craft's
-  `limitAutoSlugsToAscii`: `Über uns` is `ueber-uns`, `Crème brûlée`
-  `creme-brulee`, other scripts keep their letters. Saved and typed
-  slugs stay as they are (`über-uns`), only new entries and users get
-  the new ones; the slug of a block (anchors) changes the same way.
-  Text in NFD (macOS: `U` and a combining `¨`) is composed first, so it
-  is `ueber` too and a typed slug keeps its `ü`.
-  An entry saved before with the unicode slug of its title (`über-uns`)
-  no longer has its slug follow the title in the studio, since it isn't
-  the title's slug anymore: saved slugs never change by themselves.
-- A slug made of the title gets `-2`, `-3`, … when another entry of the
-  site (also one that isn't live) has its uri, like Craft's, instead of
-  the error "the uri … is already used": a second "Zopf" is `zopf-2`,
-  also from the members' routes and the AI. A slug that is typed or
-  sent is still refused, saved slugs stay. The studio sends no slug for
-  a new entry whose slug follows the title.
-- GraphQL `assets(id: [3, 4])` and `asset(id: 3)` read assets by their
-  ids, for a token with the library.
+New entries that save themselves and required fields only to publish,
+like Craft; ASCII and unique auto slugs; members link only assets they
+may show; plugins with tables and studio pages of their own.
+
+### Upgrading
+
+- Required fields only have to be filled to publish: an unpublished
+  entry or a draft can miss them now. Code that reads entries that
+  aren't live gets the draft types (see Content model and fields).
+- `types` writes draft variants (`PageDraftFields`, `TextDraftBlock`)
+  and `Entry` takes them as a third parameter: regenerate the types of
+  a site and add it where `Entry` is written by hand.
+- Slugs made of a title or a name are ASCII; saved slugs stay as they
+  are, but an entry saved before with the unicode slug of its title
+  (`über-uns`) no longer has its slug follow the title in the studio.
+- Users with only own access to a section link only assets they may
+  show (see Security): their drafts lose other assets.
+
+### Security
+
 - Users with only own access to a section (`Role::own`, website
   members) link only assets they uploaded or that a live entry shows
   (with a page, or of a section they see all of, on a site that is
@@ -36,7 +30,9 @@
   an editor's publish would make them public. Links an entry has stay,
   roles with the section's access link any asset. The same for the
   user fields of one's own profile, only admins link any asset there.
-- `user --name`: the cli sets a user's display name too.
+
+### Content model and fields
+
 - Required fields only have to be filled to publish, like Craft's: an
   unpublished entry or a draft saves without them, publishing (the
   studio, the api, the members' routes, the AI's new entries) refuses
@@ -48,15 +44,37 @@
   have the members' routes' entries (their drafts too). `Entry` takes
   them as a third parameter. A required field with a condition is
   optional in both.
+- Slugs made of a title or a name are ASCII like Craft's
+  `limitAutoSlugsToAscii`: `Über uns` is `ueber-uns`, `Crème brûlée`
+  `creme-brulee`, other scripts keep their letters. Saved and typed
+  slugs stay as they are (`über-uns`), only new entries and users get
+  the new ones; the slug of a block (anchors) changes the same way.
+  Text in NFD (macOS: `U` and a combining `¨`) is composed first, so it
+  is `ueber` too and a typed slug keeps its `ü`.
+- A slug made of the title gets `-2`, `-3`, … when another entry of the
+  site (also one that isn't live) has its uri, like Craft's, instead of
+  the error "the uri … is already used": a second "Zopf" is `zopf-2`,
+  also from the members' routes and the AI. A slug that is typed or
+  sent is still refused, saved slugs stay. The studio sends no slug for
+  a new entry whose slug follows the title.
+- An entry that isn't live may have no title (no uri, *Untitled* in the
+  studio), and a new one that isn't live takes the next free slug
+  (`-2`) when its uri is taken. An entry that was never live keeps the
+  slug of its title free too when it is published, also when the draft
+  sends it.
+
+### GraphQL
+
+- `assets(id: [3, 4])` and `asset(id: 3)` read assets by their ids,
+  for a token with the library.
+
+### Studio
+
 - The studio creates a new entry with its first change, like Craft's:
   not live, then its changes are a draft, so a reload or a failed
   publish no longer loses a new page. The address switches to the
   entry, Create is Save (Publish when switched on), a structure's
-  parent can still change while the editor is open. An entry that
-  isn't live may have no title (no uri, *Untitled* in the studio), and
-  a new one that isn't live takes the next free slug (`-2`) when its
-  uri is taken. An entry that was never live keeps the slug of its
-  title free too when it is published, also when the draft sends it.
+  parent can still change while the editor is open.
 - Replace in the ⋯ menu of an image or a video in an asset field picks
   another one from the library in its place.
 - An empty image or video field is a low row like the one of other
@@ -64,10 +82,29 @@
   tile to add more has their shape: a click anywhere chooses from the
   library, files still drop on it and Upload is in its bar. A field of
   one file says so in the singular (`Drag a PDF file here`).
+- The image editor's crop has handles in the middle of its sides that
+  move only that side; Alt while dragging resizes around the middle;
+  edges dragged near the image's border snap to it, so does the whole
+  crop when it moves.
+
+### Plugins and zipp-ui
+
 - Plugins have tables of their own (`Plugin::tables`: SQL that runs
   once each before the migrations, counted per plugin) and pages in the
   studio's sidebar (`PluginStudio::page` with a `PluginPage`, shown to
   who may view its section, the module's `page` renders it).
+- zipp-ui: `ContextMenu` opens a menu at the pointer without a ⋯
+  button, for the right clicks of a module (`open(e)` in its
+  `oncontextmenu`, `MenuItem`s like `Menu`); `Popover` needs no
+  `trigger` when it opens at a point.
+- zipp-ui: svelte-check of a TypeScript module finds the types of its
+  imports (`zipp-ui/Icon.svelte`, `zipp-ui/field`) also without a
+  tsconfig (`typesVersions`); docs/extending.md has the tsconfig of a
+  module with `"moduleResolution": "bundler"`.
+
+### Cli
+
+- `user --name` sets a user's display name too.
 
 ## 0.2.0 (2026-11-07)
 

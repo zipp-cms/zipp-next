@@ -6,8 +6,8 @@ meierlabs-seo: global settings, defaults per section and entry type,
 
 ```toml
 [dependencies]
-zipp = { package = "zipp-cms", version = "0.2" }
-zipp-seo = "0.2"
+zipp = { package = "zipp-cms", version = "0.3" }
+zipp-seo = "0.3"
 ```
 
 ```rust,ignore
