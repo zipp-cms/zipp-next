@@ -45,9 +45,10 @@ their handles, required, widths, order and pages. Their texts (label,
 placeholder, instructions and the names of the pages) are per site, the
 type `formSiteText` (`{ "de": "Name", "en": "Name" }`): the studio
 edits the text of the site on screen and shows another site's as the
-placeholder, a site without its own gets the primary site's. A form has
-the labels of its buttons (*Send*, between pages *Next* and *Back*) and
-the message after sending, per site. Like every
+placeholder, a site without its own gets the primary site's. The
+builder is the tab *Fields* of a form, its tab *Settings* has the labels
+of the buttons (*Send*, between pages *Next* and *Back*) and the message
+after sending, per site. Like every
 entry it is on the website only where it is published, with drafts and
 revisions.
 

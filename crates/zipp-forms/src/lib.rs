@@ -10,13 +10,14 @@
 //!     .entry("page", "Page", [form_field("form")])
 //! ```
 //!
-//! A form is an entry of the section `forms`: its fields are blocks
-//! (single line text, multi-line text, email, phone) with a label, a
-//! handle, required, a placeholder and instructions, in each site of
-//! on pages (steps) the studio shows as tabs ([`FormFields`]); the fields
-//! are the same in all sites, their texts per site ([`SiteText`]), plus
-//! the labels of the buttons and the message after sending. The website gets a form by its
-//! id and sends to it, see [`routes`]; the studio's page Submissions
+//! A form is an entry of the section `forms`. Its tab Fields is the
+//! builder ([`FormFields`]): field blocks (single line text, multi-line
+//! text, email, phone) with a label, a handle, required, a placeholder,
+//! instructions and a width, on pages (steps) shown as tabs; the fields
+//! are the same in all sites, their texts per site ([`SiteText`]). Its
+//! tab Settings has the labels of the buttons and the message after
+//! sending. The website gets a form by its id and sends to it, see
+//! [`routes`]; the studio's page Submissions
 //! shows what came in, for who may view `forms`.
 
 use std::collections::HashMap;
@@ -119,41 +120,56 @@ impl Plugin for Forms {
 	fn schema(&self, schema: Schema) -> Schema {
 		let mut schema = schema
 			.section(Section::channel(FORMS, [FORM]).name("Forms"))
-			.entry(
+			// Formie's tabs: the builder, the buttons and the message
+			.entry_tabs(
 				FORM,
 				"Form",
 				[
-					// the same in all sites, the texts in it are per site
-					Field::custom("fields", FORM_FIELDS, Value::Null)
-						.item_blocks(
-							FIELD_BLOCKS
-								.iter()
-								.map(|(h, _)| *h)
-								.chain([form::PAGE]),
-						),
-					Field::text("submitLabel")
-						.label("Button")
-						.translatable()
-						.instructions("Empty: *Send*"),
-					Field::text("nextLabel")
-						.label("Next page")
-						.translatable()
-						.width(50)
-						.instructions("With pages. Empty: *Next*"),
-					Field::text("backLabel")
-						.label("Page before")
-						.translatable()
-						.width(50)
-						.instructions("With pages. Empty: *Back*"),
-					Field::text("successMessage")
-						.label("Message after sending")
-						.multiline()
-						.translatable()
-						.instructions(
-							"Empty: *Thank you, your message is sent.*",
-						),
+					(
+						"Fields",
+						// the same in all sites, the texts in it are per
+						// site
+						vec![
+							Field::custom("fields", FORM_FIELDS, Value::Null)
+								.item_blocks(
+									FIELD_BLOCKS
+										.iter()
+										.map(|(h, _)| *h)
+										.chain([form::PAGE]),
+								),
+						],
+					),
+					(
+						"Settings",
+						vec![
+							Field::text("submitLabel")
+								.label("Send button")
+								.translatable()
+								.instructions("Empty: *Send*"),
+							Field::text("nextLabel")
+								.label("Next page button")
+								.translatable()
+								.instructions(
+									"For forms with pages. Empty: *Next*",
+								),
+							Field::text("backLabel")
+								.label("Page before button")
+								.translatable()
+								.instructions(
+									"For forms with pages. Empty: *Back*",
+								),
+							Field::text("successMessage")
+								.label("Message after sending")
+								.multiline()
+								.translatable()
+								.instructions(
+									"Empty: *Thank you, your message is sent.*",
+								),
+						],
+					),
 				],
 			)
+			.tab_card(FORM, "Settings")
 			.icon(FORM, "clipboard-list");
 		let icons = ["type", "align-left", "mail", "phone"];
 		for ((handle, name), icon) in FIELD_BLOCKS.iter().zip(icons) {
