@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { MenuItem } from './Menu.svelte';
 	import { ui } from './texts.svelte';
+	import { pointerOf, takeContextMenu } from './contextMenu';
 	import MenuItems from './MenuItems.svelte';
 	import Popover from './Popover.svelte';
 
@@ -19,18 +20,10 @@
 	let at = $state<{ x: number; y: number } | null>(null);
 
 	export function open(e: MouseEvent) {
-		const target = e.target as Element;
-		if (!items.length) return;
-		if (target.closest('input, textarea, [contenteditable]')) return;
-		e.preventDefault();
-		e.stopPropagation();
+		if (!items.length || !takeContextMenu(e)) return;
 
-		if (e.button === 2 || e.clientX) {
-			at = { x: e.clientX, y: e.clientY };
-		} else {
-			const r = target.getBoundingClientRect();
-			at = { x: r.left, y: r.bottom };
-		}
+		const r = (e.target as Element).getBoundingClientRect();
+		at = pointerOf(e) ?? { x: r.left, y: Math.min(r.bottom, innerHeight) };
 		shown = true;
 	}
 </script>

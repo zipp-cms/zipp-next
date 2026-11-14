@@ -67,6 +67,9 @@
 	},
 	"typesVersions": {
 		"*": {
+			"vite": [
+				"vite.js"
+			],
 			"*": [
 				"src/*",
 				"src/*.svelte.ts"
