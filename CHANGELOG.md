@@ -64,6 +64,10 @@
   tile to add more has their shape: a click anywhere chooses from the
   library, files still drop on it and Upload is in its bar. A field of
   one file says so in the singular (`Drag a PDF file here`).
+- Plugins have tables of their own (`Plugin::tables`: SQL that runs
+  once each before the migrations, counted per plugin) and pages in the
+  studio's sidebar (`PluginStudio::page` with a `PluginPage`, shown to
+  who may view its section, the module's `page` renders it).
 
 ## 0.2.0 (2026-11-07)
 

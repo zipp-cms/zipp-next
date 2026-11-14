@@ -92,7 +92,9 @@ use cli::{
 };
 use server::serve;
 
-pub use crate::plugin::{EntryField, GraphqlExt, Plugin, PluginStudio};
+pub use crate::plugin::{
+	EntryField, GraphqlExt, Plugin, PluginPage, PluginStudio,
+};
 pub use crate::schema::{
 	Access, ButtonOption, Choice, Column, ColumnKind, Condition, Field,
 	FieldKind, FieldRelation, FieldType, Format, GraphqlSchema, GraphqlType,

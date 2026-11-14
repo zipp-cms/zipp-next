@@ -19,11 +19,12 @@ use std::sync::Arc;
 
 use async_graphql::dynamic::{Field as GqlField, Type, TypeRef};
 use axum::Router;
+use rusqlite::{Connection, OptionalExtension};
 use serde::Serialize;
 use serde_json::Value;
 
 use crate::AppState;
-use crate::schema::Schema;
+use crate::schema::{Icon, Schema};
 
 /// A crate that adds a whole feature, like `zipp-seo`: to the content
 /// model, GraphQL, the routes and the studio. The site adds it with
@@ -69,6 +70,55 @@ pub trait Plugin: Any + Send + Sync + 'static {
 	fn studio(&self) -> Option<PluginStudio> {
 		None
 	}
+
+	/// The plugin's own tables, like zipp's: SQL that runs once each, in
+	/// order, when the cms starts. Sites ran the released ones: never
+	/// change one, append a new one. Name them after the plugin
+	/// (`seo_redirects`).
+	fn tables(&self) -> &'static [&'static str] {
+		&[]
+	}
+}
+
+/// Runs the [`Plugin::tables`] that didn't run yet, each with its count
+/// in `plugin_tables` in one transaction, like zipp's own.
+pub(crate) fn create_tables(
+	conn: &Connection,
+	schema: &Schema,
+) -> rusqlite::Result<()> {
+	for p in &schema.plugins.0 {
+		let tables = p.tables();
+		let done: usize = conn
+			.query_row(
+				"SELECT version FROM plugin_tables WHERE plugin = ?",
+				[p.name()],
+				|r| r.get(0),
+			)
+			.optional()?
+			.unwrap_or(0);
+		if done > tables.len() {
+			let msg = format!(
+				"the tables of the plugin {} are of a newer version \
+				({done}, this one knows {}): update the plugin",
+				p.name(),
+				tables.len()
+			);
+			let code = rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR);
+			return Err(rusqlite::Error::SqliteFailure(code, Some(msg)));
+		}
+
+		for (i, sql) in tables.iter().enumerate().skip(done) {
+			let tx = conn.unchecked_transaction()?;
+			tx.execute_batch(sql)?;
+			tx.execute(
+				"INSERT INTO plugin_tables (plugin, version) VALUES (?, ?)
+				ON CONFLICT (plugin) DO UPDATE SET version = excluded.version",
+				(p.name(), i + 1),
+			)?;
+			tx.commit()?;
+		}
+	}
+	Ok(())
 }
 
 /// GraphQL of a plugin: its types, fields of every entry and of the root.
@@ -137,26 +187,71 @@ impl EntryField {
 /// `/_plugins/<name>.js` that brings its own framework like a field
 /// type's. It may export
 /// `sectionSetup(target, { schema, section, data, host })`, a card on
-/// the setup page of a section; `data` is the plugin's JSON for it. A
-/// plugin without a module (`default`) can still give the studio data.
+/// the setup page of a section; `data` is the plugin's JSON for it, and
+/// `page(target, { schema, page, data, host })` for its [`PluginPage`]s.
+/// A plugin without a module (`default`) can still give the studio data.
 #[derive(Debug, Clone, Default)]
 #[non_exhaustive]
 pub struct PluginStudio {
 	pub(crate) js: Option<&'static str>,
 	pub(crate) data: Value,
+	pub(crate) pages: Vec<PluginPage>,
 }
 
 impl PluginStudio {
 	pub fn new(js: &'static str) -> Self {
 		Self {
 			js: Some(js),
-			data: Value::Null,
+			..Self::default()
 		}
 	}
 
 	/// What the module gets as `data`.
 	pub fn data(mut self, data: Value) -> Self {
 		self.data = data;
+		self
+	}
+
+	/// A page of the plugin in the studio's sidebar.
+	pub fn page(mut self, page: PluginPage) -> Self {
+		self.pages.push(page);
+		self
+	}
+}
+
+/// A page of a plugin in the sidebar of the studio, at
+/// `/admin/plugins/<plugin>/<handle>`; the module's `page` shows it.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[non_exhaustive]
+pub struct PluginPage {
+	pub handle: String,
+	pub name: String,
+	pub icon: Option<Icon>,
+	/// users who may view this section see it, admins only without one
+	pub section: Option<String>,
+}
+
+impl PluginPage {
+	pub fn new(handle: &str, name: &str) -> Self {
+		Self {
+			handle: handle.into(),
+			name: name.into(),
+			icon: None,
+			section: None,
+		}
+	}
+
+	/// An icon of [Lucide](https://lucide.dev/icons) by its name, or an
+	/// svg of its own.
+	pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
+		self.icon = Some(icon.into());
+		self
+	}
+
+	/// Shows the page to who may view the section, its routes check the
+	/// same with `Authed::check`.
+	pub fn section(mut self, section: &str) -> Self {
+		self.section = Some(section.into());
 		self
 	}
 }
@@ -293,3 +388,7 @@ impl Schema {
 		self
 	}
 }
+
+#[cfg(test)]
+#[path = "plugin_tests.rs"]
+mod tests;

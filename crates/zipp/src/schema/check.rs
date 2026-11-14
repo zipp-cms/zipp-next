@@ -11,7 +11,9 @@ impl Schema {
 		self.check_nav()?;
 		self.check_offline()?;
 		for p in &self.plugins.0 {
-			p.check(self).map_err(|e| format!("{}: {e}", p.name()))?;
+			p.check(self)
+				.and_then(|()| self.check_plugin_pages(p.as_ref()))
+				.map_err(|e| format!("{}: {e}", p.name()))?;
 		}
 		self.check_roles()?;
 		self.check_graphql_schemas()?;
@@ -19,6 +21,30 @@ impl Schema {
 		self.check_transforms()?;
 		self.check_user_pages()?;
 		self.check_timezone()
+	}
+
+	/// The pages of a plugin: unique handles, known sections, a module
+	/// that shows them.
+	fn check_plugin_pages(
+		&self,
+		plugin: &dyn crate::Plugin,
+	) -> Result<(), String> {
+		let Some(studio) = plugin.studio() else {
+			return Ok(());
+		};
+		check_handles(&studio.pages, |page| &page.handle, "page")?;
+		if !studio.pages.is_empty() && studio.js.is_none() {
+			return Err("pages need a module".into());
+		}
+		match studio
+			.pages
+			.iter()
+			.filter_map(|page| page.section.as_ref())
+			.find(|s| self.get_section(s).is_none())
+		{
+			Some(s) => Err(format!("a page of unknown section {s}")),
+			None => Ok(()),
+		}
 	}
 
 	fn check_user_pages(&self) -> Result<(), String> {

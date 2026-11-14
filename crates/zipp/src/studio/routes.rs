@@ -163,6 +163,7 @@ async fn schema_route(
 					name: p.name().into(),
 					module: s.js.is_some(),
 					data: s.data,
+					pages: s.pages,
 				})
 			})
 			.collect(),

@@ -8,6 +8,7 @@
 		canSetup,
 		canTrash,
 		isAdmin,
+		pluginPages,
 		visibleNav,
 	} from '../core/access';
 	import { navHref } from '../core/paths';
@@ -34,8 +35,18 @@
 	const page = $derived(current.path.split('/')[2] ?? '');
 	// the pages that aren't a group of the nav
 	const other = $derived(
-		['assets', 'ai', 'users', 'graphql', 'setup', 'trash'].includes(page),
+		[
+			'assets',
+			'ai',
+			'plugins',
+			'users',
+			'graphql',
+			'setup',
+			'trash',
+		].includes(page),
 	);
+	// `/admin/plugins/seo/redirects`: the plugin and its page
+	const pluginPage = $derived(current.path.split('/').slice(3, 5).join('/'));
 	// only the sections the role may see
 	const groups = $derived(visibleNav(schema));
 	// the group of the section on screen
@@ -110,6 +121,16 @@
 				{t('shell.ai')}
 			</a>
 		{/if}
+		{#each pluginPages(schema) as { plugin, page: p } (plugin + p.handle)}
+			<a
+				class="item nav-item"
+				href="/admin/plugins/{plugin}/{p.handle}"
+				class:active={pluginPage === `${plugin}/${p.handle}`}
+			>
+				<SchemaIcon icon={p.icon ?? undefined} fallback="block" />
+				{p.name}
+			</a>
+		{/each}
 		{#if canSetup(schema) || isAdmin(schema) || canTrash(schema)}
 			<hr />
 		{/if}

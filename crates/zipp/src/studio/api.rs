@@ -16,6 +16,8 @@ pub struct PluginResp {
 	/// whether it has a module, else only `data`
 	pub module: bool,
 	pub data: serde_json::Value,
+	/// its pages in the sidebar
+	pub pages: Vec<crate::PluginPage>,
 }
 
 /// A doc of the code, as html.

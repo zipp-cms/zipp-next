@@ -278,7 +278,18 @@ A plugin is a crate that adds a whole feature, turned on with one line:
   `sectionSetup(target, { schema, section, data, host })` adds a card to
   the setup page of a section. `PluginStudio::default().data(..)` gives
   the studio only data, like the agent's `{ "chat": true }` that turns
-  on the coding agent in the chat.
+  on the coding agent in the chat. `.page(PluginPage::new("redirects",
+  "Redirects").icon("route").section("pages"))` adds a page to the
+  sidebar, `/admin/plugins/<plugin>/<handle>`, for who may view the
+  section (admins only without one; its routes check the same with
+  `Authed::check`); the module's `page(target, { schema, page, data,
+  host })` shows it and returns `{ destroy() }`.
+- `tables`: the plugin's own tables, SQL like zipp's `db.rs` that runs
+  once each, in order, before the migrations (`plugin_tables` counts
+  them per plugin). Sites ran the released ones: never change one,
+  append a new one; name the tables after the plugin
+  (`seo_redirects`). Content stays in entries, a table is for what
+  isn't content, like a log or what visitors send.
 
 What a plugin hands zipp is made with constructors (`GraphqlExt::new()`
 with `types`, `entry_fields` and `root_fields`, `EntryField::new`,

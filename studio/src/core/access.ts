@@ -6,6 +6,7 @@ import {
 	roleOf,
 	type Access,
 	type NavGroup,
+	type PluginPage,
 	type Role,
 	type Schema,
 } from './schema';
@@ -71,6 +72,21 @@ export function isAdmin(schema: Schema): boolean {
 
 export function can(schema: Schema, section: string, need: Access): boolean {
 	return isAdmin(schema) || enough(role(schema)?.sections[section], need);
+}
+
+/** The pages of plugins the user sees, with the plugin's name. */
+export function pluginPages(
+	schema: Schema,
+): { plugin: string; page: PluginPage }[] {
+	return schema.plugins.flatMap(p =>
+		p.pages
+			.filter(page =>
+				page.section
+					? can(schema, page.section, 'view')
+					: isAdmin(schema),
+			)
+			.map(page => ({ plugin: p.name, page })),
+	);
 }
 
 /**

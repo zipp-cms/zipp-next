@@ -77,7 +77,11 @@ impl crate::Plugin for Studio {
 		Some(match self.0 {
 			"chat" => crate::PluginStudio::default()
 				.data(serde_json::json!({ "chat": true })),
-			_ => crate::PluginStudio::new("export {}"),
+			_ => crate::PluginStudio::new("export {}").page(
+				crate::PluginPage::new("deck", "Deck")
+					.icon("layers")
+					.section("events"),
+			),
 		})
 	}
 }
@@ -92,8 +96,23 @@ async fn plugins_with_and_without_a_module() {
 	assert_eq!(
 		schema["plugins"],
 		serde_json::json!([
-			{ "name": "cards", "module": true, "data": null },
-			{ "name": "chat", "module": false, "data": { "chat": true } },
+			{
+				"name": "cards",
+				"module": true,
+				"data": null,
+				"pages": [{
+					"handle": "deck",
+					"name": "Deck",
+					"icon": { "lucide": "layers" },
+					"section": "events",
+				}],
+			},
+			{
+				"name": "chat",
+				"module": false,
+				"data": { "chat": true },
+				"pages": [],
+			},
 		])
 	);
 
@@ -102,6 +121,46 @@ async fn plugins_with_and_without_a_module() {
 	assert_eq!(resp.status(), StatusCode::OK);
 	let resp = anon.get("/_plugins/chat.js").await;
 	assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+/// A plugin with a page of an unknown section.
+struct Lost;
+
+impl crate::Plugin for Lost {
+	fn name(&self) -> &'static str {
+		"lost"
+	}
+
+	fn studio(&self) -> Option<crate::PluginStudio> {
+		let page = crate::PluginPage::new("deck", "Deck").section("nowhere");
+		Some(crate::PluginStudio::new("export {}").page(page))
+	}
+}
+
+#[test]
+fn a_plugin_page_needs_a_known_section() {
+	let err = site_with_roles().plugin(Lost).check().unwrap_err();
+	assert!(err.contains("unknown section nowhere"), "{err}");
+}
+
+/// A plugin with a page but no module to show it.
+struct Blank;
+
+impl crate::Plugin for Blank {
+	fn name(&self) -> &'static str {
+		"blank"
+	}
+
+	fn studio(&self) -> Option<crate::PluginStudio> {
+		let page = crate::PluginPage::new("deck", "Deck");
+		Some(crate::PluginStudio::default().page(page))
+	}
+}
+
+#[test]
+fn a_plugin_page_needs_a_module() {
+	let err = site_with_roles().plugin(Blank).check().unwrap_err();
+	assert!(err.contains("pages need a module"), "{err}");
 }
 
 /// A field type of another crate with its editor.

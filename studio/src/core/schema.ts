@@ -197,6 +197,15 @@ export type Component = {
 /** An icon of the code: a Lucide icon by its name, or an svg of its own. */
 export type SchemaIcon = { lucide: string } | { svg: string };
 
+/** A page of a plugin in the sidebar, `/admin/plugins/<plugin>/<handle>`;
+ * users who may view `section` see it, admins only without one. */
+export type PluginPage = {
+	handle: string;
+	name: string;
+	icon: SchemaIcon | null;
+	section: string | null;
+};
+
 /** A tab of the editor with the handles of its fields. */
 export type Tab = {
 	name: string;
@@ -258,7 +267,12 @@ export type Schema = {
 	/** the svgs of the Lucide icons it names, by name */
 	icons: Record<string, string>;
 	/** the plugins of the studio, `module`: `/_plugins/<name>.js` */
-	plugins: { name: string; module: boolean; data: unknown }[];
+	plugins: {
+		name: string;
+		module: boolean;
+		data: unknown;
+		pages: PluginPage[];
+	}[];
 	/** what each plugin added to the content model, handles */
 	pluginsAdded: {
 		plugin: string;
