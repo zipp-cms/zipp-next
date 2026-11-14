@@ -206,3 +206,8 @@ commit.
       says which sections (and assets) a token may read, each token of
       the studio gets one; the GraphQL page also lists the server's own
       token (`ZIPP_GRAPHQL_TOKEN`, full access) so it is never empty
+- [ ] Duplicate an asset (operator 2026-11-14, later): Duplicate in an
+      asset's ⋯ menu (library and asset field) and Save as new in the
+      image editor, like Craft's, so one use of an image gets its own
+      crop without changing the others that link the same asset
+      (valgistesshots' grid)
