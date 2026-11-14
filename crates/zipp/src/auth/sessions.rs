@@ -85,7 +85,7 @@ pub(crate) fn add_user(
 	email: &str,
 	password: &str,
 	role: Option<&str>,
-) -> Result<()> {
+) -> Result<i64> {
 	let hash = bcrypt::hash(password, COST)
 		.map_err(|e| Error::Internal(e.to_string()))?;
 	let id: Option<i64> = conn
@@ -101,7 +101,8 @@ pub(crate) fn add_user(
 		None => crate::users::create(conn, email, "", &hash, role, "")?,
 	};
 	// a new password logs out everywhere
-	set_password_hash(conn, id, &hash, None)
+	set_password_hash(conn, id, &hash, None)?;
+	Ok(id)
 }
 
 /// The user of a login, after the password was checked; bcrypt takes a

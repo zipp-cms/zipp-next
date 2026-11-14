@@ -120,7 +120,8 @@ fn finds_saved_entries_and_follows_updates() {
 	// the start of a word, without accents, in blocks and markdown
 	assert_eq!(titles(&conn, "de", "brotch"), ["Bäckerei"]);
 	assert_eq!(titles(&conn, "en", "sauer"), ["Bäckerei"]);
-	assert_eq!(titles(&conn, "de", "baeck"), Vec::<String>::new());
+	// and its ascii slug
+	assert_eq!(titles(&conn, "de", "baeck"), ["Bäckerei"]);
 	assert_eq!(titles(&conn, "de", "bäck"), ["Bäckerei"]);
 	assert_eq!(titles(&conn, "de", "jacket"), ["Jazz"]);
 	let found = search(&conn, &s, &user(None), "de", "jacket").unwrap();

@@ -7,16 +7,27 @@ fn slugs_come_from_the_name() {
 	let db = Db::memory().unwrap();
 	let conn = db.conn();
 	let mia = create(&conn, "m@x.ch", "Mia Müller", "", None, "").unwrap();
-	assert_eq!(user(&conn, mia).unwrap().slug, "mia-müller");
+	assert_eq!(user(&conn, mia).unwrap().slug, "mia-mueller");
 
 	// without a name the id, a name set later replaces it
 	let anon = create(&conn, "a@x.ch", " ", "", None, "").unwrap();
 	assert_eq!(user(&conn, anon).unwrap().slug, format!("user-{anon}"));
 	set_name(&conn, anon, "Mia Müller").unwrap();
-	assert_eq!(user(&conn, anon).unwrap().slug, "mia-müller-2");
+	assert_eq!(user(&conn, anon).unwrap().slug, "mia-mueller-2");
 	// then it stays
 	set_name(&conn, anon, "Sam").unwrap();
-	assert_eq!(user(&conn, anon).unwrap().slug, "mia-müller-2");
+	assert_eq!(user(&conn, anon).unwrap().slug, "mia-mueller-2");
+}
+
+#[test]
+fn slugs_of_names_are_ascii_given_ones_stay() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let id = create(&conn, "s@x.ch", "Sören Meier", "", None, "").unwrap();
+	assert_eq!(user(&conn, id).unwrap().slug, "soeren-meier");
+
+	let given = super::profile::check_slug(&conn, id, "Sören").unwrap();
+	assert_eq!(given.unwrap(), "sören");
 }
 
 #[test]

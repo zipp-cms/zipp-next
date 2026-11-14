@@ -10,7 +10,7 @@ use serde_json::Value;
 
 use crate::content::FieldError;
 use crate::db::marks;
-use crate::entries::{self, LIVE_DATES, slugify};
+use crate::entries::{self, LIVE_DATES, clean_slug, slugify};
 use crate::error::{Error, Result};
 use crate::schema::{Schema, USER};
 
@@ -84,7 +84,7 @@ pub(crate) fn check_slug(
 	id: i64,
 	slug: &str,
 ) -> Result<std::result::Result<String, FieldError>> {
-	let slug = slugify(slug);
+	let slug = clean_slug(slug);
 	if slug.is_empty() {
 		return Ok(Err(FieldError::new("slug", "is required")));
 	}

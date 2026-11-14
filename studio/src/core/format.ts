@@ -1,12 +1,48 @@
 import { locale, t } from '../i18n/index.svelte';
 
+/** Latin letters as ASCII, like the server's `entries::ascii`. */
+const ASCII: Record<string, string> = {
+	ä: 'ae',
+	æ: 'ae',
+	ö: 'oe',
+	œ: 'oe',
+	ü: 'ue',
+	ß: 'ss',
+	þ: 'th',
+};
+for (const [a, cs] of Object.entries({
+	a: 'àáâãåāăą',
+	c: 'çćĉċč',
+	d: 'ďđð',
+	e: 'èéêëēĕėęě',
+	g: 'ĝğġģ',
+	h: 'ĥħ',
+	i: 'ìíîïĩīĭįı',
+	j: 'ĵ',
+	k: 'ķ',
+	l: 'ĺļľŀł',
+	n: 'ñńņň',
+	o: 'òóôõøōŏő',
+	r: 'ŕŗř',
+	s: 'śŝşšș',
+	t: 'ţťŧț',
+	u: 'ùúûũūŭůűų',
+	w: 'ŵ',
+	y: 'ýÿŷ',
+	z: 'źżž',
+})) {
+	for (const c of cs) ASCII[c] = a;
+}
+
 /**
  * A slug of a title like the server's (`entries::slugify`): lowercase,
- * letters and digits (also ü), anything else one `-`.
+ * Latin letters as ASCII (ü is ue, é is e, other scripts stay) and
+ * digits, anything else one `-`.
  */
 export function slugify(s: string): string {
-	return s
-		.toLowerCase()
+	return [...s.toLowerCase()]
+		.map(c => ASCII[c] ?? c)
+		.join('')
 		.replace(/[^\p{L}\p{N}]+/gu, '-')
 		.replace(/^-+|-+$/g, '');
 }

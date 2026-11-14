@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Slugs made of a title or a name are ASCII like Craft's
+  `limitAutoSlugsToAscii`: `Über uns` is `ueber-uns`, `Crème brûlée`
+  `creme-brulee`, other scripts keep their letters. Saved and typed
+  slugs stay as they are (`über-uns`), only new entries and users get
+  the new ones; the slug of a block (anchors) changes the same way.
+- `user --name`: the cli sets a user's display name too.
+
 ## 0.2.0 (2026-11-07)
 
 Website members and public user profiles, GraphQL schemas as code, more

@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
+use rusqlite::Connection;
 
 #[cfg(feature = "craft")]
 use crate::craft;
@@ -162,6 +163,10 @@ pub(super) enum Cmd {
 		email: String,
 		#[arg(long)]
 		role: Option<String>,
+		/// The display name; the slug follows it while the user has none
+		/// of a name (`user-4`)
+		#[arg(long)]
+		name: Option<String>,
 	},
 	/// Send a test mail, to check `--smtp-url` and `--mail-from`.
 	Mail {
@@ -350,6 +355,7 @@ pub(super) fn save_user(
 	db_path: &Path,
 	email: &str,
 	role: Option<&str>,
+	name: Option<&str>,
 ) -> CmdResult {
 	crate::users::check_role(schema, role)?;
 	print!("Password: ");
@@ -362,8 +368,23 @@ pub(super) fn save_user(
 	}
 
 	let db = Db::open(db_path)?;
-	auth::add_user(&db.conn(), email, password, role)?;
+	store_user(&db.conn(), email, password, role, name)?;
 	println!("Saved {email} as {}", role.unwrap_or("admin"));
+	Ok(())
+}
+
+/// The user of [`save_user`] with its name, if one is given.
+fn store_user(
+	conn: &Connection,
+	email: &str,
+	password: &str,
+	role: Option<&str>,
+	name: Option<&str>,
+) -> crate::error::Result<()> {
+	let id = auth::add_user(conn, email, password, role)?;
+	if let Some(name) = name {
+		crate::users::set_name(conn, id, name)?;
+	}
 	Ok(())
 }
 

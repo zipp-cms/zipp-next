@@ -12,7 +12,13 @@ a tree. A section allows one or more entry types and has a uri format
 (`events/{slug}`, `{parent.uri}/{slug}`). Every entry has a row per
 site with its own title, slug, uri, published flag and translatable
 fields (the slug comes from the title, a title without letters or
-digits needs one typed); the other fields are shared by all sites. Like Craft an entry
+digits needs one typed); the other fields are shared by all sites.
+Slugs made of a title (or a user's name, a block's title) are ASCII like
+Craft's `limitAutoSlugsToAscii`: umlauts are two letters, other Latin
+letters lose their accents (`Über uns` is `ueber-uns`, `Crème brûlée`
+`creme-brulee`), other scripts keep their letters. A slug that is typed
+or already saved is only cleaned up (`über-uns` stays), so saving an
+entry again never changes its url. Like Craft an entry
 has a post date (set when it is first published) and an expiry date,
 the same in all sites: it is live in a site when it is published there
 and the date is between them, the website and GraphQL only show it
@@ -425,7 +431,7 @@ WordPress' author pages: their name, a `slug` and the user fields,
 like a block's fields, in migrations (`--rename user.bio=about`) and
 `DataTx::each("user", …)`, the same in all sites, no defaults, not
 indexed, and `id`, `name`, `slug`, `url` and `uri` are built in. A
-user's slug comes from their name when they are made (`anna-muster`,
+user's slug comes from their name when they are made (`soeren-meier`,
 `-2` when it is taken, `user-4` without a name until they set one), then
 stays: admins change it on the user's page, unique like an entry's.
 

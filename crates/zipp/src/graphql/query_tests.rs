@@ -305,6 +305,6 @@ async fn blocks_have_a_slug_of_their_title_field() {
 	.await;
 	assert_eq!(
 		data["entry"]["body"],
-		json!([{ "slug": "über-uns" }, { "slug": null }, { "slug": null }])
+		json!([{ "slug": "ueber-uns" }, { "slug": null }, { "slug": null }])
 	);
 }
