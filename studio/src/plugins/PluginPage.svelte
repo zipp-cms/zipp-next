@@ -18,7 +18,7 @@
 </script>
 
 <script lang="ts">
-	import { host } from '../fields/host.svelte';
+	import { mountPlugin } from './module';
 	import type { PluginPage, Schema } from '../core/schema';
 
 	/**
@@ -32,32 +32,16 @@
 	}: { schema: Schema; found: { plugin: string; page: PluginPage } } =
 		$props();
 
-	type Mounted = { destroy(): void };
-
 	function page(
 		target: HTMLElement,
 		found: { plugin: string; page: PluginPage },
 	) {
 		const plugin = schema.plugins.find(p => p.name === found.plugin)!;
-		let mounted: Mounted | null = null;
-		let gone = false;
-		import(/* @vite-ignore */ `/_plugins/${found.plugin}.js`)
-			.then(m => {
-				if (gone || !m.page) return;
-				mounted = m.page(target, {
-					schema: $state.snapshot(schema),
-					page: $state.snapshot(found.page),
-					data: plugin.data,
-					host,
-				});
-			})
-			.catch(e => (target.textContent = `${found.plugin}: ${e.message}`));
-		return {
-			destroy() {
-				gone = true;
-				mounted?.destroy();
-			},
+		const props = {
+			schema: $state.snapshot(schema),
+			page: $state.snapshot(found.page),
 		};
+		return mountPlugin(target, plugin, 'page', props);
 	}
 </script>
 

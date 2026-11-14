@@ -143,6 +143,26 @@ fn a_plugin_page_needs_a_known_section() {
 	assert!(err.contains("unknown section nowhere"), "{err}");
 }
 
+/// A plugin with a page but no module to show it.
+struct Blank;
+
+impl crate::Plugin for Blank {
+	fn name(&self) -> &'static str {
+		"blank"
+	}
+
+	fn studio(&self) -> Option<crate::PluginStudio> {
+		let page = crate::PluginPage::new("deck", "Deck");
+		Some(crate::PluginStudio::default().page(page))
+	}
+}
+
+#[test]
+fn a_plugin_page_needs_a_module() {
+	let err = site_with_roles().plugin(Blank).check().unwrap_err();
+	assert!(err.contains("pages need a module"), "{err}");
+}
+
 /// A field type of another crate with its editor.
 struct Stars;
 

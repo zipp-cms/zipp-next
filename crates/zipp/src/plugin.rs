@@ -97,10 +97,14 @@ pub(crate) fn create_tables(
 			.optional()?
 			.unwrap_or(0);
 		if done > tables.len() {
-			return Err(rusqlite::Error::InvalidParameterName(format!(
-				"the tables of the plugin {} are of a newer version",
-				p.name()
-			)));
+			let msg = format!(
+				"the tables of the plugin {} are of a newer version \
+				({done}, this one knows {}): update the plugin",
+				p.name(),
+				tables.len()
+			);
+			let code = rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR);
+			return Err(rusqlite::Error::SqliteFailure(code, Some(msg)));
 		}
 
 		for (i, sql) in tables.iter().enumerate().skip(done) {
@@ -184,8 +188,8 @@ impl EntryField {
 /// type's. It may export
 /// `sectionSetup(target, { schema, section, data, host })`, a card on
 /// the setup page of a section; `data` is the plugin's JSON for it, and
-/// `page(target, { schema, page, data, host })` for its [`PluginPage`]s. A plugin without a module (`default`) can still give
-/// the studio data.
+/// `page(target, { schema, page, data, host })` for its [`PluginPage`]s.
+/// A plugin without a module (`default`) can still give the studio data.
 #[derive(Debug, Clone, Default)]
 #[non_exhaustive]
 pub struct PluginStudio {
@@ -384,3 +388,7 @@ impl Schema {
 		self
 	}
 }
+
+#[cfg(test)]
+#[path = "plugin_tests.rs"]
+mod tests;

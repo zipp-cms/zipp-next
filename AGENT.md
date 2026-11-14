@@ -70,7 +70,9 @@ What zipp does is in `docs/`, what comes next in `docs/PLAN.md`.
   the editor in `edit/`, drafts), `assets/` (the library, the asset
   panel, the image editor in `image/`), `fields/` (one component per
   field kind, `registry.ts` maps the kinds, `rich/` the rich text),
-  `setup/`, `ai/`, `users/`, `graphql/` (the tokens), `auth/`. An area
+  `setup/`, `ai/`, `users/`, `graphql/` (the tokens), `auth/`,
+  `plugins/` (the pages of plugins, `module.ts` mounts what a plugin's
+  module renders). An area
   has its `api.ts` (the requests of its server area), its pages and
   components and their logic in `.ts`. An area that shows a second
   server area or plugin has its requests in a file named after it:
