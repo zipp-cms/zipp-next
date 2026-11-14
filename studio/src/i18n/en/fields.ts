@@ -18,6 +18,7 @@ export default {
 	'fields.moveFile': 'Move the file',
 	'fields.deletedFile': 'A file that was deleted',
 	'fields.details': 'Details',
+	'fields.replace': 'Replace',
 	'fields.dropToAdd': 'Drop to add',
 	'fields.dragVideos': 'Drag videos here',
 	'fields.dragImages': 'Drag images here',

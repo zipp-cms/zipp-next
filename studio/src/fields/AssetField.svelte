@@ -50,6 +50,8 @@
 
 	const chosen = chosenAssets(() => ids);
 	let picking = $state(false);
+	// the index of the file another one from the library replaces
+	let replacing = $state<number | null>(null);
 
 	// cards side by side, files one under the other
 	let list = $state<HTMLElement>();
@@ -66,6 +68,14 @@
 		else if (!full) set(inserted(ids, a.id));
 		// with a single one there is nothing more to pick
 		if (max === 1) picking = false;
+	}
+
+	/** The file at `replacing` swapped for `a`, in its place. */
+	function replace(a: Asset) {
+		const i = replacing!;
+		replacing = null;
+		const next = ids.map((id, k) => (k === i ? a.id : id));
+		set(next.filter((id, k) => k === i || id !== a.id));
 	}
 
 	/**
@@ -143,6 +153,11 @@
 								icon: 'edit',
 								onclick: () => openAsset(a.id),
 							},
+							{
+								label: t('fields.replace'),
+								icon: 'replace',
+								onclick: () => (replacing = i),
+							},
 							...linkItems(a),
 							{
 								label: t('ui.remove'),
@@ -194,7 +209,17 @@
 	{/if}
 </div>
 
-{#if picking}
+{#if replacing !== null}
+	<AssetPicker
+		{images}
+		extensions={field.extensions}
+		folderPath={folder}
+		multiple={false}
+		selected={[ids[replacing]]}
+		onpick={replace}
+		onclose={() => (replacing = null)}
+	/>
+{:else if picking}
 	<AssetPicker
 		{images}
 		extensions={field.extensions}
