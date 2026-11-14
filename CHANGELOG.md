@@ -18,7 +18,9 @@ may show; plugins with tables and studio pages of their own.
   are, but an entry saved before with the unicode slug of its title
   (`über-uns`) no longer has its slug follow the title in the studio.
 - Users with only own access to a section link only assets they may
-  show (see Security): their drafts lose other assets.
+  show (see Security): their drafts lose other assets. Drafts saved
+  before keep theirs until they are saved again, so check the pending
+  drafts of members before an editor publishes them.
 
 ### Security
 
@@ -28,8 +30,9 @@ may show; plugins with tables and studio pages of their own.
   online), else the field is invalid: a guessed id no longer publishes
   another member's private photo. Their studio drafts lose such assets,
   an editor's publish would make them public. Links an entry has stay,
-  roles with the section's access link any asset. The same for the
-  user fields of one's own profile, only admins link any asset there.
+  roles with edit access to the section link any asset. The same for
+  the user fields of one's own profile, only admins link any asset
+  there.
 
 ### Content model and fields
 
