@@ -5,6 +5,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import { markdownInline } from '../core/markdown';
 	import { t } from '../i18n/index.svelte';
+	import { getEditing } from '../core/editing';
 	import { hasControl, labelId } from './labels';
 
 	/**
@@ -26,6 +27,10 @@
 		changed: boolean;
 	} = $props();
 
+	// in an entry, like in Craft, a required field only has to be filled
+	// to publish it: a draft or an unpublished entry saves without
+	const toPublish = !!getEditing();
+
 	// entry fields with their own value in each site get an icon, like
 	// Craft's; the others are the same in all sites
 	const translated = $derived(
@@ -44,7 +49,12 @@
 		{#if changed}<span
 				class="changed-dot"
 				title={t('ui.changed')}
-			></span>{/if}{field.label}{#if field.required}<span class="req">
+			></span>{/if}{field.label}{#if field.required}<span
+				class="req"
+				title={t(
+					toPublish ? 'fields.requiredToPublish' : 'fields.required',
+				)}
+			>
 				*
 			</span>{/if}
 	</span>

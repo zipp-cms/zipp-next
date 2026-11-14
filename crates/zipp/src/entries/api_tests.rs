@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use serde_json::json;
 
 use super::api::*;
+use crate::entries::EntryInput;
 use crate::error::Error;
 use crate::fixtures::site_with_roles;
 use crate::schema::{Access, Condition, Field, Role};
@@ -231,13 +232,13 @@ async fn hidden_fields_aren_t_required() {
 	let why = Field::text("why").required().when(Condition::off("listed"));
 	schema.get_mut("event").unwrap().fields.push(why);
 	let ts = TestServer::new(schema);
-	let author = ts.user(Some("author"));
+	let editor = ts.user(Some("editor"));
 	let event =
 		|title, fields| CreateReq(input("events", "event", title, fields));
 
 	// listed by its default, the reason is hidden
-	author.call(&event("Jazz", json!({}))).await.unwrap();
-	let err = author
+	editor.call(&event("Jazz", json!({}))).await.unwrap();
+	let err = editor
 		.call(&event("Blues", json!({ "listed": false })))
 		.await
 		.unwrap_err();
@@ -246,6 +247,75 @@ async fn hidden_fields_aren_t_required() {
 	};
 	assert_eq!(fields[0].path, "why");
 	assert_eq!(fields[0].message, "is required");
+}
+
+#[tokio::test]
+async fn required_only_when_live() {
+	let mut schema = site_with_roles();
+	let event = schema.get_mut("event").unwrap();
+	event.fields.push(Field::text("venue").required());
+	event
+		.fields
+		.push(Field::text("teaser").required().translatable());
+	let ts = TestServer::new(schema);
+	let admin = ts.admin();
+	let paths = |err: Error| {
+		let Error::Invalid(fields) = err else {
+			panic!("{err:?}")
+		};
+		fields
+			.iter()
+			.map(|f| format!("{} {}", f.path, f.message))
+			.collect::<Vec<_>>()
+	};
+
+	// unpublished it may wait for its fields, not for a title
+	let mut new = input("events", "event", "Jazz", json!({}));
+	new.published = false;
+	let e = admin.call(&CreateReq(new.clone())).await.unwrap();
+	new.title = "".into();
+	let err = admin.call(&CreateReq(new)).await.unwrap_err();
+	assert_eq!(paths(err), ["title is required"]);
+	// other checks stay
+	let mut bad = input("events", "event", "Bad", json!({ "price": "x" }));
+	bad.published = false;
+	let err = admin.call(&CreateReq(bad)).await.unwrap_err();
+	assert_eq!(paths(err), ["price wrong type"]);
+
+	// publishing needs them, in de
+	let save = |site: &str, published, fields| UpdateReq {
+		id: e.id,
+		input: EntryInput {
+			site: Some(site.into()),
+			published,
+			..input("events", "event", "Jazz", fields)
+		},
+	};
+	let err = admin.call(&save("de", true, json!({}))).await.unwrap_err();
+	assert_eq!(paths(err), ["venue is required", "teaser is required"]);
+	let filled = json!({ "venue": "Bern", "teaser": "Live" });
+	admin.call(&save("de", true, filled.clone())).await.unwrap();
+	// live it stays filled
+	let err = admin
+		.call(&save("de", true, json!({ "venue": "Bern" })))
+		.await
+		.unwrap_err();
+	assert_eq!(paths(err), ["teaser is required"]);
+
+	// en isn't live: its own text may wait, the shared venue is live in de
+	let err = admin.call(&save("en", false, json!({}))).await.unwrap_err();
+	assert_eq!(paths(err), ["venue is required"]);
+	admin
+		.call(&save("en", false, json!({ "venue": "Bern" })))
+		.await
+		.unwrap();
+
+	// unpublishing never fails for them
+	admin
+		.call(&save("de", false, json!({ "venue": "Bern" })))
+		.await
+		.unwrap();
+	admin.call(&save("de", false, json!({}))).await.unwrap();
 }
 
 #[tokio::test]

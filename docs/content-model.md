@@ -73,6 +73,16 @@ until an editor removes them (`makemigration` says so).
 `Field::email("formEmail")` takes one address, `name@host.tld` without
 spaces (the server refuses anything else, the same check as email links
 and table columns), a `String` in GraphQL.
+`.required()` fields must be filled where an entry is live, like
+Craft's: a draft and an unpublished entry save without them (the
+studio's star says "Required to publish"), publishing it (the studio's
+Publish, `published: true` through the api, the members' routes, the AI)
+refuses with `is required` like any other mistake (the `min` of blocks
+too), and a save that keeps it live can't empty them. Per site: an entry live in `de` but not
+in `en` needs the translatable ones in `de`, the shared ones everywhere.
+Unpublishing never fails for them, the title is always required, and
+everything else is checked on every save. Fields of assets and users
+are always required.
 `.default(true)`, `.default("Mehr")` or a dropdown's value is what a new
 entry or block starts with: the studio fills it in, an entry created
 through the api without the field gets it, and a single starts with it.

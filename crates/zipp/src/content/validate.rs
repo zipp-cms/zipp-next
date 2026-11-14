@@ -7,8 +7,37 @@ pub fn validate(
 	comp: &Component,
 	fields: &Value,
 ) -> Result<Value, Vec<FieldError>> {
+	validate_live(schema, comp, fields, Live::Here)
+}
+
+/// Where the content of an entry in a site is live. Like in Craft,
+/// required fields only have to be filled in content that is live; the
+/// other checks are the same.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum Live {
+	/// in its site: every required field
+	Here,
+	/// only in other sites: the fields shared by all sites, they are
+	/// live there too
+	Elsewhere,
+	/// nowhere, a draft may be half done
+	Nowhere,
+}
+
+/// [`validate`] of content that is live as `live` says.
+pub(crate) fn validate_live(
+	schema: &Schema,
+	comp: &Component,
+	fields: &Value,
+	live: Live,
+) -> Result<Value, Vec<FieldError>> {
+	let needless = |f: &Field| match live {
+		Live::Here => false,
+		Live::Elsewhere => f.translatable,
+		Live::Nowhere => true,
+	};
 	let mut errors = vec![];
-	let out = validate_fields(schema, comp, fields, "", false, &mut errors);
+	let out = fields_of(schema, comp, fields, "", &needless, &mut errors);
 	if errors.is_empty() {
 		Ok(out)
 	} else {
@@ -24,6 +53,19 @@ pub(crate) fn validate_fields(
 	fields: &Value,
 	prefix: &str,
 	hidden: bool,
+	errors: &mut Vec<FieldError>,
+) -> Value {
+	fields_of(schema, comp, fields, prefix, &|_| hidden, errors)
+}
+
+/// [`validate_fields`], `needless`: whether a field (and what is inside
+/// it) needn't be filled.
+fn fields_of(
+	schema: &Schema,
+	comp: &Component,
+	fields: &Value,
+	prefix: &str,
+	needless: &dyn Fn(&Field) -> bool,
 	errors: &mut Vec<FieldError>,
 ) -> Value {
 	let mut out = Map::new();
@@ -48,7 +90,7 @@ pub(crate) fn validate_fields(
 		let value = obj.get(&field.handle).unwrap_or(&Value::Null);
 		// a hidden field keeps its value but needn't be filled, also
 		// not the fields inside it
-		let hidden = hidden || !comp.is_shown(&field.handle, obj);
+		let hidden = needless(field) || !comp.is_shown(&field.handle, obj);
 		if let Some(v) =
 			validate_value(schema, field, value, &path, hidden, errors)
 		{
