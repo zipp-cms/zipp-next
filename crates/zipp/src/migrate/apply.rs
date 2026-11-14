@@ -20,7 +20,8 @@ use crate::schema::{ASSET, Schema, SectionKind, USER};
 
 /// Brings the database up to the code before the server or a command
 /// uses it: refuses when the code changed since the last migration,
-/// applies the migrations that didn't run yet and returns their names.
+/// makes the plugins' tables, applies the migrations that didn't run yet
+/// and returns their names.
 pub(crate) fn up_to_date(
 	conn: &Connection,
 	migrations: &[Migration],
@@ -31,6 +32,7 @@ pub(crate) fn up_to_date(
 			`makemigration` first"
 			.into());
 	}
+	crate::plugin::create_tables(conn, code).map_err(|e| e.to_string())?;
 	apply_migrations(conn, migrations, code).map_err(|e| e.to_string())
 }
 

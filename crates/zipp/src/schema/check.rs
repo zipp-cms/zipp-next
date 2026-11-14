@@ -12,6 +12,19 @@ impl Schema {
 		self.check_offline()?;
 		for p in &self.plugins.0 {
 			p.check(self).map_err(|e| format!("{}: {e}", p.name()))?;
+			let pages = p.studio().map(|s| s.pages).unwrap_or_default();
+			check_handles(&pages, |p| &p.handle, "page")
+				.map_err(|e| format!("{}: {e}", p.name()))?;
+			if let Some(s) = pages
+				.iter()
+				.filter_map(|p| p.section.as_ref())
+				.find(|s| self.get_section(s).is_none())
+			{
+				return Err(format!(
+					"{}: a page of unknown section {s}",
+					p.name()
+				));
+			}
 		}
 		self.check_roles()?;
 		self.check_graphql_schemas()?;

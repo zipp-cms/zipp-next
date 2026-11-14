@@ -22,11 +22,19 @@ use crate::schema::{FieldKind, Icon, Schema};
 struct Files;
 
 /// The Lucide icons the schema names (entry types, blocks, nav groups,
-/// options of button groups),
+/// options of button groups, pages of plugins),
 /// by name: from the build of the studio, which has all of them in
 /// `_studio/lucide-<version>/`. Gathered once at the start, they come with
 /// the schema; the studio fetches only names that aren't here.
 pub fn schema_icons(schema: &Schema) -> BTreeMap<String, String> {
+	let pages: Vec<Icon> = schema
+		.plugins
+		.0
+		.iter()
+		.filter_map(|p| p.studio())
+		.flat_map(|s| s.pages)
+		.filter_map(|p| p.icon)
+		.collect();
 	let names = schema
 		.components
 		.iter()
@@ -44,6 +52,7 @@ pub fn schema_icons(schema: &Schema) -> BTreeMap<String, String> {
 				.flatten()
 				.filter_map(|o| o.icon.as_ref()),
 		)
+		.chain(&pages)
 		.filter_map(|i| match i {
 			Icon::Lucide(name) => Some(name),
 			Icon::Svg(_) => None,

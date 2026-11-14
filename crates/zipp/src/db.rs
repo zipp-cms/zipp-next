@@ -283,6 +283,13 @@ pub(crate) const MIGRATIONS: &[&str] = &[
 	ALTER TABLE graphql_tokens DROP COLUMN previews;
 	ALTER TABLE graphql_tokens DROP COLUMN users;
 "#,
+	// how many of its tables a plugin made, see `Plugin::tables`
+	r#"
+	CREATE TABLE plugin_tables (
+		plugin TEXT PRIMARY KEY,
+		version INTEGER NOT NULL
+	);
+"#,
 ];
 
 /// `?, ?, ?` for an `IN` of `n` values.

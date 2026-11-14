@@ -48,6 +48,7 @@ impl TestServer {
 		schema.check().expect("the schema has a mistake");
 		let db = Db::memory().unwrap();
 		migrate::apply::create_singles(&db.conn(), &schema).unwrap();
+		crate::plugin::create_tables(&db.conn(), &schema).unwrap();
 
 		let files = tempfile::tempdir().unwrap();
 
