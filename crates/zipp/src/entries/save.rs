@@ -24,18 +24,57 @@ pub fn save(
 }
 
 /// Validates a save of `user_id` (`None`: the system) without writing
-/// anything.
+/// anything. Required fields only have to be filled where the entry is
+/// live: in this site if the save publishes it, the shared fields also
+/// when it is published in another site.
 pub(crate) fn check(
+	conn: &Connection,
+	schema: &Schema,
+	id: Option<i64>,
+	input: EntryInput,
+	user_id: Option<i64>,
+) -> Result<Checked> {
+	let site = schema.site_or_primary(input.site.clone());
+	let elsewhere = match id {
+		Some(id) => live_elsewhere(conn, id, &site)?,
+		None => false,
+	};
+	check_live(conn, schema, id, input, user_id, elsewhere)
+}
+
+/// Whether an entry is published in a site other than `site`.
+pub(crate) fn live_elsewhere(
+	conn: &Connection,
+	id: i64,
+	site: &str,
+) -> Result<bool> {
+	Ok(conn.query_row(
+		"SELECT EXISTS (SELECT 1 FROM entry_sites
+		WHERE entry_id = ?1 AND site != ?2 AND published = 1)",
+		params![id, site],
+		|r| r.get(0),
+	)?)
+}
+
+/// [`check`], `elsewhere`: whether the entry is (or will be) published
+/// in another site.
+pub(crate) fn check_live(
 	conn: &Connection,
 	schema: &Schema,
 	id: Option<i64>,
 	mut input: EntryInput,
 	user_id: Option<i64>,
+	elsewhere: bool,
 ) -> Result<Checked> {
 	let site = schema.site_or_primary(input.site.clone());
 	if schema.get_site(&site).is_none() {
 		return Err(Error::Request(format!("unknown site {site}")));
 	}
+	let live = match (input.published, elsewhere) {
+		(true, _) => Live::Here,
+		(false, true) => Live::Elsewhere,
+		(false, false) => Live::Nowhere,
+	};
 	let (section, comp) = schema.section_type(&input.section, &input.ty)?;
 
 	let parent_id = match id {
@@ -105,7 +144,7 @@ pub(crate) fn check(
 		uris.insert(s.handle.clone(), uri);
 	}
 
-	let mut fields = match validate(schema, comp, &input.fields) {
+	let mut fields = match validate_live(schema, comp, &input.fields, live) {
 		Ok(f) => f,
 		Err(e) => {
 			errors.extend(e);
@@ -124,6 +163,7 @@ pub(crate) fn check(
 			&mut fields,
 			user_id,
 			&before,
+			live,
 		)?);
 	}
 	if let Dates {
@@ -284,7 +324,8 @@ pub(crate) fn write(
 /// leaves them out already and they mustn't block saving what links to
 /// them. What the user `user_id` may not view counts as deleted, so a
 /// save tells nothing about hidden sections or assets; what it linked to
-/// `before` stays, someone who sees it chose it.
+/// `before` stays, someone who sees it chose it. `live` says which
+/// required fields that are left empty must be filled.
 fn check_relations(
 	conn: &Connection,
 	schema: &Schema,
@@ -292,6 +333,7 @@ fn check_relations(
 	fields: &mut Value,
 	user_id: Option<i64>,
 	before: &[(LinkKind, i64)],
+	live: Live,
 ) -> Result<Vec<FieldError>> {
 	let comp = schema.get(ty).unwrap();
 	let user = crate::auth::user_of(conn, user_id)?;
@@ -332,7 +374,7 @@ fn check_relations(
 			gone.contains(&(kind, id))
 		});
 		// what is left empty goes, a required field says so
-		*fields = match validate(schema, comp, fields) {
+		*fields = match validate_live(schema, comp, fields, live) {
 			Ok(f) => f,
 			Err(e) => return Ok(e),
 		};
@@ -423,8 +465,15 @@ pub(crate) fn check_fields(
 	};
 	let mut fields = validate(schema, comp, fields).map_err(Error::Invalid)?;
 	let before = links_of(schema, comp, old);
-	let errors =
-		check_relations(conn, schema, handle, &mut fields, user_id, &before)?;
+	let errors = check_relations(
+		conn,
+		schema,
+		handle,
+		&mut fields,
+		user_id,
+		&before,
+		Live::Here,
+	)?;
 	if !errors.is_empty() {
 		return Err(Error::Invalid(errors));
 	}

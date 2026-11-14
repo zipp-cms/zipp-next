@@ -13,8 +13,8 @@ use serde_json::Value;
 
 use crate::auth::Authed;
 use crate::content::{
-	FieldError, Target, drop_links, follow, index_values, relations, validate,
-	with_defaults,
+	FieldError, Live, Target, drop_links, follow, index_values, relations,
+	validate, validate_live, with_defaults,
 };
 use crate::db::{marks, now};
 use crate::drafts::{keep_live, record_revision};
@@ -43,6 +43,8 @@ pub(crate) use routes::routes;
 pub(crate) use routes::viewable_refs;
 pub(crate) use save::check;
 pub(crate) use save::check_fields;
+pub(crate) use save::check_live;
+pub(crate) use save::live_elsewhere;
 pub(crate) use save::reindex;
 pub(crate) use save::reindex_all;
 pub use save::save;

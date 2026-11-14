@@ -110,11 +110,16 @@ pub fn create_as(
 	// a new entry is the user's, own access is enough
 	let (schema, me) = (&state.schema, Some(auth.user_id));
 	auth.check_entry(schema, &input.section, me, Access::Edit)?;
-	// published only by who may publish
-	input.published &=
-		auth.can_entry(schema, &input.section, me, Access::Publish);
 	let entry = {
 		let conn = state.db.conn();
+		// published only by who may publish; asked to, it needs what a
+		// publish needs, like a change of `update_as`
+		if input.published
+			&& !auth.can_entry(schema, &input.section, me, Access::Publish)
+		{
+			check(&conn, schema, None, input.clone(), me)?;
+			input.published = false;
+		}
 		save(&conn, schema, None, input, me)?
 	};
 	state.changed(entry.id, &entry.section, ChangeKind::Saved);
@@ -140,8 +145,15 @@ pub fn update_as(
 		let (section, author) = owner_of(&conn, id)?;
 		auth.check_entry(schema, &section, author, Access::Edit)?;
 		// the draft gets the save as checked: what the user may not link
-		// to is out, an editor who publishes it may see more
-		let c = check(&conn, schema, Some(id), input, user)?;
+		// to is out, an editor who publishes it may see more; shared
+		// fields are required where the draft publishes, like its publish
+		let draft = get_draft(&conn, id)?;
+		let site = schema.site_or_primary(input.site.clone());
+		let elsewhere = match &draft {
+			Some(d) => d.doc.iter().any(|(s, d)| *s != site && d.published),
+			None => live_elsewhere(&conn, id, &site)?,
+		};
+		let c = check_live(&conn, schema, Some(id), input, user, elsewhere)?;
 		let doc = SiteDoc {
 			ty: c.ty,
 			title: c.title,
@@ -150,7 +162,7 @@ pub fn update_as(
 			fields: c.fields,
 			dates: c.dates,
 		};
-		let base = get_draft(&conn, id)?.map(|d| d.updated_at);
+		let base = draft.map(|d| d.updated_at);
 		let draft = put_draft(&conn, schema, id, &c.site, doc, base, user)?;
 
 		let publish = auth.can_entry(schema, &section, author, Access::Publish);

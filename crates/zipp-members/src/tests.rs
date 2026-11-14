@@ -307,6 +307,44 @@ async fn invalid_fields() {
 	);
 }
 
+/// A private post may wait for its required fields (the photo of an
+/// imported recipe), going live it needs them.
+#[tokio::test]
+async fn required_only_to_publish() {
+	let ts = TestServer::new(schema());
+	let member = ts.site_user(Some("member"));
+	let mut req = new_post("Zopf");
+	req.fields = json!({});
+	req.published = false;
+	let e = member.call(&req).await.unwrap();
+	assert!(!e.published);
+
+	let mut publish = change(e.id, "Zopf", json!({}));
+	publish.published = Some(true);
+	let Error::Invalid(errors) = member.call(&publish).await.unwrap_err()
+	else {
+		panic!("invalid");
+	};
+	let paths: Vec<&str> = errors.iter().map(|e| e.path.as_str()).collect();
+	assert_eq!(paths, ["intro"]);
+	assert_eq!(errors[0].message, "is required");
+
+	publish.fields = json!({ "intro": "Hi" });
+	let r = member.call(&publish).await.unwrap();
+	assert_eq!((r.saved, r.entry.published), (Saved::Live, true));
+
+	// asked to publish, also who can't needs them
+	let helper = ts.site_user(Some("helper"));
+	let mut req = new_post("Brot");
+	req.fields = json!({});
+	let Error::Invalid(errors) = helper.call(&req).await.unwrap_err() else {
+		panic!("invalid");
+	};
+	assert_eq!(errors[0].path, "intro");
+	req.published = false;
+	assert!(!helper.call(&req).await.unwrap().published);
+}
+
 /// What the role can't view isn't linked, like in the studio.
 #[tokio::test]
 async fn links_only_to_what_the_role_sees() {

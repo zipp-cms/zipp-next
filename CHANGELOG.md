@@ -8,6 +8,11 @@
   slugs stay as they are (`über-uns`), only new entries and users get
   the new ones; the slug of a block (anchors) changes the same way.
 - `user --name`: the cli sets a user's display name too.
+- Required fields only have to be filled to publish, like Craft's: an
+  unpublished entry or a draft saves without them, publishing (the
+  studio, the api, the members' routes, the AI's new entries) refuses
+  as before, per site for translatable fields. The title stays
+  required, other checks stay on every save.
 
 ## 0.2.0 (2026-11-07)
 

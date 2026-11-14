@@ -41,10 +41,12 @@ async fn authors_write_editors_publish() {
 	assert_eq!(author.call(&publish).await.unwrap_err(), Error::Forbidden);
 	ts.user(Some("editor")).call(&publish).await.unwrap();
 
-	// what an event needs
+	// what an event needs, the date only once it is live
 	let mut bad = event("No date", "");
 	bad.0.fields["genre"] = json!("opera");
-	let Error::Invalid(fields) = author.call(&bad).await.unwrap_err() else {
+	bad.0.published = true;
+	let Error::Invalid(fields) = ts.admin().call(&bad).await.unwrap_err()
+	else {
 		panic!("not invalid");
 	};
 	let paths: Vec<_> = fields.iter().map(|f| f.path.as_str()).collect();

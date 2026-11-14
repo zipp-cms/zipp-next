@@ -96,6 +96,41 @@ fn tools_change_drafts_only() {
 	assert_eq!(draft.doc["de"].fields["intro"], "Hi");
 }
 
+/// The draft of a new entry publishes it, so it needs its required
+/// fields like a publish; the model hears what is missing.
+#[test]
+fn created_entries_need_their_required_fields() {
+	let mut schema = site_with_roles();
+	let event = schema.get_mut("event").unwrap();
+	event
+		.fields
+		.push(crate::schema::Field::text("venue").required());
+	let ts = TestServer::new(schema);
+	let conn = ts.state.db.conn();
+	crate::auth::add_user(&conn, "e@x.ch", "password1", Some("editor"))
+		.unwrap();
+	let user_id = conn.last_insert_rowid();
+	drop(conn);
+	let editor = Authed {
+		user_id,
+		role: Some("editor".into()),
+		token: String::new(),
+	};
+	let new = |fields| {
+		let input = json!({
+			"section": "events", "type": "event", "title": "Jazz",
+			"fields": fields,
+		});
+		run_tool(&ts.state, &editor, "create_entry", &input)
+	};
+
+	let Err(Error::Invalid(errors)) = new(json!({})) else {
+		panic!("not invalid");
+	};
+	assert_eq!(errors[0].path, "venue");
+	new(json!({ "venue": "Bern" })).unwrap();
+}
+
 #[test]
 fn tools_of_own_access_reach_only_own_entries() {
 	let schema = site_with_roles().role(

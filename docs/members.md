@@ -145,7 +145,13 @@ the studio: a member with own access their own entries, an admin or an
 editor with the section's access the members' entries too. What they may
 do with them is their role's: with Publish their saves are live at once,
 with only Edit a new entry stays unpublished and a change is a draft
-that an editor publishes in the studio. The frontend forwards these
+that an editor publishes in the studio. Required fields only have to be
+filled to publish (see content-model.md): a member can keep an entry
+unpublished (`published: false`) without them, like a recipe imported
+from a url that waits for its photo, and a save with `published: true`
+answers `INVALID` until they are there; so an unpublished entry these
+routes answer may lack them (optional for the frontend, also where
+`types` makes them required). The frontend forwards these
 routes with the visitor's site token (401 without one, 403 for an entry
 the role may not touch or a section that isn't the plugin's):
 

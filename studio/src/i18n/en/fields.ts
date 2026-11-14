@@ -82,6 +82,8 @@ export default {
 	'fields.anchorPlaceholder': 'optional, e.g. contact',
 	'fields.anchorNote': 'Jumps to a section of the target page.',
 	'fields.downloadInstead': 'Download instead of opening',
+	'fields.required': 'Required',
+	'fields.requiredToPublish': 'Required to publish',
 	'fields.requiredNoLink': 'Required – no link yet.',
 	'fields.noLink': 'No link yet.',
 	'fields.closeSettings': 'Close its settings',

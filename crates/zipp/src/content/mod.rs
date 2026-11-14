@@ -20,6 +20,7 @@ pub(crate) use relations::Target;
 pub(crate) use relations::asset_folders;
 pub(crate) use relations::drop_links;
 pub(crate) use relations::relations;
+pub(crate) use validate::Live;
 pub(crate) use validate::check_default;
 pub(crate) use validate::check_link;
 pub(crate) use validate::is_empty;
@@ -30,6 +31,7 @@ pub(crate) use validate::valid_date;
 pub use validate::valid_email;
 pub use validate::validate;
 pub(crate) use validate::validate_fields;
+pub(crate) use validate::validate_live;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FieldError {

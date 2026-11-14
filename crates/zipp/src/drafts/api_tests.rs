@@ -5,6 +5,7 @@ use super::api::*;
 use crate::entries::api::{CreateReq, GetReq as GetEntry};
 use crate::error::Error;
 use crate::fixtures::site_with_roles;
+use crate::schema::Field;
 use crate::testing::input;
 use crate::testing::{Client, TestServer};
 
@@ -190,6 +191,60 @@ async fn publishing_checks_the_content() {
 		admin.call(&unknown).await.unwrap_err(),
 		Error::Request(_)
 	));
+}
+
+#[tokio::test]
+async fn publishing_needs_required_fields_where_live() {
+	let mut schema = site_with_roles();
+	let event = schema.get_mut("event").unwrap();
+	event.fields.push(Field::text("venue").required());
+	let ts = TestServer::new(schema);
+	let admin = ts.admin();
+	let mut new = input("events", "event", "Jazz", json!({}));
+	new.published = false;
+	let id = admin.call(&CreateReq(new)).await.unwrap().id;
+
+	// a draft that stays unpublished saves without it
+	let mut off = content("event", "Jazz neu", json!({}));
+	off.published = false;
+	let req = PutReq {
+		id,
+		site: "de".into(),
+		base: None,
+		content: off,
+	};
+	admin.call(&req).await.unwrap();
+	admin.call(&PublishReq { id }).await.unwrap();
+	assert_eq!(live_title(&admin, id).await, "Jazz neu");
+
+	// going live it needs it
+	let req = PutReq {
+		id,
+		site: "de".into(),
+		base: None,
+		content: content("event", "Jazz", json!({})),
+	};
+	admin.call(&req).await.unwrap();
+	let Error::Invalid(fields) =
+		admin.call(&PublishReq { id }).await.unwrap_err()
+	else {
+		panic!("not invalid");
+	};
+	// shared, the other site says so first
+	assert_eq!(
+		(fields[0].path.as_str(), fields[0].message.as_str()),
+		("venue", "en: is required")
+	);
+	let base = admin.call(&GetReq { id, site: None }).await.unwrap();
+	let req = PutReq {
+		id,
+		site: "de".into(),
+		base: base.draft.map(|d| d.updated_at),
+		content: content("event", "Jazz", json!({ "venue": "Bern" })),
+	};
+	admin.call(&req).await.unwrap();
+	admin.call(&PublishReq { id }).await.unwrap();
+	assert_eq!(live_title(&admin, id).await, "Jazz");
 }
 
 #[tokio::test]

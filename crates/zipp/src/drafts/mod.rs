@@ -24,7 +24,7 @@ use crate::AppState;
 use crate::content::{FieldError, follow, validate_fields};
 use crate::db::{DAY_MS, marks, now};
 use crate::entries::{
-	Dates, Entry, EntryInput, check, get_entry, slug_of, write,
+	Dates, Entry, EntryInput, check_live, get_entry, slug_of, write,
 };
 use crate::error::{Error, Result};
 use crate::schema::{Component, Field, Schema};
@@ -430,7 +430,9 @@ pub(crate) fn publish(
 			parent_id: None,
 			fields: sd.fields.clone(),
 		};
-		match check(conn, schema, Some(id), input, user_id) {
+		// shared fields are required if the draft publishes any site
+		let elsewhere = draft.doc.iter().any(|(s, d)| s != site && d.published);
+		match check_live(conn, schema, Some(id), input, user_id, elsewhere) {
 			Ok(c) => checked.push(c),
 			Err(Error::Invalid(errors)) if site != primary => {
 				let errors = errors
