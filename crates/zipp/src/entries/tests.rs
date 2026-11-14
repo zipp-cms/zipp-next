@@ -33,8 +33,8 @@ fn saves_and_queries() {
 		None,
 	)
 	.unwrap();
-	assert_eq!(about.slug, "über-uns");
-	assert_eq!(about.uri.as_deref(), Some("über-uns"));
+	assert_eq!(about.slug, "ueber-uns");
+	assert_eq!(about.uri.as_deref(), Some("ueber-uns"));
 
 	for (city, price) in [("Bern", 10), ("Zürich", 30), ("Bern", 25)] {
 		let fields =
@@ -70,7 +70,7 @@ fn saves_and_queries() {
 	assert_eq!(titles(&conn, &[("related", &id)]).len(), 3);
 	let (events, _) = list(&conn, &query(&[("type", "event")])).unwrap();
 	let r = refs(&conn, &[events[0].id], "de", true).unwrap();
-	assert_eq!(r[&about.id].uri.as_deref(), Some("über-uns"));
+	assert_eq!(r[&about.id].uri.as_deref(), Some("ueber-uns"));
 	// with its dates, a chip shows whether it is live
 	assert!(r[&about.id].dates.post_date.is_some());
 }
@@ -295,6 +295,39 @@ fn unpublished_are_hidden() {
 #[test]
 fn slugs() {
 	assert_eq!(slugify("  Hello, World -- 2026 "), "hello-world-2026");
+	assert_eq!(slugify("Sören Meier"), "soeren-meier");
+	assert_eq!(slugify("Über uns"), "ueber-uns");
+	assert_eq!(slugify("Crème brûlée"), "creme-brulee");
+	assert_eq!(slugify("STRASSE Straße ÄÖÜ"), "strasse-strasse-aeoeue");
+	assert_eq!(
+		slugify("Façade Señor Åland Ørsted"),
+		"facade-senor-aland-orsted"
+	);
+	assert_eq!(slugify("Æsir œuvre Łódź"), "aesir-oeuvre-lodz");
+	// other scripts keep their letters
+	assert_eq!(slugify("Привет мир"), "привет-мир");
+	assert_eq!(slugify("東京"), "東京");
+	// one given is only cleaned up
+	assert_eq!(clean_slug(" Über uns! "), "über-uns");
+}
+
+#[test]
+fn a_given_slug_keeps_its_letters() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+
+	let mut about = input("pages", "page", "Über uns", json!({}));
+	about.slug = "über-uns".into();
+	let about = save(&conn, &s, None, about, None).unwrap();
+	assert_eq!(about.slug, "über-uns");
+
+	// saved again with its slug, the url stays
+	let mut again = input("pages", "page", "Über uns", json!({}));
+	again.slug = about.slug.clone();
+	let again = save(&conn, &s, Some(about.id), again, None).unwrap();
+	assert_eq!(again.slug, "über-uns");
+	assert_eq!(again.uri.as_deref(), Some("über-uns"));
 }
 
 #[test]

@@ -402,9 +402,13 @@ impl Cms {
 				&site,
 			),
 			Cmd::SortAssets => sort_assets(&schema, &opts.db, &migrations),
-			Cmd::User { email, role } => {
-				save_user(&schema, &opts.db, &email, role.as_deref())
-			}
+			Cmd::User { email, role, name } => save_user(
+				&schema,
+				&opts.db,
+				&email,
+				role.as_deref(),
+				name.as_deref(),
+			),
 			Cmd::Mail { to, mail } => test_mail(&to, &mail),
 			Cmd::Backup { dir, files, keep } => {
 				backup(&opts.db, &files, &dir, keep)

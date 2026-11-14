@@ -13,8 +13,10 @@ SQLite database, default `zipp.db`):
   the changed schema; `--data --name n` an empty data migration, see
   below
 - `check [--queries dir]`: what CI runs before a deploy, see below
-- `user <email> [--role r]`: adds a user or sets a new password and role,
-  reads the password from stdin; without a role an admin
+- `user <email> [--role r] [--name n]`: adds a user or sets a new
+  password and role, reads the password from stdin; without a role an
+  admin. `--name` sets the display name, the slug follows it while the
+  user has none of a name (`user-4`)
 - `types`: prints TypeScript types of the content
 - `mail <to> [--smtp-url url --mail-from from]`: sends a test mail, see
   Mail below

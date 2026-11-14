@@ -757,16 +757,25 @@ pub(crate) fn section_of(conn: &Connection, id: i64) -> Result<String> {
 	Ok(owner_of(conn, id)?.0)
 }
 
-/// The slug an entry is saved with: its own, else one of its title.
+/// The slug an entry is saved with: its own cleaned up (one given keeps
+/// its letters, `über-uns` stays), else one of its title.
 pub(crate) fn slug_of(slug: &str, title: &str) -> String {
 	match slug.trim() {
 		"" => slugify(title),
-		s => slugify(s),
+		s => clean_slug(s),
 	}
 }
 
-/// `Über uns!` becomes `über-uns`.
+/// The slug made of a title or name, ASCII like Craft's
+/// `limitAutoSlugsToAscii`: `Über uns!` becomes `ueber-uns`, see
+/// [`ascii`].
 pub(crate) fn slugify(s: &str) -> String {
+	clean_slug(&ascii(s))
+}
+
+/// A slug given by hand, cleaned up: lowercase letters and digits (any
+/// script), anything else one `-`. `Über uns!` becomes `über-uns`.
+pub(crate) fn clean_slug(s: &str) -> String {
 	let mut out = String::new();
 	for c in s.chars().flat_map(char::to_lowercase) {
 		if c.is_alphanumeric() {
@@ -776,4 +785,44 @@ pub(crate) fn slugify(s: &str) -> String {
 		}
 	}
 	out.trim_end_matches('-').into()
+}
+
+/// Latin letters without their accents, German umlauts as two letters
+/// (`ä` is `ae`, `ß` is `ss`); other scripts stay as they are.
+pub(crate) fn ascii(s: &str) -> String {
+	let mut out = String::with_capacity(s.len());
+	for c in s.chars().flat_map(char::to_lowercase) {
+		let a = match c {
+			'ä' | 'æ' => "ae",
+			'ö' | 'œ' => "oe",
+			'ü' => "ue",
+			'ß' => "ss",
+			'þ' => "th",
+			'à' | 'á' | 'â' | 'ã' | 'å' | 'ā' | 'ă' | 'ą' => "a",
+			'ç' | 'ć' | 'ĉ' | 'ċ' | 'č' => "c",
+			'ď' | 'đ' | 'ð' => "d",
+			'è' | 'é' | 'ê' | 'ë' | 'ē' | 'ĕ' | 'ė' | 'ę' | 'ě' => "e",
+			'ĝ' | 'ğ' | 'ġ' | 'ģ' => "g",
+			'ĥ' | 'ħ' => "h",
+			'ì' | 'í' | 'î' | 'ï' | 'ĩ' | 'ī' | 'ĭ' | 'į' | 'ı' => "i",
+			'ĵ' => "j",
+			'ķ' => "k",
+			'ĺ' | 'ļ' | 'ľ' | 'ŀ' | 'ł' => "l",
+			'ñ' | 'ń' | 'ņ' | 'ň' => "n",
+			'ò' | 'ó' | 'ô' | 'õ' | 'ø' | 'ō' | 'ŏ' | 'ő' => "o",
+			'ŕ' | 'ŗ' | 'ř' => "r",
+			'ś' | 'ŝ' | 'ş' | 'š' | 'ș' => "s",
+			'ţ' | 'ť' | 'ŧ' | 'ț' => "t",
+			'ù' | 'ú' | 'û' | 'ũ' | 'ū' | 'ŭ' | 'ů' | 'ű' | 'ų' => "u",
+			'ŵ' => "w",
+			'ý' | 'ÿ' | 'ŷ' => "y",
+			'ź' | 'ż' | 'ž' => "z",
+			c => {
+				out.push(c);
+				continue;
+			}
+		};
+		out.push_str(a);
+	}
+	out
 }
