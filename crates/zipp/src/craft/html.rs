@@ -154,10 +154,16 @@ fn is_inline(node: &Node) -> bool {
 		Node::Element { name, .. } => matches!(
 			name.as_str(),
 			"b" | "strong"
-				| "i" | "em" | "a"
-				| "br" | "span"
-				| "u" | "s" | "sub"
-				| "sup" | "small"
+				| "i"
+				| "em"
+				| "a"
+				| "br"
+				| "span"
+				| "u"
+				| "s"
+				| "sub"
+				| "sup"
+				| "small"
 				| "code"
 		),
 	}

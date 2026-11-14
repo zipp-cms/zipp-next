@@ -103,8 +103,10 @@ impl Edits {
 			// one image beyond each side at most
 			let near = |v: f64| (-1.0 - 1e-9..=2.0 + 1e-9).contains(&v);
 			if !(near(c.x)
-				&& near(c.y) && c.w > 0.0
-				&& c.h > 0.0 && near(c.x + c.w)
+				&& near(c.y)
+				&& c.w > 0.0
+				&& c.h > 0.0
+				&& near(c.x + c.w)
 				&& near(c.y + c.h))
 			{
 				return Err("the crop is too far outside the image".into());
