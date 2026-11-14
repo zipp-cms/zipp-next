@@ -13,7 +13,7 @@
 	import { linkItems } from '../assets/actions';
 	import { chosenAssets } from '../assets/chosen.svelte';
 	import { openAsset } from '../core/flyout.svelte';
-	import { inserted, isFull, removed } from '../core/list';
+	import { inserted, isFull, removed, replaced } from '../core/list';
 	import Icon from 'zipp-ui/Icon.svelte';
 	import UploadButton from 'zipp-ui/UploadButton.svelte';
 	import { FileDrag, uploads } from '../assets/uploads.svelte';
@@ -50,7 +50,7 @@
 
 	const chosen = chosenAssets(() => ids);
 	let picking = $state(false);
-	// the index of the file another one from the library replaces
+	// the file another one from the library replaces
 	let replacing = $state<number | null>(null);
 
 	// cards side by side, files one under the other
@@ -70,11 +70,14 @@
 		if (max === 1) picking = false;
 	}
 
-	/** The file at `replacing` swapped for `a`, in its place. */
+	/** The file `replacing` swapped for `a`, in its place. */
 	function replace(a: Asset) {
-		const i = replacing!;
+		// an upload that ends after the picker closed
+		const i = replacing === null ? -1 : ids.indexOf(replacing);
 		replacing = null;
-		const next = ids.map((id, k) => (k === i ? a.id : id));
+		if (i < 0) return;
+
+		const next = replaced(ids, i, a.id);
 		set(next.filter((id, k) => k === i || id !== a.id));
 	}
 
@@ -156,7 +159,7 @@
 							{
 								label: t('fields.replace'),
 								icon: 'replace',
-								onclick: () => (replacing = i),
+								onclick: () => (replacing = a.id),
 							},
 							...linkItems(a),
 							{
@@ -215,7 +218,7 @@
 		extensions={field.extensions}
 		folderPath={folder}
 		multiple={false}
-		selected={[ids[replacing]]}
+		selected={[replacing]}
 		onpick={replace}
 		onclose={() => (replacing = null)}
 	/>

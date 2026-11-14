@@ -188,7 +188,9 @@ the path), else it searches what is there. Enter in an empty search
 picks nothing. A chosen entry or image opens in a flyout from
 the right, like Craft's slideout: the entry with its whole editor, an image
 with its details (below); Done or Escape closes it and the
-page behind stays as it was. In rich text, a button is a link like the
+page behind stays as it was. Replace in the ⋯ menu of an image or a
+video in an asset field picks another one in its place; one that is already in the
+field moves there. In rich text, a button is a link like the
 link field, right in the text (buttons next to each other are one row on
 the website), a block is a card that opens its form; both have + Line
 above and below to write before or after them.
