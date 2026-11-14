@@ -44,6 +44,7 @@ pub(crate) use routes::viewable_refs;
 pub(crate) use save::check;
 pub(crate) use save::check_fields;
 pub(crate) use save::check_live;
+pub(crate) use save::live_elsewhere;
 pub(crate) use save::reindex;
 pub(crate) use save::reindex_all;
 pub use save::save;

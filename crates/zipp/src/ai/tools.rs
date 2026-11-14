@@ -300,24 +300,22 @@ fn tool_create_entry(t: &Ctx, input: &Value) -> ToolResult {
 	let me = Some(t.user_id);
 	t.auth
 		.check_entry(schema, &req("section"), me, Access::Edit)?;
+	let mut new = EntryInput {
+		section: req("section"),
+		ty: req("type"),
+		site: Some(site.clone()),
+		title: req("title"),
+		slug: req("slug"),
+		published: true,
+		dates: Default::default(),
+		parent_id: input["parent_id"].as_i64(),
+		fields: input.get("fields").cloned().unwrap_or(json!({})),
+	};
+	// checked as the draft's publish will, the model hears what is missing
+	check(conn, schema, None, new.clone(), me)?;
 	// live it is off, the draft publishes it in every site
-	let entry = save(
-		conn,
-		schema,
-		None,
-		EntryInput {
-			section: req("section"),
-			ty: req("type"),
-			site: Some(site.clone()),
-			title: req("title"),
-			slug: req("slug"),
-			published: false,
-			dates: Default::default(),
-			parent_id: input["parent_id"].as_i64(),
-			fields: input.get("fields").cloned().unwrap_or(json!({})),
-		},
-		Some(t.user_id),
-	)?;
+	new.published = false;
+	let entry = save(conn, schema, None, new, me)?;
 	// like a new entry of the studio
 	state.changed(entry.id, &entry.section, crate::ChangeKind::Saved);
 	for s in &schema.sites {

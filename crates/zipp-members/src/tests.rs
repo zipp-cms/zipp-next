@@ -332,6 +332,17 @@ async fn required_only_to_publish() {
 	publish.fields = json!({ "intro": "Hi" });
 	let r = member.call(&publish).await.unwrap();
 	assert_eq!((r.saved, r.entry.published), (Saved::Live, true));
+
+	// asked to publish, also who can't needs them
+	let helper = ts.site_user(Some("helper"));
+	let mut req = new_post("Brot");
+	req.fields = json!({});
+	let Error::Invalid(errors) = helper.call(&req).await.unwrap_err() else {
+		panic!("invalid");
+	};
+	assert_eq!(errors[0].path, "intro");
+	req.published = false;
+	assert!(!helper.call(&req).await.unwrap().published);
 }
 
 /// What the role can't view isn't linked, like in the studio.

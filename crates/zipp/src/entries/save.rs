@@ -43,7 +43,11 @@ pub(crate) fn check(
 }
 
 /// Whether an entry is published in a site other than `site`.
-fn live_elsewhere(conn: &Connection, id: i64, site: &str) -> Result<bool> {
+pub(crate) fn live_elsewhere(
+	conn: &Connection,
+	id: i64,
+	site: &str,
+) -> Result<bool> {
 	Ok(conn.query_row(
 		"SELECT EXISTS (SELECT 1 FROM entry_sites
 		WHERE entry_id = ?1 AND site != ?2 AND published = 1)",

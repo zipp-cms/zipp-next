@@ -18,7 +18,9 @@ use crate::AppState;
 use crate::auth::Authed;
 use crate::drafts::{Draft, SiteDoc, current, get_draft, put_draft};
 use crate::entries::query::Query;
-use crate::entries::{Entry, EntryInput, by_uri, get_entry, save, select};
+use crate::entries::{
+	Entry, EntryInput, by_uri, check, get_entry, save, select,
+};
 use crate::error::{Error, Result};
 use crate::schema::Access;
 use crate::schema::Schema;

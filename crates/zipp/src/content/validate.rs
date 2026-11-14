@@ -88,8 +88,8 @@ fn fields_of(
 	for field in &comp.fields {
 		let path = format!("{prefix}{}", field.handle);
 		let value = obj.get(&field.handle).unwrap_or(&Value::Null);
-		// a hidden field keeps its value but needn't be filled, also
-		// not the fields inside it
+		// a hidden field, or one that isn't live, keeps its value but
+		// needn't be filled, also not the fields inside it
 		let hidden = needless(field) || !comp.is_shown(&field.handle, obj);
 		if let Some(v) =
 			validate_value(schema, field, value, &path, hidden, errors)
