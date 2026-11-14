@@ -3,12 +3,13 @@ use std::collections::HashMap;
 use super::*;
 use crate::assets::{self, AssetList, Kind};
 
-/// The arguments of `assets` and `assetCount`, like Craft's: `folder` is
-/// Craft's `volume`, the import makes a folder of each.
+/// The arguments of `asset`, `assets` and `assetCount`, like Craft's:
+/// `folder` is Craft's `volume`, the import makes a folder of each.
 fn assets_args(field: GqlField) -> GqlField {
 	let l = || TypeRef::named_list(TypeRef::STRING);
 	let i = || TypeRef::named(TypeRef::INT);
 	field
+		.argument(InputValue::new("id", TypeRef::named_list("QueryArgument")))
 		.argument(InputValue::new("folder", l()))
 		.argument(InputValue::new(
 			"folderId",
@@ -40,6 +41,9 @@ fn list_of(
 	}
 
 	let mut q = AssetList::default();
+	if let Some(ids) = arg(ctx, "id") {
+		q.ids = Some(ids_of(&ids, "id")?);
+	}
 	// every folder in them too, like a volume with its folders
 	let mut folders = None;
 	if let Some(paths) = arg(ctx, "folder") {
@@ -50,11 +54,7 @@ fn list_of(
 		folders = Some(ids.collect::<Vec<_>>());
 	}
 	if let Some(ids) = arg(ctx, "folderId") {
-		let ids = all(&ids)?.into_iter().map(|id| {
-			id.parse::<i64>()
-				.map_err(|_| GqlError::new(format!("folderId {id}")))
-		});
-		let ids = ids.collect::<async_graphql::Result<Vec<_>>>()?;
+		let ids = ids_of(&ids, "folderId")?;
 		// both: the folders of the ids in the paths
 		folders = Some(match folders {
 			Some(f) => f.into_iter().filter(|f| ids.contains(f)).collect(),
@@ -80,6 +80,18 @@ fn list_of(
 		q.offset = Some(o.i64()?);
 	}
 	Ok(Some((q, site)))
+}
+
+/// The ids of an argument, one or a list.
+fn ids_of(
+	value: &async_graphql::dynamic::ValueAccessor,
+	name: &str,
+) -> async_graphql::Result<Vec<i64>> {
+	let ids = all(value)?.into_iter().map(|id| {
+		id.parse::<i64>()
+			.map_err(|_| GqlError::new(format!("{name} {id}")))
+	});
+	ids.collect()
 }
 
 /// The kinds of the `kind` argument, none for all: `"image"` or
@@ -132,10 +144,22 @@ pub(super) fn path_of(
 }
 
 /// The assets of the library, like Craft's: `assets(folder: "Clubs",
-/// kind: "image") { title url }`, the newest first; and `assetCount`
-/// with the same arguments for the pages. Files are public by their url,
-/// so every viewer may list them; trashed ones are gone.
-pub(super) fn asset_list_fields() -> [GqlField; 2] {
+/// kind: "image") { title url }`, the newest first, `assets(id: [3, 4])`
+/// some by their ids; `asset` the first of them, and `assetCount` with
+/// the same arguments for the pages. Files are public by their url, so
+/// every viewer may list them; trashed ones are gone.
+pub(super) fn asset_list_fields() -> [GqlField; 3] {
+	let one = GqlField::new("asset", TypeRef::named("Asset"), |ctx| {
+		FieldFuture::new(async move {
+			let Some((mut q, site)) = list_of(&ctx)? else {
+				return Ok(None);
+			};
+			q.limit = Some(1);
+			spend(&ctx, 1)?;
+			let found = assets::list(&ctx.data::<Db>()?.conn(), &q)?;
+			Ok(found.into_iter().next().map(|a| asset_value(a, &site)))
+		})
+	});
 	let list =
 		GqlField::new("assets", TypeRef::named_nn_list_nn("Asset"), |ctx| {
 			FieldFuture::new(async move {
@@ -163,5 +187,5 @@ pub(super) fn asset_list_fields() -> [GqlField; 2] {
 				Ok(Some(GqlValue::from(n)))
 			})
 		});
-	[assets_args(list), assets_args(count)]
+	[assets_args(one), assets_args(list), assets_args(count)]
 }

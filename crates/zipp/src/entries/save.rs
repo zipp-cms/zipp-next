@@ -112,37 +112,61 @@ pub(crate) fn check_live(
 	if title.is_empty() {
 		errors.push(FieldError::new("title", "is required"));
 	}
-	let slug = slug_of(&input.slug, &title);
+	let mut slug = slug_of(&input.slug, &title);
 	// a title of only signs makes none, the uri would be the parent's (or
 	// the home page's)
 	if slug.is_empty() && !title.is_empty() {
 		errors.push(FieldError::new("slug", "is required"));
 	}
+	// a slug made of the title gets `-2`, `-3`, … when its uri is used
+	// (like Craft's), one that was given stays and is refused
+	let auto = input.slug.trim().is_empty() && !slug.is_empty();
 
 	// the uri in every site, a new entry starts with this slug everywhere
-	let mut uris = HashMap::new();
-	for s in &schema.sites {
-		if id.is_some() && s.handle != site {
-			continue;
+	let mut first = HashMap::new();
+	let uris = 'free: {
+		for n in 1.. {
+			let candidate = match n {
+				1 => slug.clone(),
+				n => format!("{slug}-{n}"),
+			};
+			let mut uris = HashMap::new();
+			let mut taken = None;
+			for s in &schema.sites {
+				if id.is_some() && s.handle != site {
+					continue;
+				}
+				let uri = uri_for(
+					conn,
+					section,
+					&input.ty,
+					&candidate,
+					parent_id,
+					&s.handle,
+					&input.fields,
+				)?;
+				if let Some(uri) = &uri
+					&& uri_taken(conn, &s.handle, uri, id)?
+				{
+					taken = Some((s.handle.clone(), uri.clone()));
+					break;
+				}
+				uris.insert(s.handle.clone(), uri);
+			}
+			let Some((s, uri)) = taken else {
+				slug = candidate;
+				break 'free uris;
+			};
+			// a uri without the slug doesn't get free with a number
+			if !auto || first.get(&s) == Some(&uri) {
+				let msg = format!("the uri /{uri} is already used");
+				errors.push(FieldError::new("slug", msg));
+				break 'free uris;
+			}
+			first.entry(s).or_insert(uri);
 		}
-		let uri = uri_for(
-			conn,
-			section,
-			&input.ty,
-			&slug,
-			parent_id,
-			&s.handle,
-			&input.fields,
-		)?;
-		if let Some(uri) = &uri
-			&& uri_taken(conn, &s.handle, uri, id)?
-		{
-			let msg = format!("the uri /{uri} is already used");
-			errors.push(FieldError::new("slug", msg));
-			break;
-		}
-		uris.insert(s.handle.clone(), uri);
-	}
+		unreachable!()
+	};
 
 	let mut fields = match validate_live(schema, comp, &input.fields, live) {
 		Ok(f) => f,

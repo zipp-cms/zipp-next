@@ -261,13 +261,9 @@ fn rejects_invalid_content() {
 	};
 	assert_eq!(errs[0].path, "body.0.link");
 
-	let Err(Error::Invalid(errs)) = save(
-		&conn,
-		&s,
-		None,
-		input("events", "event", "E", json!({})),
-		None,
-	) else {
+	let mut taken = input("events", "event", "E", json!({}));
+	taken.slug = "e".into();
+	let Err(Error::Invalid(errs)) = save(&conn, &s, None, taken, None) else {
 		panic!("should fail");
 	};
 	assert_eq!(errs[0].message, "the uri /events/e is already used");
@@ -276,6 +272,42 @@ fn rejects_invalid_content() {
 	assert!(save(&conn, &s, None, wrong, None).is_err());
 	let single = input("home", "page", "Home", json!({}));
 	assert!(save(&conn, &s, None, single, None).is_err());
+}
+
+#[test]
+fn slugs_of_titles_get_a_number() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site();
+
+	// an unpublished one counts too
+	let mut first = input("events", "event", "Fest", json!({}));
+	first.published = false;
+	let first = save(&conn, &s, None, first, None).unwrap();
+	assert_eq!(first.slug, "fest");
+	let second = input("events", "event", "Fest", json!({}));
+	let second = save(&conn, &s, None, second, None).unwrap();
+	assert_eq!(second.slug, "fest-2");
+	assert_eq!(second.uri.as_deref(), Some("events/fest-2"));
+	let third = input("events", "event", "Fest", json!({}));
+	assert_eq!(save(&conn, &s, None, third, None).unwrap().slug, "fest-3");
+
+	// saved again, it keeps its slug, also made of the title again
+	let mut again = input("events", "event", "Fest", json!({}));
+	again.slug = second.slug.clone();
+	let again = save(&conn, &s, Some(second.id), again, None).unwrap();
+	assert_eq!(again.slug, "fest-2");
+	let retitled = input("events", "event", "Fest", json!({}));
+	let retitled = save(&conn, &s, Some(second.id), retitled, None).unwrap();
+	assert_eq!(retitled.slug, "fest-2");
+
+	// a slug given is the editor's choice, it isn't changed
+	let mut given = input("events", "event", "Other", json!({}));
+	given.slug = "fest".into();
+	let Err(Error::Invalid(errs)) = save(&conn, &s, None, given, None) else {
+		panic!("should fail");
+	};
+	assert_eq!(errs[0].message, "the uri /events/fest is already used");
 }
 
 #[test]

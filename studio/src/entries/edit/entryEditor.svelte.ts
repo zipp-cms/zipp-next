@@ -371,6 +371,8 @@ export class EntryEditor {
 					site: this.site,
 					parentId: this.parentId,
 					...this.doc,
+					// one of the title the server makes free (`-2`, …)
+					...(this.slugFollows ? { slug: '' } : {}),
 					...(unpublished ? { published: false } : {}),
 				});
 				// saved, the page of the entry may open

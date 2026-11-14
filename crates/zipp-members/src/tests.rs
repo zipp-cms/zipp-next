@@ -203,6 +203,23 @@ async fn only_own_entries_of_the_sections() {
 /// Admins and editors edit the members' entries on the website too, as
 /// their role allows in the studio.
 #[tokio::test]
+async fn same_titles_get_a_number() {
+	let ts = TestServer::new(schema());
+	let anna = ts.site_user(Some("member"));
+	let ben = ts.site_user(Some("member"));
+
+	// anna's isn't live, it has the uri all the same
+	let mut private = new_post("Zopf");
+	private.published = false;
+	anna.call(&private).await.unwrap();
+	let e = ben.call(&new_post("Zopf")).await.unwrap();
+	assert_eq!(e.uri.as_deref(), Some("posts/zopf-2"));
+
+	let r = ben.call(&change(e.id, "Zopf", json!({}))).await.unwrap();
+	assert_eq!(r.entry.slug, "zopf-2");
+}
+
+#[tokio::test]
 async fn editors_edit_all_entries() {
 	let ts = TestServer::new(schema());
 	let member = ts.site_user(Some("member"));

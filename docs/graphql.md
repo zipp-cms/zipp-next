@@ -198,7 +198,9 @@ The library is `assets` like Craft's, `assetCount` with the same
 arguments: `assets(folder: "Clubs", kind: "image", orderBy: "title")
 { title url alt }`. Craft's `volume` is `folder` (the import makes a
 folder of each volume): a path, any case, with the folders in it,
-several in a list; `folderId` only the folder itself. `search` matches
+several in a list; `folderId` only the folder itself, `id` the assets
+of these ids (`assets(id: [3, 4])`, e.g. the photos of an entry that
+isn't live) and `asset(id: 3)` one. `search` matches
 every word in the filename, title or alt text; `orderBy` is `title`,
 `filename`, `dateCreated`, `size` or `id` with `ASC` or `DESC`, the
 newest first without; `limit` and `offset` page it. `site` or `siteId`

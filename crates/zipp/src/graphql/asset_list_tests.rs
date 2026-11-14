@@ -171,6 +171,48 @@ async fn assets_know_their_folder() {
 }
 
 #[tokio::test]
+async fn assets_by_their_ids() {
+	let db = Db::memory().unwrap();
+	let s = Arc::new(site());
+	let gql =
+		build(s.clone(), db.clone(), String::new(), SiteUrls::new()).unwrap();
+	let tmp = tempfile::tempdir().unwrap();
+	let ids = library(&db, &s, tmp.path());
+
+	// the photos of an entry that isn't live, without the entry
+	let q = format!(
+		r#"{{ assets(id: [{}, {}], orderBy: "id") {{ id filename url }}
+		asset(id: {}) {{ filename }} none: asset(id: 999) {{ id }} }}"#,
+		ids[0], ids[1], ids[1]
+	);
+	let data = run(&gql, &q, true).await;
+	assert_eq!(names(&data["assets"]), ["zurich.png", "bern.png"]);
+	assert_eq!(data["assets"][0]["id"], ids[0].to_string());
+	assert!(
+		data["assets"][0]["url"]
+			.as_str()
+			.unwrap()
+			.contains("zurich")
+	);
+	assert_eq!(data["asset"]["filename"], "bern.png");
+	assert_eq!(data["none"], Value::Null);
+
+	// trashed ones are gone, a token without assets sees none
+	crate::trash::trash_asset(&db.conn(), ids[1], None).unwrap();
+	let data = run(&gql, &q, true).await;
+	assert_eq!(names(&data["assets"]), ["zurich.png"]);
+	assert_eq!(data["asset"], Value::Null);
+	let mut v = viewer(true);
+	v.scope.assets = false;
+	let req = async_graphql::Request::new(q).data(v);
+	let data = gql.execute(req).await.data.into_json().unwrap();
+	assert_eq!(
+		(&data["assets"], &data["asset"]),
+		(&json!([]), &Value::Null)
+	);
+}
+
+#[tokio::test]
 async fn wrong_asset_arguments() {
 	let db = Db::memory().unwrap();
 	let gql =
@@ -182,6 +224,7 @@ async fn wrong_asset_arguments() {
 		r#"{ assets(site: "fr") { id } }"#,
 		r#"{ assetCount(siteId: 9) }"#,
 		r#"{ assets(folderId: "clubs") { id } }"#,
+		r#"{ asset(id: "zurich") { id } }"#,
 	] {
 		let req = async_graphql::Request::new(q).data(viewer(true));
 		assert!(!gql.execute(req).await.errors.is_empty(), "{q}");
