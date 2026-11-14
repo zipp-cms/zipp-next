@@ -4,6 +4,18 @@ What editors get in the studio (`/admin`).
 
 ## Drafts, revisions and previews
 
+A new entry is created with its first change, like Craft's: not live,
+whatever its switch says, so the required fields and even the title can
+wait (an entry without one is *Untitled* in the lists). The address
+becomes the entry's without opening it again, and from then on its
+changes are a draft like any entry's; leaving or reloading loses
+nothing, only in the moment before it is created leaving asks. Its
+button is Save (Publish once switched on): it creates it right away and
+publishes the draft, which needs the required fields. While the editor
+is open a new entry of a structure can still get another parent (moved
+to its end). A new entry nobody finished stays in the section's list,
+not live, and goes to the trash like any other.
+
 The studio saves every change into
 a draft of the entry (one per entry, all sites), the website keeps the
 live content until it is published. A change undone (the draft is the
@@ -27,8 +39,10 @@ desktop, a tablet or a phone, the border dragged for more room (both
 kept in the browser, the switch too). One token per opening (it lasts a
 day, a new one comes before); after every save of the draft the page
 loads again where it is, like Craft's (crelte caches the queries of a
-page in the browser, only a load shows new content). A new entry has a
-preview once it is created, an entry in the flyout none. The studio's
+page in the browser, only a load shows new content). A new entry gets
+it from the button once it has a slug (creating it then, the preview
+doesn't open by itself when its first change creates it), an entry in
+the flyout none. The studio's
 navigation makes room while it is on, the Menu button before the title
 slides it in.
 

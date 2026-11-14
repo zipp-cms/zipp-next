@@ -8,6 +8,7 @@ export default {
 		other: 'Move {title} to the trash? The {n} entries below it too.',
 	},
 	'entries.new': 'New entry',
+	'entries.untitled': 'Untitled',
 	'entries.search': 'Search entries',
 	'entries.status': 'Status',
 	'entries.type': 'Type',
@@ -65,6 +66,10 @@ export default {
 	'entries.discardTitle': 'Throw away the unpublished changes',
 	'entries.liveTitle': 'The website next to the editor, with the draft',
 	'entries.livePreview': 'Live preview',
+	'entries.liveNeedsTitle':
+		'The live preview needs a title: the address of the page comes from it',
+	'entries.liveNeedsPublish':
+		'The live preview comes once the entry is published: it was created without a title, so its page has no address yet',
 	'entries.previewTitle': 'Open the draft on the website',
 	'entries.viewTitle': 'Open the page on the website',
 	'entries.mayNotPublish':

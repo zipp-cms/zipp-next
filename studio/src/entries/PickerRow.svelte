@@ -2,7 +2,7 @@
 	import Icon from 'zipp-ui/Icon.svelte';
 	import type { Schema } from '../core/schema';
 	import { componentName, sectionOf } from '../core/schema';
-	import { date } from '../core/format';
+	import { date, titleOf } from '../core/format';
 	import EntryBadges from './EntryBadges.svelte';
 	import EntryState from './EntryState.svelte';
 	import type { EntryPickerState } from './entryPicker.svelte';
@@ -71,7 +71,7 @@
 			{#if !inTree && r.path.length}
 				<span class="path">{r.path.join(' › ')} ›</span>
 			{/if}
-			{r.e.title}
+			{titleOf(r.e)}
 		</span>
 		{#if on}<Icon name="check" size={14} />{/if}
 		<EntryBadges {schema} draft={r.e.draft} />

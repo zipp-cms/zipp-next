@@ -15,7 +15,7 @@
 	import { sectionName, type Schema } from '../core/schema';
 	import { Busy } from '../core/busy.svelte';
 	import { entryPath } from '../core/paths';
-	import { fileSize, time } from '../core/format';
+	import { fileSize, time, titleOf } from '../core/format';
 	import { t } from '../i18n/index.svelte';
 	import {
 		emptyTrash,
@@ -151,7 +151,7 @@
 		>
 			{#snippet row(e)}
 				<td>
-					<span class="title">{e.title}</span>
+					<span class="title">{titleOf(e)}</span>
 					{#if e.children}
 						<span class="note">
 							{t('trash.below', { n: e.children })}

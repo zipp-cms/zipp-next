@@ -40,14 +40,23 @@
 - Required fields only have to be filled to publish, like Craft's: an
   unpublished entry or a draft saves without them, publishing (the
   studio, the api, the members' routes, the AI's new entries) refuses
-  as before, per site for translatable fields. The title stays
-  required, other checks stay on every save.
+  as before, per site for translatable fields. Other checks stay on
+  every save.
 - `types` writes a draft variant of every entry type's and block's
   fields with all of them optional (`PageDraftFields`,
   `TextDraftBlock`): an entry with `published: false` has those, so
   have the members' routes' entries (their drafts too). `Entry` takes
   them as a third parameter. A required field with a condition is
   optional in both.
+- The studio creates a new entry with its first change, like Craft's:
+  not live, then its changes are a draft, so a reload or a failed
+  publish no longer loses a new page. The address switches to the
+  entry, Create is Save (Publish when switched on), a structure's
+  parent can still change while the editor is open. An entry that
+  isn't live may have no title (no uri, *Untitled* in the studio), and
+  a new one that isn't live takes the next free slug (`-2`) when its
+  uri is taken. An entry that was never live keeps the slug of its
+  title free too when it is published, also when the draft sends it.
 - Replace in the ⋯ menu of an image or a video in an asset field picks
   another one from the library in its place.
 - An empty image or video field is a low row like the one of other

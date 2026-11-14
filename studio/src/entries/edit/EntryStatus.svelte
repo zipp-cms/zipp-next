@@ -2,7 +2,7 @@
 	import DateTime from './DateTime.svelte';
 	import Switch from 'zipp-ui/Switch.svelte';
 	import { dateState } from '../api';
-	import { shortTime } from '../../core/format';
+	import { shortTime, titleOf } from '../../core/format';
 	import { canSetup, isAdmin } from '../../core/access';
 	import { displayName } from '../../users/api';
 	import { setupPath } from '../../core/paths';
@@ -184,13 +184,22 @@ discarding or restoring: what is typed then would be lost -->
 			{/if}
 		</label>
 
-		{#if isNew && ed.parents.length}
+		<!-- only a new entry has its parents, also once it is created:
+		then the parent moves it, who may publish -->
+		{#if ed.parents.length}
 			<label>
 				<span>{t('entries.parent')}</span>
-				<select bind:value={ed.parentId}>
-					<option value={null}>{t('entries.noParent')}</option>
+				<select
+					value={ed.parentId}
+					disabled={!isNew && !may.publish}
+					onchange={e => {
+						const v = e.currentTarget.value;
+						ed.setParent(v ? Number(v) : null);
+					}}
+				>
+					<option value="">{t('entries.noParent')}</option>
 					{#each ed.parents as p (p.id)}
-						<option value={p.id}>{p.title}</option>
+						<option value={p.id}>{titleOf(p)}</option>
 					{/each}
 				</select>
 			</label>

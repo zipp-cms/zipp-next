@@ -23,7 +23,7 @@
 		uriOf,
 		type Schema,
 	} from '../../core/schema';
-	import { go } from '../../core/router.svelte';
+	import { go, replacePath } from '../../core/router.svelte';
 	import Fields from '../../fields/Fields.svelte';
 	import { pathShown } from '../../fields/conditions';
 	import { Tabs } from '../../fields/tabs.svelte';
@@ -66,10 +66,12 @@
 
 	// the page is new for another entry or site
 	const ed = untrack(() => editor);
-	const id = ed.id;
+	const isNew = ed.id === null;
 	// the fields in it know their entry, also in the flyout
 	setEditing({
-		entryId: id,
+		get entryId() {
+			return ed.id;
+		},
 		site: ed.site,
 		get slug() {
 			return ed.slug;
@@ -97,25 +99,38 @@
 	const card = $derived(!!(ed.comp?.card || tabs.card));
 	const url = $derived(entryUrl(schema, ed.site, ed.uri));
 
+	// a new entry shows the website when asked, not when its first
+	// change creates it: the editor would jump while typing
+	let asked = $state(!isNew);
 	// the website next to the editor; an entry in the flyout or without
 	// a page (or an id) has none
-	const canLive = $derived(!onclose && id !== null && !!url);
-	// a new entry of a section with pages gets it once it is saved: the
-	// button saves it unpublished first, like Craft's new entries are
-	// drafts, and opens it with the website
+	const canLive = $derived(!onclose && ed.id !== null && !!url && asked);
+	// a new entry of a section with pages gets it once it is created:
+	// the button creates it now; without a slug its page has no address,
+	// the button says why
 	const canLiveNew = $derived(
-		!onclose &&
-			id === null &&
+		!asked &&
 			!!schema.siteUrls[ed.site] &&
 			!!ed.secDef &&
 			uriOf(ed.secDef, ed.ty, ed.site) !== null,
+	);
+	const liveOff = $derived(
+		!canLiveNew
+			? ''
+			: ed.id === null
+				? ed.slug
+					? ''
+					: t('entries.liveNeedsTitle')
+				: url
+					? ''
+					: t('entries.liveNeedsPublish'),
 	);
 	const live = $derived(
 		canLive && liveSetting.on
 			? untrack(
 					() =>
 						new SitePreview(schema, ed.site, url, () =>
-							previewToken(id!),
+							previewToken(ed.id!),
 						),
 				)
 			: null,
@@ -135,16 +150,19 @@
 		untrack(() => ed.saver.changed(ed.may.edit));
 	});
 
-	async function save() {
-		const created = await ed.save();
-		if (created !== null) go(entryPath(ed.sec, created), true);
-	}
+	// created with its first change: the url is the entry's, the editor
+	// stays as it is (a reload or another site opens the entry); not
+	// once Back or a link goes elsewhere, that page's url stays
+	const newPath = location.pathname;
+	$effect(() => {
+		if (isNew && ed.id !== null && location.pathname === newPath)
+			replacePath(entryPath(ed.sec, ed.id));
+	});
 
 	async function liveNew() {
-		const created = await ed.save(true);
-		if (created === null) return;
+		if (!(await ed.saver.flush())) return;
+		asked = true;
 		if (!liveSetting.on) toggleLive();
-		go(entryPath(ed.sec, created), true);
 	}
 
 	function discard() {
@@ -173,10 +191,17 @@
 		if (el) setTimeout(() => el.isConnected && el.focus());
 	});
 
-	// what was typed last is saved, the next editor waits for it
-	onDestroy(() => ed.saver.flush());
-	// a new entry has no draft: leaving asks first
-	onDestroy(guardLeave(() => ed.saver.unsaved));
+	// what was typed last is saved, the next editor waits for it; a new
+	// entry that isn't created yet was left after asking, see below
+	onDestroy(() => (ed.id === null ? ed.saver.cancel() : ed.saver.flush()));
+	// a new entry that isn't created yet: leaving asks first, then its
+	// first change isn't created on the way out
+	onDestroy(
+		guardLeave(
+			() => ed.saver.unsaved,
+			() => ed.saver.cancel(),
+		),
+	);
 	// the session ended while typing: saved after the new login
 	onDestroy(session.onRenewed(() => ed.saver.retry()));
 
@@ -197,8 +222,10 @@
 		if (!onclose && flyout.open) return;
 		if ((e.metaKey || e.ctrlKey) && e.key === 's') {
 			e.preventDefault();
-			// like the button: a new entry who may edit, else who may publish
-			if (ed.id === null ? ed.may.edit : ed.may.publish) save();
+			// like the button: a new entry with content who may edit, else
+			// who may publish
+			if (ed.id === null ? ed.may.edit && !ed.blank : ed.may.publish)
+				ed.save();
 		}
 	}
 </script>
@@ -217,11 +244,12 @@
 		title={ed.global ? ed.secDef.name : ed.title}
 		{url}
 		live={canLive ? !!live : canLiveNew ? false : null}
+		{liveOff}
 		onlive={canLive ? toggleLive : liveNew}
 		onpreview={() => url && ed.preview(url)}
 		ondiscard={discard}
 		onremove={remove}
-		onsave={save}
+		onsave={() => ed.save()}
 		{narrow}
 		copySites={ed.copySites}
 		oncopy={copyFrom}

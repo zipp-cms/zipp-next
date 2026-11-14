@@ -78,9 +78,12 @@ pub(crate) fn check_live(
 	};
 	let (section, comp) = schema.section_type(&input.section, &input.ty)?;
 
+	// an entry that was never live: its slug may still be its title's
+	let mut never_live = false;
 	let parent_id = match id {
 		Some(id) => {
 			let e = get_entry(conn, id, &site)?;
+			never_live = e.dates.post_date.is_none();
 			if e.section != input.section {
 				return Err(Error::Request(
 					"the section of an entry can't change".into(),
@@ -110,20 +113,29 @@ pub(crate) fn check_live(
 
 	let mut errors = vec![];
 	let title = input.title.trim().to_string();
-	if title.is_empty() {
+	let mut slug = slug_of(&input.slug, &title);
+	// like required fields, only content that goes live needs them: the
+	// studio creates a new entry with its first change, maybe untitled
+	if input.published && title.is_empty() {
 		errors.push(FieldError::new("title", "is required"));
 	}
-	let mut slug = slug_of(&input.slug, &title);
 	// a title of only signs makes none, the uri would be the parent's (or
 	// the home page's)
-	if slug.is_empty() && !title.is_empty() {
+	if input.published && slug.is_empty() && !title.is_empty() {
 		errors.push(FieldError::new("slug", "is required"));
 	}
 	// a slug made of the title gets `-2`, `-3`, … when its uri is used
-	// (like Craft's), one that was given stays and is refused
-	let auto = input.slug.trim().is_empty() && !slug.is_empty();
+	// (like Craft's), one that was given stays and is refused; the draft
+	// of an entry created with its first change has the title's slug of
+	// then, the studio's that follows the title (`ofTitle`)
+	let auto = !slug.is_empty()
+		&& (input.slug.trim().is_empty()
+			|| (never_live && slug == slugify(&title)));
 
-	// the uri in every site, a new entry starts with this slug everywhere
+	// the uri in every site, a new entry starts with this slug everywhere;
+	// one that isn't live takes the next free slug too, given or not, its
+	// draft says which one it wants when it is published
+	let free = auto || (id.is_none() && live == Live::Nowhere);
 	let mut first = HashMap::new();
 	let uris = 'free: {
 		for n in 1.. {
@@ -137,15 +149,19 @@ pub(crate) fn check_live(
 				if id.is_some() && s.handle != site {
 					continue;
 				}
-				let uri = uri_for(
-					conn,
-					section,
-					&input.ty,
-					&candidate,
-					parent_id,
-					&s.handle,
-					&input.fields,
-				)?;
+				// no slug, no page yet
+				let uri = match candidate.as_str() {
+					"" => None,
+					candidate => uri_for(
+						conn,
+						section,
+						&input.ty,
+						candidate,
+						parent_id,
+						&s.handle,
+						&input.fields,
+					)?,
+				};
 				if let Some(uri) = &uri
 					&& uri_taken(conn, &s.handle, uri, id)?
 				{
@@ -159,7 +175,7 @@ pub(crate) fn check_live(
 				break 'free uris;
 			};
 			// a uri without the slug doesn't get free with a number
-			if !auto || first.get(&s) == Some(&uri) {
+			if !free || first.get(&s) == Some(&uri) {
 				let msg = format!("the uri /{uri} is already used");
 				errors.push(FieldError::new("slug", msg));
 				break 'free uris;

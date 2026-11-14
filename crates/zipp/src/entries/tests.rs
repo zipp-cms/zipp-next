@@ -309,6 +309,16 @@ fn slugs_of_titles_get_a_number() {
 		panic!("should fail");
 	};
 	assert_eq!(errs[0].message, "the uri /events/fest is already used");
+
+	// created with its first change, before the whole title: published,
+	// the slug of its title is still made free
+	let mut early = input("events", "event", "Fe", json!({}));
+	early.published = false;
+	let early = save(&conn, &s, None, early, None).unwrap();
+	let mut whole = input("events", "event", "Fest", json!({}));
+	whole.slug = "fest".into();
+	let whole = save(&conn, &s, Some(early.id), whole, None).unwrap();
+	assert_eq!(whole.slug, "fest-4");
 }
 
 #[test]

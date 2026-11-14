@@ -269,13 +269,30 @@ async fn required_only_when_live() {
 			.collect::<Vec<_>>()
 	};
 
-	// unpublished it may wait for its fields, not for a title
+	// unpublished it may wait for its fields and its title
 	let mut new = input("events", "event", "Jazz", json!({}));
 	new.published = false;
 	let e = admin.call(&CreateReq(new.clone())).await.unwrap();
-	new.title = "".into();
-	let err = admin.call(&CreateReq(new)).await.unwrap_err();
+	let mut untitled = new.clone();
+	untitled.title = "".into();
+	let blank = admin.call(&CreateReq(untitled.clone())).await.unwrap();
+	// no slug, no page yet
+	assert_eq!((blank.slug.as_str(), blank.uri), ("", None));
+	untitled.published = true;
+	untitled.fields = json!({ "venue": "Bern", "teaser": "Live" });
+	let err = admin.call(&CreateReq(untitled)).await.unwrap_err();
 	assert_eq!(paths(err), ["title is required"]);
+	// a new one that isn't live takes the next free uri, also of a given
+	// slug, a live one only of its title's
+	let mut given = new.clone();
+	given.slug = "jazz".into();
+	let second = admin.call(&CreateReq(given.clone())).await.unwrap();
+	assert_eq!(second.uri.as_deref(), Some("events/jazz-2"));
+	let mut live = given.clone();
+	live.published = true;
+	live.fields = json!({ "venue": "Bern", "teaser": "Live" });
+	let err = admin.call(&CreateReq(live)).await.unwrap_err();
+	assert_eq!(paths(err), ["slug the uri /events/jazz is already used"]);
 	// other checks stay
 	let mut bad = input("events", "event", "Bad", json!({ "price": "x" }));
 	bad.published = false;
