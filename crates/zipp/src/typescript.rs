@@ -100,7 +100,6 @@ const LINK: &str = "{ type: 'entry' | 'url' | 'email' | 'phone' | 'asset'; \
 /// The fields of a component, with `draft` all optional and its blocks
 /// and groups as drafts.
 fn fields(schema: &Schema, comp: &Component, draft: bool) -> String {
-	let suffix = if draft { "Draft" } else { "" };
 	// notes have no value
 	let fields: Vec<_> =
 		comp.fields.iter().filter(|f| f.kind.has_value()).collect();
@@ -110,6 +109,10 @@ fn fields(schema: &Schema, comp: &Component, draft: bool) -> String {
 
 	let mut out = "{\n".to_string();
 	for f in fields {
+		// a field hidden by its condition needn't be filled to publish,
+		// nor what is inside it
+		let draft = draft || !comp.conditions_of(&f.handle).is_empty();
+		let suffix = if draft { "Draft" } else { "" };
 		let ty = match &f.kind {
 			FieldKind::Text { .. } | FieldKind::Email => "string".into(),
 			// `2026-11-14`, with a time `2026-11-14T20:00`
@@ -205,7 +208,7 @@ fn pascal(handle: &str) -> String {
 mod tests {
 	use super::*;
 	use crate::fixtures::site;
-	use crate::schema::Field;
+	use crate::schema::{Condition, Field};
 
 	#[test]
 	fn generates_types() {
@@ -238,6 +241,20 @@ mod tests {
 		// blocks of a draft are drafts too
 		assert!(ts.contains("\tbody?: (TextDraftBlock | ButtonDraftBlock)[];"));
 		assert!(ts.contains("\tseo?: SeoDraftFields;"));
+	}
+
+	#[test]
+	fn conditional_fields_are_optional() {
+		// hidden by its condition, a required field needn't be filled
+		let ts = generate(
+			&site().asset_fields([
+				Field::boolean("credited"),
+				Field::text("credit")
+					.required()
+					.when(Condition::on("credited")),
+			]),
+		);
+		assert!(ts.contains("\tcredit?: string;"));
 	}
 
 	#[test]
