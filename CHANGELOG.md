@@ -42,6 +42,11 @@
   optional in both.
 - Replace in the ⋯ menu of an image or a video in an asset field picks
   another one from the library in its place.
+- An empty image or video field is a low row like the one of other
+  files (`Drag an image here`, Choose, Upload); next to its cards the
+  tile to add more has their shape: a click anywhere chooses from the
+  library, files still drop on it and Upload is in its bar. A field of
+  one file says so in the singular (`Drag a PDF file here`).
 
 ## 0.2.0 (2026-11-07)
 
