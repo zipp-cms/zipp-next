@@ -20,24 +20,35 @@ A form is an entry of the section `forms` (put it in the nav). Its
 fields are blocks: *Single line text*, *Multi-line text*, *Email* and
 *Phone*, each with a label, a handle (the name of the value for the
 website and in the submissions; empty: made of the label, `E-Mail` is
-`eMail`), required, a placeholder and instructions. They are one field
-of the type `formFields` whose studio editor is the builder: drag the
-fields into their order, duplicate one, switch one off. *Add page*
-makes a form of several pages, steps like Formie's: the pages are tabs
-above the fields, each with its name (the step's title on the website)
-and *Delete page*, a field moves to another page with *Move to page*.
-A form of one page shows no tabs. The field is translatable: each site
-has its own labels (and could have its own fields and pages), *Copy
-content* takes them from another site. A form has the labels of its
-buttons (*Send*, between pages *Next* and *Back*) and the message after
-sending, per site. Like every entry it is on the website only where it
-is published, with drafts and revisions.
+`eMail`), required, a placeholder and instructions, and a width (¼, ⅓,
+½, ⅔, ¾ or full) like Formie's columns: fields side by side that fit
+share a row. They are one field of the type `formFields`, whose studio
+editor is the builder:
 
-The value is a list of items `{ "page": "Über Sie", "block": { … } }`
-(the blocks of `Field::item_blocks`), the items of a page one after the
-other; one page without a name is a form without pages. GraphQL only
-counts them (`{ pages fields }`), the website gets a form through its
-routes.
+- the pages are tabs above the fields, a form always has one: drag a
+  tab (or its ⋯: Move left, Move right) to order them, ⋯ Rename (or a
+  double click) names one, the step's title on the website, ⋯ Delete
+  page removes it with its fields, *Add page* makes a new one;
+- the fields of the page on screen are a grid of their widths with a
+  preview of their inputs: drag one to move it, a click opens its
+  settings and width in a flyout, its ⋯ menu (or a right click) has
+  Edit, Duplicate, To another page, Switch off and Delete;
+- *Add field* at the end of the grid picks the type and opens the new
+  field.
+
+The field is translatable: each site has its own labels (and could
+have its own fields and pages), *Copy content* takes them from another
+site. A form has the labels of its buttons (*Send*, between pages
+*Next* and *Back*) and the message after sending, per site. Like every
+entry it is on the website only where it is published, with drafts and
+revisions.
+
+The value is a list of items (the blocks of `Field::item_blocks`): `{
+"width": 50, "block": { … } }` a field, `{ "block": { "type":
+"formPage", "fields": { "label": "Über Sie" } } }` where a page starts;
+the fields before the first page item are on a page without a name, a
+page without fields isn't a step on the website. GraphQL only counts
+them (`{ pages fields }`), the website gets a form through its routes.
 
 The page **Submissions** (in the sidebar, for who may view `forms`)
 lists what came in, the newest first, filtered by form; a click on a
@@ -55,7 +66,8 @@ doesn't need to be public):
 
 - `GET /forms/{id}?site=de`: the form as it is live in the site, 404
   where it isn't: `{ id, title, pages: [{ label, fields: [{ type,
-  handle, label, required, placeholder, instructions }] }], submitLabel,
+  handle, label, required, placeholder, instructions, width }] }],
+  submitLabel,
   nextLabel, backLabel, successMessage, honeypot }`, `type` is `text`,
   `textarea`, `email` or `phone`; one page at least.
 - `POST /forms/{id}?site=de`, JSON of the values by handle: stored,
@@ -127,7 +139,9 @@ sending it shows the message (`sent` snippet for another look), why it
 couldn't send above the button. `Submit` says *Next* before the last
 page, `Back` goes to the page before and keeps what was typed (nothing
 on the first page); a mistake found when sending opens its page.
-`Fields` shows each field of the page on screen with `Field` (label, input,
+`Fields` shows each field of the page on screen in rows by their
+widths (each its own row below 40rem, the gap is `--zipp-form-gap`) with
+`Field` (label, input,
 instructions, errors), or a `field` snippet of the site's own built of
 `Label`, `Input`, `Instructions` and `Errors`; `getForm()` gives the
 form to the site's own components. The `ZippForm` has the values

@@ -1,98 +1,107 @@
-// The fields of a form on its pages, what FormFields.svelte changes: the
-// value is a list of items `{ page, block }`, the items of a page one
-// after the other. Each function returns a new list.
+// The fields of a form on its pages, what FormFields.svelte changes. The
+// value is a list of items: `{ block }` of the type `formPage` starts a
+// page, `{ width, block }` is a field; the fields before the first page
+// item are on a first page without one. Here the items are pages with
+// their fields (`groups`), each change makes new ones and flattens them.
+
+export const PAGE = 'formPage';
+export const WIDTHS = [25, 33, 50, 67, 75, 100];
 
 /**
- * @typedef {{ page: string, block: { id: string, type: string, fields: Record<string, unknown>, enabled?: false } }} Item
- * @typedef {{ label: string, rows: number[] }} Page
+ * @typedef {{ id: string, type: string, fields: Record<string, any>, enabled?: false }} Block
+ * @typedef {{ width?: number, block: Block }} Item
+ * @typedef {{ page: Item | null, fields: Item[] }} Group
  */
 
 /**
- * The pages in their order with the rows of their items, then the new
- * ones without fields yet (`extra`); at least one.
+ * The pages with their fields; at least one.
  * @param {Item[]} items
- * @param {string[]} extra
- * @returns {Page[]}
+ * @returns {Group[]}
  */
-export function pagesOf(items, extra) {
-	/** @type {Page[]} */
-	const pages = [];
-	items.forEach((item, i) => {
-		const last = pages.at(-1);
-		if (last && last.label === item.page) last.rows.push(i);
-		else pages.push({ label: item.page, rows: [i] });
-	});
-	for (const label of extra) {
-		if (!pages.some(p => p.label === label))
-			pages.push({ label, rows: [] });
+export function groupsOf(items) {
+	/** @type {Group[]} */
+	const groups = [];
+	for (const item of items) {
+		if (item.block.type === PAGE) groups.push({ page: item, fields: [] });
+		else if (groups.length) groups.at(-1).fields.push(item);
+		else groups.push({ page: null, fields: [item] });
 	}
-	if (!pages.length) pages.push({ label: '', rows: [] });
-	return pages;
+	if (!groups.length) groups.push({ page: null, fields: [] });
+	return groups;
 }
 
 /**
- * Puts an item at the end of a page (the end of the list for a page
- * without fields).
- * @param {Item[]} items
- * @param {Item} item
+ * The items of the pages: a page without its item (the first) gets one
+ * when there are others, so it keeps its place.
+ * @param {Group[]} groups
+ * @param {() => Item} newPage
+ * @returns {Item[]}
  */
-export function addTo(items, item) {
-	const last = items.findLastIndex(i => i.page === item.page);
-	const at = last < 0 ? items.length : last + 1;
-	return [...items.slice(0, at), item, ...items.slice(at)];
+export function flatten(groups, newPage) {
+	return groups.flatMap((g, i) => {
+		const page = g.page ?? (i > 0 || groups.length > 1 ? newPage() : null);
+		return page ? [page, ...g.fields] : g.fields;
+	});
 }
 
+/** @param {Group} g */
+export const labelOf = g => g.page?.block.fields.label ?? '';
+
 /**
- * Moves the item of a row to the end of another page.
- * @param {Item[]} items
- * @param {number} row
- * @param {string} page
+ * @param {Group[]} groups
+ * @param {number} i
+ * @param {string} label
+ * @param {() => Item} newPage
  */
-export function moveTo(items, row, page) {
-	const rest = items.filter((_, i) => i !== row);
-	return addTo(rest, { ...items[row], page });
+export function renamed(groups, i, label, newPage) {
+	return groups.map((g, k) => {
+		if (k !== i) return g;
+		const page = g.page ?? newPage();
+		const block = {
+			...page.block,
+			fields: { ...page.block.fields, label },
+		};
+		return { ...g, page: { ...page, block } };
+	});
 }
 
 /**
- * Moves an item within its page: `from` and `to` count its page's rows.
- * @param {Item[]} items
- * @param {number[]} rows the rows of the page
+ * @template T
+ * @param {T[]} list
  * @param {number} from
  * @param {number} to
  */
-export function reorder(items, rows, from, to) {
-	const page = rows.map(r => items[r]);
-	const [item] = page.splice(from, 1);
-	page.splice(to, 0, item);
-	const next = [...items];
-	rows.forEach((r, i) => (next[r] = page[i]));
+export function moved(list, from, to) {
+	const next = [...list];
+	const [x] = next.splice(from, 1);
+	next.splice(to, 0, x);
 	return next;
 }
 
 /**
- * @param {Item[]} items
- * @param {string} from
- * @param {string} to
+ * Changes the fields of one page.
+ * @param {Group[]} groups
+ * @param {number} i
+ * @param {(fields: Item[]) => Item[]} f
  */
-export function rename(items, from, to) {
-	return items.map(i => (i.page === from ? { ...i, page: to } : i));
+export function withFields(groups, i, f) {
+	return groups.map((g, k) => (k === i ? { ...g, fields: f(g.fields) } : g));
 }
 
 /**
- * @param {Item[]} items
- * @param {string} page
+ * Moves a field to the end of another page.
+ * @param {Group[]} groups
+ * @param {number} from the page it is on
+ * @param {number} field
+ * @param {number} to
  */
-export function removePage(items, page) {
-	return items.filter(i => i.page !== page);
+export function toPage(groups, from, field, to) {
+	const item = groups[from].fields[field];
+	const out = withFields(groups, from, fs =>
+		fs.filter((_, k) => k !== field),
+	);
+	return withFields(out, to, fs => [...fs, item]);
 }
 
-/**
- * A label none of the pages has: `wanted`, else with a number after it.
- * @param {string[]} labels
- * @param {string} wanted
- */
-export function freeLabel(labels, wanted) {
-	let label = wanted;
-	for (let n = 2; labels.includes(label); n++) label = `${wanted} ${n}`;
-	return label;
-}
+/** Grid columns of a width, of 12. */
+export const span = width => Math.round(((width ?? 100) / 100) * 12);

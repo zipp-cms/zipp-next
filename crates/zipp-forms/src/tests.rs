@@ -28,14 +28,19 @@ pub(crate) fn block(ty: &str, label: &str, more: Value) -> Value {
 	json!({ "type": ty, "fields": fields })
 }
 
-/// A field of a form on its page, `""` for a form without pages.
-pub(crate) fn item(page: &str, block: Value) -> Value {
-	json!({ "page": page, "block": block })
+/// A field of a form, full width.
+pub(crate) fn item(block: Value) -> Value {
+	json!({ "block": block })
 }
 
-/// The items of blocks on one page without a name.
+/// The item that starts a page.
+fn page(label: &str) -> Value {
+	json!({ "block": { "type": "formPage", "fields": { "label": label } } })
+}
+
+/// The items of fields on one page without a name.
 fn one_page(blocks: Vec<Value>) -> Value {
-	blocks.into_iter().map(|b| item("", b)).collect()
+	blocks.into_iter().map(item).collect()
 }
 
 /// The contact form in German, live in `de`.
@@ -112,20 +117,20 @@ async fn the_website_gets_a_live_form_of_its_site() {
 			"pages": [{ "label": "", "fields": [
 				{
 					"type": "text", "handle": "name", "label": "Name",
-					"required": true, "placeholder": "", "instructions": "",
+					"required": true, "placeholder": "", "instructions": "", "width": 100,
 				},
 				{
 					"type": "email", "handle": "email", "label": "E-Mail",
-					"required": true, "placeholder": "", "instructions": "",
+					"required": true, "placeholder": "", "instructions": "", "width": 100,
 				},
 				{
 					"type": "phone", "handle": "telefon", "label": "Telefon",
-					"required": false, "placeholder": "", "instructions": "",
+					"required": false, "placeholder": "", "instructions": "", "width": 100,
 				},
 				{
 					"type": "textarea", "handle": "nachricht",
 					"label": "Nachricht", "required": true,
-					"placeholder": "Ihre Nachricht", "instructions": "",
+					"placeholder": "Ihre Nachricht", "instructions": "", "width": 100,
 				},
 			]}],
 			"submitLabel": "Send",
@@ -140,7 +145,7 @@ async fn the_website_gets_a_live_form_of_its_site() {
 
 	// its own fields in English
 	let en = json!({
-		"fields": [item("", block("formText", "Your name", json!({ "handle": "name" })))],
+		"fields": [item(block("formText", "Your name", json!({ "handle": "name" })))],
 		"submitLabel": "Go",
 	});
 	let mut en = input(FORMS, FORM, "Contact", en);
@@ -331,22 +336,22 @@ fn handles_of_labels() {
 	assert_eq!(handle_of("  "), "");
 }
 
-/// The contact form in two steps: who, then the message.
+/// The contact form in two steps: who, then the message; the phone
+/// next to the email.
 fn steps() -> Value {
 	let mut fields = contact_fields();
-	for (i, it) in fields["fields"]
-		.as_array_mut()
-		.unwrap()
-		.iter_mut()
-		.enumerate()
-	{
-		it["page"] = json!(if i < 3 { "Über Sie" } else { "Ihre Nachricht" });
-	}
+	let items = fields["fields"].as_array_mut().unwrap();
+	items[1]["width"] = json!(50);
+	items[2]["width"] = json!(50);
+	items.insert(0, page("Über Sie"));
+	items.insert(4, page("Ihre Nachricht"));
+	// a page without fields isn't a step
+	items.push(page("Leer"));
 	fields
 }
 
 #[test]
-fn the_labels_of_the_items_make_pages() {
+fn page_items_make_pages() {
 	let form = Form::of_entry(&entry(steps()), "website");
 	let pages: Vec<(&str, Vec<&str>)> = form
 		.pages
@@ -368,16 +373,25 @@ fn the_labels_of_the_items_make_pages() {
 	assert_eq!(form.pages.len(), 1);
 }
 
+#[test]
+fn widths_come_with_the_fields() {
+	let form = Form::of_entry(&entry(steps()), "website");
+	let widths: Vec<u8> =
+		form.pages[0].fields.iter().map(|f| f.width).collect();
+	assert_eq!(widths, [100, 50, 50]);
+}
+
 #[tokio::test]
-async fn an_item_needs_its_page() {
+async fn a_width_is_one_of_a_few() {
 	let ts = TestServer::new(schema());
-	let fields = json!({ "fields": [{ "block": block("formText", "Name", json!({})) }] });
+	let mut fields = contact_fields();
+	fields["fields"][0]["width"] = json!(40);
 	let input = input(FORMS, FORM, "Kontakt", fields);
 	let err = ts.admin().call(&CreateReq(input)).await.unwrap_err();
 	let zipp::error::Error::Invalid(fields) = err else {
 		panic!("{err}");
 	};
-	assert!(format!("{fields:?}").contains("the page of a field"));
+	assert!(format!("{fields:?}").contains("a width of"));
 }
 
 #[tokio::test]

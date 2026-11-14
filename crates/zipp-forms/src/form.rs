@@ -23,7 +23,7 @@ pub struct Form {
 	pub honeypot: String,
 }
 
-/// A step of a form: the fields of the items of one page.
+/// A step of a form: the fields after its page item.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FormPage {
 	/// its title, empty for a form without pages
@@ -42,6 +42,9 @@ pub struct FormField {
 	pub required: bool,
 	pub placeholder: String,
 	pub instructions: String,
+	/// percent of a row: 25, 33, 50, 67, 75 or 100; fields side by side
+	/// that fit share a row
+	pub width: u8,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -51,6 +54,21 @@ pub enum FieldKind {
 	Textarea,
 	Email,
 	Phone,
+}
+
+/// The block of an item that starts a page, its `label` the page's
+/// name; the studio shows it as a tab, not as a block.
+pub const PAGE: &str = "formPage";
+
+/// The widths a field may have, percent of a row.
+pub const WIDTHS: &[u8] = &[25, 33, 50, 67, 75, 100];
+
+/// The width of an item, 100 without one.
+pub(crate) fn width_of(item: &Value) -> u8 {
+	item["width"]
+		.as_u64()
+		.and_then(|w| WIDTHS.iter().copied().find(|x| u64::from(*x) == w))
+		.unwrap_or(100)
 }
 
 impl FieldKind {
@@ -101,19 +119,33 @@ impl Form {
 		let text = |v: &Value, key: &str| {
 			v[key].as_str().unwrap_or_default().trim().to_string()
 		};
-		let mut pages: Vec<FormPage> = vec![];
+		// the fields before a page item are on a first page without a name
+		let mut pages = vec![FormPage {
+			label: String::new(),
+			fields: vec![],
+		}];
 		let items = entry.fields["fields"].as_array();
 		for item in items.into_iter().flatten() {
 			let block = &item["block"];
+			let ty = block["type"].as_str().unwrap_or_default();
+			let f = &block["fields"];
+			if ty == PAGE {
+				let label = text(f, "label");
+				match pages.last_mut() {
+					Some(p) if p.fields.is_empty() => p.label = label,
+					_ => pages.push(FormPage {
+						label,
+						fields: vec![],
+					}),
+				}
+				continue;
+			}
 			if block["enabled"] == Value::Bool(false) {
 				continue;
 			}
-			let Some(kind) =
-				block["type"].as_str().and_then(FieldKind::of_block)
-			else {
+			let Some(kind) = FieldKind::of_block(ty) else {
 				continue;
 			};
-			let f = &block["fields"];
 			let label = text(f, "label");
 			let mut handle = match text(f, "handle") {
 				h if h.is_empty() => handle_of(&label),
@@ -135,17 +167,12 @@ impl Form {
 				required: f["required"] == Value::Bool(true),
 				placeholder: text(f, "placeholder"),
 				instructions: text(f, "instructions"),
+				width: width_of(item),
 			};
-			// the items of a page are one after the other
-			let page = text(item, "page");
-			match pages.last_mut() {
-				Some(p) if p.label == page => p.fields.push(field),
-				_ => pages.push(FormPage {
-					label: page,
-					fields: vec![field],
-				}),
-			}
+			pages.last_mut().expect("a page").fields.push(field);
 		}
+		// a page without fields isn't a step on the website
+		pages.retain(|p| !p.fields.is_empty());
 		if pages.is_empty() {
 			pages.push(FormPage {
 				label: String::new(),

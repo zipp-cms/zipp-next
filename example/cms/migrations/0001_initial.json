@@ -21,7 +21,8 @@
               "formText",
               "formTextarea",
               "formEmail",
-              "formPhone"
+              "formPhone",
+              "formPage"
             ]
           },
           {
@@ -330,6 +331,29 @@
           "lucide": "phone"
         },
         "title_field": "label"
+      }
+    },
+    {
+      "op": "addComponent",
+      "component": {
+        "handle": "formPage",
+        "name": "Page",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ],
+        "icon": {
+          "lucide": "panel-top"
+        }
       }
     },
     {
@@ -2320,7 +2344,8 @@
               "formText",
               "formTextarea",
               "formEmail",
-              "formPhone"
+              "formPhone",
+              "formPage"
             ]
           },
           {
@@ -2617,6 +2642,26 @@
           "lucide": "phone"
         },
         "title_field": "label"
+      },
+      {
+        "handle": "formPage",
+        "name": "Page",
+        "entry": false,
+        "fields": [
+          {
+            "handle": "label",
+            "label": "Label",
+            "required": false,
+            "indexed": false,
+            "translatable": false,
+            "kind": "text",
+            "max": null,
+            "multiline": false
+          }
+        ],
+        "icon": {
+          "lucide": "panel-top"
+        }
       },
       {
         "handle": "seoSettings",

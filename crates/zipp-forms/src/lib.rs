@@ -114,7 +114,12 @@ impl Plugin for Forms {
 				"Form",
 				[
 					Field::custom("fields", FORM_FIELDS, Value::Null)
-						.item_blocks(FIELD_BLOCKS.iter().map(|(h, _)| *h))
+						.item_blocks(
+							FIELD_BLOCKS
+								.iter()
+								.map(|(h, _)| *h)
+								.chain([form::PAGE]),
+						)
 						.translatable(),
 					Field::text("submitLabel")
 						.label("Button")
@@ -147,7 +152,11 @@ impl Plugin for Forms {
 				.block_title(handle, "label")
 				.icon(handle, icon);
 		}
-		schema.field_type(FormFields)
+		let page = Field::text("label");
+		schema
+			.block(form::PAGE, "Page", [page])
+			.icon(form::PAGE, "panel-top")
+			.field_type(FormFields)
 	}
 
 	fn tables(&self) -> &'static [&'static str] {
@@ -180,10 +189,11 @@ const STUDIO: &str = include_str!("../assets/forms.js");
 /// The type of the fields of a form.
 pub const FORM_FIELDS: &str = "formFields";
 
-/// The fields of a form on its pages: items `{ "page": "Über Sie",
-/// "block": { … } }` with a field block each, the items of a page one
-/// after the other in its order. One page whose label is empty is a form
-/// without pages. The studio shows the pages as tabs.
+/// The fields of a form on its pages: items `{ "width": 50, "block": {
+/// … } }` with a field block each, and `{ "block": { "type": "formPage",
+/// "fields": { "label": "Über Sie" } } }` where a page starts (the
+/// fields before the first are on a page without a name). The studio
+/// shows the pages as tabs and the fields as a grid of their widths.
 pub struct FormFields;
 
 impl FieldType for FormFields {
@@ -191,7 +201,8 @@ impl FieldType for FormFields {
 		FORM_FIELDS
 	}
 
-	/// The blocks come checked, each item needs the label of its page.
+	/// The blocks come checked; a field's width is one of
+	/// [`WIDTHS`](form::WIDTHS), none is 100.
 	fn validate(
 		&self,
 		_options: &Value,
@@ -200,11 +211,16 @@ impl FieldType for FormFields {
 		let items = value.as_array().ok_or("a list of fields")?;
 		let mut out = vec![];
 		for item in items {
-			let page = item["page"].as_str().ok_or("the page of a field")?;
-			if page.chars().count() > 200 {
-				return Err("a page name of at most 200 characters".into());
+			let block = &item["block"];
+			if block["type"] == form::PAGE {
+				out.push(json!({ "block": block }));
+				continue;
 			}
-			out.push(json!({ "page": page.trim(), "block": item["block"] }));
+			let width = form::width_of(item);
+			if !item["width"].is_null() && item["width"] != width {
+				return Err("a width of 25, 33, 50, 67, 75 or 100".into());
+			}
+			out.push(json!({ "width": width, "block": block }));
 		}
 		Ok(match out.is_empty() {
 			true => Value::Null,
@@ -222,16 +238,14 @@ impl FieldType for FormFields {
 
 	fn output(&self, _options: &Value, value: &Value) -> Value {
 		let items = value.as_array().map(Vec::as_slice).unwrap_or_default();
-		let mut pages: Vec<&str> = items
-			.iter()
-			.map(|i| i["page"].as_str().unwrap_or_default())
-			.collect();
-		pages.dedup();
-		json!({ "pages": pages.len().max(1), "fields": items.len() })
+		let page = |i: &&Value| i["block"]["type"] == form::PAGE;
+		let pages = items.iter().filter(page).count();
+		let fields = items.len() - pages;
+		json!({ "pages": pages.max(1), "fields": fields })
 	}
 
 	fn typescript(&self) -> String {
-		"{ page: string; block: { id: string; type: string; fields: \
+		"{ width?: number; block: { id: string; type: string; fields: \
 		Record<string, unknown>; enabled?: false } }[]"
 			.into()
 	}

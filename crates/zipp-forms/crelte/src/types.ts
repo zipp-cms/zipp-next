@@ -26,6 +26,8 @@ export type FieldData = {
 	required: boolean;
 	placeholder: string;
 	instructions: string;
+	/** percent of a row: 25, 33, 50, 67, 75 or 100 */
+	width: number;
 };
 
 /**

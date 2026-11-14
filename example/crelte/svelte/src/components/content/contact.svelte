@@ -55,7 +55,7 @@
 
 <style>
 	.contact {
-		max-width: 32rem;
+		max-width: 40rem;
 		margin: 2rem 0;
 	}
 

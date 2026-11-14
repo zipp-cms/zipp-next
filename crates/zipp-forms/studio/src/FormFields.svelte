@@ -1,263 +1,515 @@
 <script>
-	import AddGroup from 'zipp-ui/AddGroup.svelte';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
-	import ItemActions from 'zipp-ui/ItemActions.svelte';
-	import ItemCard from 'zipp-ui/ItemCard.svelte';
+	import FieldRow from 'zipp-ui/FieldRow.svelte';
+	import Flyout from 'zipp-ui/Flyout.svelte';
+	import Icon from 'zipp-ui/Icon.svelte';
+	import Menu from 'zipp-ui/Menu.svelte';
+	import Popover from 'zipp-ui/Popover.svelte';
 	import Segmented from 'zipp-ui/Segmented.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
-	import Icon from 'zipp-ui/Icon.svelte';
 	import { Sortable } from 'zipp-ui/sortable';
+	import FieldCard from './FieldCard.svelte';
 	import {
-		addTo,
-		freeLabel,
-		moveTo,
-		pagesOf,
-		removePage,
-		rename,
-		reorder,
+		PAGE,
+		WIDTHS,
+		flatten,
+		groupsOf,
+		labelOf,
+		moved,
+		renamed,
+		span,
+		toPage,
+		withFields,
 	} from './formFields.js';
 	import { texts } from './texts.js';
 
 	/**
-	 * The fields of a form, the editor of `formFields`: its pages as tabs
-	 * (a form of one page shows none, only Add page), in a tab the
-	 * studio's editors of the field blocks, to drag, duplicate, switch off
-	 * or move to another page. A new page has no fields until one is
-	 * added, it lives here until then.
+	 * The builder of a form, the editor of `formFields`: its pages as
+	 * tabs (drag them into their order, ⋯ to rename, move or delete, + for
+	 * a new one), the fields of the page on screen as a grid of their
+	 * widths with a preview of their inputs. A click on a field opens its
+	 * settings and width in a flyout, the studio's editor of its block;
+	 * its ⋯ menu duplicates, moves it to another page, switches it off or
+	 * deletes it.
 	 */
 	let { value, onchange, readonly, blocks } = $props();
 	const tx = texts();
-	const uid = $props.id();
 
 	const items = $derived(value ?? []);
-	// pages without fields yet
-	let extra = $state([]);
-	const pages = $derived(pagesOf(items, extra));
+	const groups = $derived(groupsOf(items));
 	let active = $state(0);
-	const page = $derived(pages[Math.min(active, pages.length - 1)]);
-	const nameOf = (p, i) => p.label || `${tx.page} ${i + 1}`;
-
-	const set = next => onchange(next.length ? next : null);
-
-	function add(type) {
-		const item = { page: page.label, block: blocks.create(type) };
-		extra = extra.filter(l => l !== page.label);
-		set(addTo(items, item));
-	}
-
-	function addPage() {
-		const labels = pages.map(p => p.label);
-		const label = freeLabel(labels, `${tx.page} ${pages.length + 1}`);
-		extra = [...extra, label];
-		active = pages.length;
-	}
-
-	function renamePage(e) {
-		const labels = pages.filter(p => p !== page).map(p => p.label);
-		const label = freeLabel(labels, e.currentTarget.value.trim());
-		extra = extra.map(l => (l === page.label ? label : l));
-		if (page.rows.length) set(rename(items, page.label, label));
-	}
-
-	function deletePage() {
-		if (page.rows.length && !confirm(tx.confirmDeletePage)) return;
-		extra = extra.filter(l => l !== page.label);
-		if (page.rows.length) set(removePage(items, page.label));
-		active = Math.max(0, active - 1);
-	}
-
-	function duplicate(row) {
-		const item = items[row];
-		set(addTo(items, { ...item, block: blocks.copy(item.block) }));
-	}
-
-	function switchOff(row) {
-		const { enabled, ...block } = items[row].block;
-		const next = [...items];
-		next[row] = {
-			...items[row],
-			block: enabled === false ? block : { ...block, enabled: false },
-		};
-		set(next);
-	}
-
-	function move(row, label) {
-		extra = extra.filter(l => l !== label);
-		set(moveTo(items, row, label));
-	}
-
-	let list = $state();
-	const sort = new Sortable({
-		container: () => list,
-		depths: () => page.rows.map(() => 0),
-		onmove: (from, drop) =>
-			set(reorder(items, page.rows, from, drop.index)),
-	});
-
+	const at = $derived(Math.min(active, groups.length - 1));
+	const group = $derived(groups[at]);
+	const fieldTypes = $derived(blocks.types.filter(t => t.handle !== PAGE));
 	const typeName = type =>
 		blocks.types.find(t => t.handle === type)?.name ?? type;
+	const pageName = (g, i) => labelOf(g) || `${tx.page} ${i + 1}`;
+
+	const newPage = () => ({ block: blocks.create(PAGE) });
+	function set(next) {
+		const out = flatten(next, newPage);
+		onchange(out.length ? out : null);
+	}
+
+	// pages
+
+	let renaming = $state(null);
+
+	function addPage() {
+		const page = newPage();
+		page.block.fields.label = `${tx.page} ${groups.length + 1}`;
+		set([...groups, { page, fields: [] }]);
+		active = groups.length;
+	}
+
+	function rename(i, label) {
+		if (renaming !== i) return;
+		renaming = null;
+		set(renamed(groups, i, label.trim(), newPage));
+	}
+
+	/**
+	 * Focuses the name's input once the menu that opened it closed and
+	 * gave the focus back to its button; a blur before that isn't the
+	 * end of renaming.
+	 */
+	function focusName(node, i) {
+		let ready = false;
+		const id = setTimeout(() => {
+			node.focus();
+			node.select();
+			ready = true;
+		}, 50);
+		const blur = () => ready && rename(i, node.value);
+		node.addEventListener('blur', blur);
+		return {
+			destroy() {
+				clearTimeout(id);
+				node.removeEventListener('blur', blur);
+			},
+		};
+	}
+
+	function movePage(from, to) {
+		set(moved(groups, from, to));
+		active = to;
+	}
+
+	function deletePage(i) {
+		if (groups[i].fields.length && !confirm(tx.confirmDeletePage)) return;
+		set(groups.filter((_, k) => k !== i));
+		active = Math.max(0, i - 1);
+	}
+
+	const pageMenu = i => [
+		{ label: tx.renamePage, icon: 'edit', onclick: () => (renaming = i) },
+		...(i > 0
+			? [
+					{
+						label: tx.moveLeft,
+						icon: 'arrow-left',
+						onclick: () => movePage(i, i - 1),
+					},
+				]
+			: []),
+		...(i < groups.length - 1
+			? [
+					{
+						label: tx.moveRight,
+						icon: 'arrow-right',
+						onclick: () => movePage(i, i + 1),
+					},
+				]
+			: []),
+		...(groups.length > 1
+			? [
+					{
+						label: tx.deletePage,
+						icon: 'delete',
+						danger: true,
+						onclick: () => deletePage(i),
+					},
+				]
+			: []),
+	];
+
+	let tabList = $state();
+	const tabSort = new Sortable({
+		container: () => tabList,
+		depths: () => groups.map(() => 0),
+		grid: () => true,
+		onmove: (from, drop) => movePage(from, drop.index),
+	});
+
+	// fields
+
+	// the id of the block whose settings are open
+	let editing = $state(null);
+	const edited = $derived(
+		editing &&
+			groups
+				.flatMap((g, gi) =>
+					g.fields.map((item, fi) => ({ item, gi, fi })),
+				)
+				.find(x => x.item.block.id === editing),
+	);
+
+	const fields = f => set(withFields(groups, at, f));
+
+	// a new field: its first input gets the cursor
+	let fresh = null;
+
+	function add(type) {
+		const block = blocks.create(type);
+		fields(fs => [...fs, { width: 100, block }]);
+		editing = fresh = block.id;
+	}
+
+	function duplicate(fi) {
+		const item = group.fields[fi];
+		const copy = { ...item, block: blocks.copy(item.block) };
+		fields(fs => [...fs.slice(0, fi + 1), copy, ...fs.slice(fi + 1)]);
+	}
+
+	function switchOff(fi) {
+		fields(fs =>
+			fs.map((item, k) => {
+				if (k !== fi) return item;
+				const { enabled, ...block } = item.block;
+				return {
+					...item,
+					block:
+						enabled === false
+							? block
+							: { ...block, enabled: false },
+				};
+			}),
+		);
+	}
+
+	function remove(fi) {
+		if (editing === group.fields[fi].block.id) editing = null;
+		fields(fs => fs.filter((_, k) => k !== fi));
+	}
+
+	function setWidth(gi, fi, width) {
+		set(
+			withFields(groups, gi, fs =>
+				fs.map((item, k) => (k === fi ? { ...item, width } : item)),
+			),
+		);
+	}
+
+	const fieldMenu = (item, fi) => [
+		{
+			label: tx.edit,
+			icon: 'edit',
+			onclick: () => (editing = item.block.id),
+		},
+		{ label: tx.duplicate, icon: 'copy', onclick: () => duplicate(fi) },
+		...groups
+			.map((g, gi) => ({ g, gi }))
+			.filter(({ gi }) => gi !== at)
+			.map(({ g, gi }) => ({
+				label: tx.toPage.replace('{page}', pageName(g, gi)),
+				icon: 'move',
+				onclick: () => set(toPage(groups, at, fi, gi)),
+			})),
+		{
+			label: item.block.enabled === false ? tx.switchOn : tx.switchOff,
+			icon: item.block.enabled === false ? 'view' : 'hide',
+			onclick: () => switchOff(fi),
+		},
+		{
+			label: tx.remove,
+			icon: 'delete',
+			danger: true,
+			onclick: () => remove(fi),
+		},
+	];
+
+	let grid = $state();
+	const fieldSort = new Sortable({
+		container: () => grid,
+		depths: () => group.fields.map(() => 0),
+		grid: () => true,
+		onmove: (from, drop) => fields(fs => moved(fs, from, drop.index)),
+	});
 
 	/** The studio's editor of a block. */
 	function editor(target, id) {
 		const m = blocks.mount(target, id);
+		if (fresh === id) {
+			fresh = null;
+			setTimeout(() => target.querySelector('input')?.focus(), 50);
+		}
 		return { destroy: () => m.destroy() };
 	}
+
+	const widthLabel = w =>
+		({ 25: '¼', 33: '⅓', 50: '½', 67: '⅔', 75: '¾', 100: tx.full })[w];
 </script>
 
-<div class="form-fields">
-	{#if pages.length > 1}
-		<div class="tabs">
-			<Segmented
-				tabs
-				label={tx.pages}
-				options={pages.map((p, i) => ({
-					value: i,
-					label: nameOf(p, i),
-				}))}
-				value={pages.indexOf(page)}
-				onchange={i => (active = i)}
-			/>
-		</div>
-		{#if !readonly}
-			<div class="page-head">
-				<label class="stacked">
-					{tx.pageName}
+<div class="builder">
+	<div class="tabs" role="tablist" aria-label={tx.pages} bind:this={tabList}>
+		{#each groups as g, i (g.page?.block.id ?? 'first')}
+			<div
+				class="tab"
+				class:on={i === at}
+				class:sort-dragging={tabSort.moving(i)}
+				data-sort
+				data-menu-area
+			>
+				{#if !readonly && groups.length > 1}
+					<span class="grip">
+						<DragHandle sortable={tabSort} index={i} />
+					</span>
+				{/if}
+				{#if renaming === i}
 					<input
-						id="{uid}-name"
-						value={page.label}
-						placeholder={nameOf(page, pages.indexOf(page))}
-						onchange={renamePage}
+						class="rename"
+						aria-label={tx.pageName}
+						value={labelOf(g)}
+						placeholder={pageName(g, i)}
+						use:focusName={i}
+						onkeydown={e => {
+							if (e.key === 'Enter')
+								rename(i, e.currentTarget.value);
+							if (e.key === 'Escape') renaming = null;
+						}}
 					/>
-				</label>
-				<button type="button" class="light danger" onclick={deletePage}>
-					<Icon name="delete" />
-					{tx.deletePage}
-				</button>
+				{:else}
+					<button
+						type="button"
+						role="tab"
+						class="plain name"
+						aria-selected={i === at}
+						onclick={() => (active = i)}
+						ondblclick={() => !readonly && (renaming = i)}
+					>
+						{pageName(g, i)}
+						<span class="count">{g.fields.length}</span>
+					</button>
+				{/if}
+				{#if !readonly && i === at && renaming !== i}
+					<Menu items={pageMenu(i)} label={tx.pageActions} />
+				{/if}
 			</div>
-			<p class="note">{tx.pageNameNote}</p>
-		{/if}
-	{/if}
-
-	<div class="items" bind:this={list}>
-		{#each page.rows as row, i (items[row].block.id)}
-			{@const item = items[row]}
-			<div data-sort class:sort-dragging={sort.moving(i)}>
-				<ItemCard
-					kind={typeName(item.block.type)}
-					off={item.block.enabled === false}
-				>
-					{#snippet handle()}
-						{#if !readonly}
-							<DragHandle sortable={sort} index={i} />
-						{/if}
-					{/snippet}
-					{#snippet summary()}{item.block.fields.label ??
-							''}{/snippet}
-					{#snippet actions()}
-						{#if !readonly}
-							{#if pages.length > 1}
-								<select
-									class="move"
-									aria-label={tx.moveTo}
-									title={tx.moveTo}
-									value=""
-									onchange={e =>
-										move(row, e.currentTarget.value)}
-								>
-									<option value="" disabled>
-										{tx.moveTo}
-									</option>
-									{#each pages as p, k (k)}
-										{#if p !== page}
-											<option value={p.label}>
-												{nameOf(p, k)}
-											</option>
-										{/if}
-									{/each}
-								</select>
-							{/if}
-							<ItemActions
-								off={item.block.enabled === false}
-								onswitch={() => switchOff(row)}
-								onduplicate={() => duplicate(row)}
-								onremove={() =>
-									set(items.filter((_, k) => k !== row))}
-							/>
-						{/if}
-					{/snippet}
-					<div use:editor={item.block.id}></div>
-				</ItemCard>
-			</div>
-		{:else}
-			<p class="empty">{tx.noFields}</p>
 		{/each}
-		<SortLine sortable={sort} />
+		{#if !readonly}
+			<button
+				type="button"
+				class="plain add-page"
+				title={tx.addPage}
+				onclick={addPage}
+			>
+				<Icon name="add" />
+				<span>{tx.addPage}</span>
+			</button>
+		{/if}
+		<SortLine sortable={tabSort} />
 	</div>
 
-	{#if !readonly}
-		<div class="add">
-			<AddGroup
-				options={blocks.types.map(t => ({
-					value: t.handle,
-					label: t.name,
-				}))}
-				onadd={add}
-			/>
-			<button type="button" class="light" onclick={addPage}>
-				<Icon name="add" />
-				{tx.addPage}
-			</button>
-		</div>
-	{/if}
+	<div class="grid" bind:this={grid}>
+		{#each group.fields as item, fi (item.block.id)}
+			<div
+				class="cell"
+				style:--span={span(item.width)}
+				data-sort
+				class:sort-dragging={fieldSort.moving(fi)}
+			>
+				<FieldCard
+					{item}
+					typeName={typeName(item.block.type)}
+					selected={editing === item.block.id}
+					{readonly}
+					sortable={fieldSort}
+					index={fi}
+					menu={fieldMenu(item, fi)}
+					onedit={() => (editing = item.block.id)}
+				/>
+			</div>
+		{:else}
+			{#if readonly}<p class="empty">{tx.noFields}</p>{/if}
+		{/each}
+		{#if !readonly}
+			<div class="cell add">
+				<Popover menu label={tx.addField}>
+					{#snippet trigger({ toggle, open })}
+						<button
+							type="button"
+							class="add-field"
+							aria-expanded={open}
+							onclick={toggle}
+						>
+							<Icon name="add" />
+							{tx.addField}
+						</button>
+					{/snippet}
+					{#each fieldTypes as t (t.handle)}
+						<button
+							type="button"
+							class="popup-item"
+							role="menuitem"
+							onclick={() => add(t.handle)}
+						>
+							{t.name}
+						</button>
+					{/each}
+				</Popover>
+			</div>
+		{/if}
+		<SortLine sortable={fieldSort} />
+	</div>
 </div>
+
+{#if edited}
+	<Flyout
+		title={edited.item.block.fields.label ||
+			typeName(edited.item.block.type)}
+		onclose={() => (editing = null)}
+	>
+		<div class="settings">
+			{#if !readonly}
+				<FieldRow label={tx.width}>
+					<Segmented
+						label={tx.width}
+						options={WIDTHS.map(w => ({
+							value: w,
+							label: widthLabel(w),
+						}))}
+						value={edited.item.width ?? 100}
+						onchange={w => setWidth(edited.gi, edited.fi, w)}
+					/>
+				</FieldRow>
+			{/if}
+			{#key editing}
+				<div use:editor={editing}></div>
+			{/key}
+		</div>
+	</Flyout>
+{/if}
 
 <style lang="scss">
 	@use 'zipp-ui/vars.scss' as *;
 
-	.form-fields {
+	.builder {
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
 	}
 
-	.page-head {
-		display: flex;
-		align-items: flex-end;
-		gap: 0.75rem;
-
-		label {
-			flex: 1;
-		}
-	}
-
-	.note {
-		margin: -0.5rem 0 0;
-	}
-
-	.items {
+	.tabs {
 		position: relative;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.move {
-		width: auto;
-		padding: 0.125rem 0.375rem;
-		font-size: var(--fs-sm);
-	}
-
-	.add {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.75rem;
+		gap: 0.25rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid var(--line);
+	}
+
+	.tab {
+		display: flex;
+		align-items: center;
+		gap: 0.125rem;
+		padding: 0.125rem 0.25rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius);
+
+		&.on {
+			background: var(--accent-soft);
+			border-color: var(--accent-ring);
+		}
+
+		.grip {
+			display: flex;
+			color: var(--muted);
+		}
+	}
+
+	.name {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.25rem 0.375rem;
+		font-weight: 500;
+
+		.on & {
+			color: var(--accent);
+		}
+	}
+
+	.count {
+		min-width: 1.25rem;
+		padding: 0 0.3125rem;
+		color: var(--muted);
+		font-size: var(--fs-xs);
+		text-align: center;
+		background: var(--hover);
+		border-radius: 999px;
+	}
+
+	.rename {
+		width: 12rem;
+		padding: 0.25rem 0.5rem;
+	}
+
+	.add-page {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.375rem 0.5rem;
+		color: var(--muted);
+
+		@include hover {
+			color: var(--accent);
+		}
+	}
+
+	.grid {
+		position: relative;
+		display: grid;
+		grid-template-columns: repeat(12, minmax(0, 1fr));
+		gap: 0.625rem;
+	}
+
+	.cell {
+		grid-column: span var(--span, 12);
+		min-width: 0;
+
+		&.add {
+			grid-column: span 12;
+		}
+	}
+
+	.add-field {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.375rem;
+		width: 100%;
+		padding: 0.75rem;
+		color: var(--muted);
+		background: transparent;
+		border: 1px dashed var(--border-strong);
+		border-radius: var(--radius-lg);
+
+		@include hover {
+			color: var(--accent);
+			border-color: var(--accent);
+		}
+	}
+
+	.settings {
+		display: flex;
+		flex-direction: column;
+		gap: 0.625rem;
 	}
 
 	@include max-tablet {
-		.page-head {
-			flex-direction: column;
-			align-items: stretch;
+		.cell {
+			grid-column: span 12;
 		}
 	}
 </style>
