@@ -86,8 +86,11 @@ entry the AI creates (its draft publishes it) too, and a save that keeps
 it live can't empty them. Per site: an entry live in `de` but not in
 `en` needs the translatable ones in `de`, the shared ones everywhere
 it is live; unpublishing a site only needs the shared ones that are
-live elsewhere. The title is always required, and everything else is
-checked on every save. Fields of assets and users are always required.
+live elsewhere. The title (and a slug from it) is required the same
+way: an entry that isn't live may have none yet, it has no uri then.
+A new entry that isn't live and whose uri is taken gets the next free
+slug (`-2`, `-3`, …) instead of an error; a live one is refused.
+Everything else is checked on every save. Fields of assets and users are always required.
 `.default(true)`, `.default("Mehr")` or a dropdown's value is what a new
 entry or block starts with: the studio fills it in, an entry created
 through the api without the field gets it, and a single starts with it.

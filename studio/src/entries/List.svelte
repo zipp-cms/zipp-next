@@ -33,7 +33,7 @@
 	import type { Entry } from './api';
 	import Menu, { type MenuItem } from 'zipp-ui/Menu.svelte';
 	import Icon from 'zipp-ui/Icon.svelte';
-	import { date } from '../core/format';
+	import { date, titleOf } from '../core/format';
 	import DragHandle from 'zipp-ui/DragHandle.svelte';
 	import SortLine from 'zipp-ui/SortLine.svelte';
 	import { Sortable } from 'zipp-ui/sortable';
@@ -155,11 +155,11 @@
 					<DragHandle
 						sortable={sort}
 						index={i}
-						label={t('entries.move', { title: e.title })}
+						label={t('entries.move', { title: titleOf(e) })}
 					/>
 				{/if}
 				<a class="title" href={entryPath(section, e.id)}>
-					{e.title}
+					{titleOf(e)}
 				</a>
 			</span>
 			<span class="status">
@@ -182,7 +182,7 @@
 			<span class="date hide-small">{date(e.updatedAt)}</span>
 			<Menu
 				items={actions(e)}
-				label={t('entries.actionsFor', { title: e.title })}
+				label={t('entries.actionsFor', { title: titleOf(e) })}
 			/>
 		</div>
 	{:else}

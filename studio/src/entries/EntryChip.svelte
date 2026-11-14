@@ -5,6 +5,7 @@
 	import { openEntry } from '../core/flyout.svelte';
 	import { componentName } from '../core/schema';
 	import { t } from '../i18n/index.svelte';
+	import { titleOf } from '../core/format';
 
 	/**
 	 * A chosen entry, like Craft's element chips: compact, side by side
@@ -39,7 +40,7 @@
 		title={t('entries.openInFlyout')}
 		onclick={() => openEntry(id)}
 	>
-		<span class="truncate">{entry?.title ?? `#${id}`}</span>
+		<span class="truncate">{entry ? titleOf(entry) : `#${id}`}</span>
 		{#if entry && showType}
 			<span class="note">{componentName(schema, entry.type)}</span>
 		{/if}

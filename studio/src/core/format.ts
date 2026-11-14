@@ -1,5 +1,13 @@
 import { locale, t } from '../i18n/index.svelte';
 
+/**
+ * The title of an entry, also of one that has none yet: the studio
+ * creates a new entry with its first change.
+ */
+export function titleOf(e: { title: string }): string {
+	return e.title || t('entries.untitled');
+}
+
 /** Latin letters as ASCII, like the server's `entries::ascii`. */
 const ASCII: Record<string, string> = {
 	ä: 'ae',

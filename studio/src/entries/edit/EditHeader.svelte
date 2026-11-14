@@ -13,6 +13,7 @@
 		title,
 		url,
 		live,
+		liveOff = '',
 		onlive,
 		onpreview,
 		ondiscard,
@@ -28,6 +29,8 @@
 		url: string | null;
 		/** the live preview is on; null: this entry has none */
 		live: boolean | null;
+		/** why the live preview can't open yet, the button is off */
+		liveOff?: string;
 		onlive: () => void;
 		onpreview: () => void;
 		ondiscard: () => void;
@@ -75,7 +78,12 @@
 	);
 </script>
 
-<PageTop crumbs={[...crumbs, { label: title || t('entries.new') }]}>
+<PageTop
+	crumbs={[
+		...crumbs,
+		{ label: title || (isNew ? t('entries.new') : t('entries.untitled')) },
+	]}
+>
 	{#snippet state()}
 		{#if !isNew}
 			<span class="badge" class:live={published} class:draft={!published}>
@@ -123,8 +131,11 @@
 				class="toggle"
 				class:on={live}
 				aria-pressed={live}
-				onclick={onlive}
-				title={t('entries.liveTitle')}
+				aria-disabled={!!liveOff}
+				onclick={() => {
+					if (!liveOff) onlive();
+				}}
+				title={liveOff || t('entries.liveTitle')}
 			>
 				<Icon name="live-preview" />
 				<span class="text">{t('entries.livePreview')}</span>
@@ -149,17 +160,19 @@
 				</a>
 			{/if}
 		{/if}
-		<!-- a role that may only edit leaves its draft for someone to publish -->
+		<!-- a role that may only edit leaves its draft for someone to publish;
+		a new entry is created with its first change, the button does it now
+		and publishes it when it is switched on -->
 		<button
 			class="primary"
 			onclick={onsave}
 			disabled={ed.busy ||
-				(isNew ? !may.edit : !hasDraft || !may.publish)}
+				(isNew ? !may.edit || ed.blank : !hasDraft || !may.publish)}
 			title={!isNew && !may.publish
 				? t('entries.mayNotPublish')
 				: undefined}
 		>
-			{isNew ? t('common.create') : t('common.publish')}
+			{isNew && !ed.published ? t('common.save') : t('common.publish')}
 		</button>
 	{/snippet}
 </PageTop>

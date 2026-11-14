@@ -74,6 +74,17 @@ export function go(path: string, replace = false) {
 	router.open(path, {}, { history: replace ? 'replace' : 'push' });
 }
 
+/**
+ * Another path for the page that is open, without opening it again: a
+ * new entry that was created in its editor. Back, a reload and another
+ * site open this path.
+ */
+export function replacePath(path: string) {
+	const req = router.currentRequest.get().clone();
+	req.url = new URL(path, location.origin);
+	router.replaceReq(req);
+}
+
 /** The site the studio edits, the same in all pages. */
 export const site = $state({
 	current: localStorage.getItem('zipp-site') ?? '',

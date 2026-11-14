@@ -11,6 +11,7 @@ export default {
 		other: '{title} in den Papierkorb legen? Die {n} untergeordneten Einträge auch.',
 	},
 	'entries.new': 'Neuer Eintrag',
+	'entries.untitled': 'Ohne Titel',
 	'entries.search': 'Einträge suchen',
 	'entries.status': 'Status',
 	'entries.type': 'Typ',
@@ -69,6 +70,10 @@ export default {
 	'entries.discardTitle': 'Die nicht veröffentlichten Änderungen verwerfen',
 	'entries.liveTitle': 'Die Website neben dem Editor, mit dem Entwurf',
 	'entries.livePreview': 'Live-Vorschau',
+	'entries.liveNeedsTitle':
+		'Die Live-Vorschau braucht einen Titel: die Adresse der Seite kommt von ihm',
+	'entries.liveNeedsPublish':
+		'Die Live-Vorschau kommt, sobald der Eintrag veröffentlicht ist: er wurde ohne Titel erstellt, seine Seite hat noch keine Adresse',
 	'entries.previewTitle': 'Den Entwurf auf der Website öffnen',
 	'entries.viewTitle': 'Die Seite auf der Website öffnen',
 	'entries.mayNotPublish':

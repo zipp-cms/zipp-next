@@ -165,7 +165,7 @@ button,
 	text-decoration: none;
 
 	@include hover {
-		&:hover:not(:disabled) {
+		&:hover:not(:disabled, [aria-disabled='true']) {
 			background: var(--hover);
 		}
 	}
@@ -207,7 +207,10 @@ button,
 		}
 	}
 
-	&:disabled {
+	// aria-disabled: off, but its title still says why (a disabled
+	// button shows none in Firefox)
+	&:disabled,
+	&[aria-disabled='true'] {
 		opacity: 0.4;
 		cursor: default;
 	}

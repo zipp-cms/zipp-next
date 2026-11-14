@@ -12,7 +12,7 @@ import {
 	deleteEntry,
 	getEntry,
 	listEntries,
-	createEntry,
+	moveEntry,
 	setAuthor,
 	type Author,
 	type Dates,
@@ -159,11 +159,15 @@ export class EntryEditor {
 		return this.action.fields;
 	}
 
+	/** null: new, until its first change creates it, see `DraftSaver` */
+	id = $state<number | null>(null);
+
 	constructor(
 		readonly schema: Schema,
-		readonly id: number | null,
+		id: number | null,
 		section: string | null,
 	) {
+		this.id = id;
 		this.site = site.current;
 		this.sec = section ?? '';
 		this.loaded = id === null;
@@ -364,37 +368,56 @@ export class EntryEditor {
 	}
 
 	/**
-	 * A new entry is created directly, its id comes back (`unpublished`:
-	 * not live yet whatever its switch says, for the live preview); a
-	 * draft is published, the last keys first.
+	 * The new entry is created, see `DraftSaver`: the editor goes on with
+	 * it as it is, what it has besides is its draft.
 	 */
-	async save(unpublished = false): Promise<number | null> {
-		// Cmd+S while saving: once is enough, a new entry only once
-		if (this.busy) return null;
-		const created = await this.action.run(async () => {
-			if (this.id === null) {
-				const entry = await createEntry({
-					section: this.sec,
-					site: this.site,
-					parentId: this.parentId,
-					...this.doc,
-					// one of the title the server makes free (`-2`, …)
-					...(this.slugFollows ? { slug: '' } : {}),
-					...(unpublished ? { published: false } : {}),
-				});
-				// saved, the page of the entry may open
-				this.saver.saved();
-				return entry.id;
-			}
+	async created(entry: Entry) {
+		this.id = entry.id;
+		this.uri = entry.uri;
+		this.authorId = entry.authorId;
+		const user = session.user;
+		this.author = user ? { id: user.id, name: user.name } : null;
+		// the title's slug the server made free (`-2`, …), not a draft
+		if (this.slugFollows && ofTitle(entry.slug, this.#title))
+			this.#slug = entry.slug;
+		this.live = {
+			type: entry.type,
+			title: entry.title,
+			slug: entry.slug,
+			published: entry.published,
+			fields: entry.fields,
+			postDate: entry.postDate,
+			expiryDate: entry.expiryDate,
+		};
+		this.perSite = Object.fromEntries(
+			this.schema.sites.map(s => [s.handle, false]),
+		);
+		this.#opened = null;
+		this.action.error = '';
+		this.action.fields = {};
+		// nothing besides: no draft
+		if (docChanges(this.live, this.doc).size === 0) this.saver.saved();
+		// a parent chosen while it was created
+		if (entry.parentId !== this.parentId)
+			await this.moveTo(entry.id, this.parentId);
+	}
+
+	/**
+	 * Publishes the draft, the last keys first; a new entry is created
+	 * first, like its first change does.
+	 */
+	async save() {
+		// Cmd+S while saving: once is enough
+		if (this.busy) return;
+		await this.action.run(async () => {
 			// what isn't saved can't be published: the conflict or error shows
-			if (!(await this.saver.flush())) return null;
-			if (!this.draft) return null;
-			await publishDraft(this.id);
+			if (!(await this.saver.flush())) return;
+			// who may only edit keeps the draft of a new entry
+			if (!this.draft || !this.may.publish) return;
+			await publishDraft(this.id!);
 			this.saver.state = '';
 			await this.load();
-			return null;
 		});
-		return created ?? null;
 	}
 
 	discard() {
@@ -430,6 +453,25 @@ export class EntryEditor {
 			this.#title = theirs.title;
 			this.fields = theirs.fields;
 		});
+	}
+
+	/**
+	 * The parent of an entry new in this editor: chosen before it is
+	 * created, moved there after (at the end).
+	 */
+	setParent(parent: number | null) {
+		const id = this.id;
+		if (id === null) {
+			this.parentId = parent;
+			return;
+		}
+		return this.action.run(() => this.moveTo(id, parent));
+	}
+
+	private async moveTo(id: number, parent: number | null) {
+		await moveEntry(id, parent, Number.MAX_SAFE_INTEGER);
+		this.parentId = parent;
+		this.uri = (await getEntry(id, this.site)).entry.uri;
 	}
 
 	/** The users an admin may make the author, loaded once. */
