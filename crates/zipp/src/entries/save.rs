@@ -1,4 +1,5 @@
 use super::*;
+use crate::assets::linkable_by;
 
 /// Creates an entry in all sites, or updates it in one site when `id` is
 /// given, with a revision of who did it (`None`: the system). Shared
@@ -183,6 +184,7 @@ pub(crate) fn check_live(
 		errors.extend(check_relations(
 			conn,
 			schema,
+			Some(&section.handle),
 			&input.ty,
 			&mut fields,
 			user_id,
@@ -349,10 +351,15 @@ pub(crate) fn write(
 /// them. What the user `user_id` may not view counts as deleted, so a
 /// save tells nothing about hidden sections or assets; what it linked to
 /// `before` stays, someone who sees it chose it. `live` says which
-/// required fields that are left empty must be filled.
+/// required fields that are left empty must be filled. Someone who
+/// edits only their own entries of the `section` links only assets
+/// they may (see [`linkable_by`]), else a published entry would show
+/// another member's private photo.
+#[allow(clippy::too_many_arguments)]
 fn check_relations(
 	conn: &Connection,
 	schema: &Schema,
+	section: Option<&str>,
 	ty: &str,
 	fields: &mut Value,
 	user_id: Option<i64>,
@@ -404,6 +411,12 @@ fn check_relations(
 		};
 	}
 
+	let own_only = match (&user, section) {
+		(Some(u), Some(s)) if !u.can(schema, s, Access::Edit) => {
+			Some(u.user_id)
+		}
+		_ => None,
+	};
 	let mut errors = vec![];
 
 	for rel in relations(schema, comp, fields) {
@@ -424,6 +437,15 @@ fn check_relations(
 			let found: Option<(String, String)> = conn
 				.query_row(sql, [id], |r| Ok((r.get(0)?, r.get(1)?)))
 				.optional()?;
+			// what it links already stays
+			let private = match (&rel.target, &found, own_only) {
+				(Target::Assets { .. }, Some(_), Some(u))
+					if !before.contains(&(LinkKind::Asset, id)) =>
+				{
+					!linkable_by(conn, id, u)?
+				}
+				_ => false,
+			};
 			let error = match (&rel.target, found) {
 				(_, None) => format!("{what} {id} doesn't exist"),
 				(Target::Entries { types, sections }, Some((t, s))) => {
@@ -445,6 +467,9 @@ fn check_relations(
 						&& !has_extension(&filename, extensions) =>
 				{
 					format!("asset {id} is no {}", extensions.join(", "))
+				}
+				(Target::Assets { .. }, Some(_)) if private => {
+					format!("asset {id} is neither yours nor public")
 				}
 				_ => continue,
 			};
@@ -492,6 +517,7 @@ pub(crate) fn check_fields(
 	let errors = check_relations(
 		conn,
 		schema,
+		None,
 		handle,
 		&mut fields,
 		user_id,

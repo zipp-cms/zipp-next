@@ -485,6 +485,25 @@ pub(crate) fn store_file(
 	get_asset(conn, id)
 }
 
+/// Whether a user who edits only their own entries may link an asset:
+/// they uploaded it, or a live entry shows it already, so it is public.
+pub(crate) fn linkable_by(
+	conn: &Connection,
+	id: i64,
+	user_id: i64,
+) -> Result<bool> {
+	let sql = format!(
+		"SELECT uploaded_by IS ?2 OR EXISTS (SELECT 1 FROM asset_relations r
+			JOIN entry_sites s ON s.entry_id = r.entry_id AND s.site = r.site
+			JOIN entries e ON e.id = r.entry_id
+			WHERE r.asset_id = a.id AND s.published = 1
+			AND e.deleted_at IS NULL AND {})
+		FROM assets a WHERE id = ?1",
+		crate::entries::LIVE_DATES
+	);
+	Ok(conn.query_row(&sql, params![id, user_id], |r| r.get(0))?)
+}
+
 /// Where uploads go, `--files`.
 pub(crate) fn files_dir(path: PathBuf) -> std::io::Result<PathBuf> {
 	fs::create_dir_all(&path)?;

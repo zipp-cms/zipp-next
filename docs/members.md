@@ -171,4 +171,9 @@ one (`published` is what is live). A change replaces the fields it
 sends, the others stay, and keeps the type, slug and dates; invalid
 fields answer `INVALID` with their paths like the studio's api. Images
 go into the folder of `.images` (`{user}` is the user's id), up to its
-size, only images. A user may change or upload 60 times in 10 minutes.
+size, only images. A user with only own access to the section links
+only assets they uploaded or that a live entry shows already (public),
+else the field is `INVALID`, so a guessed id can't publish another
+member's private photo; links an entry has already stay. Roles with the
+section's access link any asset. A user may change or upload 60 times
+in 10 minutes.

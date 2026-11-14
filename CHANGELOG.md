@@ -20,6 +20,11 @@
   a new entry whose slug follows the title.
 - GraphQL `assets(id: [3, 4])` and `asset(id: 3)` read assets by their
   ids, for a token with the library.
+- Users with only own access to a section (`Role::own`, website
+  members) link only assets they uploaded or that a live entry shows,
+  else the field is invalid: a guessed id no longer publishes another
+  member's private photo. Links an entry has stay, roles with the
+  section's access link any asset.
 - `user --name`: the cli sets a user's display name too.
 - Required fields only have to be filled to publish, like Craft's: an
   unpublished entry or a draft saves without them, publishing (the
