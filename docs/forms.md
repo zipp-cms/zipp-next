@@ -20,16 +20,24 @@ A form is an entry of the section `forms` (put it in the nav). Its
 fields are blocks: *Single line text*, *Multi-line text*, *Email* and
 *Phone*, each with a label, a handle (the name of the value for the
 website and in the submissions; empty: made of the label, `E-Mail` is
-`eMail`), required, a placeholder and instructions. So the builder is
-the entry editor: drag the fields into their order, duplicate one,
-switch one off. A *Page break* block starts a page, a step of the form
-like Formie's pages: its label is the page's title, before the first
-field it names the first page, a form without one is one page. The
-block list is translatable: each site has its own labels (and could
-have its own fields), *Copy content* takes them from another site. A
-form has the labels of its buttons (*Send*, between pages *Next* and
-*Back*) and the message after sending, per site. Like every entry it is on the website
-only where it is published, with drafts and revisions.
+`eMail`), required, a placeholder and instructions. They are one field
+of the type `formFields` whose studio editor is the builder: drag the
+fields into their order, duplicate one, switch one off. *Add page*
+makes a form of several pages, steps like Formie's: the pages are tabs
+above the fields, each with its name (the step's title on the website)
+and *Delete page*, a field moves to another page with *Move to page*.
+A form of one page shows no tabs. The field is translatable: each site
+has its own labels (and could have its own fields and pages), *Copy
+content* takes them from another site. A form has the labels of its
+buttons (*Send*, between pages *Next* and *Back*) and the message after
+sending, per site. Like every entry it is on the website only where it
+is published, with drafts and revisions.
+
+The value is a list of items `{ "page": "Über Sie", "block": { … } }`
+(the blocks of `Field::item_blocks`), the items of a page one after the
+other; one page without a name is a form without pages. GraphQL only
+counts them (`{ pages fields }`), the website gets a form through its
+routes.
 
 The page **Submissions** (in the sidebar, for who may view `forms`)
 lists what came in, the newest first, filtered by form; a click on a

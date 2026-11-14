@@ -28,10 +28,20 @@ pub(crate) fn block(ty: &str, label: &str, more: Value) -> Value {
 	json!({ "type": ty, "fields": fields })
 }
 
+/// A field of a form on its page, `""` for a form without pages.
+pub(crate) fn item(page: &str, block: Value) -> Value {
+	json!({ "page": page, "block": block })
+}
+
+/// The items of blocks on one page without a name.
+fn one_page(blocks: Vec<Value>) -> Value {
+	blocks.into_iter().map(|b| item("", b)).collect()
+}
+
 /// The contact form in German, live in `de`.
 pub(crate) fn contact_fields() -> Value {
 	json!({
-		"fields": [
+		"fields": one_page(vec![
 			block("formText", "Name", json!({ "required": true })),
 			block(
 				"formEmail",
@@ -44,7 +54,7 @@ pub(crate) fn contact_fields() -> Value {
 				"Nachricht",
 				json!({ "required": true, "placeholder": "Ihre Nachricht" }),
 			),
-		],
+		]),
 		"successMessage": "Danke!",
 	})
 }
@@ -130,7 +140,7 @@ async fn the_website_gets_a_live_form_of_its_site() {
 
 	// its own fields in English
 	let en = json!({
-		"fields": [block("formText", "Your name", json!({ "handle": "name" }))],
+		"fields": [item("", block("formText", "Your name", json!({ "handle": "name" })))],
 		"submitLabel": "Go",
 	});
 	let mut en = input(FORMS, FORM, "Contact", en);
@@ -297,13 +307,13 @@ fn handles_are_unique_and_off_blocks_left_out() {
 	let mut off = block("formText", "Hidden", json!({}));
 	off["enabled"] = json!(false);
 	let form = Form::of_entry(
-		&entry(json!({ "fields": [
+		&entry(json!({ "fields": one_page(vec![
 			block("formText", "Website", json!({})),
 			block("formText", "Vorname", json!({ "handle": "name" })),
 			block("formText", "Name", json!({})),
 			off,
 			block("formText", "!!", json!({})),
-		]})),
+		])})),
 		"website",
 	);
 	let fields = &form.pages[0].fields;
@@ -324,16 +334,19 @@ fn handles_of_labels() {
 /// The contact form in two steps: who, then the message.
 fn steps() -> Value {
 	let mut fields = contact_fields();
-	let blocks = fields["fields"].as_array_mut().unwrap();
-	blocks.insert(0, block("formPage", "Über Sie", json!({})));
-	blocks.insert(4, block("formPage", "Ihre Nachricht", json!({})));
-	// a page break at the end opens no page
-	blocks.push(block("formPage", "Leer", json!({})));
+	for (i, it) in fields["fields"]
+		.as_array_mut()
+		.unwrap()
+		.iter_mut()
+		.enumerate()
+	{
+		it["page"] = json!(if i < 3 { "Über Sie" } else { "Ihre Nachricht" });
+	}
 	fields
 }
 
 #[test]
-fn page_breaks_make_pages() {
+fn the_labels_of_the_items_make_pages() {
 	let form = Form::of_entry(&entry(steps()), "website");
 	let pages: Vec<(&str, Vec<&str>)> = form
 		.pages
@@ -350,6 +363,21 @@ fn page_breaks_make_pages() {
 			("Ihre Nachricht", vec!["nachricht"]),
 		]
 	);
+	// no fields: one empty page
+	let form = Form::of_entry(&entry(json!({})), "website");
+	assert_eq!(form.pages.len(), 1);
+}
+
+#[tokio::test]
+async fn an_item_needs_its_page() {
+	let ts = TestServer::new(schema());
+	let fields = json!({ "fields": [{ "block": block("formText", "Name", json!({})) }] });
+	let input = input(FORMS, FORM, "Kontakt", fields);
+	let err = ts.admin().call(&CreateReq(input)).await.unwrap_err();
+	let zipp::error::Error::Invalid(fields) = err else {
+		panic!("{err}");
+	};
+	assert!(format!("{fields:?}").contains("the page of a field"));
 }
 
 #[tokio::test]

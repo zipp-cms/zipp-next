@@ -12,7 +12,7 @@ use zipp::entries::Entry;
 pub struct Form {
 	pub id: i64,
 	pub title: String,
-	/// one at least, a form without a page break is one page
+	/// one at least, a form without pages is one without a name
 	pub pages: Vec<FormPage>,
 	pub submit_label: String,
 	/// the buttons between the pages
@@ -23,10 +23,10 @@ pub struct Form {
 	pub honeypot: String,
 }
 
-/// A step of a form: the fields up to the next page break.
+/// A step of a form: the fields of the items of one page.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FormPage {
-	/// its title, empty for a first page without a page break before it
+	/// its title, empty for a form without pages
 	pub label: String,
 	pub fields: Vec<FormField>,
 }
@@ -52,9 +52,6 @@ pub enum FieldKind {
 	Email,
 	Phone,
 }
-
-/// The block that starts a page.
-pub const PAGE_BREAK: &str = "formPage";
 
 impl FieldKind {
 	fn of_block(ty: &str) -> Option<Self> {
@@ -96,39 +93,27 @@ pub struct FieldError {
 }
 
 impl Form {
-	/// The form of an entry of `forms` in its site; switched off blocks
+	/// The form of an entry of `forms` in its site, its fields on their
+	/// pages (see [`FormFields`](crate::FormFields)); switched off blocks
 	/// are left out, a handle that is empty or already there is made of
-	/// the label. A page break starts a page, before the first field it
-	/// names the first one.
+	/// the label.
 	pub fn of_entry(entry: &Entry, honeypot: &str) -> Self {
 		let text = |v: &Value, key: &str| {
 			v[key].as_str().unwrap_or_default().trim().to_string()
 		};
-		let mut pages = vec![FormPage {
-			label: String::new(),
-			fields: vec![],
-		}];
-		let blocks = entry.fields["fields"].as_array();
-		for block in blocks.into_iter().flatten() {
+		let mut pages: Vec<FormPage> = vec![];
+		let items = entry.fields["fields"].as_array();
+		for item in items.into_iter().flatten() {
+			let block = &item["block"];
 			if block["enabled"] == Value::Bool(false) {
 				continue;
 			}
-			let ty = block["type"].as_str().unwrap_or_default();
-			let f = &block["fields"];
-			if ty == PAGE_BREAK {
-				let label = text(f, "label");
-				match pages.last_mut() {
-					Some(p) if p.fields.is_empty() => p.label = label,
-					_ => pages.push(FormPage {
-						label,
-						fields: vec![],
-					}),
-				}
-				continue;
-			}
-			let Some(kind) = FieldKind::of_block(ty) else {
+			let Some(kind) =
+				block["type"].as_str().and_then(FieldKind::of_block)
+			else {
 				continue;
 			};
+			let f = &block["fields"];
 			let label = text(f, "label");
 			let mut handle = match text(f, "handle") {
 				h if h.is_empty() => handle_of(&label),
@@ -151,12 +136,21 @@ impl Form {
 				placeholder: text(f, "placeholder"),
 				instructions: text(f, "instructions"),
 			};
-			pages.last_mut().expect("a page").fields.push(field);
+			// the items of a page are one after the other
+			let page = text(item, "page");
+			match pages.last_mut() {
+				Some(p) if p.label == page => p.fields.push(field),
+				_ => pages.push(FormPage {
+					label: page,
+					fields: vec![field],
+				}),
+			}
 		}
-		// a page break at the end opens no page
-		if pages.len() > 1 && pages.last().is_some_and(|p| p.fields.is_empty())
-		{
-			pages.pop();
+		if pages.is_empty() {
+			pages.push(FormPage {
+				label: String::new(),
+				fields: vec![],
+			});
 		}
 
 		let mut honeypot = honeypot.to_string();

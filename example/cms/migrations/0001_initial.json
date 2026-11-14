@@ -14,16 +14,15 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "blocks",
-            "types": [
+            "kind": "custom",
+            "type": "formFields",
+            "options": null,
+            "blocks": [
               "formText",
               "formTextarea",
               "formEmail",
-              "formPhone",
-              "formPage"
-            ],
-            "min": 1,
-            "max": null
+              "formPhone"
+            ]
           },
           {
             "handle": "submitLabel",
@@ -329,31 +328,6 @@
         ],
         "icon": {
           "lucide": "phone"
-        },
-        "title_field": "label"
-      }
-    },
-    {
-      "op": "addComponent",
-      "component": {
-        "handle": "formPage",
-        "name": "Page break",
-        "entry": false,
-        "fields": [
-          {
-            "handle": "label",
-            "label": "Label",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "instructions": "The title of the page that starts here, a step of the form.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
-          }
-        ],
-        "icon": {
-          "lucide": "separator-horizontal"
         },
         "title_field": "label"
       }
@@ -2339,16 +2313,15 @@
             "required": false,
             "indexed": false,
             "translatable": true,
-            "kind": "blocks",
-            "types": [
+            "kind": "custom",
+            "type": "formFields",
+            "options": null,
+            "blocks": [
               "formText",
               "formTextarea",
               "formEmail",
-              "formPhone",
-              "formPage"
-            ],
-            "min": 1,
-            "max": null
+              "formPhone"
+            ]
           },
           {
             "handle": "submitLabel",
@@ -2642,28 +2615,6 @@
         ],
         "icon": {
           "lucide": "phone"
-        },
-        "title_field": "label"
-      },
-      {
-        "handle": "formPage",
-        "name": "Page break",
-        "entry": false,
-        "fields": [
-          {
-            "handle": "label",
-            "label": "Label",
-            "required": false,
-            "indexed": false,
-            "translatable": false,
-            "instructions": "The title of the page that starts here, a step of the form.",
-            "kind": "text",
-            "max": null,
-            "multiline": false
-          }
-        ],
-        "icon": {
-          "lucide": "separator-horizontal"
         },
         "title_field": "label"
       },

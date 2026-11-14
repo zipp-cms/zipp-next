@@ -13,16 +13,20 @@
 //! A form is an entry of the section `forms`: its fields are blocks
 //! (single line text, multi-line text, email, phone) with a label, a
 //! handle, required, a placeholder and instructions, in each site of
-//! their own (the block list is translatable), a page break block
-//! starts another page (a step), plus the labels of the buttons and the
-//! message after sending. The website gets a form by its
+//! their own (the field is translatable), on pages (steps) the studio
+//! shows as tabs ([`FormFields`]), plus the labels of the buttons and
+//! the message after sending. The website gets a form by its
 //! id and sends to it, see [`routes`]; the studio's page Submissions
 //! shows what came in, for who may view `forms`.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use zipp::{Field, Plugin, PluginPage, PluginStudio, Schema, Section};
+use serde_json::{Value, json};
+use zipp::{
+	Field, FieldType, GraphqlType, Plugin, PluginPage, PluginStudio, Scalar,
+	Schema, Section, StudioModule,
+};
 
 pub mod api;
 #[cfg(test)]
@@ -109,15 +113,9 @@ impl Plugin for Forms {
 				FORM,
 				"Form",
 				[
-					Field::blocks(
-						"fields",
-						FIELD_BLOCKS
-							.iter()
-							.map(|(h, _)| *h)
-							.chain([form::PAGE_BREAK]),
-					)
-					.translatable()
-					.min(1),
+					Field::custom("fields", FORM_FIELDS, Value::Null)
+						.item_blocks(FIELD_BLOCKS.iter().map(|(h, _)| *h))
+						.translatable(),
 					Field::text("submitLabel")
 						.label("Button")
 						.translatable()
@@ -149,13 +147,7 @@ impl Plugin for Forms {
 				.block_title(handle, "label")
 				.icon(handle, icon);
 		}
-		let page = Field::text("label").instructions(
-			"The title of the page that starts here, a step of the form.",
-		);
-		schema
-			.block(form::PAGE_BREAK, "Page break", [page])
-			.block_title(form::PAGE_BREAK, "label")
-			.icon(form::PAGE_BREAK, "separator-horizontal")
+		schema.field_type(FormFields)
 	}
 
 	fn tables(&self) -> &'static [&'static str] {
@@ -177,7 +169,74 @@ impl Plugin for Forms {
 		let page = PluginPage::new("submissions", "Submissions")
 			.icon("inbox")
 			.section(FORMS);
-		let js = include_str!("../assets/forms.js");
-		Some(PluginStudio::new(js).page(page))
+		Some(PluginStudio::new(STUDIO).page(page))
+	}
+}
+
+/// The studio module of the plugin: its page Submissions (`page`) and
+/// the editor of [`FormFields`] (`mount`).
+const STUDIO: &str = include_str!("../assets/forms.js");
+
+/// The type of the fields of a form.
+pub const FORM_FIELDS: &str = "formFields";
+
+/// The fields of a form on its pages: items `{ "page": "Über Sie",
+/// "block": { … } }` with a field block each, the items of a page one
+/// after the other in its order. One page whose label is empty is a form
+/// without pages. The studio shows the pages as tabs.
+pub struct FormFields;
+
+impl FieldType for FormFields {
+	fn name(&self) -> &'static str {
+		FORM_FIELDS
+	}
+
+	/// The blocks come checked, each item needs the label of its page.
+	fn validate(
+		&self,
+		_options: &Value,
+		value: &Value,
+	) -> Result<Value, String> {
+		let items = value.as_array().ok_or("a list of fields")?;
+		let mut out = vec![];
+		for item in items {
+			let page = item["page"].as_str().ok_or("the page of a field")?;
+			if page.chars().count() > 200 {
+				return Err("a page name of at most 200 characters".into());
+			}
+			out.push(json!({ "page": page.trim(), "block": item["block"] }));
+		}
+		Ok(match out.is_empty() {
+			true => Value::Null,
+			false => Value::Array(out),
+		})
+	}
+
+	/// The website gets a form through the routes, GraphQL only counts.
+	fn graphql(&self) -> GraphqlType {
+		GraphqlType::Object {
+			name: "FormFields",
+			fields: vec![("pages", Scalar::Int), ("fields", Scalar::Int)],
+		}
+	}
+
+	fn output(&self, _options: &Value, value: &Value) -> Value {
+		let items = value.as_array().map(Vec::as_slice).unwrap_or_default();
+		let mut pages: Vec<&str> = items
+			.iter()
+			.map(|i| i["page"].as_str().unwrap_or_default())
+			.collect();
+		pages.dedup();
+		json!({ "pages": pages.len().max(1), "fields": items.len() })
+	}
+
+	fn typescript(&self) -> String {
+		"{ page: string; block: { id: string; type: string; fields: \
+		Record<string, unknown>; enabled?: false } }[]"
+			.into()
+	}
+
+	fn studio(&self) -> StudioModule {
+		StudioModule::new(STUDIO)
 	}
 }
