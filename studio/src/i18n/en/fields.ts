@@ -20,10 +20,16 @@ export default {
 	'fields.details': 'Details',
 	'fields.replace': 'Replace',
 	'fields.dropToAdd': 'Drop to add',
-	'fields.dragVideos': 'Drag videos here',
-	'fields.dragImages': 'Drag images here',
 	'fields.dragFiles': 'Drag files here',
 	'fields.dragTypes': 'Drag {types} files here',
+	'fields.dragFile': 'Drag a file here',
+	'fields.dragType': 'Drag a {types} file here',
+	'fields.chooseImage': 'Choose an image',
+	'fields.addImages': 'Add images',
+	'fields.chooseVideo': 'Choose a video',
+	'fields.addVideos': 'Add videos',
+	'fields.orDropIt': 'or drop it here',
+	'fields.orDropThem': 'or drop them here',
 
 	// blocks
 	'fields.blocks': { one: '{n} block', other: '{n} blocks' },

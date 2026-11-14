@@ -23,10 +23,16 @@ export default {
 	'fields.details': 'Details',
 	'fields.replace': 'Ersetzen',
 	'fields.dropToAdd': 'Loslassen zum Hinzufügen',
-	'fields.dragVideos': 'Videos hierher ziehen',
-	'fields.dragImages': 'Bilder hierher ziehen',
 	'fields.dragFiles': 'Dateien hierher ziehen',
 	'fields.dragTypes': '{types}-Dateien hierher ziehen',
+	'fields.dragFile': 'Eine Datei hierher ziehen',
+	'fields.dragType': 'Eine {types}-Datei hierher ziehen',
+	'fields.chooseImage': 'Bild auswählen',
+	'fields.addImages': 'Bilder hinzufügen',
+	'fields.chooseVideo': 'Video auswählen',
+	'fields.addVideos': 'Videos hinzufügen',
+	'fields.orDropIt': 'oder hierher ziehen',
+	'fields.orDropThem': 'oder hierher ziehen',
 
 	// blocks
 	'fields.blocks': { one: '{n} Block', other: '{n} Blöcke' },

@@ -96,18 +96,20 @@
 	}
 
 	const drag = new FileDrag(upload, () => !full);
+	const one = $derived(max === 1);
+	const types = $derived(
+		field.extensions?.map(e => e.toUpperCase()).join(', '),
+	);
 	const dragHint = $derived(
+		types
+			? t(one ? 'fields.dragType' : 'fields.dragTypes', { types })
+			: t(one ? 'fields.dragFile' : 'fields.dragFiles'),
+	);
+	// the tile of images and videos: what a click does
+	const chooseLabel = $derived(
 		videos
-			? t('fields.dragVideos')
-			: field.extensions?.length
-				? t('fields.dragTypes', {
-						types: field.extensions
-							.map(e => e.toUpperCase())
-							.join(', '),
-					})
-				: images
-					? t('fields.dragImages')
-					: t('fields.dragFiles'),
+			? t(one ? 'fields.chooseVideo' : 'fields.addVideos')
+			: t(one ? 'fields.chooseImage' : 'fields.addImages'),
 	);
 </script>
 
@@ -181,7 +183,36 @@
 		</div>
 	{/each}
 	<SortLine sortable={sort} />
-	{#if !full}
+	{#if !full && cards}
+		<!-- in the shape of the card it becomes: a click chooses from
+		the library, its bar uploads -->
+		<div class="drop-zone tile" class:over={drag.over}>
+			<button
+				type="button"
+				class="choose plain"
+				onclick={() => (picking = true)}
+			>
+				<Icon name={videos ? 'add-video' : 'add-image'} size={22} />
+				<span class="label">
+					{drag.over ? t('fields.dropToAdd') : chooseLabel}
+				</span>
+				<span class="hint">
+					{t(one ? 'fields.orDropIt' : 'fields.orDropThem')}
+				</span>
+				{#if types}<span class="types">{types}</span>{/if}
+			</button>
+			<span class="bar">
+				<UploadButton
+					onfiles={f => upload(fromInput(f))}
+					multiple={!one}
+					accept={acceptOf(field)}
+					icon="upload"
+				>
+					{t('common.upload')}
+				</UploadButton>
+			</span>
+		</div>
+	{:else if !full}
 		<!-- a click on the zone chooses from the library -->
 		<div
 			class="drop-zone"
@@ -201,7 +232,7 @@
 				</AddButton>
 				<UploadButton
 					onfiles={f => upload(fromInput(f))}
-					multiple={max !== 1}
+					multiple={!one}
 					accept={acceptOf(field)}
 					icon="upload"
 				>
@@ -227,7 +258,7 @@
 		{images}
 		extensions={field.extensions}
 		folderPath={folder}
-		multiple={max !== 1}
+		multiple={!one}
 		selected={ids}
 		onpick={toggle}
 		onclose={() => (picking = false)}
@@ -321,20 +352,91 @@
 		cursor: auto;
 	}
 
-	// as large as an image, the buttons under each other
-	.images .drop-zone {
+	// as large as a card: the choice where its picture is, the upload
+	// where its title is
+	.tile {
 		flex-direction: column;
-		justify-content: center;
+		align-items: stretch;
+		gap: 0;
 		width: 10rem;
 		aspect-ratio: 1;
-		padding: 0.625rem;
+		padding: 0;
+		background: var(--surface-2);
+		cursor: auto;
+
+		@include hover {
+			&:hover {
+				border-color: var(--accent);
+			}
+		}
+	}
+
+	.choose {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.25rem;
+		padding: 0.5rem;
+		color: var(--muted);
 		font-size: var(--fs-sm);
+		font-weight: 400;
 		text-align: center;
 
-		.buttons {
-			flex-direction: column;
-			align-items: stretch;
-			margin: 0.25rem 0 0;
+		> :global(.icon) {
+			margin-bottom: 0.25rem;
+			color: var(--subtle);
+		}
+
+		@include hover {
+			&:hover .label {
+				text-decoration: underline;
+			}
+		}
+	}
+
+	.label {
+		color: var(--accent);
+		font-size: var(--fs-md);
+		font-weight: 500;
+	}
+
+	.types {
+		color: var(--subtle);
+		font-size: var(--fs-xs);
+	}
+
+	.tile .bar {
+		display: flex;
+		min-height: 2.25rem;
+		border-top: 1px dashed var(--border-strong);
+
+		:global(.upload) {
+			flex: 1;
+			justify-content: center;
+			padding: 0 0.625rem;
+			border: none;
+			border-radius: 0 0 calc(var(--radius-lg) - 1px)
+				calc(var(--radius-lg) - 1px);
+			background: none;
+			color: var(--muted);
+			font-size: var(--fs-sm);
+		}
+
+		@include hover {
+			:global(.upload:hover) {
+				background: var(--hover);
+				color: var(--text);
+			}
+		}
+	}
+
+	.tile.over {
+		.choose,
+		.choose > :global(.icon),
+		.label {
+			color: var(--accent);
 		}
 	}
 </style>
