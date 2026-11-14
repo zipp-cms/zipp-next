@@ -52,6 +52,13 @@ function isEmpty(v: unknown, def: unknown): boolean {
 /** What the role may do with the entry; the server checks it too. */
 export type May = { edit: boolean; publish: boolean; delete: boolean };
 
+/** Whether a slug is the title's, also with the server's `-2`, `-3`, …. */
+function ofTitle(slug: string, title: string): boolean {
+	const base = slugify(title);
+	const n = slug.slice(base.length + 1);
+	return slug === base || (slug.startsWith(`${base}-`) && /^\d+$/.test(n));
+}
+
 /**
  * The state of the entry editor and what it does: loading, saving drafts
  * while the editor types, publishing, conflicts with another editor,
@@ -85,7 +92,7 @@ export class EntryEditor {
 	/** A slug written by hand; emptied, it follows the title again. */
 	set slug(s: string) {
 		this.#slug = s;
-		this.slugFollows = !s || s === slugify(this.#title);
+		this.slugFollows = !s || ofTitle(s, this.#title);
 	}
 	uri = $state<string | null>(null);
 	published = $state(false);
@@ -267,7 +274,7 @@ export class EntryEditor {
 		// a live entry's url stays when its title changes
 		this.slugFollows =
 			entry.postDate === null &&
-			(!content.slug || content.slug === slugify(content.title));
+			(!content.slug || ofTitle(content.slug, content.title));
 		this.saver.saved();
 		this.loaded = true;
 		const [revs, list] = await Promise.all([
@@ -371,6 +378,8 @@ export class EntryEditor {
 					site: this.site,
 					parentId: this.parentId,
 					...this.doc,
+					// one of the title the server makes free (`-2`, …)
+					...(this.slugFollows ? { slug: '' } : {}),
 					...(unpublished ? { published: false } : {}),
 				});
 				// saved, the page of the entry may open

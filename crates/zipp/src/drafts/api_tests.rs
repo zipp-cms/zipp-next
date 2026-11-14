@@ -524,3 +524,49 @@ async fn own_access_drafts_only_own_entries() {
 		.await;
 	assert!(got.unwrap().entry.author_id.is_some());
 }
+
+#[tokio::test]
+async fn own_access_drafts_only_own_or_public_assets() {
+	let schema = site_with_roles().role(
+		crate::schema::Role::new("member", "Member")
+			.own("events", crate::schema::Access::Edit),
+	);
+	let ts = TestServer::new(schema);
+	let member = ts.user(Some("member"));
+	let mine = input("events", "event", "Mine", json!({}));
+	let mine = member.call(&CreateReq(mine)).await.unwrap().id;
+	let png = crate::fixtures::png(1, 1);
+	let upload = |name: &str, by: Option<i64>| {
+		let conn = ts.state.db.conn();
+		crate::assets::store(&conn, &ts.state.files, name, &png, by)
+			.unwrap()
+			.id
+	};
+	let author = {
+		let conn = ts.state.db.conn();
+		crate::entries::owner_of(&conn, mine).unwrap().1
+	};
+	let private = upload("private.png", None);
+	let own = upload("own.png", author);
+
+	// an editor publishing the draft would make the private one public
+	let mut req = put(mine, "event", "Mine", None);
+	req.content.fields = json!({ "image": [private] });
+	let d = member.call(&req).await.unwrap().unwrap();
+	assert_eq!(d.doc["de"].fields["image"], json!([]));
+	req.content.fields = json!({ "image": [own] });
+	req.base = Some(d.updated_at);
+	let d = member.call(&req).await.unwrap().unwrap();
+	assert_eq!(d.doc["de"].fields["image"], json!([own]));
+
+	// what the draft has already stays
+	{
+		let conn = ts.state.db.conn();
+		conn.execute("UPDATE assets SET uploaded_by = NULL", [])
+			.unwrap();
+	}
+	req.content.title = "Mine again".into();
+	req.base = Some(d.updated_at);
+	let d = member.call(&req).await.unwrap().unwrap();
+	assert_eq!(d.doc["de"].fields["image"], json!([own]));
+}

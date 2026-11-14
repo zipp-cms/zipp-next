@@ -314,3 +314,20 @@ fn a_new_entry_goes_after_the_live_ones() {
 	trash_entry(&conn, &s, b, None).unwrap();
 	assert_eq!(page("C").1, 1);
 }
+
+#[test]
+fn a_uri_without_the_slug_taken_meanwhile_is_refused() {
+	let db = Db::memory().unwrap();
+	let conn = db.conn();
+	let s = site().section(
+		crate::schema::Section::channel("news", ["event"]).uri("news"),
+	);
+	let first = input("news", "event", "First", json!({}));
+	let first = save(&conn, &s, None, first, None).unwrap();
+	trash_entry(&conn, &s, first.id, None).unwrap();
+	let second = input("news", "event", "Second", json!({}));
+	save(&conn, &s, None, second, None).unwrap();
+
+	let err = restore_entry(&conn, &s, first.id).unwrap_err();
+	assert_eq!(err, Error::Request("the uri /news is already used".into()));
+}

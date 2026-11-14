@@ -21,13 +21,15 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::AppState;
-use crate::content::{FieldError, follow, validate_fields};
+use crate::assets::linkable_by;
+use crate::content::{FieldError, drop_links, follow, validate_fields};
 use crate::db::{DAY_MS, marks, now};
 use crate::entries::{
-	Dates, Entry, EntryInput, check_live, get_entry, slug_of, write,
+	Dates, Entry, EntryInput, check_live, get_entry, links_only_own, slug_of,
+	write,
 };
 use crate::error::{Error, Result};
-use crate::schema::{Component, Field, Schema};
+use crate::schema::{Component, Field, LinkKind, Schema};
 
 pub mod api;
 #[cfg(test)]
@@ -125,6 +127,25 @@ pub(crate) fn draft_refs(
 	ids.sort_unstable();
 	ids.dedup();
 	crate::entries::refs_of(conn, &ids, site)
+}
+
+/// The assets that docs link to.
+fn asset_ids<'a>(
+	schema: &Schema,
+	docs: impl Iterator<Item = &'a SiteDoc>,
+) -> Vec<i64> {
+	let mut ids = vec![];
+	for doc in docs {
+		let Some(comp) = schema.entry_type(&doc.ty) else {
+			continue;
+		};
+		for r in crate::content::relations(schema, comp, &doc.fields) {
+			if let crate::content::Target::Assets { .. } = r.target {
+				ids.extend(r.ids);
+			}
+		}
+	}
+	ids
 }
 
 /// The live content of an entry.
@@ -270,7 +291,11 @@ pub(super) fn check_base(
 
 /// Changes one site of the draft, it starts as a copy of the live entry.
 /// Shared fields go to the other sites of the draft too. Nothing is
-/// validated here, a draft may be half done.
+/// validated here, a draft may be half done; but someone who edits only
+/// their own entries loses the assets they may not link (see
+/// `entries::check_relations`) that the entry or its draft doesn't have
+/// yet: publishing checks with the rights of who publishes, an editor
+/// would make them public.
 ///
 /// The type is that of every site: another type of the section changes
 /// it in all of them, their fields converted (see `content::convert`). The
@@ -306,6 +331,23 @@ pub fn put_draft(
 	check_base(current.as_ref(), base, user_id)?;
 
 	let live = live_doc(conn, id)?;
+	let drafted = current.iter().flat_map(|d| d.doc.values());
+	let kept = asset_ids(schema, live.values().chain(drafted));
+	let user = crate::auth::user_of(conn, user_id)?;
+	if let Some(u) =
+		links_only_own(user.as_ref(), schema, Some(&entry.section), "")
+	{
+		let mut gone = vec![];
+		for id in asset_ids(schema, [&content].into_iter()) {
+			if !kept.contains(&id) && !linkable_by(conn, schema, u, id)? {
+				gone.push(id);
+			}
+		}
+		drop_links(schema, comp, &mut content.fields, &|kind, id| {
+			kind == LinkKind::Asset && gone.contains(&id)
+		});
+	}
+
 	let mut doc = current.map_or_else(|| live.clone(), |d| d.doc);
 	for (s, sd) in doc.iter_mut().filter(|(s, _)| s.as_str() != site) {
 		let fields = follow(schema, &sd.ty, comp, &content.fields, &sd.fields);

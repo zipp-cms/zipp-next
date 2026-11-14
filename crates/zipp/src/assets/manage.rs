@@ -134,6 +134,8 @@ impl Kind {
 /// Assets of some folders, kinds and words, for GraphQL's `assets`.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct AssetList {
+	/// the ids of assets, `None` all
+	pub ids: Option<Vec<i64>>,
 	/// the ids of folders, `None` all
 	pub folders: Option<Vec<i64>>,
 	/// any of them, none all
@@ -151,6 +153,10 @@ impl AssetList {
 	/// The `WHERE` and its values.
 	fn filter(&self) -> (String, Vec<String>) {
 		let mut and = vec!["deleted_at IS NULL".to_string()];
+		if let Some(ids) = &self.ids {
+			let ids: Vec<String> = ids.iter().map(i64::to_string).collect();
+			and.push(format!("id IN ({})", ids.join(", ")));
+		}
 		if let Some(folders) = &self.folders {
 			let ids: Vec<String> = folders.iter().map(i64::to_string).collect();
 			and.push(format!("folder_id IN ({})", ids.join(", ")));

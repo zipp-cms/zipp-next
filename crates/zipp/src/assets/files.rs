@@ -60,10 +60,8 @@ async fn serve_file(
 	req: axum::extract::Request,
 ) -> Result<Response> {
 	let parsed = mime.parse().map_err(|_| Error::NotFound)?;
-	let resp = ServeFile::new_with_mime(path, &parsed)
-		.oneshot(req)
-		.await
-		.map_err(|e| Error::Internal(e.to_string()))?;
+	// serving a file never fails, a missing one is a 404
+	let Ok(resp) = ServeFile::new_with_mime(path, &parsed).oneshot(req).await;
 	if resp.status() == StatusCode::NOT_FOUND {
 		return Err(Error::NotFound);
 	}

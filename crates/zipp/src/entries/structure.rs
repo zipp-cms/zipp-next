@@ -133,6 +133,7 @@ pub(crate) fn free_uri(
 		Some(p) => stored_uri(conn, p, site)?,
 		None => None,
 	};
+	let mut first = None;
 	for n in 1.. {
 		let candidate = match n {
 			1 => slug.to_string(),
@@ -146,9 +147,15 @@ pub(crate) fn free_uri(
 			fields,
 		);
 		match &uri {
+			// a uri without the slug doesn't get free with a number
+			Some(u) if first.as_ref() == Some(u) => {
+				let msg = format!("the uri /{u} is already used");
+				return Err(Error::Request(msg));
+			}
 			Some(u) if uri_taken(conn, site, u, None)? => {}
 			_ => return Ok((candidate, uri)),
 		}
+		first = first.or(uri);
 	}
 	unreachable!()
 }

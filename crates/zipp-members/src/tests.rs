@@ -35,7 +35,11 @@ fn schema() -> Schema {
 			],
 		)
 		.entry("page", "Page", [Field::text("intro")])
-		.entry("note", "Note", [Field::text("intro")])
+		.entry(
+			"note",
+			"Note",
+			[Field::text("intro"), Field::images("image")],
+		)
 		.role(
 			Role::new("member", "Member")
 				.own("posts", Access::Delete)
@@ -198,6 +202,24 @@ async fn only_own_entries_of_the_sections() {
 		..new_post("Page")
 	};
 	assert_eq!(anna.call(&page).await.unwrap_err(), Error::Forbidden);
+}
+
+/// A title used already, also by an entry that isn't live, gets a number.
+#[tokio::test]
+async fn same_titles_get_a_number() {
+	let ts = TestServer::new(schema());
+	let anna = ts.site_user(Some("member"));
+	let ben = ts.site_user(Some("member"));
+
+	// anna's isn't live, it has the uri all the same
+	let mut private = new_post("Zopf");
+	private.published = false;
+	anna.call(&private).await.unwrap();
+	let e = ben.call(&new_post("Zopf")).await.unwrap();
+	assert_eq!(e.uri.as_deref(), Some("posts/zopf-2"));
+
+	let r = ben.call(&change(e.id, "Zopf", json!({}))).await.unwrap();
+	assert_eq!(r.entry.slug, "zopf-2");
 }
 
 /// Admins and editors edit the members' entries on the website too, as
@@ -481,6 +503,60 @@ async fn uploads_images() {
 	assert_eq!(err, Error::Forbidden);
 	let err = upload(&ts.visitor(None), "a.png", PNG).await.unwrap_err();
 	assert_eq!(err, Error::MissingSessionToken);
+}
+
+#[tokio::test]
+async fn members_link_only_their_own_or_public_assets() {
+	let ts = TestServer::new(schema());
+	let anna = ts.site_user(Some("member"));
+	let ben = ts.site_user(Some("member"));
+	let with_image = |title: &str, id: i64| {
+		let mut req = new_post(title);
+		req.fields = json!({ "intro": "Hi", "image": [id] });
+		req
+	};
+
+	// anna's photo of a post that isn't live is hers alone
+	let private = upload(&anna, "private.png", PNG).await.unwrap();
+	let mut req = with_image("Zopf", private.id);
+	req.published = false;
+	anna.call(&req).await.unwrap();
+	let err = ben.call(&with_image("Brot", private.id)).await.unwrap_err();
+	let Error::Invalid(errors) = err else {
+		panic!("{err:?}");
+	};
+	assert_eq!(errors[0].path, "image");
+	// an admin links anything
+	let admin = ts.site_user(None);
+	admin
+		.call(&with_image("Admin's", private.id))
+		.await
+		.unwrap();
+
+	// one a live post shows is public already
+	let public = upload(&anna, "public.png", PNG).await.unwrap();
+	anna.call(&with_image("Kuchen", public.id)).await.unwrap();
+	let e = ben.call(&with_image("Torte", public.id)).await.unwrap();
+	assert_eq!(e.fields["image"], json!([public.id]));
+
+	// a live note isn't public, members see only their own notes
+	let scan = upload(&anna, "scan.png", PNG).await.unwrap();
+	let note = input("notes", "note", "Note", json!({ "image": [scan.id] }));
+	ts.admin().call(&StudioCreate(note)).await.unwrap();
+	let err = ben.call(&with_image("Scan", scan.id)).await.unwrap_err();
+	assert!(matches!(err, Error::Invalid(_)), "{err:?}");
+
+	// what an entry links already stays, also if it couldn't be linked now
+	let own = upload(&ben, "own.png", PNG).await.unwrap();
+	let e = ben.call(&with_image("Brot", own.id)).await.unwrap();
+	ts.state
+		.db
+		.conn()
+		.execute("UPDATE assets SET uploaded_by = NULL", [])
+		.unwrap();
+	let fields = json!({ "image": [own.id] });
+	let r = ben.call(&change(e.id, "Brot neu", fields)).await.unwrap();
+	assert_eq!(r.entry.fields["image"], json!([own.id]));
 }
 
 #[tokio::test]

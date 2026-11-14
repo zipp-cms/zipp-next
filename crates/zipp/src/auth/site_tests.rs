@@ -396,3 +396,61 @@ async fn site_users_edit_their_profile() {
 		.unwrap();
 	assert_eq!(studio.send(req).await.status().as_u16(), 401);
 }
+
+#[tokio::test]
+async fn profiles_link_only_own_or_public_assets() {
+	let schema = site_with_roles()
+		.role(
+			Role::new("member", "Member")
+				.own("events", Access::Edit)
+				.assets(Access::Edit)
+				.no_studio(),
+		)
+		.user_fields([crate::schema::Field::images("photo")]);
+	let ts = TestServer::new(schema);
+	let anna = ts.site_user(Some("member"));
+	let ben = ts.site_user(Some("member"));
+	let id_of = async |c: &crate::testing::Client| {
+		c.call(&SiteMeReq {}).await.unwrap().user.id
+	};
+	let (anna_id, ben_id) = (id_of(&anna).await, id_of(&ben).await);
+	let png = crate::fixtures::png(1, 1);
+	let upload = |name: &str, by: i64| {
+		let conn = ts.state.db.conn();
+		crate::assets::store(&conn, &ts.state.files, name, &png, Some(by))
+			.unwrap()
+			.id
+	};
+	let private = upload("anna.png", anna_id);
+	let own = upload("ben.png", ben_id);
+
+	// another member's upload no profile or live entry shows
+	let photo = |id: i64| json!({ "fields": { "photo": [id] } });
+	let (status, err) = put_me(&ben, photo(private)).await;
+	assert_eq!(status, 400);
+	assert_eq!(err["error"]["detail"][0]["path"], "fields.photo", "{err}");
+	let (status, me) = put_me(&ben, photo(own)).await;
+	assert_eq!((status, &me["fields"]["photo"]), (200, &json!([own])));
+
+	// once a live entry shows it, it is public
+	let fields = json!({ "image": [private] });
+	let event = crate::testing::input("events", "event", "Fest", fields);
+	let event = {
+		let conn = ts.state.db.conn();
+		crate::entries::save(&conn, &ts.state.schema, None, event, None)
+			.unwrap()
+	};
+	let (status, me) = put_me(&ben, photo(private)).await;
+	assert_eq!((status, &me["fields"]["photo"]), (200, &json!([private])));
+
+	// private again, the profile keeps it
+	{
+		let conn = ts.state.db.conn();
+		conn.execute("DELETE FROM entries WHERE id = ?1", [event.id])
+			.unwrap();
+	}
+	let (status, me) = put_me(&ben, json!({ "name": "Ben" })).await;
+	assert_eq!((status, &me["fields"]["photo"]), (200, &json!([private])));
+	let (status, _) = put_me(&ben, photo(private)).await;
+	assert_eq!(status, 200);
+}

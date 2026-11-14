@@ -485,6 +485,50 @@ pub(crate) fn store_file(
 	get_asset(conn, id)
 }
 
+/// Whether a user who edits only their own entries may link an asset:
+/// they uploaded it, or a live entry shows it already, so it is public:
+/// one on a site that is online, with a page or of a section they see
+/// all entries of (not a note where everybody sees only their own).
+pub(crate) fn linkable_by(
+	conn: &Connection,
+	schema: &crate::schema::Schema,
+	user: &crate::auth::Authed,
+	id: i64,
+) -> Result<bool> {
+	let sections: Vec<&str> = schema
+		.sections
+		.iter()
+		.map(|s| s.handle.as_str())
+		.filter(|s| user.can(schema, s, crate::schema::Access::View))
+		.collect();
+	let sites: Vec<&str> = schema
+		.sites
+		.iter()
+		.map(|s| s.handle.as_str())
+		.filter(|s| !schema.is_offline(s))
+		.collect();
+
+	let sql = format!(
+		"SELECT EXISTS (SELECT 1 FROM assets a WHERE id = ?1
+		AND (uploaded_by IS ?2 OR EXISTS (SELECT 1 FROM asset_relations r
+			JOIN entry_sites s ON s.entry_id = r.entry_id AND s.site = r.site
+			JOIN entries e ON e.id = r.entry_id
+			WHERE r.asset_id = a.id AND s.published = 1
+			AND e.deleted_at IS NULL AND {}
+			AND (s.uri IS NOT NULL
+				OR e.section IN (SELECT value FROM json_each(?3)))
+			AND r.site IN (SELECT value FROM json_each(?4)))))",
+		crate::entries::LIVE_DATES
+	);
+	let sections = serde_json::to_string(&sections).unwrap();
+	let sites = serde_json::to_string(&sites).unwrap();
+	Ok(conn.query_row(
+		&sql,
+		params![id, user.user_id, sections, sites],
+		|r| r.get(0),
+	)?)
+}
+
 /// Where uploads go, `--files`.
 pub(crate) fn files_dir(path: PathBuf) -> std::io::Result<PathBuf> {
 	fs::create_dir_all(&path)?;

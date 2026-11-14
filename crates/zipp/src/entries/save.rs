@@ -1,4 +1,5 @@
 use super::*;
+use crate::assets::linkable_by;
 
 /// Creates an entry in all sites, or updates it in one site when `id` is
 /// given, with a revision of who did it (`None`: the system). Shared
@@ -112,37 +113,61 @@ pub(crate) fn check_live(
 	if title.is_empty() {
 		errors.push(FieldError::new("title", "is required"));
 	}
-	let slug = slug_of(&input.slug, &title);
+	let mut slug = slug_of(&input.slug, &title);
 	// a title of only signs makes none, the uri would be the parent's (or
 	// the home page's)
 	if slug.is_empty() && !title.is_empty() {
 		errors.push(FieldError::new("slug", "is required"));
 	}
+	// a slug made of the title gets `-2`, `-3`, … when its uri is used
+	// (like Craft's), one that was given stays and is refused
+	let auto = input.slug.trim().is_empty() && !slug.is_empty();
 
 	// the uri in every site, a new entry starts with this slug everywhere
-	let mut uris = HashMap::new();
-	for s in &schema.sites {
-		if id.is_some() && s.handle != site {
-			continue;
+	let mut first = HashMap::new();
+	let uris = 'free: {
+		for n in 1.. {
+			let candidate = match n {
+				1 => slug.clone(),
+				n => format!("{slug}-{n}"),
+			};
+			let mut uris = HashMap::new();
+			let mut taken = None;
+			for s in &schema.sites {
+				if id.is_some() && s.handle != site {
+					continue;
+				}
+				let uri = uri_for(
+					conn,
+					section,
+					&input.ty,
+					&candidate,
+					parent_id,
+					&s.handle,
+					&input.fields,
+				)?;
+				if let Some(uri) = &uri
+					&& uri_taken(conn, &s.handle, uri, id)?
+				{
+					taken = Some((s.handle.clone(), uri.clone()));
+					break;
+				}
+				uris.insert(s.handle.clone(), uri);
+			}
+			let Some((s, uri)) = taken else {
+				slug = candidate;
+				break 'free uris;
+			};
+			// a uri without the slug doesn't get free with a number
+			if !auto || first.get(&s) == Some(&uri) {
+				let msg = format!("the uri /{uri} is already used");
+				errors.push(FieldError::new("slug", msg));
+				break 'free uris;
+			}
+			first.entry(s).or_insert(uri);
 		}
-		let uri = uri_for(
-			conn,
-			section,
-			&input.ty,
-			&slug,
-			parent_id,
-			&s.handle,
-			&input.fields,
-		)?;
-		if let Some(uri) = &uri
-			&& uri_taken(conn, &s.handle, uri, id)?
-		{
-			let msg = format!("the uri /{uri} is already used");
-			errors.push(FieldError::new("slug", msg));
-			break;
-		}
-		uris.insert(s.handle.clone(), uri);
-	}
+		unreachable!()
+	};
 
 	let mut fields = match validate_live(schema, comp, &input.fields, live) {
 		Ok(f) => f,
@@ -159,6 +184,7 @@ pub(crate) fn check_live(
 		errors.extend(check_relations(
 			conn,
 			schema,
+			Some(&section.handle),
 			&input.ty,
 			&mut fields,
 			user_id,
@@ -325,10 +351,16 @@ pub(crate) fn write(
 /// them. What the user `user_id` may not view counts as deleted, so a
 /// save tells nothing about hidden sections or assets; what it linked to
 /// `before` stays, someone who sees it chose it. `live` says which
-/// required fields that are left empty must be filled.
+/// required fields that are left empty must be filled. Someone who
+/// edits only their own entries of the `section`, or their own user
+/// fields, links only assets they may (see [`linkable_by`]), else a
+/// published entry or a profile would show another member's private
+/// photo.
+#[allow(clippy::too_many_arguments)]
 fn check_relations(
 	conn: &Connection,
 	schema: &Schema,
+	section: Option<&str>,
 	ty: &str,
 	fields: &mut Value,
 	user_id: Option<i64>,
@@ -380,6 +412,7 @@ fn check_relations(
 		};
 	}
 
+	let own_only = links_only_own(user.as_ref(), schema, section, ty);
 	let mut errors = vec![];
 
 	for rel in relations(schema, comp, fields) {
@@ -400,8 +433,21 @@ fn check_relations(
 			let found: Option<(String, String)> = conn
 				.query_row(sql, [id], |r| Ok((r.get(0)?, r.get(1)?)))
 				.optional()?;
+			// what it links already stays
+			let private = match (&rel.target, &found, own_only) {
+				(Target::Assets { .. }, Some(_), Some(u))
+					if !before.contains(&(LinkKind::Asset, id)) =>
+				{
+					!linkable_by(conn, schema, u, id)?
+				}
+				_ => false,
+			};
 			let error = match (&rel.target, found) {
 				(_, None) => format!("{what} {id} doesn't exist"),
+				// before its kind, which would tell about it
+				(Target::Assets { .. }, Some(_)) if private => {
+					format!("asset {id} is neither yours nor public")
+				}
 				(Target::Entries { types, sections }, Some((t, s))) => {
 					if !types.contains(&t) {
 						format!("entry {id} is a {t}, not allowed here")
@@ -429,6 +475,23 @@ fn check_relations(
 	}
 
 	Ok(errors)
+}
+
+/// The user if they link only the assets they may (see [`linkable_by`]):
+/// they edit only their own entries of the `section`, or their own user
+/// fields of type `ty`.
+pub(crate) fn links_only_own<'a>(
+	user: Option<&'a Authed>,
+	schema: &Schema,
+	section: Option<&str>,
+	ty: &str,
+) -> Option<&'a Authed> {
+	match (user, section) {
+		(Some(u), Some(s)) if !u.can(schema, s, Access::Edit) => Some(u),
+		// a profile is public too, only admins edit other users
+		(Some(u), None) if ty == crate::schema::USER && !u.admin() => Some(u),
+		_ => None,
+	}
 }
 
 /// What an entry links to in any of its sites, see [`check_relations`].
@@ -468,6 +531,7 @@ pub(crate) fn check_fields(
 	let errors = check_relations(
 		conn,
 		schema,
+		None,
 		handle,
 		&mut fields,
 		user_id,
