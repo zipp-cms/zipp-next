@@ -109,9 +109,6 @@ fragment Content on Block {
 	}
 	... on contact_Block {
 		title
-		form {
-			id
-		}
 	}
 }
 

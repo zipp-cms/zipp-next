@@ -14,8 +14,6 @@
 		"strict": true,
 		"noImplicitAny": false,
 		"skipLibCheck": true,
-		// zipp-forms is linked from the repository, its imports resolve here
-		"preserveSymlinks": true,
 		"plugins": [
 			{
 				"name": "typescript-svelte-plugin",
