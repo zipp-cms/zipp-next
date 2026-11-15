@@ -7,7 +7,7 @@
 - [Editing](editing.md): drafts, revisions, previews, Setup, the AI chat
 - [GraphQL and crelte](graphql.md): what frontends read and how
 - [SEO](seo.md): like the Craft plugin meierlabs-seo
-- [Forms](forms.md): forms editors build, their submissions, like Craft's Formie
+- [Forms](forms.md): a contact form, mailed, like Craft's Contact Form
 - [Website users](members.md): members, roles without the studio, logins
   on the website, editing their own entries there (`zipp-members`)
 - [Extending](extending.md): routes, hooks, field types of other crates,

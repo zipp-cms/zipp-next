@@ -1,109 +1,146 @@
-<script module>
-	import { loadForm } from 'zipp-forms';
+<script>
+	import { getSite } from 'crelte';
+	import { getTranslations } from 'crelte/translations';
 
-	// the form the editors chose, built in the studio's Forms; null where
-	// it isn't live in the site
-	/**
-	 * @param {import('crelte').CrelteRequest} cr
-	 * @param {{ form: { id: string }[] }} block
-	 */
-	export async function loadData(cr, block) {
-		return { zippForm: await loadForm(cr, block.form[0]?.id) };
+	// the contact form of zipp-forms: the server proxies /forms/contact
+	// to the cms, which mails it to who is set in Forms
+	let { title } = $props();
+	const t = getTranslations();
+	const site = getSite();
+
+	let values = $state({
+		name: '',
+		email: '',
+		phone: '',
+		message: '',
+		website: '',
+	});
+	// the inputs besides the message
+	/** @type {{ key: 'name' | 'email' | 'phone', type: string, required: boolean }[]} */
+	const INPUTS = [
+		{ key: 'name', type: 'text', required: true },
+		{ key: 'email', type: 'email', required: true },
+		{ key: 'phone', type: 'tel', required: false },
+	];
+
+	/** @type {Record<string, string>} */
+	let errors = $state({});
+	let sent = $state('');
+	let failed = $state('');
+	let sending = $state(false);
+
+	async function submit(e) {
+		e.preventDefault();
+		sending = true;
+		errors = {};
+		failed = '';
+		try {
+			const resp = await fetch(`/forms/contact?site=${$site.handle}`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify(values),
+			});
+			const body = await resp.json().catch(() => ({}));
+			if (body.success) sent = body.message;
+			else if (body.errors)
+				errors = Object.fromEntries(
+					body.errors.map(e => [e.path, e.message]),
+				);
+			else failed = body.message ?? $t('contact.failed');
+		} catch {
+			failed = $t('contact.failed');
+		} finally {
+			sending = false;
+		}
 	}
 </script>
 
-<script>
-	import { getTranslations } from 'crelte/translations';
-	import { Back, Form, Fields, Submit } from 'zipp-forms';
-
-	let { title, zippForm } = $props();
-	const t = getTranslations();
-
-	// the frontend's own texts of what the cms says in English
-	$effect(() => {
-		if (!zippForm) return;
-		zippForm.messages = {
-			failed: $t('contact.failed'),
-			required: $t('contact.required'),
-			email: $t('contact.email'),
-			phone: $t('contact.phone'),
-		};
-	});
-</script>
-
-{#if zippForm}
-	<section class="contact">
-		{#if title}<h2>{title}</h2>{/if}
-		<Form form={zippForm}>
-			<!-- a form with pages: the step and its title -->
-			{#if zippForm.pages.length > 1}
-				<p class="step">
-					{zippForm.page + 1} / {zippForm.pages.length}
-					{#if zippForm.pages[zippForm.page].label}
-						· {zippForm.pages[zippForm.page].label}
-					{/if}
-				</p>
-			{/if}
-			<Fields />
-			<div class="buttons">
-				<Back />
-				<Submit />
-			</div>
-		</Form>
-	</section>
-{/if}
+<section class="contact">
+	{#if title}<h2>{title}</h2>{/if}
+	{#if sent}
+		<p class="sent" role="status">{sent}</p>
+	{:else}
+		<form onsubmit={submit}>
+			{#each INPUTS as { key, type, required } (key)}
+				<label>
+					{$t(`contact.${key}`)}{required ? '*' : ''}
+					<input
+						{type}
+						name={key}
+						bind:value={values[key]}
+						{required}
+					/>
+					{#if errors[key]}<span class="error">
+							{errors[key]}
+						</span>{/if}
+				</label>
+			{/each}
+			<label>
+				{$t('contact.message')}*
+				<textarea
+					name="message"
+					rows="5"
+					bind:value={values.message}
+					required
+				></textarea>
+				{#if errors.message}<span class="error">
+						{errors.message}
+					</span>{/if}
+			</label>
+			<!-- people don't see it, bots fill it -->
+			<input
+				class="honeypot"
+				name="website"
+				tabindex="-1"
+				autocomplete="off"
+				aria-hidden="true"
+				bind:value={values.website}
+			/>
+			{#if failed}<p class="error">{failed}</p>{/if}
+			<button disabled={sending}>{$t('contact.send')}</button>
+		</form>
+	{/if}
+</section>
 
 <style>
 	.contact {
-		max-width: 40rem;
+		max-width: 32rem;
 		margin: 2rem 0;
 	}
 
-	.contact :global(form) {
+	form {
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
 	}
 
-	.contact :global(.zipp-form-field) {
+	label {
 		display: flex;
 		flex-direction: column;
 		gap: 0.25rem;
 	}
 
-	.contact :global(input),
-	.contact :global(textarea) {
+	input,
+	textarea {
 		padding: 0.5rem;
 		font: inherit;
 	}
 
-	.contact :global(textarea) {
-		min-height: 8rem;
+	.honeypot {
+		position: absolute;
+		left: -10000px;
 	}
 
-	.contact :global(.instructions) {
-		margin: 0;
-		font-size: 0.875rem;
-		opacity: 0.7;
-	}
-
-	.contact :global(.error) {
-		margin: 0;
+	.error {
 		color: #b00020;
 	}
 
-	.step {
-		margin: 0;
-		font-weight: bold;
-	}
-
-	.buttons {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	.contact :global(button) {
+	button {
+		align-self: flex-start;
 		padding: 0.5rem 1rem;
-		font: inherit;
+		border: 0;
+		border-radius: 0.3rem;
+		background: #222;
+		color: white;
 	}
 </style>
